@@ -15,6 +15,8 @@
   const portalUrl    = CFG.portalUrl    || 'index.html';
   const productName  = CFG.product      || '';
   const productColor = CFG.productColor || '#E8B84B';
+  const noNav    = CFG.noNav    || false;
+  const noFooter = CFG.noFooter || false;
 
   const LOGO_SVG = `<svg viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
     <defs><clipPath id="sd-clip"><circle cx="256" cy="256" r="240"/></clipPath></defs>
@@ -123,6 +125,7 @@
   document.documentElement.style.scrollPaddingTop = '64px';
 
   /* ── Nav ── */
+  if(noNav) return;
   const nav = document.createElement('nav');
   nav.id = 'sd-nav';
   nav.innerHTML = `
@@ -159,6 +162,7 @@
   }
 
   /* ── Footer ── */
+  if(noFooter) return;
   const footer = document.createElement('footer');
   footer.id = 'sd-footer';
   footer.innerHTML = `
