@@ -56,7 +56,7 @@ body{font-family:var(--font);background:var(--bg);color:#263238;min-height:100vh
 .ev-login{background:#e8f5ec;color:#1b5c42;}
 .ev-logout{background:var(--lgray);color:var(--gray);}
 .ev-feature_click{background:var(--pp);color:var(--purple);}
-.ev-uid{font-size:.7rem;color:var(--gray);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;}
+.ev-uid{font-size:.7rem;color:var(--gray);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;}
 .ev-detail{font-size:.75rem;color:#455a64;}
 
 /* 事件篩選 */
@@ -607,7 +607,10 @@ function renderEventList() {
   }
   $list.innerHTML = filtered.slice(0, 200).map(e => {
     const dt   = e.date || new Date(e.ts).toLocaleString('zh-TW');
-    const uid  = e.uid === 'anonymous' ? '訪客' : (e.uid || '—').slice(0, 8) + '…';
+    const isAnon   = !e.uid || e.uid === 'anonymous' || e.uid.startsWith('anon_');
+    const shortId  = isAnon
+      ? '👤 訪客 · ' + (e.uid || '').replace('anon_','').slice(0,6)
+      : '🔑 ' + (e.uid || '').slice(0, 8) + '…';
     const label = EV_LABELS[e.event] || e.event;
     let detail = '';
     if(e.event === 'page_view')    detail = e.page_name || e.page || '';
@@ -619,7 +622,7 @@ function renderEventList() {
       <div class="ev-time">${dt}</div>
       <div><span class="ev-badge ev-${e.event}">${label}</span></div>
       <div class="ev-detail">${detail}</div>
-      <div class="ev-uid" title="${e.uid || ''}">${uid}</div>
+      <div class="ev-uid" title="${e.uid || ''}">${shortId}</div>
     </div>`;
   }).join('');
 }

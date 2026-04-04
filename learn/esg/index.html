@@ -2620,10 +2620,16 @@ ul.s-list > li::before{
 
     window._fbUser = null;
 
+    // ── 匿名訪客 ID（localStorage 持久化，跨頁面追蹤）──
+    if (!localStorage.getItem('_anon_id')) {
+      localStorage.setItem('_anon_id', crypto.randomUUID());
+    }
+    window._anonId = localStorage.getItem('_anon_id');
+
     // ── Analytics 埋點核心函數 ──────────────────────────
     window._logEvent = function(eventName, params) {
       try {
-        const uid = window._fbUser ? window._fbUser.uid : 'anonymous';
+        const uid = window._fbUser ? window._fbUser.uid : ('anon_' + window._anonId);
         const payload = {
           event: eventName,
           uid:   uid,
