@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <clipPath id="circle-clip">
+      <circle cx="256" cy="256" r="240"/>
+    </clipPath>
+  </defs>
+  <circle cx="256" cy="256" r="256" fill="#1E3554"/>
+  <path d="M16 256 A240 240 0 0 1 496 256" fill="#E8B84B" clip-path="url(#circle-clip)"/>
+  <line x1="62"  y1="295" x2="450" y2="295" stroke="#FFFFFF" stroke-width="26" stroke-linecap="round" opacity="0.85"/>
+  <line x1="96"  y1="338" x2="416" y2="338" stroke="#FFFFFF" stroke-width="22" stroke-linecap="round" opacity="0.65"/>
+  <line x1="138" y1="378" x2="374" y2="378" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round" opacity="0.45"/>
+  <!-- 鎖頭角標 -->
+  <circle cx="400" cy="120" r="108" fill="#C0622A"/>
+  <rect x="358" y="112" width="84" height="64" rx="10" fill="white"/>
+  <path d="M373 112 V88 A27 27 0 0 1 427 88 V112" fill="none" stroke="white" stroke-width="20" stroke-linecap="round"/>
+  <circle cx="400" cy="142" r="12" fill="#C0622A"/>
+</svg>
