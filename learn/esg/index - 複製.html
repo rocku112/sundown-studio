@@ -2564,8 +2564,12 @@ ul.s-list > li::before{
 .tx-acc-tag.t-risk    {background:#FAEEDA;color:#633806}
 .tx-acc-tag.t-eco     {background:#EAF3DE;color:#27500A}
 .tx-acc-detail{font-size:13px;color:#444;line-height:1.75;padding:10px 0 2px}/* ── SunDown Studio footer ── */
-
-#sidebar{padding-bottom:calc(var(--bottom-nav-h) + env(safe-area-inset-bottom,0px));}}
+#sd-footer{margin-left:var(--sidebar-w);background:var(--card);border-top:1px solid var(--border);padding:10px 24px;display:flex;align-items:center;justify-content:center;gap:8px;flex-shrink:0;}
+#sd-footer .sd-lock{width:11px;height:11px;opacity:.4;flex-shrink:0;}
+#sd-footer .sd-text{font-size:.7rem;color:#b0a898;font-weight:500;}
+#sd-footer .sd-brand{font-weight:700;color:var(--sd-navy);opacity:.75;}
+#sd-footer .sd-dot{color:var(--border);margin:0 4px;}
+@media(max-width:640px){#sd-footer{margin-left:0;flex-wrap:wrap;gap:4px;padding-bottom:calc(var(--bottom-nav-h) + 10px);}#sidebar{padding-bottom:calc(var(--bottom-nav-h) + env(safe-area-inset-bottom,0px));}}
 
 /* ── Topbar auth ── */
 #topbar-auth{display:flex;align-items:center;gap:8px;flex-shrink:0;}
@@ -2657,7 +2661,6 @@ ul.s-list > li::before{
     };
   </script>
 
-<link rel="stylesheet" href="../../brand.css">
 </head>
 <body>
 <div id="app">
@@ -9906,13 +9909,16 @@ function togTxAcc(id){
   <span class="rq-label" id="return-to-q-label"></span>
 </button>
 
-<script>
-window.SD_CONFIG = {
-  product: '永續發展學習平台',
-  productColor: '#7A9A5A',
-  portalUrl: '../../index.html',
-};
-</script>
-<script src="../../brand.js"></script>
+<!-- SunDown Studio footer -->
+<footer id="sd-footer">
+  <svg class="sd-lock" viewBox="0 0 28 28" fill="none" style="width:16px;height:16px;flex-shrink:0;">
+    <circle cx="14" cy="14" r="13" fill="#2D4A6E"/>
+    <path d="M2 14 A12 12 0 0 1 26 14" fill="#E8B84B"/>
+    <line x1="5" y1="17" x2="23" y2="17" stroke="#fff" stroke-width="1.5" opacity=".85"/>
+    <line x1="7" y1="20" x2="21" y2="20" stroke="#fff" stroke-width="1.5" opacity=".65"/>
+    <line x1="9.5" y1="23" x2="18.5" y2="23" stroke="#fff" stroke-width="1.5" opacity=".45"/>
+  </svg>
+  <span class="sd-text"><span class="sd-brand">SunDown Studio</span> © 日落工作室 · 永續發展學習平台</span>
+</footer>
 </body>
 </html>
