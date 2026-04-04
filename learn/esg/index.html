@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>永續發展學習平台 · SunDown Studio 日落工作室</title>
+<title>永續知幾 · SunDown Studio 日落工作室</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Noto+Sans+TC:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -84,7 +84,7 @@ body{font-family:var(--font);background:var(--bg);color:#263238;overflow-x:hidde
 #menu-btn{display:none;background:none;border:none;cursor:pointer;font-size:1.4rem;padding:4px;flex-shrink:0;}
 
 /* Content area */
-#content{padding:24px;padding-bottom:40px;flex:1;width:100%;display:flex;flex-direction:column;min-height:0;}
+#content{padding:24px;flex:1;width:100%;display:flex;flex-direction:column;min-height:0;}
 
 /* Overlay for drawer */
 #overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:190;}
@@ -210,7 +210,7 @@ body{font-family:var(--font);background:var(--bg);color:#263238;overflow-x:hidde
   #sidebar.open{transform:translateX(0);}
   #bottom-nav{display:flex;}
   #main{margin-left:0;padding-bottom:calc(var(--bottom-nav-h) + env(safe-area-inset-bottom,0px));}
-  #content{padding:12px;padding-bottom:calc(var(--bottom-nav-h) + 32px);}
+  #content{padding:12px;padding-bottom:calc(var(--bottom-nav-h) + env(safe-area-inset-bottom,0px));}
   #topbar{padding:0 12px;}
   #topbar h1{font-size:.9rem;}
   /* 手機也要顯示漢堡按鈕（sidebar 可滑入） */
@@ -226,7 +226,7 @@ body{font-family:var(--font);background:var(--bg);color:#263238;overflow-x:hidde
 
 /* ── 超窄手機(≤390px) iPhone SE 等 ── */
 @media(max-width:390px){
-  #content{padding:10px;padding-bottom:calc(var(--bottom-nav-h) + 32px);}
+  #content{padding:10px;padding-bottom:calc(var(--bottom-nav-h) + env(safe-area-inset-bottom,0px));}
   #topbar h1{font-size:.82rem;}
   .stats-grid{gap:8px;}
   .stat-card{padding:12px 8px;}
@@ -2669,7 +2669,7 @@ ul.s-list > li::before{
       <svg style="width:36px;height:36px;flex-shrink:0" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><clipPath id="sd-sb-hdr-clip"><circle cx="256" cy="256" r="240"/></clipPath></defs><circle cx="256" cy="256" r="256" fill="#1E3554"/><path d="M16 256 A240 240 0 0 1 496 256" fill="#E8B84B" clip-path="url(#sd-sb-hdr-clip)"/><line x1="62" y1="295" x2="450" y2="295" stroke="#fff" stroke-width="26" stroke-linecap="round" opacity=".85"/><line x1="96" y1="338" x2="416" y2="338" stroke="#fff" stroke-width="22" stroke-linecap="round" opacity=".65"/><line x1="138" y1="378" x2="374" y2="378" stroke="#fff" stroke-width="18" stroke-linecap="round" opacity=".45"/></svg>
       <div style="line-height:1.2">
         <div style="font-family:'Jost',sans-serif;font-size:14px;font-weight:900;color:#1E3554;letter-spacing:.04em"><span style="color:#C9960A">Sun</span>Down Studio</div>
-        <div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;color:#8A96A8;letter-spacing:.04em;margin-top:2px">永續發展學習平台</div>
+        <div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;color:#8A96A8;letter-spacing:.04em;margin-top:2px">永續知幾</div>
       </div>
     </a>
   </div>
@@ -9908,9 +9908,18 @@ function togTxAcc(id){
   <span class="rq-label" id="return-to-q-label"></span>
 </button>
 
+<!-- SunDown Studio Footer -->
+<div id="sd-brand-footer" style="border-top:1px solid #e8e2d8;padding:14px 24px;display:flex;flex-direction:column;align-items:center;gap:4px;font-family:'Jost','Noto Sans TC',sans-serif;">
+  <div style="display:flex;align-items:center;gap:7px;">
+    <svg style="width:18px;height:18px;flex-shrink:0" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><clipPath id="sd-ft-clip"><circle cx="256" cy="256" r="240"/></clipPath></defs><circle cx="256" cy="256" r="256" fill="#1E3554"/><path d="M16 256 A240 240 0 0 1 496 256" fill="#E8B84B" clip-path="url(#sd-ft-clip)"/><line x1="62" y1="295" x2="450" y2="295" stroke="#fff" stroke-width="26" stroke-linecap="round" opacity=".85"/><line x1="96" y1="338" x2="416" y2="338" stroke="#fff" stroke-width="22" stroke-linecap="round" opacity=".65"/><line x1="138" y1="378" x2="374" y2="378" stroke="#fff" stroke-width="18" stroke-linecap="round" opacity=".45"/></svg>
+    <span style="font-size:12px;font-weight:700;color:#8A96A8;letter-spacing:.04em"><span style="color:#C9960A">SunDown</span> Studio &nbsp;©&nbsp; 日落工作室 · 永續知幾</span>
+  </div>
+  <div style="font-size:10px;color:#b0a898;letter-spacing:.05em">© 2025 SunDown Studio · All rights reserved</div>
+</div>
+
 <script>
 window.SD_CONFIG = {
-  product: '永續發展學習平台',
+  product: '永續知幾',
   productColor: '#7A9A5A',
   portalUrl: '../../index.html',
   noNav: true,
