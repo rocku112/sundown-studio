@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ESG 管理後台</title>
+<title>永續知幾 · 管理後台</title>
 <style>
 :root{
   --green:#1b5c42;--gl:#3fa068;--gp:#e2f5ec;--gll:#72c49a;--gd:#0f3a28;
@@ -21,6 +21,52 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:var(--font);background:var(--bg);color:#263238;min-height:100vh;overflow-x:hidden}
+
+/* ── 主分頁 tab 切換 ── */
+.main-tabs{display:flex;gap:2px;padding:0 28px;background:var(--card);border-bottom:1px solid var(--border2);margin-bottom:0;}
+.main-tab{padding:12px 20px;border:none;background:none;font-family:var(--font);font-size:.85rem;font-weight:600;color:var(--gray);cursor:pointer;border-bottom:3px solid transparent;transition:all var(--tr);}
+.main-tab:hover{color:var(--green);background:var(--gp);}
+.main-tab.active{color:var(--green);border-bottom-color:var(--gl);}
+.tab-pane{display:none;}
+.tab-pane.active{display:block;}
+
+/* ── Analytics 分頁樣式 ── */
+#analytics-wrap{padding:24px 28px;max-width:1280px;width:100%;margin:0 auto;}
+.an-stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
+.an-section-title{font-size:.78rem;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+.an-section-title::before{content:'';width:3px;height:14px;background:var(--gl);border-radius:2px;display:inline-block;}
+.an-card{background:var(--card);border:1px solid var(--border2);border-radius:var(--radius);padding:20px;margin-bottom:20px;box-shadow:var(--shadow);}
+
+/* 頁面熱度圖 */
+.pg-heat-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;}
+.pg-heat-item{border-radius:var(--radius-sm);padding:16px 12px;text-align:center;border:1px solid var(--border);}
+.pg-heat-name{font-size:.72rem;color:var(--gray);margin-bottom:6px;}
+.pg-heat-count{font-size:1.6rem;font-weight:800;}
+.pg-heat-bar{height:5px;border-radius:3px;margin-top:8px;background:var(--lgray);overflow:hidden;}
+.pg-heat-fill{height:100%;border-radius:3px;background:var(--gl);transition:width .5s ease;}
+
+/* 事件時間軸 */
+.ev-list{display:flex;flex-direction:column;gap:6px;max-height:480px;overflow-y:auto;}
+.ev-item{display:grid;grid-template-columns:140px 100px 1fr auto;align-items:center;gap:12px;padding:10px 14px;background:var(--card);border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:.8rem;}
+.ev-time{color:var(--gray);font-size:.75rem;}
+.ev-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:.7rem;font-weight:700;white-space:nowrap;}
+.ev-page_view{background:var(--gp);color:var(--green);}
+.ev-exam_start{background:var(--bp);color:var(--blue);}
+.ev-exam_submit{background:var(--op);color:var(--orange);}
+.ev-login{background:#e8f5ec;color:#1b5c42;}
+.ev-logout{background:var(--lgray);color:var(--gray);}
+.ev-feature_click{background:var(--pp);color:var(--purple);}
+.ev-uid{font-size:.7rem;color:var(--gray);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;}
+.ev-detail{font-size:.75rem;color:#455a64;}
+
+/* 事件篩選 */
+.an-filter-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center;}
+.an-chip{padding:4px 12px;border-radius:20px;font-size:.75rem;font-weight:600;cursor:pointer;border:1.5px solid var(--border);background:#fff;color:var(--gray);transition:all var(--tr);}
+.an-chip.active{background:var(--green);color:#fff;border-color:var(--green);}
+.an-loading{display:flex;align-items:center;gap:10px;color:var(--gray);font-size:.85rem;padding:32px;justify-content:center;}
+
+@media(max-width:960px){.an-stats-row{grid-template-columns:repeat(2,1fr)}.pg-heat-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:600px){.ev-item{grid-template-columns:1fr auto;}.ev-time,.ev-uid{display:none;}.an-stats-row{grid-template-columns:1fr 1fr}.pg-heat-grid{grid-template-columns:repeat(2,1fr)}}
 
 /* ══════════════════ LOGIN ══════════════════ */
 #login-screen{
@@ -282,7 +328,7 @@ main{padding:24px 28px;max-width:1280px;width:100%;margin:0 auto;animation:fadeU
 <div id="login-screen">
   <div class="login-card">
     <div class="login-emblem">🌿</div>
-    <h1>ESG 管理後台</h1>
+    <h1>永續知幾 管理後台</h1>
     <p class="sub">請使用管理員帳號登入<br>以檢視全體學員的學習狀況</p>
     <button id="btn-google">
       <svg viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
@@ -297,7 +343,7 @@ main{padding:24px 28px;max-width:1280px;width:100%;margin:0 auto;animation:fadeU
   <header>
     <div class="h-left">
       <span class="h-badge">ADMIN</span>
-      <h1>ESG 永續學習平台 <span>/ 管理後台</span></h1>
+      <h1>永續知幾 <span>/ 管理後台</span></h1>
     </div>
     <div class="h-right">
       <span id="admin-email"></span>
@@ -309,6 +355,14 @@ main{padding:24px 28px;max-width:1280px;width:100%;margin:0 auto;animation:fadeU
     </div>
   </header>
 
+  <!-- 主分頁 tab -->
+  <div class="main-tabs">
+    <button class="main-tab active" data-pane="pane-users">👥 學員管理</button>
+    <button class="main-tab" data-pane="pane-analytics">📊 操作紀錄</button>
+  </div>
+
+  <!-- 分頁一：學員管理（原有內容） -->
+  <div id="pane-users" class="tab-pane active">
   <main>
     <!-- STATS -->
     <div class="stats-row">
@@ -337,7 +391,47 @@ main{padding:24px 28px;max-width:1280px;width:100%;margin:0 auto;animation:fadeU
       <div class="e-icon">🔍</div><p>找不到符合條件的學員</p>
     </div>
   </main>
-</div>
+  </div>
+
+  <!-- 分頁二：Analytics 操作紀錄 -->
+  <div id="pane-analytics" class="tab-pane">
+    <div id="analytics-wrap">
+      <div class="an-loading" id="an-loading"><div class="spinner"></div><span>載入操作紀錄中…</span></div>
+      <div id="an-content" style="display:none;">
+        <!-- 統計卡 -->
+        <div class="an-stats-row">
+          <div class="sc c0"><div class="sc-icon">👣</div><div class="sc-body"><div class="sc-val" id="an-s-total">—</div><div class="sc-lbl">總事件筆數</div></div></div>
+          <div class="sc c1"><div class="sc-icon">📄</div><div class="sc-body"><div class="sc-val" id="an-s-pv">—</div><div class="sc-lbl">頁面瀏覽次數</div></div></div>
+          <div class="sc c2"><div class="sc-icon">✍️</div><div class="sc-body"><div class="sc-val" id="an-s-exam">—</div><div class="sc-lbl">考試次數（含匿名）</div></div></div>
+          <div class="sc c3"><div class="sc-icon">🔑</div><div class="sc-body"><div class="sc-val" id="an-s-login">—</div><div class="sc-lbl">登入次數</div></div></div>
+        </div>
+
+        <!-- 頁面熱度 -->
+        <div class="an-card">
+          <div class="an-section-title">頁面瀏覽熱度</div>
+          <div class="pg-heat-grid" id="pg-heat-grid"></div>
+        </div>
+
+        <!-- 事件時間軸 -->
+        <div class="an-card">
+          <div class="an-section-title">操作事件紀錄</div>
+          <div class="an-filter-row">
+            <span style="font-size:.78rem;color:var(--gray);margin-right:4px;">篩選：</span>
+            <button class="an-chip active" data-filter="all">全部</button>
+            <button class="an-chip" data-filter="page_view">頁面瀏覽</button>
+            <button class="an-chip" data-filter="exam_start">考試開始</button>
+            <button class="an-chip" data-filter="exam_submit">考試結束</button>
+            <button class="an-chip" data-filter="login">登入</button>
+            <button class="an-chip" data-filter="logout">登出</button>
+            <button class="an-chip" data-filter="feature_click">功能點擊</button>
+          </div>
+          <div class="ev-list" id="ev-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /#dashboard -->
 
 <!-- ── DRAWER ── -->
 <div id="drawer-overlay"></div>
@@ -364,7 +458,7 @@ main{padding:24px 28px;max-width:1280px;width:100%;margin:0 auto;animation:fadeU
 import { initializeApp }   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut as fbSignOut }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getDatabase, ref, get } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+import { getDatabase, ref, get, query, orderByChild, limitToLast } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyAzY_dPwuap8_SCDhAvEJ2d_H_pETKp_M8",
@@ -419,7 +513,117 @@ onAuthStateChanged(auth, user => {
 document.getElementById('btn-google').addEventListener('click', () =>
   signInWithPopup(auth, new GoogleAuthProvider()).catch(console.error));
 document.getElementById('btn-logout').addEventListener('click', () => fbSignOut(auth));
-document.getElementById('btn-refresh').addEventListener('click', loadData);
+document.getElementById('btn-refresh').addEventListener('click', () => {
+  const active = document.querySelector('.main-tab.active');
+  if(active && active.dataset.pane === 'pane-analytics') loadAnalytics();
+  else loadData();
+});
+
+// ── 主分頁切換 ──────────────────────────────────────
+document.querySelectorAll('.main-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.main-tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.pane).classList.add('active');
+    if(btn.dataset.pane === 'pane-analytics') loadAnalytics();
+  });
+});
+
+// ── Analytics 資料載入 ──────────────────────────────
+let allEvents = [];
+let evFilter  = 'all';
+
+async function loadAnalytics() {
+  document.getElementById('an-loading').style.display = 'flex';
+  document.getElementById('an-content').style.display = 'none';
+  try {
+    const snap = await get(query(ref(db, 'analytics/events'), orderByChild('ts'), limitToLast(500)));
+    const raw  = snap.val();
+    allEvents  = raw ? Object.values(raw).sort((a, b) => b.ts - a.ts) : [];
+    renderAnalytics();
+    document.getElementById('an-loading').style.display = 'none';
+    document.getElementById('an-content').style.display = 'block';
+  } catch(err) {
+    document.getElementById('an-loading').innerHTML =
+      `<span style="color:var(--red);font-size:.85rem">載入失敗：${err.message}</span>`;
+  }
+}
+
+function renderAnalytics() {
+  const pvEvents    = allEvents.filter(e => e.event === 'page_view');
+  const examEvents  = allEvents.filter(e => e.event === 'exam_submit');
+  const loginEvents = allEvents.filter(e => e.event === 'login');
+
+  document.getElementById('an-s-total').textContent = allEvents.length;
+  document.getElementById('an-s-pv').textContent    = pvEvents.length;
+  document.getElementById('an-s-exam').textContent  = examEvents.length;
+  document.getElementById('an-s-login').textContent = loginEvents.length;
+
+  // 頁面熱度
+  const PAGE_LABELS = {
+    home:'首頁', reader:'精華筆記', textbook2:'永續課文',
+    notes:'考點卡片', charts:'圖表總覽', podcast:'Podcast',
+    textbook:'永續題庫', quiz:'歷屆題庫', exam:'模擬考試', progress:'學習進度'
+  };
+  const pageCounts = {};
+  pvEvents.forEach(e => {
+    const p = e.page || 'unknown';
+    pageCounts[p] = (pageCounts[p] || 0) + 1;
+  });
+  const maxPv = Math.max(1, ...Object.values(pageCounts));
+  const sorted = Object.entries(pageCounts).sort((a,b) => b[1]-a[1]);
+  const heatColors = ['#1b5c42','#3fa068','#72c49a','#2563a8','#89b4d4','#c87848','#8872b8','#4a9480','#b71c1c','#7a6e65'];
+  document.getElementById('pg-heat-grid').innerHTML = sorted.map(([page, cnt], i) => `
+    <div class="pg-heat-item">
+      <div class="pg-heat-name">${PAGE_LABELS[page] || page}</div>
+      <div class="pg-heat-count" style="color:${heatColors[i%heatColors.length]}">${cnt}</div>
+      <div class="pg-heat-bar"><div class="pg-heat-fill" style="width:${(cnt/maxPv*100).toFixed(0)}%;background:${heatColors[i%heatColors.length]}"></div></div>
+    </div>`).join('') || '<div style="color:var(--gray);font-size:.85rem;padding:16px;">尚無頁面瀏覽資料</div>';
+
+  renderEventList();
+
+  // 篩選chip事件
+  document.querySelectorAll('.an-chip').forEach(chip => {
+    chip.onclick = () => {
+      document.querySelectorAll('.an-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      evFilter = chip.dataset.filter;
+      renderEventList();
+    };
+  });
+}
+
+function renderEventList() {
+  const EV_LABELS = {
+    page_view: '頁面瀏覽', exam_start: '考試開始', exam_submit: '考試結束',
+    login: '登入', logout: '登出', feature_click: '功能點擊'
+  };
+  const filtered = evFilter === 'all' ? allEvents : allEvents.filter(e => e.event === evFilter);
+  const $list = document.getElementById('ev-list');
+  if (!filtered.length) {
+    $list.innerHTML = '<div style="color:var(--gray);font-size:.85rem;padding:20px;text-align:center;">沒有符合的紀錄</div>';
+    return;
+  }
+  $list.innerHTML = filtered.slice(0, 200).map(e => {
+    const dt   = e.date || new Date(e.ts).toLocaleString('zh-TW');
+    const uid  = e.uid === 'anonymous' ? '訪客' : (e.uid || '—').slice(0, 8) + '…';
+    const label = EV_LABELS[e.event] || e.event;
+    let detail = '';
+    if(e.event === 'page_view')    detail = e.page_name || e.page || '';
+    if(e.event === 'exam_submit')  detail = `${e.correct}/${e.total} 題 (${e.pct}%) ${e.passed ? '✓通過' : '✗未通過'}`;
+    if(e.event === 'exam_start')   detail = `${e.question_count} 題`;
+    if(e.event === 'login')        detail = e.email || '';
+    if(e.event === 'feature_click') detail = `從 ${e.from_page || '?'} 頁跳轉`;
+    return `<div class="ev-item">
+      <div class="ev-time">${dt}</div>
+      <div><span class="ev-badge ev-${e.event}">${label}</span></div>
+      <div class="ev-detail">${detail}</div>
+      <div class="ev-uid" title="${e.uid || ''}">${uid}</div>
+    </div>`;
+  }).join('');
+}
+
 document.getElementById('search-input').addEventListener('input', e => renderGrid(e.target.value));
 document.getElementById('drawer-close').addEventListener('click', closeDrawer);
 $overlay.addEventListener('click', closeDrawer);

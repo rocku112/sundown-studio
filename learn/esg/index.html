@@ -2583,12 +2583,24 @@ ul.s-list > li::before{
 
 </script>
 
+  <!-- Google Analytics 4 -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-4CTZGQMDVW"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-4CTZGQMDVW');
+    window._ga4 = function(eventName, params) {
+      if(typeof gtag === 'function') gtag('event', eventName, params || {});
+    };
+  </script>
+
   <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getDatabase, ref, set, get, onValue }
+    import { getDatabase, ref, set, get, push, onValue }
       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
     const firebaseConfig = {
@@ -2608,6 +2620,22 @@ ul.s-list > li::before{
 
     window._fbUser = null;
 
+    // ── Analytics 埋點核心函數 ──────────────────────────
+    window._logEvent = function(eventName, params) {
+      try {
+        const uid = window._fbUser ? window._fbUser.uid : 'anonymous';
+        const payload = {
+          event: eventName,
+          uid:   uid,
+          ts:    Date.now(),
+          date:  new Date().toLocaleString('zh-TW', {timeZone:'Asia/Taipei'}),
+          ...(params || {})
+        };
+        push(ref(db, 'analytics/events'), payload).catch(()=>{});
+        window._ga4 && window._ga4(eventName, { uid, ...(params || {}) });
+      } catch(e) {}
+    };
+
     window.fbSignIn = async function() {
       try {
         await signInWithPopup(auth, provider);
@@ -2618,6 +2646,7 @@ ul.s-list > li::before{
     };
 
     window.fbSignOut = async function() {
+      window._logEvent('logout', { email: window._fbUser?.email || '' });
       await signOut(auth);
       showToast('已登出');
     };
@@ -2626,6 +2655,7 @@ ul.s-list > li::before{
       window._fbUser = user;
       _updateAuthUI(user);
       if(user) {
+        window._logEvent('login', { email: user.email || '', displayName: user.displayName || '' });
         // 寫入 profile（供管理後台顯示）
         set(ref(db, 'users/' + user.uid + '/profile'), {
           email:       user.email       || '',
@@ -6052,6 +6082,8 @@ function _captureAndGo(fn) {
   var rawId = ((document.querySelector('.page.active')||{}).id || '');
   var pageId = rawId.replace(/^page-/, '');
   _setReturnState(pageId, null, _makeRestoreFn(pageId));
+  // ── 功能跳轉埋點 ──
+  window._logEvent && window._logEvent('feature_click', { from_page: pageId, action: 'view_reference' });
   fn();
 }
 
@@ -6184,6 +6216,14 @@ function goPage(id){
   const sCtx = document.getElementById('sidebar-reading-ctx');
   if(sCtx) sCtx.style.display = (id === PAGES.READER ? 'block' : 'none');
   window.scrollTo(0, 0);
+
+  // ── 頁面切換埋點 ──
+  const _pageNames = {
+    home:'首頁', reader:'精華筆記', textbook2:'永續課文',
+    notes:'考點卡片', charts:'圖表總覽', podcast:'Podcast',
+    textbook:'永續題庫', quiz:'歷屆題庫', exam:'模擬考試', progress:'學習進度'
+  };
+  window._logEvent && window._logEvent('page_view', { page: id, page_name: _pageNames[id] || id });
 }
 
 document.querySelectorAll('.nav-item').forEach(el =>
@@ -7272,6 +7312,8 @@ function startExam(){
   document.getElementById('exam-q-count').textContent   = '(' + examQ.length + ' 題)';
   startTimer();
   renderExamQ();
+  // ── 考試開始埋點 ──
+  window._logEvent && window._logEvent('exam_start', { question_count: examQ.length });
 }
 
 function startTimer(){
@@ -7383,6 +7425,11 @@ function submitExam(){
   });
   p.history.unshift({date:new Date().toLocaleDateString('zh-TW'),type:'模擬考試',total,correct,pct,passed,chStats:_eChStats,secStats:_eSecStats});
   saveProgress(p);
+  // ── 考試結束埋點 ──
+  window._logEvent && window._logEvent('exam_submit', {
+    total, correct, pct, passed,
+    skipped: total - Object.keys(examAns).length
+  });
   const L          = ['A','B','C','D'];
   const wrongItems = examQ.map((q, i) => {
     const ua = examAns[i];
