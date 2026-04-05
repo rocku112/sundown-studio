@@ -2,7 +2,6 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-  <link rel="icon" type="image/svg+xml" href="/sundown-studio/favicon.svg">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>永續知幾 · SunDown Studio 日落工作室</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2572,13 +2571,31 @@ ul.s-list > li::before{
 #topbar-auth{display:flex;align-items:center;gap:8px;flex-shrink:0;}
 #tb-login-btn{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:8px;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-size:.78rem;font-weight:600;color:#444;font-family:var(--font);transition:background .15s,border-color .15s;}
 #tb-login-btn:hover{background:var(--lgray);border-color:#c5bfb5;}
-#tb-user{display:none;align-items:center;gap:7px;cursor:pointer;padding:4px 8px;border-radius:8px;transition:background .15s;}
+#tb-user-wrap{position:relative;display:none;}
+#tb-user{display:flex;align-items:center;gap:7px;cursor:pointer;padding:4px 8px;border-radius:8px;transition:background .15s;user-select:none;}
 #tb-user:hover{background:var(--lgray);}
 #tb-avatar{width:26px;height:26px;border-radius:50%;object-fit:cover;border:1.5px solid var(--border);background:var(--gp);}
 #tb-avatar-fallback{width:26px;height:26px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:#fff;flex-shrink:0;}
 #tb-name{font-size:.78rem;font-weight:600;color:#2a221a;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-#tb-logout-tip{font-size:.68rem;color:var(--gray);}
-@media(max-width:640px){#tb-name,#tb-logout-tip{display:none;}#tb-login-btn span.tb-login-text{display:none;}}
+#tb-chevron{font-size:.6rem;color:var(--gray);transition:transform .15s;flex-shrink:0;}
+#tb-user-wrap.open #tb-chevron{transform:rotate(180deg);}
+/* Dropdown 選單 */
+#tb-dropdown{
+  display:none;position:absolute;top:calc(100% + 8px);right:0;
+  background:#fff;border:1px solid var(--border);border-radius:12px;
+  box-shadow:0 4px 20px rgba(0,0,0,.12);min-width:200px;z-index:500;
+  overflow:hidden;animation:dropFadeIn .15s ease;
+}
+@keyframes dropFadeIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+#tb-user-wrap.open #tb-dropdown{display:block;}
+.tb-drop-info{padding:14px 16px;border-bottom:1px solid var(--border);}
+.tb-drop-name{font-size:.85rem;font-weight:700;color:#1a2e1a;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tb-drop-email{font-size:.72rem;color:var(--gray);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tb-drop-btn{display:flex;align-items:center;gap:8px;width:100%;padding:11px 16px;border:none;background:none;font-family:var(--font);font-size:.82rem;cursor:pointer;color:#263238;transition:background .12s;text-align:left;}
+.tb-drop-btn:hover{background:var(--lgray);}
+.tb-drop-btn.danger{color:var(--red);}
+.tb-drop-btn.danger:hover{background:var(--rp);}
+@media(max-width:640px){#tb-name,#tb-chevron{display:none;}#tb-login-btn span.tb-login-text{display:none;}#tb-dropdown{right:-8px;}}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js">
 
@@ -2765,13 +2782,27 @@ ul.s-list > li::before{
           <svg width="14" height="14" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.2l6.8-6.8C35.8 2.4 30.2 0 24 0 14.6 0 6.6 5.4 2.6 13.2l7.9 6.1C12.4 13 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.6 5.9c4.4-4.1 7-10.1 7-17.1z"/><path fill="#FBBC05" d="M10.5 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7L2.4 13.2A23.9 23.9 0 0 0 0 24c0 3.8.9 7.4 2.5 10.6l8-5.9z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.6-5.9c-2 1.4-4.6 2.2-7.6 2.2-6.2 0-11.5-4.2-13.4-9.8l-8 5.9C6.5 42.5 14.6 48 24 48z"/></svg>
           <span class="tb-login-text">登入</span>
         </button>
-        <!-- Logged in -->
-        <div id="tb-user" onclick="fbSignOut()" title="點擊登出">
-          <img id="tb-avatar" src="" alt="" onerror="this.style.display='none';document.getElementById('tb-avatar-fallback').style.display='flex'">
-          <div id="tb-avatar-fallback" style="display:none;"></div>
-          <div>
+        <!-- Logged in：點頭像展開 dropdown -->
+        <div id="tb-user-wrap">
+          <div id="tb-user" onclick="toggleUserDropdown()">
+            <img id="tb-avatar" src="" alt="" onerror="this.style.display='none';document.getElementById('tb-avatar-fallback').style.display='flex'">
+            <div id="tb-avatar-fallback" style="display:none;"></div>
             <div id="tb-name"></div>
-            <div id="tb-logout-tip">點擊登出</div>
+            <span id="tb-chevron">▾</span>
+          </div>
+          <div id="tb-dropdown">
+            <div class="tb-drop-info">
+              <div class="tb-drop-name" id="tb-drop-name">—</div>
+              <div class="tb-drop-email" id="tb-drop-email">—</div>
+            </div>
+            <button class="tb-drop-btn" onclick="goPage('progress');closeUserDropdown()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              學習進度
+            </button>
+            <button class="tb-drop-btn danger" onclick="fbSignOut()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              登出
+            </button>
           </div>
         </div>
       </div>
@@ -9903,24 +9934,42 @@ document.getElementById('tx-body') && document.getElementById('tx-body').addEven
 
 // ── Firebase 登入狀態 UI 更新 ──────────────────────────────
 function _updateAuthUI(user) {
-  // Topbar auth
-  const tbLogin  = document.getElementById('tb-login-btn');
-  const tbUser   = document.getElementById('tb-user');
-  const tbAvatar = document.getElementById('tb-avatar');
+  const tbLogin    = document.getElementById('tb-login-btn');
+  const tbWrap     = document.getElementById('tb-user-wrap');
+  const tbAvatar   = document.getElementById('tb-avatar');
   const tbFallback = document.getElementById('tb-avatar-fallback');
-  const tbName   = document.getElementById('tb-name');
+  const tbName     = document.getElementById('tb-name');
+  const tbDropName  = document.getElementById('tb-drop-name');
+  const tbDropEmail = document.getElementById('tb-drop-email');
   if(user) {
-    if(tbLogin)  tbLogin.style.display  = 'none';
-    if(tbUser)   tbUser.style.display   = 'flex';
+    if(tbLogin) tbLogin.style.display = 'none';
+    if(tbWrap)  tbWrap.style.display  = 'block';
     if(tbAvatar && user.photoURL){ tbAvatar.src = user.photoURL; tbAvatar.style.display='block'; }
     const initials = (user.displayName||user.email||'U').charAt(0).toUpperCase();
-    if(tbFallback) tbFallback.textContent = initials;
-    if(tbName)   tbName.textContent = user.displayName || user.email || '';
+    if(tbFallback)  tbFallback.textContent = initials;
+    if(tbName)      tbName.textContent     = user.displayName || user.email || '';
+    if(tbDropName)  tbDropName.textContent  = user.displayName || '未設定名稱';
+    if(tbDropEmail) tbDropEmail.textContent = user.email || '';
   } else {
-    if(tbLogin)  tbLogin.style.display  = 'flex';
-    if(tbUser)   tbUser.style.display   = 'none';
+    if(tbLogin) tbLogin.style.display = 'flex';
+    if(tbWrap)  tbWrap.style.display  = 'none';
+    closeUserDropdown();
   }
 }
+
+function toggleUserDropdown() {
+  const wrap = document.getElementById('tb-user-wrap');
+  if(wrap) wrap.classList.toggle('open');
+}
+function closeUserDropdown() {
+  const wrap = document.getElementById('tb-user-wrap');
+  if(wrap) wrap.classList.remove('open');
+}
+// 點選單外部自動關閉
+document.addEventListener('click', function(e) {
+  const wrap = document.getElementById('tb-user-wrap');
+  if(wrap && !wrap.contains(e.target)) closeUserDropdown();
+});
 
 
 
