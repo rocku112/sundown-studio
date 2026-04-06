@@ -2,6 +2,7 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="/sundown-studio/favicon-admin.svg">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>永續知幾 · 管理後台</title>
 <style>
@@ -68,52 +69,7 @@ body{font-family:var(--font);background:var(--bg);color:#263238;min-height:100vh
 @media(max-width:960px){.an-stats-row{grid-template-columns:repeat(2,1fr)}.pg-heat-grid{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:600px){.ev-item{grid-template-columns:1fr auto;}.ev-time,.ev-uid{display:none;}.an-stats-row{grid-template-columns:1fr 1fr}.pg-heat-grid{grid-template-columns:repeat(2,1fr)}}
 
-/* ══════════════════ 訪客管理 ══════════════════ */
-#pane-visitors main{padding:24px 28px;max-width:1280px;width:100%;margin:0 auto;}
-.visitor-card{
-  background:var(--card);border:1px solid var(--border2);border-radius:var(--radius);
-  padding:16px 20px;cursor:pointer;
-  display:grid;grid-template-columns:44px 1fr auto auto auto;align-items:center;gap:16px;
-  transition:all var(--tr);box-shadow:var(--shadow);margin-bottom:8px;
-}
-.visitor-card:hover{border-color:var(--gll);box-shadow:var(--shadow-md);transform:translateY(-1px);}
-.visitor-card.active{border-color:var(--gl);background:linear-gradient(to right,#f6fbf8,#fff);}
-.vc-avatar{
-  width:44px;height:44px;border-radius:12px;
-  background:linear-gradient(135deg,#4a7ab5,#7aa8d4);
-  display:flex;align-items:center;justify-content:center;
-  color:#fff;font-size:.85rem;font-weight:800;flex-shrink:0;letter-spacing:-.5px;
-}
-.vc-info .vc-name{font-size:.9rem;font-weight:700;color:#1a2e1a;margin-bottom:3px;}
-.vc-info .vc-pages{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;}
-.vc-page-pill{font-size:.65rem;font-weight:600;padding:1px 7px;border-radius:10px;background:var(--gp);color:var(--green);}
-.vc-stat{text-align:center;flex-shrink:0;min-width:60px;}
-.vc-stat-val{font-size:.95rem;font-weight:800;}
-.vc-stat-lbl{font-size:.68rem;color:var(--gray);margin-top:1px;}
-.vc-last{font-size:.72rem;color:var(--gray);text-align:right;flex-shrink:0;min-width:90px;}
-
-/* 訪客 drawer 事件列表 */
-.vd-ev-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);}
-.vd-ev-item:last-child{border-bottom:none;}
-.vd-ev-time{font-size:.72rem;color:var(--gray);flex-shrink:0;width:130px;}
-.vd-ev-detail{font-size:.78rem;color:#455a64;flex:1;}
-
-@media(max-width:600px){
-  .visitor-card{grid-template-columns:44px 1fr;}
-  .vc-stat,.vc-last{display:none;}
-}
-
-/* ══════════════════ 訪客 DRAWER ══════════════════ */
-#vd-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:300;backdrop-filter:blur(2px);}
-#vd-overlay.show{display:block;animation:fadeIn .2s ease;}
-#vd-drawer{
-  position:fixed;top:0;right:0;bottom:0;width:var(--drawer-w);max-width:100vw;
-  background:var(--bg);z-index:301;
-  box-shadow:-8px 0 40px rgba(0,0,0,.15);
-  transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);
-  display:flex;flex-direction:column;overflow:hidden;
-}
-#vd-drawer.open{transform:none;}
+/* ══════════════════ LOGIN ══════════════════ */
 #login-screen{
   display:flex;align-items:center;justify-content:center;
   min-height:100vh;
@@ -403,7 +359,6 @@ main{padding:24px 28px;max-width:1280px;width:100%;margin:0 auto;animation:fadeU
   <!-- 主分頁 tab -->
   <div class="main-tabs">
     <button class="main-tab active" data-pane="pane-users">👥 學員管理</button>
-    <button class="main-tab" data-pane="pane-visitors">👤 訪客管理</button>
     <button class="main-tab" data-pane="pane-analytics">📊 操作紀錄</button>
   </div>
 
@@ -437,30 +392,9 @@ main{padding:24px 28px;max-width:1280px;width:100%;margin:0 auto;animation:fadeU
       <div class="e-icon">🔍</div><p>找不到符合條件的學員</p>
     </div>
   </main>
-  </div><!-- /#pane-users -->
-
-  <!-- 分頁二：訪客管理 -->
-  <div id="pane-visitors" class="tab-pane">
-    <main>
-      <div class="stats-row">
-        <div class="sc c0"><div class="sc-icon">👤</div><div class="sc-body"><div class="sc-val" id="vs-total">—</div><div class="sc-lbl">不重複訪客數</div></div></div>
-        <div class="sc c1"><div class="sc-icon">👣</div><div class="sc-body"><div class="sc-val" id="vs-events">—</div><div class="sc-lbl">匿名事件總數</div></div></div>
-        <div class="sc c2"><div class="sc-icon">📄</div><div class="sc-body"><div class="sc-val" id="vs-avg-pv">—</div><div class="sc-lbl">平均瀏覽頁數</div></div></div>
-        <div class="sc c3"><div class="sc-icon">🕐</div><div class="sc-body"><div class="sc-val" id="vs-last">—</div><div class="sc-lbl">最後訪問時間</div></div></div>
-      </div>
-      <div class="toolbar">
-        <div class="toolbar-left">
-          <span class="sec-title">訪客列表</span>
-          <span class="count-pill" id="vs-count-pill">0 人</span>
-        </div>
-      </div>
-      <div id="vs-loading"><div class="spinner" style="margin:40px auto;display:block;"></div></div>
-      <div id="vs-grid" style="display:none;"></div>
-      <div id="vs-empty" style="display:none;" class="empty-wrap">
-        <div class="e-icon">👤</div><p>尚無訪客資料</p>
-      </div>
-    </main>
   </div>
+
+  <!-- 分頁二：Analytics 操作紀錄 -->
   <div id="pane-analytics" class="tab-pane">
     <div id="analytics-wrap">
       <div class="an-loading" id="an-loading"><div class="spinner"></div><span>載入操作紀錄中…</span></div>
@@ -500,7 +434,7 @@ main{padding:24px 28px;max-width:1280px;width:100%;margin:0 auto;animation:fadeU
 
 </div><!-- /#dashboard -->
 
-<!-- ── DRAWER（學員） ── -->
+<!-- ── DRAWER ── -->
 <div id="drawer-overlay"></div>
 <div id="drawer">
   <div class="drawer-header">
@@ -518,24 +452,6 @@ main{padding:24px 28px;max-width:1280px;width:100%;margin:0 auto;animation:fadeU
       <button class="d-tab" data-tab="history">考試紀錄</button>
     </div>
     <div id="d-content"></div>
-  </div>
-</div>
-
-<!-- ── DRAWER（訪客） ── -->
-<div id="vd-overlay"></div>
-<div id="vd-drawer">
-  <div class="drawer-header">
-    <div class="drawer-avatar" id="vd-avatar" style="background:linear-gradient(135deg,#4a7ab5,#7aa8d4);">👤</div>
-    <div style="flex:1;min-width:0;">
-      <div class="drawer-name" id="vd-name">—</div>
-      <div class="drawer-email" id="vd-sub">—</div>
-    </div>
-    <button class="drawer-close" id="vd-close">✕</button>
-  </div>
-  <div class="drawer-body">
-    <div class="d-overview-grid" id="vd-stats" style="margin-bottom:16px;"></div>
-    <div class="d-section-title">操作事件紀錄</div>
-    <div id="vd-events"></div>
   </div>
 </div>
 
@@ -601,7 +517,6 @@ document.getElementById('btn-logout').addEventListener('click', () => fbSignOut(
 document.getElementById('btn-refresh').addEventListener('click', () => {
   const active = document.querySelector('.main-tab.active');
   if(active && active.dataset.pane === 'pane-analytics') loadAnalytics();
-  else if(active && active.dataset.pane === 'pane-visitors') loadVisitors();
   else loadData();
 });
 
@@ -613,7 +528,6 @@ document.querySelectorAll('.main-tab').forEach(btn => {
     btn.classList.add('active');
     document.getElementById(btn.dataset.pane).classList.add('active');
     if(btn.dataset.pane === 'pane-analytics') loadAnalytics();
-    if(btn.dataset.pane === 'pane-visitors')  loadVisitors();
   });
 });
 
@@ -714,168 +628,9 @@ function renderEventList() {
   }).join('');
 }
 
-// ════════════════════════════════════════
-//  訪客管理
-// ════════════════════════════════════════
-let allVisitors = [];
-let activeVid   = null;
-
-const PAGE_LABELS_V = {
-  home:'首頁', reader:'精華筆記', textbook2:'永續課文',
-  notes:'考點卡片', charts:'圖表總覽', podcast:'Podcast',
-  textbook:'永續題庫', quiz:'歷屆題庫', exam:'模擬考試', progress:'學習進度'
-};
-const EV_LABELS_V = {
-  page_view:'頁面瀏覽', exam_start:'考試開始', exam_submit:'考試結束',
-  login:'登入', logout:'登出', feature_click:'功能點擊'
-};
-
-async function loadVisitors() {
-  document.getElementById('vs-loading').style.display = 'block';
-  document.getElementById('vs-grid').style.display    = 'none';
-  document.getElementById('vs-empty').style.display   = 'none';
-
-  // 重用 allEvents，若還沒載入就先載入
-  if(!allEvents.length) {
-    try {
-      const snap = await get(query(ref(db, 'analytics/events'), orderByChild('ts'), limitToLast(1000)));
-      const raw  = snap.val();
-      allEvents  = raw ? Object.values(raw).sort((a,b) => b.ts - a.ts) : [];
-    } catch(err) {
-      document.getElementById('vs-loading').innerHTML =
-        `<span style="color:var(--red);font-size:.85rem">載入失敗：${err.message}</span>`;
-      return;
-    }
-  }
-
-  // 只取匿名訪客（uid 以 anon_ 開頭，或 anonymous）
-  const anonEvents = allEvents.filter(e => e.uid && (e.uid.startsWith('anon_') || e.uid === 'anonymous'));
-
-  // 聚合成訪客物件
-  const visitorMap = {};
-  anonEvents.forEach(e => {
-    const vid = e.uid;
-    if(!visitorMap[vid]) visitorMap[vid] = { vid, events: [], pages: new Set(), lastTs: 0 };
-    visitorMap[vid].events.push(e);
-    if(e.event === 'page_view' && e.page) visitorMap[vid].pages.add(e.page);
-    if(e.ts > visitorMap[vid].lastTs) visitorMap[vid].lastTs = e.ts;
-  });
-
-  allVisitors = Object.values(visitorMap).sort((a,b) => b.lastTs - a.lastTs);
-
-  // 統計卡
-  const totalPv   = anonEvents.filter(e => e.event === 'page_view').length;
-  const avgPv     = allVisitors.length ? (totalPv / allVisitors.length).toFixed(1) : '0';
-  const lastTime  = allVisitors.length
-    ? new Date(allVisitors[0].lastTs).toLocaleString('zh-TW', {timeZone:'Asia/Taipei', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'})
-    : '—';
-  document.getElementById('vs-total').textContent   = allVisitors.length;
-  document.getElementById('vs-events').textContent  = anonEvents.length;
-  document.getElementById('vs-avg-pv').textContent  = avgPv;
-  document.getElementById('vs-last').textContent    = lastTime;
-  document.getElementById('vs-count-pill').textContent = `${allVisitors.length} 人`;
-
-  document.getElementById('vs-loading').style.display = 'none';
-
-  if(!allVisitors.length) {
-    document.getElementById('vs-empty').style.display = 'block';
-    return;
-  }
-
-  renderVisitorGrid();
-}
-
-function renderVisitorGrid() {
-  const $grid = document.getElementById('vs-grid');
-  $grid.style.display = 'flex';
-  $grid.style.flexDirection = 'column';
-  $grid.innerHTML = '';
-
-  allVisitors.forEach(v => {
-    const shortId  = v.vid.startsWith('anon_') ? v.vid.replace('anon_','').slice(0,8) : v.vid.slice(0,8);
-    const lastDate = new Date(v.lastTs).toLocaleString('zh-TW', {timeZone:'Asia/Taipei', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'});
-    const pages    = [...v.pages].slice(0,5);
-    const pvCount  = v.events.filter(e => e.event === 'page_view').length;
-
-    const card = document.createElement('div');
-    card.className = 'visitor-card' + (v.vid === activeVid ? ' active' : '');
-    card.dataset.vid = v.vid;
-    card.innerHTML = `
-      <div class="vc-avatar">${shortId.slice(0,3)}</div>
-      <div class="vc-info">
-        <div class="vc-name">訪客 · ${shortId}</div>
-        <div class="vc-pages">
-          ${pages.map(p => `<span class="vc-page-pill">${PAGE_LABELS_V[p]||p}</span>`).join('')}
-          ${v.pages.size > 5 ? `<span class="vc-page-pill" style="background:var(--lgray);color:var(--gray);">+${v.pages.size-5}</span>` : ''}
-        </div>
-      </div>
-      <div class="vc-stat">
-        <div class="vc-stat-val" style="color:var(--blue)">${v.events.length}</div>
-        <div class="vc-stat-lbl">事件數</div>
-      </div>
-      <div class="vc-stat">
-        <div class="vc-stat-val" style="color:var(--green)">${pvCount}</div>
-        <div class="vc-stat-lbl">瀏覽頁數</div>
-      </div>
-      <div class="vc-last">${lastDate}</div>`;
-    card.addEventListener('click', () => openVdDrawer(v.vid));
-    $grid.appendChild(card);
-  });
-}
-
-function openVdDrawer(vid) {
-  activeVid = vid;
-  const v = allVisitors.find(x => x.vid === vid);
-  if(!v) return;
-
-  const shortId = v.vid.startsWith('anon_') ? v.vid.replace('anon_','').slice(0,8) : v.vid.slice(0,8);
-  document.getElementById('vd-name').textContent = `訪客 · ${shortId}`;
-  document.getElementById('vd-sub').textContent  = `共 ${v.events.length} 筆事件 · ${v.pages.size} 個頁面`;
-
-  // 統計卡
-  const pvCount   = v.events.filter(e => e.event === 'page_view').length;
-  const examCount = v.events.filter(e => e.event === 'exam_submit').length;
-  const firstTime = new Date(Math.min(...v.events.map(e=>e.ts))).toLocaleString('zh-TW',{timeZone:'Asia/Taipei',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
-  const lastTime  = new Date(v.lastTs).toLocaleString('zh-TW',{timeZone:'Asia/Taipei',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
-  document.getElementById('vd-stats').innerHTML = `
-    <div class="d-mini-card"><div class="d-mini-val" style="color:var(--blue)">${pvCount}</div><div class="d-mini-lbl">頁面瀏覽</div></div>
-    <div class="d-mini-card"><div class="d-mini-val" style="color:var(--orange)">${examCount}</div><div class="d-mini-lbl">考試次數</div></div>
-    <div class="d-mini-card" style="grid-column:span 2"><div class="d-mini-val" style="font-size:.9rem;color:var(--gray)">${firstTime}</div><div class="d-mini-lbl">首次訪問</div></div>`;
-
-  // 事件列表（時間正序）
-  const sorted = [...v.events].sort((a,b) => a.ts - b.ts);
-  document.getElementById('vd-events').innerHTML = sorted.map(e => {
-    const dt     = new Date(e.ts).toLocaleString('zh-TW',{timeZone:'Asia/Taipei',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'});
-    const label  = EV_LABELS_V[e.event] || e.event;
-    let detail   = '';
-    if(e.event === 'page_view')    detail = PAGE_LABELS_V[e.page] || e.page || '';
-    if(e.event === 'exam_submit')  detail = `${e.correct}/${e.total} 題 (${e.pct}%) ${e.passed?'✓通過':'✗未通過'}`;
-    if(e.event === 'exam_start')   detail = `${e.question_count} 題`;
-    if(e.event === 'feature_click') detail = `從 ${e.from_page||'?'} 跳轉`;
-    return `<div class="vd-ev-item">
-      <div class="vd-ev-time">${dt}</div>
-      <span class="ev-badge ev-${e.event}" style="flex-shrink:0">${label}</span>
-      <div class="vd-ev-detail">${detail}</div>
-    </div>`;
-  }).join('') || '<p style="color:var(--gray);font-size:.85rem">無事件資料</p>';
-
-  document.getElementById('vd-drawer').classList.add('open');
-  document.getElementById('vd-overlay').classList.add('show');
-  document.querySelectorAll('.visitor-card').forEach(c => c.classList.toggle('active', c.dataset.vid === vid));
-}
-
-function closeVdDrawer() {
-  document.getElementById('vd-drawer').classList.remove('open');
-  document.getElementById('vd-overlay').classList.remove('show');
-  activeVid = null;
-  document.querySelectorAll('.visitor-card').forEach(c => c.classList.remove('active'));
-}
+document.getElementById('search-input').addEventListener('input', e => renderGrid(e.target.value));
 document.getElementById('drawer-close').addEventListener('click', closeDrawer);
 $overlay.addEventListener('click', closeDrawer);
-
-// 訪客 drawer 關閉
-document.getElementById('vd-close').addEventListener('click', closeVdDrawer);
-document.getElementById('vd-overlay').addEventListener('click', closeVdDrawer);
 
 // drawer tabs
 document.querySelectorAll('.d-tab').forEach(btn => {
