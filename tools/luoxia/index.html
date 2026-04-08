@@ -2558,8 +2558,31 @@ window.SD_CONFIG = {
   product: '落霞千頁',
   productColor: '#2D4A6E',
   portalUrl: '../../index.html',
+  noNav: true,   // LP 已有自己的 nav，避免重複
 };
 </script>
 <script src="../../brand.js"></script>
+<script>
+// 切換 app/LP 時同步顯示/隱藏 brand.js footer
+(function() {
+  function syncBrandFooter() {
+    const footer = document.getElementById('sd-footer');
+    if (!footer) return;
+    const appVisible = !document.getElementById('app-wrap').classList.contains('hidden');
+    footer.style.display = appVisible ? 'none' : '';
+  }
+  // patch goLaunch & goHome
+  const origGoHome = window.goHome;
+  window.goHome = function() { origGoHome && origGoHome(); setTimeout(syncBrandFooter, 50); };
+
+  const _origGoLaunch = window.goLaunch;
+  // goLaunch is defined in lp script — wrap after load
+  window.addEventListener('load', function() {
+    const origGL = window.goLaunch;
+    if (origGL) window.goLaunch = function(t) { origGL(t); setTimeout(syncBrandFooter, 50); };
+    syncBrandFooter();
+  });
+})();
+</script>
 </body>
 </html>
