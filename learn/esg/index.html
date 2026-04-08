@@ -588,6 +588,20 @@ body.tx2-mode #content {padding:0!important;max-width:unset!important;display:fl
 .tx-chapter-title{font-size:1.6rem;font-weight:800;color:#1a1a1a;margin:4px 0 8px;}
 .tx-chapter-sub{font-size:.82rem;color:#888;margin:0;}
 
+/* ── Textbook skeleton loading ── */
+@keyframes tx-shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
+.tx-skeleton{padding:28px 0;animation:fadeIn .3s;}
+.tx-sk-badge{width:80px;height:28px;border-radius:20px;margin:0 auto 16px;background:#e8f0ec;}
+.tx-sk-title{width:200px;height:28px;border-radius:6px;margin:0 auto 10px;background:#e8f0ec;}
+.tx-sk-sub{width:160px;height:16px;border-radius:4px;margin:0 auto 32px;background:#f0f4f0;}
+.tx-sk-h2{height:42px;border-radius:0 8px 8px 0;margin:0 0 18px;background:linear-gradient(135deg,#e2f5ec,#f1f8f1);border-left:5px solid #d4e8dc;}
+.tx-sk-line{height:14px;border-radius:4px;margin:0 0 12px;background:#f0f4f0;}
+.tx-sk-line,.tx-sk-badge,.tx-sk-title,.tx-sk-sub,.tx-sk-h2{
+  background-size:800px 100%;
+  background-image:linear-gradient(90deg,#f0f4f0 0,#e2ece6 20%,#f0f4f0 40%,#f0f4f0 100%);
+  animation:tx-shimmer 1.5s infinite linear;
+}
+
 /* 大節標題 h2 */
 .tx-h2{
   font-size:1.08rem;font-weight:800;color:#1b5c42;
@@ -5059,14 +5073,13 @@ function goPage(id){
     [PAGES.BOOKMARKS]: renderBookmarksPage,
     [PAGES.TEXTBOOK]: function(){
     _txEnsureChapter(0); // 第一章立即載入，使用者馬上看到內容
-    // 其餘章節分幀載入，避免阻塞主執行緒
-    requestAnimationFrame(()=>{
-      _txEnsureChapter(1);
-      requestAnimationFrame(()=>{
-        _txEnsureChapter(2);
-        requestAnimationFrame(()=>{ _txEnsureChapter(3); });
-      });
-    });
+    // 其餘章節在瀏覽器空閒時依序載入
+    const _ric = window.requestIdleCallback || (cb => setTimeout(cb, 200));
+    _ric(() => { _txEnsureChapter(1).then(() => {
+      _ric(() => { _txEnsureChapter(2).then(() => {
+        _ric(() => { _txEnsureChapter(3); });
+      }); });
+    }); });
   },
     [PAGES.EXAM]:      renderExamHistory,
     [PAGES.PODCAST]:   initPodcast,
@@ -7939,13 +7952,36 @@ async function _txEnsureChapter(ci) {
   _txLoaded[ci] = true;
   const container = document.getElementById('tx-lazy-content');
   if(!container) return;
+
+  // 1. Show skeleton placeholder immediately
+  const skId = 'tx-sk-' + ci;
+  const sk = document.createElement('div');
+  sk.id = skId;
+  sk.className = 'tx-skeleton';
+  sk.innerHTML = '<div class="tx-sk-badge"></div><div class="tx-sk-title"></div><div class="tx-sk-sub"></div>'
+    + '<div class="tx-sk-h2"></div>'
+    + '<div class="tx-sk-line" style="width:95%"></div><div class="tx-sk-line" style="width:88%"></div>'
+    + '<div class="tx-sk-line" style="width:92%"></div><div class="tx-sk-line" style="width:75%"></div>'
+    + '<div class="tx-sk-line" style="width:85%"></div><div class="tx-sk-line" style="width:60%"></div>'
+    + '<div class="tx-sk-h2"></div>'
+    + '<div class="tx-sk-line" style="width:90%"></div><div class="tx-sk-line" style="width:80%"></div>'
+    + '<div class="tx-sk-line" style="width:70%"></div>';
+  container.appendChild(sk);
+
+  // 2. Load the script (network fetch)
   const html = await _loadTxChapter(ci);
+
+  // 3. Yield to browser so skeleton paints, then do heavy DOM work
+  await new Promise(r => setTimeout(r, 0));
   const div = document.createElement('div');
   div.id = 'tx-ch-' + (ci+1);
   div.innerHTML = html || '';
-  _cleanTxLabels(div); // 清理多餘段落標籤
+  _cleanTxLabels(div);
+
+  // 4. Replace skeleton with real content
+  const oldSk = document.getElementById(skId);
+  if(oldSk) oldSk.remove();
   container.appendChild(div);
-  // 重新初始化這章的 Chart
   setTimeout(_initSectionCharts, 50);
 }
 
