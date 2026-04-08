@@ -68,8 +68,40 @@ body{font-family:var(--font);background:var(--bg);color:#263238;min-height:100vh
 .an-chip.active{background:var(--green);color:#fff;border-color:var(--green);}
 .an-loading{display:flex;align-items:center;gap:10px;color:var(--gray);font-size:.85rem;padding:32px;justify-content:center;}
 
-@media(max-width:960px){.an-stats-row{grid-template-columns:repeat(2,1fr)}.pg-heat-name{width:70px;font-size:.75rem;}}
-@media(max-width:600px){.ev-item{grid-template-columns:1fr auto;}.ev-time,.ev-uid{display:none;}.an-stats-row{grid-template-columns:1fr 1fr}.pg-heat-name{width:60px;font-size:.7rem;}}
+/* 時間篩選列 */
+.date-filter-bar{display:flex;align-items:center;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
+.date-filter-bar .df-label{font-size:.78rem;color:var(--gray);font-weight:600;margin-right:2px;}
+.df-btn{padding:5px 14px;border-radius:20px;font-size:.75rem;font-weight:600;cursor:pointer;border:1.5px solid var(--border);background:#fff;color:var(--gray);transition:all var(--tr);font-family:var(--font);}
+.df-btn:hover{border-color:var(--gl);color:var(--green);}
+.df-btn.active{background:var(--green);color:#fff;border-color:var(--green);}
+.df-custom{display:flex;align-items:center;gap:6px;margin-left:4px;}
+.df-custom input[type="date"]{font-family:var(--font);font-size:.75rem;padding:4px 8px;border:1.5px solid var(--border);border-radius:var(--radius-xs);color:#263238;outline:none;}
+.df-custom input[type="date"]:focus{border-color:var(--gl);}
+
+/* Dashboard 總覽 */
+.dash-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
+.dash-card{background:var(--card);border:1px solid var(--border2);border-radius:var(--radius);padding:22px;box-shadow:var(--shadow);transition:transform var(--tr),box-shadow var(--tr);}
+.dash-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);}
+.dash-card-title{font-size:.72rem;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.dash-card-title svg{width:14px;height:14px;color:var(--gl);}
+.dash-val{font-size:2rem;font-weight:800;line-height:1;}
+.dash-sub{font-size:.75rem;color:var(--gray);margin-top:6px;}
+.dash-section{margin-bottom:24px;}
+.dash-section-title{font-size:.78rem;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px;display:flex;align-items:center;gap:6px;}
+.dash-section-title::before{content:'';width:3px;height:14px;background:var(--gl);border-radius:2px;display:inline-block;}
+.dash-recent{display:flex;flex-direction:column;gap:8px;}
+.dash-recent-item{background:var(--card);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:12px 16px;display:flex;align-items:center;gap:12px;}
+.dash-recent-item .ev-badge{flex-shrink:0;}
+.dash-recent-detail{flex:1;font-size:.82rem;color:#455a64;}
+.dash-recent-time{font-size:.72rem;color:var(--gray);flex-shrink:0;}
+
+/* CSV export button */
+.btn-export{display:flex;align-items:center;gap:5px;padding:6px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:#fff;color:var(--gray);font-family:var(--font);font-size:.78rem;font-weight:600;cursor:pointer;transition:all var(--tr);}
+.btn-export:hover{border-color:var(--gl);color:var(--green);background:var(--gp);}
+.btn-export svg{width:14px;height:14px;}
+
+@media(max-width:960px){.an-stats-row{grid-template-columns:repeat(2,1fr)}.pg-heat-name{width:70px;font-size:.75rem;}.dash-grid{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:600px){.ev-item{grid-template-columns:1fr auto;}.ev-time,.ev-uid{display:none;}.an-stats-row{grid-template-columns:1fr 1fr}.pg-heat-name{width:60px;font-size:.7rem;}.dash-grid{grid-template-columns:1fr 1fr;}}
 
 /* ══════════════════ 訪客管理 ══════════════════ */
 #pane-visitors main{padding:24px 28px;max-width:1280px;width:100%;margin:0 auto;}
@@ -405,13 +437,22 @@ main{padding:24px 28px;max-width:1280px;width:100%;margin:0 auto;animation:fadeU
 
   <!-- 主分頁 tab -->
   <div class="main-tabs">
-    <button class="main-tab active" data-pane="pane-users"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg> 學員管理</button>
+    <button class="main-tab active" data-pane="pane-dashboard"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg> 總覽</button>
+    <button class="main-tab" data-pane="pane-users"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg> 學員管理</button>
     <button class="main-tab" data-pane="pane-visitors"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> 訪客管理</button>
     <button class="main-tab" data-pane="pane-analytics"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg> 操作紀錄</button>
   </div>
 
+  <!-- 分頁零：總覽儀表板 -->
+  <div id="pane-dashboard" class="tab-pane active">
+    <main>
+      <div id="dash-loading" class="an-loading"><div class="spinner"></div><span>載入總覽資料中…</span></div>
+      <div id="dash-content" style="display:none;"></div>
+    </main>
+  </div>
+
   <!-- 分頁一：學員管理（原有內容） -->
-  <div id="pane-users" class="tab-pane active">
+  <div id="pane-users" class="tab-pane">
   <main>
     <!-- STATS -->
     <div class="stats-row">
@@ -427,9 +468,15 @@ main{padding:24px 28px;max-width:1280px;width:100%;margin:0 auto;animation:fadeU
         <span class="sec-title">學員列表</span>
         <span class="count-pill" id="count-pill">0 人</span>
       </div>
-      <div class="search-wrap">
-        <svg viewBox="0 0 16 16" fill="currentColor" style="color:var(--gray)"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.099zm-5.242 1.656a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z"/></svg>
-        <input type="text" id="search-input" placeholder="搜尋學員姓名或 Email…">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="search-wrap">
+          <svg viewBox="0 0 16 16" fill="currentColor" style="color:var(--gray)"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.099zm-5.242 1.656a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z"/></svg>
+          <input type="text" id="search-input" placeholder="搜尋學員姓名或 Email…">
+        </div>
+        <button class="btn-export" id="btn-csv" title="匯出 CSV">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          匯出 CSV
+        </button>
       </div>
     </div>
 
@@ -468,6 +515,19 @@ main{padding:24px 28px;max-width:1280px;width:100%;margin:0 auto;animation:fadeU
     <div id="analytics-wrap">
       <div class="an-loading" id="an-loading"><div class="spinner"></div><span>載入操作紀錄中…</span></div>
       <div id="an-content" style="display:none;">
+        <!-- 時間篩選 -->
+        <div class="date-filter-bar">
+          <span class="df-label">時間範圍：</span>
+          <button class="df-btn active" data-range="all">全部</button>
+          <button class="df-btn" data-range="today">今天</button>
+          <button class="df-btn" data-range="7d">近 7 天</button>
+          <button class="df-btn" data-range="30d">近 30 天</button>
+          <button class="df-btn" data-range="custom">自訂</button>
+          <div class="df-custom" id="df-custom-wrap" style="display:none;">
+            <input type="date" id="df-start"> <span style="color:var(--gray);font-size:.75rem;">至</span> <input type="date" id="df-end">
+            <button class="df-btn" id="df-apply" style="padding:4px 10px;">套用</button>
+          </div>
+        </div>
         <!-- 統計卡 -->
         <div class="an-stats-row">
           <div class="sc c0"><div class="sc-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div><div class="sc-body"><div class="sc-val" id="an-s-total">—</div><div class="sc-lbl">總事件筆數</div></div></div>
@@ -588,7 +648,7 @@ onAuthStateChanged(auth, user => {
     $login.style.display = 'none';
     $dash.style.display  = 'flex';
     document.getElementById('admin-email').textContent = user.email;
-    loadData();
+    loadDashboard();
   } else if (user) {
     fbSignOut(auth);
     $error.style.display = 'block';
@@ -605,6 +665,7 @@ document.getElementById('btn-refresh').addEventListener('click', () => {
   const active = document.querySelector('.main-tab.active');
   if(active && active.dataset.pane === 'pane-analytics') loadAnalytics();
   else if(active && active.dataset.pane === 'pane-visitors') loadVisitors();
+  else if(active && active.dataset.pane === 'pane-dashboard') loadDashboard();
   else loadData();
 });
 
@@ -615,9 +676,53 @@ document.querySelectorAll('.main-tab').forEach(btn => {
     document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById(btn.dataset.pane).classList.add('active');
+    if(btn.dataset.pane === 'pane-dashboard')  loadDashboard();
+    if(btn.dataset.pane === 'pane-users')     loadData();
     if(btn.dataset.pane === 'pane-analytics') loadAnalytics();
     if(btn.dataset.pane === 'pane-visitors')  loadVisitors();
   });
+});
+
+// ── 時間篩選狀態 ──────────────────────────────
+let dateRange = 'all';
+let dateStart = null;
+let dateEnd   = null;
+
+function getFilteredEvents() {
+  if (dateRange === 'all') return allEvents;
+  const now = Date.now();
+  let startTs, endTs = now;
+  if (dateRange === 'today') {
+    const d = new Date(); d.setHours(0,0,0,0);
+    startTs = d.getTime();
+  } else if (dateRange === '7d') {
+    startTs = now - 7 * 86400000;
+  } else if (dateRange === '30d') {
+    startTs = now - 30 * 86400000;
+  } else if (dateRange === 'custom' && dateStart && dateEnd) {
+    startTs = new Date(dateStart).getTime();
+    const ed = new Date(dateEnd); ed.setHours(23,59,59,999);
+    endTs = ed.getTime();
+  } else {
+    return allEvents;
+  }
+  return allEvents.filter(e => e.ts >= startTs && e.ts <= endTs);
+}
+
+// 時間篩選按鈕事件
+document.querySelectorAll('.df-btn[data-range]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.df-btn[data-range]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    dateRange = btn.dataset.range;
+    document.getElementById('df-custom-wrap').style.display = dateRange === 'custom' ? 'flex' : 'none';
+    if (dateRange !== 'custom') renderAnalytics();
+  });
+});
+document.getElementById('df-apply').addEventListener('click', () => {
+  dateStart = document.getElementById('df-start').value;
+  dateEnd   = document.getElementById('df-end').value;
+  if (dateStart && dateEnd) renderAnalytics();
 });
 
 // ── Analytics 資料載入 ──────────────────────────────
@@ -641,11 +746,12 @@ async function loadAnalytics() {
 }
 
 function renderAnalytics() {
-  const pvEvents    = allEvents.filter(e => e.event === 'page_view');
-  const examEvents  = allEvents.filter(e => e.event === 'exam_submit');
-  const loginEvents = allEvents.filter(e => e.event === 'login');
+  const filtered    = getFilteredEvents();
+  const pvEvents    = filtered.filter(e => e.event === 'page_view');
+  const examEvents  = filtered.filter(e => e.event === 'exam_submit');
+  const loginEvents = filtered.filter(e => e.event === 'login');
 
-  document.getElementById('an-s-total').textContent = allEvents.length;
+  document.getElementById('an-s-total').textContent = filtered.length;
   document.getElementById('an-s-pv').textContent    = pvEvents.length;
   document.getElementById('an-s-exam').textContent  = examEvents.length;
   document.getElementById('an-s-login').textContent = loginEvents.length;
@@ -710,7 +816,8 @@ function renderEventList() {
     page_view: '頁面瀏覽', exam_start: '考試開始', exam_submit: '考試結束',
     login: '登入', logout: '登出', feature_click: '功能點擊'
   };
-  const filtered = evFilter === 'all' ? allEvents : allEvents.filter(e => e.event === evFilter);
+  const timeFiltered = getFilteredEvents();
+  const filtered = evFilter === 'all' ? timeFiltered : timeFiltered.filter(e => e.event === evFilter);
   const $list = document.getElementById('ev-list');
   if (!filtered.length) {
     $list.innerHTML = '<div style="color:var(--gray);font-size:.85rem;padding:20px;text-align:center;">沒有符合的紀錄</div>';
@@ -1110,6 +1217,203 @@ function renderDrawerContent() {
       ${items.map(h=>historyItem(h)).join('')||'<p style="color:var(--gray);font-size:.85rem">尚無紀錄</p>'}`;
   }
 }
+
+// ── Dashboard 總覽 ──────────────────────────────
+let dashLoaded = false;
+async function loadDashboard() {
+  const $loading = document.getElementById('dash-loading');
+  const $content = document.getElementById('dash-content');
+  $loading.style.display = 'flex';
+  $content.style.display = 'none';
+
+  // Ensure both data sources loaded
+  try {
+    if (!allUsers.length) {
+      const snap = await get(ref(db, 'users'));
+      const raw = snap.val();
+      if (raw) {
+        allUsers = Object.entries(raw).map(([uid, data]) => {
+          let p = {};
+          try { p = typeof data.progress === 'string' ? JSON.parse(data.progress) : (data.progress || {}); } catch{}
+          const history  = p.history  || [];
+          const chStats  = p.chStats  || {};
+          const secStats = p.secStats || {};
+          const email       = data.profile?.email       || '';
+          const displayName = data.profile?.displayName || '';
+          const scores = history.map(h => h.pct || 0);
+          return { uid, email, displayName, history, chStats, secStats,
+            examCount : history.length,
+            lastDate  : history.length ? history[history.length-1].date : '—',
+            maxScore  : scores.length ? Math.max(...scores) : 0,
+            avgScore  : scores.length ? scores.reduce((a,b)=>a+b,0)/scores.length : 0,
+            passCount : history.filter(h=>(h.pct||0)>=70).length
+          };
+        });
+      }
+    }
+    if (!allEvents.length) {
+      const snap = await get(query(ref(db, 'analytics/events'), orderByChild('ts'), limitToLast(500)));
+      const raw = snap.val();
+      allEvents = raw ? Object.values(raw).sort((a, b) => b.ts - a.ts) : [];
+    }
+  } catch(err) {
+    $loading.innerHTML = `<span style="color:var(--red);font-size:.85rem">載入失敗：${err.message}</span>`;
+    return;
+  }
+
+  renderDashboard();
+  $loading.style.display = 'none';
+  $content.style.display = 'block';
+  dashLoaded = true;
+}
+
+function renderDashboard() {
+  const $c = document.getElementById('dash-content');
+  const now = Date.now();
+  const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+  const todayTs = todayStart.getTime();
+  const week = now - 7 * 86400000;
+
+  // Today's stats
+  const todayEvents  = allEvents.filter(e => e.ts >= todayTs);
+  const todayPv      = todayEvents.filter(e => e.event === 'page_view').length;
+  const todayExams   = todayEvents.filter(e => e.event === 'exam_submit').length;
+  const todayLogins  = todayEvents.filter(e => e.event === 'login').length;
+  const todayUids    = new Set(todayEvents.map(e => e.uid).filter(Boolean));
+
+  // Weekly stats
+  const weekEvents = allEvents.filter(e => e.ts >= week);
+  const weekExams  = weekEvents.filter(e => e.event === 'exam_submit').length;
+
+  // All-time stats
+  const totalExams = allUsers.reduce((s, u) => s + u.examCount, 0);
+  const allScores  = allUsers.flatMap(u => u.history.map(h => h.pct || 0));
+  const avgScore   = allScores.length ? (allScores.reduce((a,b) => a+b, 0) / allScores.length) : 0;
+  const passRate   = allScores.length ? (allScores.filter(s => s >= 70).length / allScores.length * 100) : 0;
+
+  // Recent events (last 10)
+  const EV_LABELS_D = {
+    page_view:'頁面瀏覽', exam_start:'考試開始', exam_submit:'考試結束',
+    login:'登入', logout:'登出', feature_click:'功能點擊'
+  };
+  const recentEvents = allEvents.slice(0, 10);
+
+  // Top students (by examCount)
+  const topStudents = [...allUsers].sort((a,b) => b.examCount - a.examCount).slice(0, 5);
+
+  $c.innerHTML = `
+    <!-- 今日快報 -->
+    <div class="dash-section-title">今日快報</div>
+    <div class="dash-grid">
+      <div class="dash-card">
+        <div class="dash-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> 活躍用戶</div>
+        <div class="dash-val" style="color:var(--green);">${todayUids.size}</div>
+        <div class="dash-sub">今日不重複登入</div>
+      </div>
+      <div class="dash-card">
+        <div class="dash-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> 頁面瀏覽</div>
+        <div class="dash-val" style="color:var(--blue);">${todayPv}</div>
+        <div class="dash-sub">今日瀏覽次數</div>
+      </div>
+      <div class="dash-card">
+        <div class="dash-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> 考試次數</div>
+        <div class="dash-val" style="color:var(--orange);">${todayExams}</div>
+        <div class="dash-sub">今日考試提交</div>
+      </div>
+      <div class="dash-card">
+        <div class="dash-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> 登入次數</div>
+        <div class="dash-val" style="color:var(--purple);">${todayLogins}</div>
+        <div class="dash-sub">今日登入事件</div>
+      </div>
+    </div>
+
+    <!-- 整體概況 -->
+    <div class="dash-section-title">整體概況</div>
+    <div class="dash-grid">
+      <div class="dash-card">
+        <div class="dash-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg> 總學員</div>
+        <div class="dash-val" style="color:var(--green);">${allUsers.length}</div>
+        <div class="dash-sub">註冊學員人數</div>
+      </div>
+      <div class="dash-card">
+        <div class="dash-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> 累計考試</div>
+        <div class="dash-val" style="color:var(--blue);">${totalExams}</div>
+        <div class="dash-sub">近 7 天 ${weekExams} 次</div>
+      </div>
+      <div class="dash-card">
+        <div class="dash-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg> 平均答對率</div>
+        <div class="dash-val" style="color:${avgScore>=70?'var(--green)':avgScore>=50?'var(--orange)':'var(--red)'};">${avgScore.toFixed(1)}%</div>
+        <div class="dash-sub">全體學員平均</div>
+      </div>
+      <div class="dash-card">
+        <div class="dash-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg> 通過率</div>
+        <div class="dash-val" style="color:${passRate>=60?'var(--green)':'var(--orange)'};">${passRate.toFixed(1)}%</div>
+        <div class="dash-sub">70 分以上佔比</div>
+      </div>
+    </div>
+
+    <!-- 最近動態 -->
+    <div class="dash-section-title">最近動態</div>
+    <div class="dash-recent">
+      ${recentEvents.map(e => {
+        const dt = new Date(e.ts).toLocaleString('zh-TW',{timeZone:'Asia/Taipei',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+        const label = EV_LABELS_D[e.event] || e.event;
+        let detail = '';
+        if(e.event === 'page_view') detail = e.page_name || e.page || '';
+        if(e.event === 'exam_submit') detail = (e.correct||0)+'/'+(e.total||0)+' 題 ('+(e.pct||0)+'%)';
+        if(e.event === 'login') detail = e.email || '';
+        if(e.event === 'feature_click') detail = '從 '+(e.from_page||'?')+' 跳轉';
+        const isAnon = !e.uid || e.uid === 'anonymous' || (e.uid||'').startsWith('anon_');
+        const who = isAnon ? '訪客' : (e.email || (e.uid||'').slice(0,8));
+        return '<div class="dash-recent-item"><span class="ev-badge ev-'+e.event+'">'+label+'</span><div class="dash-recent-detail">'+who+(detail?' · '+detail:'')+'</div><div class="dash-recent-time">'+dt+'</div></div>';
+      }).join('') || '<p style="color:var(--gray);font-size:.85rem">尚無事件資料</p>'}
+    </div>
+
+    ${topStudents.length ? `
+    <!-- 學習排行 -->
+    <div class="dash-section-title" style="margin-top:24px;">學習排行（考試次數）</div>
+    <div class="dash-recent">
+      ${topStudents.map((u, i) => {
+        const avgColor = u.avgScore>=70?'var(--green)':u.avgScore>=50?'var(--orange)':'var(--red)';
+        return '<div class="dash-recent-item"><div style="width:24px;height:24px;border-radius:6px;background:var(--gp);display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:800;color:var(--green);flex-shrink:0;">'+(i+1)+'</div><div class="dash-recent-detail" style="font-weight:600;">'+(u.displayName||u.email||'未命名')+'</div><div style="font-size:.78rem;font-weight:700;color:'+avgColor+';flex-shrink:0;">'+u.avgScore.toFixed(0)+'%</div><div style="font-size:.72rem;color:var(--gray);flex-shrink:0;margin-left:8px;">'+u.examCount+' 次</div></div>';
+      }).join('')}
+    </div>` : ''}
+  `;
+}
+
+// ── CSV 匯出 ──────────────────────────────
+document.getElementById('btn-csv').addEventListener('click', () => {
+  if (!allUsers.length) { alert('尚無學員資料可匯出'); return; }
+
+  const BOM = '\uFEFF';
+  const headers = ['姓名','Email','考試次數','平均答對率(%)','最高分(%)','通過次數','最後考試日期'];
+  const rows = allUsers.map(u => [
+    u.displayName || '未設定',
+    u.email || '',
+    u.examCount,
+    u.avgScore.toFixed(1),
+    u.maxScore.toFixed(1),
+    u.passCount,
+    u.lastDate || '—'
+  ]);
+
+  const csv = BOM + [headers, ...rows].map(r =>
+    r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')
+  ).join('\n');
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `永續知幾_學員資料_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+// ── 搜尋輸入事件 ──────────────────────────────
+document.getElementById('search-input').addEventListener('input', (e) => {
+  renderGrid(e.target.value);
+});
 
 function historyItem(h) {
   const pct   = (h.pct||0).toFixed(1);
