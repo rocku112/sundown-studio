@@ -5,6 +5,15 @@
 <link rel="icon" type="image/svg+xml" href="/sundown-studio/favicon.svg">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>落霞千頁 · SunDown Studio</title>
+<meta name="description" content="免費線上文件工具套件：PDF 轉 JPG、HEIC 轉 JPG、圖片壓縮、尺寸調整、PDF 合併拆分壓縮。所有檔案在本機處理，不上傳伺服器。">
+<meta property="og:title" content="落霞千頁 · SunDown Studio">
+<meta property="og:description" content="七種文件工具，全部免費、免帳號、本機處理。PDF 轉圖、HEIC 轉換、圖片壓縮、PDF 合併拆分壓縮。">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://rocku112.github.io/sundown-studio/tools/luoxia/">
+<meta property="og:site_name" content="SunDown Studio">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="落霞千頁 · 免費文件工具套件">
+<meta name="twitter:description" content="PDF 轉 JPG、HEIC 轉換、圖片壓縮、PDF 合併拆分壓縮。本機處理，不上傳伺服器。">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,200;0,300;0,400;0,600;0,700;0,800;0,900;1,300;1,400&family=Noto+Sans+TC:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script>
@@ -376,6 +385,49 @@ select, input[type=number], input[type=text] { font-family:inherit; }
 
 /* Page size select in pdfmix */
 .mx-pgsz { font-size:10px; background:var(--cream); border:1px solid var(--border); border-radius:4px; padding:3px 6px; color:var(--text2); font-family:var(--sans); }
+
+/* ── Card done — click to re-download ── */
+.fc.card-done { cursor:pointer; }
+.fc.card-done::after {
+  content:'↓ 點擊下載'; position:absolute; inset:0;
+  background:rgba(30,53,84,.55); color:#fff;
+  font-size:11px; font-weight:800; letter-spacing:.06em;
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; transition:opacity .18s; border-radius:12px;
+  pointer-events:none;
+}
+.fc.card-done:hover::after { opacity:1; }
+
+/* ── Tool chain suggestion banner ── */
+.chain-banner {
+  display:none; align-items:center; gap:10px; flex-wrap:wrap;
+  background:var(--gold-tint); border:1px solid rgba(232,184,75,.3);
+  border-radius:10px; padding:11px 16px;
+}
+.chain-banner.show { display:flex; }
+.chain-banner-label {
+  font-size:11px; font-weight:700; color:var(--gold);
+  letter-spacing:.04em; white-space:nowrap;
+}
+.chain-btn {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:5px 12px; border-radius:20px; border:none;
+  background:var(--navy); color:#fff;
+  font-family:var(--sans); font-size:11px; font-weight:700;
+  cursor:pointer; transition:all .18s;
+}
+.chain-btn:hover { background:var(--navy-mid); transform:translateY(-1px); }
+
+/* ── Sample file button in drop zone ── */
+.sample-btn {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:5px 12px; border-radius:20px;
+  background:transparent; border:1px solid var(--border);
+  font-family:var(--sans); font-size:11px; font-weight:600;
+  color:var(--text3); cursor:pointer; transition:all .18s;
+  margin-top:8px;
+}
+.sample-btn:hover { border-color:var(--gold-mid); color:var(--gold); }
 
 /* ── HEIC panel — missing styles ── */
 .frows { display:flex; flex-direction:column; gap:6px; min-height:40px; }
@@ -1004,6 +1056,7 @@ window.addEventListener('scroll', function() {
       <input type="file" id="pdfFI" accept=".pdf" multiple>
     </div>
     <div id="pdfGrid" class="fgrid" style="display:none;"></div>
+    <div class="chain-banner" id="chain-pdf"></div>
   </div>
   <aside class="sidebar">
     <div class="ss"><h3>基本設定</h3>
@@ -1079,6 +1132,7 @@ window.addEventListener('scroll', function() {
       <div class="hsdiv"></div>
       <div class="hs"><span class="hs-n" id="hs4">—</span><span class="hs-l">輸出大小</span></div>
     </div>
+    <div class="chain-banner" id="chain-heic"></div>
   </div>
   <aside class="sidebar" style="justify-content:flex-start;">
     <div class="ss" style="flex:1;">
@@ -1110,9 +1164,11 @@ window.addEventListener('scroll', function() {
       <button class="drop-btn" onclick="document.getElementById('cpFI').click();event.stopPropagation()">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg> 選擇檔案
       </button>
+      <button class="sample-btn" onclick="loadSampleImg('compress');event.stopPropagation()">✦ 載入範例圖片</button>
       <input type="file" id="cpFI" accept="image/*" multiple>
     </div>
     <div id="cpGrid" class="fgrid" style="display:none;"></div>
+    <div class="chain-banner" id="chain-compress"></div>
   </div>
   <aside class="sidebar">
     <div class="ss"><h3>壓縮設定</h3>
@@ -1150,9 +1206,11 @@ window.addEventListener('scroll', function() {
       <button class="drop-btn" onclick="document.getElementById('rzFI').click();event.stopPropagation()">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg> 選擇檔案
       </button>
+      <button class="sample-btn" onclick="loadSampleImg('resize');event.stopPropagation()">✦ 載入範例圖片</button>
       <input type="file" id="rzFI" accept="image/*" multiple>
     </div>
     <div id="rzGrid" class="fgrid" style="display:none;"></div>
+    <div class="chain-banner" id="chain-resize"></div>
   </div>
   <aside class="sidebar">
     <div class="ss"><h3>縮放設定</h3>
@@ -1272,6 +1330,7 @@ window.addEventListener('scroll', function() {
       <input type="file" id="pcFI" accept=".pdf" multiple>
     </div>
     <div id="pcGrid" class="fgrid" style="display:none;"></div>
+    <div class="chain-banner" id="chain-pdfcmp"></div>
   </div>
   <aside class="sidebar">
     <div class="ss"><h3>壓縮設定</h3>
@@ -1323,43 +1382,50 @@ window.addEventListener('scroll', function() {
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 
+// ─── Helper: set lucide icon on a button (works after lucide replaces <i> with <svg>) ──
+function setSbIcon(btn, iconName) {
+  btn.innerHTML = `<i data-lucide="${iconName}" style="width:15px;height:15px;"></i>`;
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
 // ─── Sidebar toggle ────────────────────────────────────────────────────────────
 function toggleSidebar() {
   const isMobile = window.matchMedia('(max-width:900px)').matches;
   const btn = document.getElementById('sbToggleBtn');
-  const icon = btn.querySelector('i');
+  if (!btn) return;
   if (isMobile) {
     const sb = document.querySelector('.tab-panel.active .sidebar');
     if (!sb) return;
     const open = sb.classList.toggle('sb-open');
-    icon.setAttribute('data-lucide', open ? 'panel-right-close' : 'panel-right-open');
+    setSbIcon(btn, open ? 'panel-right-close' : 'panel-right-open');
     btn.classList.toggle('sb-closed', !open);
   } else {
     const hidden = !!document.querySelector('.sidebar.sb-hidden');
     document.querySelectorAll('.sidebar').forEach(sb =>
       hidden ? sb.classList.remove('sb-hidden') : sb.classList.add('sb-hidden'));
     const nowHidden = !hidden;
-    icon.setAttribute('data-lucide', nowHidden ? 'panel-right-open' : 'panel-right-close');
+    setSbIcon(btn, nowHidden ? 'panel-right-open' : 'panel-right-close');
     btn.classList.toggle('sb-closed', nowHidden);
     localStorage.setItem('sbPref', nowHidden ? 'hide' : 'show');
   }
-  lucide.createIcons();
 }
 
 // ─── Shared ────────────────────────────────────────────────────────────────────
 function switchTab(name) {
+  const valid = ['pdf','heic','compress','resize','pdfops','pdfcmp','pdfmix'];
+  if (!valid.includes(name)) return;
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('panel-' + name).classList.add('active');
   document.querySelector(`.tab-btn[data-tab="${name}"]`).classList.add('active');
+  history.replaceState(null, '', '#' + name);
   // close mobile sidebar when switching tabs
   if (window.matchMedia('(max-width:900px)').matches) {
     document.querySelectorAll('.sidebar').forEach(sb => sb.classList.remove('sb-open'));
     const btn = document.getElementById('sbToggleBtn');
     if (btn) {
-      btn.querySelector('i').setAttribute('data-lucide','panel-right-open');
+      setSbIcon(btn, 'panel-right-open');
       btn.classList.add('sb-closed');
-      lucide.createIcons();
     }
   }
 }
@@ -1453,7 +1519,7 @@ pdfCvt.onclick=async()=>{
     pS.done++;pdfSt();const b=card?.querySelector('.sbadge');if(b){b.className='sbadge done';b.textContent='完成';}}
 
   if(doZip&&zip){document.getElementById('pdfPT').textContent='打包 ZIP…';const zb=await zip.generateAsync({type:'blob'},m=>pdfProg(Math.round(m.percent),100,true));dlBlob(zb,`converted_${Date.now()}.zip`);}
-  pS.conv=false;pdfCvt.disabled=false;pdfClr.disabled=false;document.getElementById('pdfPT').textContent='完成 ✓';toast(`已輸出 ${pS.imgs} 張`);
+  pS.conv=false;pdfCvt.disabled=false;pdfClr.disabled=false;document.getElementById('pdfPT').textContent='完成 ✓';toast(`已輸出 ${pS.imgs} 張`);showChain('pdf');
 };
 function pdfProg(d,t,raw=false){const p=raw?d:Math.round(d/t*100);document.getElementById('pdfPF').style.width=p+'%';document.getElementById('pdfPP').textContent=p+'%';document.getElementById('ps4').textContent=pS.imgs;}
 pdfClr.onclick=()=>{pS.files=[];pdfGrid.innerHTML='';pdfGrid.style.display='none';pS.done=0;pS.imgs=0;document.getElementById('pdfPW').style.display='none';document.getElementById('pdfPF').style.width='0%';pdfSt();pdfUI();};
@@ -1493,7 +1559,7 @@ hCvt.onclick=async()=>{
   const el=((Date.now()-t0)/1000).toFixed(1);hLog(`── 完成 ${done} 成功 · ${fail} 失敗 · ${el}s ──`,'info');
   document.getElementById('hs1').textContent=done;document.getElementById('hs2').textContent=fail;document.getElementById('hs3').textContent=el;document.getElementById('hs4').textContent=fmtSz(bytes);document.getElementById('hSt').classList.add('show');
   if(done>0){if(dl==='zip'){hLog('打包 ZIP…','info');const zip=new JSZip();hFiles.filter(f=>f.status==='done'&&f.blob).forEach(f=>zip.file(f.name.replace(/\.(heic|heif)$/i,'.jpg'),f.blob));const zb=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:1}});saveAs(zb,`heic2jpg_${Date.now()}.zip`);hLog('⬇ ZIP 完成','ok');}else{for(const f of hFiles.filter(f=>f.status==='done'&&f.blob)){saveAs(f.blob,f.name.replace(/\.(heic|heif)$/i,'.jpg'));await new Promise(r=>setTimeout(r,200));}}}
-  hConv=false;hCvt.disabled=false;hClr.disabled=false;toast(`已轉換 ${done} 張`);
+  hConv=false;hCvt.disabled=false;hClr.disabled=false;toast(`已轉換 ${done} 張`);showChain('heic');
 };
 hClr.onclick=()=>{hFiles=[];document.getElementById('hLog').innerHTML='';document.getElementById('hLog').style.display='none';document.getElementById('hPW').style.display='none';document.getElementById('hPF').style.width='0%';document.getElementById('hSt').classList.remove('show');hRL();hUB();};
 function hUB(){const hp=hFiles.some(f=>f.status!=='done');hCvt.disabled=!hFiles.length||!hp;hClr.disabled=!hFiles.length;}
@@ -1523,7 +1589,7 @@ cpCvt.onclick=async()=>{
     const img=await loadImg(en.file);let blob;
     if(mode==='quality'){const cv=imgToCanvas(img,img.width,img.height,mime);blob=await new Promise(r=>cv.toBlob(r,mime,qual));}
     else{const cv=imgToCanvas(img,img.width,img.height,mime);let lo=0.05,hi=1,best=null;for(let k=0;k<12;k++){const mid=(lo+hi)/2;const b=await new Promise(r=>cv.toBlob(r,mime,mid));if(b.size<=targetB){best=b;lo=mid;}else hi=mid;}blob=best||await new Promise(r=>cv.toBlob(r,mime,0.05));}
-    if(blob){const saved=en.size-blob.size;cpS.savedBytes+=Math.max(0,saved);const e2=ext(mime,en.name);const outName=en.name.replace(/\.[^.]+$/,'')+e2;if(doZip)zip.file(outName,blob);else dlBlob(blob,outName);
+    if(blob){const saved=en.size-blob.size;cpS.savedBytes+=Math.max(0,saved);const e2=ext(mime,en.name);const outName=en.name.replace(/\.[^.]+$/,'')+e2;en._outBlob=blob;en._outName=outName;card?.classList.add('card-done');if(doZip)zip.file(outName,blob);else dlBlob(blob,outName);
       const prev=card?.querySelector('.prev');if(prev){const nb=URL.createObjectURL(blob);const img2=prev.querySelector('img');if(img2)img2.src=nb;}
       const fm=card?.querySelector('.fm');if(fm){const pct=saved>0?` (-${Math.round(saved/en.size*100)}%)`:' (無壓縮)';fm.innerHTML=`${fmtSz(en.size)} → <span class="sav">${fmtSz(blob.size)}${pct}</span>`;}}
     cpS.done++;document.getElementById('cps2').textContent=cpS.done;
@@ -1531,7 +1597,7 @@ cpCvt.onclick=async()=>{
     const pct=Math.round((i+1)/cpS.files.length*100);document.getElementById('cpPF').style.width=pct+'%';document.getElementById('cpPP').textContent=pct+'%';
     const b=card?.querySelector('.sbadge');if(b){b.className='sbadge done';b.textContent='完成';}await tick();}
   if(doZip&&zip){const zb=await zip.generateAsync({type:'blob'});dlBlob(zb,`compressed_${Date.now()}.zip`);}
-  cpS.conv=false;cpCvt.disabled=false;cpClr.disabled=false;document.getElementById('cpPT').textContent='完成 ✓';toast(`已壓縮 ${cpS.done} 張，節省 ${fmtSz(cpS.savedBytes)}`);
+  cpS.conv=false;cpCvt.disabled=false;cpClr.disabled=false;document.getElementById('cpPT').textContent='完成 ✓';toast(`已壓縮 ${cpS.done} 張，節省 ${fmtSz(cpS.savedBytes)}`);showChain('compress');
 };
 cpClr.onclick=()=>{cpS.files.forEach(en=>{if(en._url)URL.revokeObjectURL(en._url);});cpS.files=[];cpGrid.innerHTML='';cpGrid.style.display='none';cpS.done=0;cpS.savedBytes=0;document.getElementById('cpPW').style.display='none';document.getElementById('cpPF').style.width='0%';document.getElementById('cpSaved').textContent='—';document.getElementById('cps1').textContent='0';document.getElementById('cps2').textContent='0';cpUI();};
 function cpUI(){const h=cpS.files.length>0;cpCvt.disabled=!h;cpClr.disabled=!h;cpDZ.style.display=h?'none':'block';cpGrid.style.display=h?'grid':'none';document.getElementById('cps1').textContent=cpS.files.length;}
@@ -1570,6 +1636,7 @@ rzCvt.onclick=async()=>{
     const mime=fmt==='keep'?(en.file.type||'image/jpeg'):fmt;
     const cv=imgToCanvas(img,nw,nh,mime);const blob=await new Promise(r=>cv.toBlob(r,mime,qual));
     const e2=ext(mime,en.name);const outName=en.name.replace(/\.[^.]+$/,'')+e2;
+    en._outBlob=blob;en._outName=outName;card?.classList.add('card-done');
     if(doZip)zip.file(outName,blob);else dlBlob(blob,outName);
     const prev=card?.querySelector('.prev');if(prev){const nb=URL.createObjectURL(blob);const im2=prev.querySelector('img');if(im2)im2.src=nb;}
     const fm=card?.querySelector('.fm');if(fm)fm.textContent=`${en.w}×${en.h} → ${nw}×${nh} · ${fmtSz(blob.size)}`;
@@ -1577,7 +1644,7 @@ rzCvt.onclick=async()=>{
     const pct=Math.round((i+1)/rzS.files.length*100);document.getElementById('rzPF').style.width=pct+'%';document.getElementById('rzPP').textContent=pct+'%';
     const b=card?.querySelector('.sbadge');if(b){b.className='sbadge done';b.textContent='完成';}await tick();}
   if(doZip&&zip){const zb=await zip.generateAsync({type:'blob'});dlBlob(zb,`resized_${Date.now()}.zip`);}
-  rzS.conv=false;rzCvt.disabled=false;rzClr.disabled=false;document.getElementById('rzPT').textContent='完成 ✓';toast(`已縮放 ${rzS.done} 張`);
+  rzS.conv=false;rzCvt.disabled=false;rzClr.disabled=false;document.getElementById('rzPT').textContent='完成 ✓';toast(`已縮放 ${rzS.done} 張`);showChain('resize');
 };
 rzClr.onclick=()=>{rzS.files.forEach(en=>{if(en._url)URL.revokeObjectURL(en._url);});rzS.files=[];rzGrid.innerHTML='';rzGrid.style.display='none';rzS.done=0;document.getElementById('rzPW').style.display='none';document.getElementById('rzPF').style.width='0%';document.getElementById('rzs1').textContent='0';document.getElementById('rzs2').textContent='0';rzUI();};
 function rzUI(){const h=rzS.files.length>0;rzCvt.disabled=!h;rzClr.disabled=!h;rzDZ.style.display=h?'none':'block';rzGrid.style.display=h?'grid':'none';document.getElementById('rzs1').textContent=rzS.files.length;}
@@ -1837,7 +1904,9 @@ pcCvt.onclick=async()=>{
       const pct=en.size>0?Math.round(saved/en.size*100):0;
 
       const outName=en.name.replace(/\.pdf$/i,`_compressed.pdf`);
-      dlBlob(new Blob([outBytes],{type:'application/pdf'}),outName);
+      const outBlob=new Blob([outBytes],{type:'application/pdf'});
+      en._outBlob=outBlob;en._outName=outName;card?.classList.add('card-done');
+      dlBlob(outBlob,outName);
 
       const fm=card?.querySelector('.fm');
       if(fm)fm.innerHTML=`${fmtSz(en.size)} → <span class="sav">${fmtSz(outSize)} (-${pct}%)</span>`;
@@ -1863,7 +1932,7 @@ pcCvt.onclick=async()=>{
   document.getElementById('pcPT').textContent='完成 ✓';
   const saved=totalOrigSize-totalOutSize;
   const pctSaved=totalOrigSize>0?Math.round(saved/totalOrigSize*100):0;
-  toast(`壓縮完成！節省 ${fmtSz(Math.max(0,saved))}（${pctSaved}%）`);
+  toast(`壓縮完成！節省 ${fmtSz(Math.max(0,saved))}（${pctSaved}%）`);showChain('pdfcmp');
   }catch(err){
     document.getElementById('pcPT').textContent='發生錯誤';
     toast('壓縮過程發生錯誤：'+err.message,true);
@@ -2259,11 +2328,228 @@ function goHome() {
     document.querySelectorAll('.sidebar').forEach(sb => sb.classList.add('sb-hidden'));
     const btn = document.getElementById('sbToggleBtn');
     if (btn) {
-      btn.querySelector('i').setAttribute('data-lucide', 'panel-right-open');
+      setSbIcon(btn, 'panel-right-open');
       btn.classList.add('sb-closed');
     }
   }
 })();
+
+// ─── Fix toast class name bug ───────────────────────────────────────────────
+(function(){
+  const origToast = window.toast;
+  window.toast = function(msg, err=false) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = err ? 'err show' : 'show';
+    clearTimeout(window._tt);
+    window._tt = setTimeout(() => el.className = '', 3500);
+  };
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HASH ROUTING — load correct tab from URL hash
+// ═══════════════════════════════════════════════════════════════════════════
+(function() {
+  const hash = location.hash.replace('#','');
+  const valid = ['pdf','heic','compress','resize','pdfops','pdfcmp','pdfmix'];
+  if (valid.includes(hash)) {
+    // Only apply if app-wrap is visible (user navigated directly to tool)
+    const tryApply = () => {
+      const aw = document.getElementById('app-wrap');
+      if (aw && !aw.classList.contains('hidden')) switchTab(hash);
+    };
+    setTimeout(tryApply, 100);
+  }
+  window.addEventListener('hashchange', () => {
+    const h = location.hash.replace('#','');
+    if (valid.includes(h)) switchTab(h);
+  });
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SETTINGS MEMORY — save/restore all sidebar inputs via localStorage
+// ═══════════════════════════════════════════════════════════════════════════
+const SDS_KEY = 'sds_luoxia_settings_v1';
+
+function saveSettings() {
+  const out = {};
+  document.querySelectorAll('.sidebar input:not([type=file]), .sidebar select').forEach(el => {
+    if (!el.id) return;
+    if (el.type === 'radio') out['radio_' + el.name] = el.checked ? el.value : (out['radio_' + el.name] || '');
+    else if (el.type === 'checkbox') out[el.id] = el.checked;
+    else if (el.type === 'color') out[el.id] = el.value;
+    else out[el.id] = el.value;
+  });
+  try { localStorage.setItem(SDS_KEY, JSON.stringify(out)); } catch(e) {}
+}
+
+function loadSettings() {
+  let saved;
+  try { saved = JSON.parse(localStorage.getItem(SDS_KEY) || 'null'); } catch(e) {}
+  if (!saved) return;
+  Object.entries(saved).forEach(([k, v]) => {
+    if (k.startsWith('radio_')) {
+      const name = k.replace('radio_', '');
+      const radio = document.querySelector(`input[type=radio][name="${name}"][value="${v}"]`);
+      if (radio) radio.checked = true;
+    } else {
+      const el = document.getElementById(k);
+      if (!el) return;
+      if (el.type === 'checkbox') el.checked = !!v;
+      else el.value = v;
+      // fire input/change to update display spans & visibility
+      el.dispatchEvent(new Event('input'));
+      el.dispatchEvent(new Event('change'));
+    }
+  });
+}
+
+// Save on any sidebar input change
+document.querySelectorAll('.sidebar input:not([type=file]), .sidebar select').forEach(el => {
+  el.addEventListener('change', saveSettings);
+  el.addEventListener('input', saveSettings);
+});
+loadSettings();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CARD CLICK RE-DOWNLOAD — delegated click on .fc.card-done
+// ═══════════════════════════════════════════════════════════════════════════
+function getEnById(id) {
+  const all = [
+    ...(typeof cpS !== 'undefined' ? cpS.files : []),
+    ...(typeof rzS !== 'undefined' ? rzS.files : []),
+    ...(typeof pcS !== 'undefined' ? pcS.files : []),
+    ...(typeof pS  !== 'undefined' ? pS.files  : []),
+  ];
+  return all.find(f => f.id === id);
+}
+
+document.addEventListener('click', function(e) {
+  const card = e.target.closest('.fc.card-done');
+  if (!card || e.target.closest('.rb')) return;
+  const en = getEnById(card.id);
+  if (en && en._outBlob && en._outName) {
+    dlBlob(en._outBlob, en._outName);
+    toast('重新下載：' + en._outName);
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CTRL+V PASTE — route image paste to current tool
+// ═══════════════════════════════════════════════════════════════════════════
+document.addEventListener('paste', function(e) {
+  if (document.getElementById('app-wrap').classList.contains('hidden')) return;
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  const items = [...(e.clipboardData?.items || [])];
+  const imageFiles = items
+    .filter(it => it.kind === 'file' && it.type.startsWith('image/'))
+    .map(it => it.getAsFile())
+    .filter(Boolean);
+  if (!imageFiles.length) return;
+  const tab = document.querySelector('.tab-btn.active')?.dataset.tab;
+  if (tab === 'compress') { cpHF(imageFiles); toast('已貼上 ' + imageFiles.length + ' 張圖片'); }
+  else if (tab === 'resize')   { rzHF(imageFiles); toast('已貼上 ' + imageFiles.length + ' 張圖片'); }
+  else if (tab === 'pdfmix')   { mxAddImgFiles && mxAddImgFiles(imageFiles); toast('已貼上 ' + imageFiles.length + ' 張圖片'); }
+  else toast('請切換到圖片壓縮或尺寸調整工具後再貼上');
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// KEYBOARD SHORTCUTS
+// ═══════════════════════════════════════════════════════════════════════════
+const TAB_KEYS = {'1':'pdf','2':'heic','3':'compress','4':'resize','5':'pdfops','6':'pdfcmp','7':'pdfmix'};
+
+document.addEventListener('keydown', function(e) {
+  if (document.getElementById('app-wrap').classList.contains('hidden')) return;
+  const tag = document.activeElement?.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+  // 1-7: switch tool
+  if (TAB_KEYS[e.key]) { switchTab(TAB_KEYS[e.key]); return; }
+
+  const tab = document.querySelector('.tab-btn.active')?.dataset.tab;
+
+  // Enter: start conversion on current tool
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const btnMap = {pdf:'pdfCvt',heic:'hCvt',compress:'cpCvt',resize:'rzCvt',pdfcmp:'pcCvt',pdfmix:'mxCvt'};
+    if (tab === 'pdfops') {
+      const mergeBtn = document.getElementById('poMCvt');
+      const splitBtn = document.getElementById('poSCvt');
+      const active = (mergeBtn && !mergeBtn.closest('[style*="display:none"]') && !mergeBtn.disabled) ? mergeBtn
+                   : (splitBtn && !splitBtn.disabled) ? splitBtn : null;
+      if (active) active.click();
+    } else {
+      const btn = document.getElementById(btnMap[tab]);
+      if (btn && !btn.disabled) btn.click();
+    }
+  }
+
+  // Escape: clear current tool
+  if (e.key === 'Escape') {
+    const clrMap = {pdf:'pdfClr',heic:'hClr',compress:'cpClr',resize:'rzClr',pdfcmp:'pcClr'};
+    const btn = document.getElementById(clrMap[tab]);
+    if (btn && !btn.disabled) btn.click();
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TOOL CHAIN SUGGESTIONS
+// ═══════════════════════════════════════════════════════════════════════════
+const CHAIN_MAP = {
+  pdf:    [['compress','圖片壓縮'],['resize','尺寸調整']],
+  heic:   [['compress','圖片壓縮'],['resize','尺寸調整']],
+  compress:[['resize','尺寸調整'],['pdfmix','混合合併']],
+  resize: [['compress','圖片壓縮'],['pdfmix','混合合併']],
+  pdfops: [['pdfcmp','PDF 壓縮']],
+  pdfcmp: [['pdfops','PDF 合併/拆分']],
+  pdfmix: [['pdfcmp','PDF 壓縮']],
+};
+
+function showChain(tab) {
+  const bannerId = {pdf:'chain-pdf',heic:'chain-heic',compress:'chain-compress',
+                    resize:'chain-resize',pdfcmp:'chain-pdfcmp'}[tab];
+  if (!bannerId) return;
+  const banner = document.getElementById(bannerId);
+  if (!banner) return;
+  const targets = CHAIN_MAP[tab] || [];
+  banner.innerHTML =
+    '<span class="chain-banner-label">✓ 完成！繼續用：</span>' +
+    targets.map(([t,label]) =>
+      `<button class="chain-btn" onclick="switchTab('${t}');this.closest('.chain-banner').classList.remove('show')">${label} →</button>`
+    ).join('') +
+    '<button class="chain-btn" style="background:transparent;color:var(--text3);border:1px solid var(--border);margin-left:auto;" onclick="this.closest(\'.chain-banner\').classList.remove(\'show\')">關閉</button>';
+  banner.classList.add('show');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SAMPLE IMAGE LOADER
+// ═══════════════════════════════════════════════════════════════════════════
+function loadSampleImg(tool) {
+  const cv = document.createElement('canvas');
+  cv.width = 800; cv.height = 600;
+  const ctx = cv.getContext('2d');
+  // Background gradient
+  const g = ctx.createLinearGradient(0, 0, 800, 600);
+  g.addColorStop(0, '#1E3554'); g.addColorStop(1, '#3D5A80');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 800, 600);
+  // Gold arc
+  ctx.beginPath(); ctx.arc(400, 260, 180, Math.PI, 0);
+  ctx.fillStyle = '#E8B84B'; ctx.fill();
+  // Text
+  ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
+  ctx.font = 'bold 52px sans-serif'; ctx.fillText('落霞千頁', 400, 370);
+  ctx.font = '22px sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.6)';
+  ctx.fillText('SunDown Studio · Sample Image', 400, 415);
+  ctx.font = '14px monospace'; ctx.fillStyle = 'rgba(255,255,255,.35)';
+  ctx.fillText('800 × 600 px', 400, 450);
+
+  cv.toBlob(blob => {
+    const file = new File([blob], 'sample_luoxia.jpg', { type: 'image/jpeg' });
+    if (tool === 'compress') cpHF([file]);
+    else if (tool === 'resize') rzHF([file]);
+    toast('已載入範例圖片');
+  }, 'image/jpeg', 0.92);
+}
 </script>
 
 
