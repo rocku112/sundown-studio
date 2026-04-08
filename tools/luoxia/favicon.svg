@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- 奶白底圓形 + 深藍邊框（與永續知幾同款基底） -->
+  <circle cx="32" cy="32" r="32" fill="#F5F0E8"/>
+  <circle cx="32" cy="32" r="28" fill="none" stroke="#1E3554" stroke-width="2.5"/>
+
+  <!-- 落霞：金色日落半圓弧（地平線以上的霞光） -->
+  <path d="M14 31 A18 18 0 0 1 50 31Z" fill="#E8B84B"/>
+
+  <!-- 千頁：三條漸縮的深藍橫線，象徵疊放的文件頁 -->
+  <line x1="17" y1="38" x2="47" y2="38" stroke="#1E3554" stroke-width="2.4" stroke-linecap="round"/>
+  <line x1="21" y1="44" x2="43" y2="44" stroke="#1E3554" stroke-width="2" stroke-linecap="round"/>
+  <line x1="25" y1="50" x2="39" y2="50" stroke="#1E3554" stroke-width="1.6" stroke-linecap="round" opacity="0.55"/>
+</svg>
