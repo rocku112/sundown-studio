@@ -651,8 +651,10 @@ function renderAnalytics() {
   // 頁面熱度
   const PAGE_LABELS = {
     home:'首頁', reader:'精華筆記', textbook2:'永續課文',
-    notes:'考點卡片', charts:'圖表總覽', podcast:'Podcast',
-    textbook:'永續題庫', quiz:'歷屆題庫', exam:'模擬考試', progress:'學習進度'
+    notes:'考點卡片', charts:'圖表總覽', podcast:'Podcast 聆聽',
+    textbook:'永續題庫', quiz:'歷屆題庫', exam:'模擬考試', progress:'學習進度',
+    pastexam:'歷屆題庫', textbookq:'永續題庫', bookmarks:'收藏題目',
+    search:'題目搜尋', keypoints:'考點卡片'
   };
   const pageCounts = {};
   pvEvents.forEach(e => {
@@ -723,8 +725,10 @@ let activeVid   = null;
 
 const PAGE_LABELS_V = {
   home:'首頁', reader:'精華筆記', textbook2:'永續課文',
-  notes:'考點卡片', charts:'圖表總覽', podcast:'Podcast',
-  textbook:'永續題庫', quiz:'歷屆題庫', exam:'模擬考試', progress:'學習進度'
+  notes:'考點卡片', charts:'圖表總覽', podcast:'Podcast 聆聽',
+  textbook:'永續題庫', quiz:'歷屆題庫', exam:'模擬考試', progress:'學習進度',
+  pastexam:'歷屆題庫', textbookq:'永續題庫', bookmarks:'收藏題目',
+  search:'題目搜尋', keypoints:'考點卡片'
 };
 const EV_LABELS_V = {
   page_view:'頁面瀏覽', exam_start:'考試開始', exam_submit:'考試結束',
