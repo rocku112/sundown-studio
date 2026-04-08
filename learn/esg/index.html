@@ -38,7 +38,7 @@
   --transition:.2s ease;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:var(--font);background:var(--bg);color:#263238;overflow-x:hidden;}
+body{font-family:var(--font);background:var(--bg);color:#2a221a;overflow-x:hidden;}
 
 /* ═══════════════════════════════════════════
    LAYOUT
@@ -66,7 +66,7 @@ body{font-family:var(--font);background:var(--bg);color:#263238;overflow-x:hidde
   border-left:3px solid transparent;
 }
 .nav-item:hover{background:rgba(0,0,0,.06);color:#2a221a;}
-.nav-item.active{background:#eef6ec;color:#3a7d44;border-left-color:#5a9e6a;font-weight:700;}
+.nav-item.active{background:var(--gp);color:#4a6b3a;border-left-color:var(--gl);font-weight:700;}
 .nav-item .icon{font-size:1.1rem;width:22px;text-align:center;}
 #sidebar-footer{padding:10px 18px;border-top:1px solid #ede8e0;font-size:.72rem;color:#b0a898;display:flex;align-items:center;gap:8px;}
 
@@ -261,7 +261,7 @@ body{font-family:var(--font);background:var(--bg);color:#263238;overflow-x:hidde
   border:1px solid rgba(0,0,0,.08);
 }
 .wb-left{
-  background:linear-gradient(145deg,#2d5a1b,#4a8a2a);
+  background:linear-gradient(145deg,#4a6b3a,#7A9A5A);
   color:#fff;padding:28px 26px;display:flex;flex-direction:column;gap:14px;
 }
 .wb-badge{
@@ -320,9 +320,9 @@ body{font-family:var(--font);background:var(--bg);color:#263238;overflow-x:hidde
 .tl-step-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .tl-step-icon svg{width:18px;height:18px;}
 .tl-step-label{font-weight:700;font-size:.83rem;}
-.tl-step-desc{font-size:.73rem;color:#666;line-height:1.4;margin-top:1px;}
+.tl-step-desc{font-size:.73rem;color:#7a6e65;line-height:1.4;margin-top:1px;}
 .tl-step-arrow{margin-left:auto;color:#ccc;font-size:1rem;flex-shrink:0;transition:color .2s;}
-.tl-step:hover .tl-step-arrow{color:#888;}
+.tl-step:hover .tl-step-arrow{color:#8a7e72;}
 
 /* ═══════════════════════════════════════════
    READER PAGE
@@ -341,7 +341,7 @@ body{font-family:var(--font);background:var(--bg);color:#263238;overflow-x:hidde
 }
 .toc-ch{font-size:.78rem;font-weight:700;color:var(--green);padding:10px 14px 4px;text-transform:uppercase;letter-spacing:.5px;}
 .toc-sec{
-  font-size:.82rem;color:#455a64;padding:8px 14px 8px 20px;cursor:pointer;
+  font-size:.82rem;color:#5a4e42;padding:8px 14px 8px 20px;cursor:pointer;
   border-left:3px solid transparent;transition:all var(--transition);
   line-height:1.4;
 }
@@ -350,11 +350,11 @@ body{font-family:var(--font);background:var(--bg);color:#263238;overflow-x:hidde
 .reader-body{flex:1;background:var(--card);border-radius:var(--radius);overflow-y:auto;padding:28px 32px;box-shadow:var(--shadow);margin-left:14px;max-width:860px;}
 .reader-body h3{font-size:1.15rem;color:var(--green);margin-bottom:16px;padding-bottom:8px;border-bottom:2px solid var(--gp);}
 .topic-head{font-size:.95rem;font-weight:700;color:#7A9A5A;margin:18px 0 8px;padding:8px 12px;background:var(--gp);border-radius:6px;border-left:3px solid var(--gl);}
-.note-p{font-size:.88rem;line-height:1.8;color:#37474f;margin-bottom:8px;}
+.note-p{font-size:.88rem;line-height:1.8;color:#3d3028;margin-bottom:8px;}
 .key-term{font-size:.88rem;line-height:1.7;margin-bottom:6px;}
 .key-term .term{font-weight:700;color:var(--green);}
 .note-list{padding-left:20px;margin-bottom:8px;}
-.note-list li{font-size:.86rem;line-height:1.7;color:#455a64;margin-bottom:4px;}
+.note-list li{font-size:.86rem;line-height:1.7;color:#5a4e42;margin-bottom:4px;}
 .note-list.sub{padding-left:32px;}
 .note-list li.sub-item{list-style-type:circle;}
 
@@ -416,7 +416,7 @@ body{font-family:var(--font);background:var(--bg);color:#263238;overflow-x:hidde
 .concept-card-head .ch-tag{font-size:.68rem;font-weight:700;color:var(--green);background:var(--gp);padding:2px 8px;border-radius:12px;white-space:nowrap;flex-shrink:0;}
 .concept-card-head .badge{font-size:.65rem;font-weight:700;padding:2px 7px;border-radius:10px;flex-shrink:0;}
 .badge-必考{background:#fff3cd;color:#856404;}
-.badge-重要{background:#d1ecf1;color:#0c5460;}
+.badge-重要{background:#e8f0e4;color:#3d5a3a;}
 .concept-card-head h4{font-size:.88rem;font-weight:600;line-height:1.35;flex:1;}
 .concept-card-head .expand-icon{color:var(--gray);transition:transform var(--transition);margin-left:4px;flex-shrink:0;font-size:.85rem;}
 .concept-card.expanded .expand-icon{transform:rotate(90deg);}
@@ -438,7 +438,7 @@ body{font-family:var(--font);background:var(--bg);color:#263238;overflow-x:hidde
 .kc-extra-head:hover{color:#7A9A5A;}
 .kx-arrow{font-size:.7rem;transition:transform .2s;}
 .kc-extra.kx-open .kx-arrow{transform:rotate(90deg);}
-.kc-extra-body{display:none;padding:6px 0 2px;font-size:.79rem;line-height:1.65;color:#37474f;}
+.kc-extra-body{display:none;padding:6px 0 2px;font-size:.79rem;line-height:1.65;color:#3d3028;}
 .kc-extra.kx-open .kc-extra-body{display:block;}
 .kc-extra-body b{color:#7A9A5A;}
 .kc-extra-body .xr{display:flex;gap:5px;margin-bottom:3px;}
@@ -589,7 +589,7 @@ body.tx2-mode #content {padding:0!important;max-width:unset!important;display:fl
   border-radius:20px;margin-bottom:12px;letter-spacing:.05em;
 }
 .tx-chapter-title{font-size:1.6rem;font-weight:800;color:#1a1a1a;margin:4px 0 8px;}
-.tx-chapter-sub{font-size:.82rem;color:#888;margin:0;}
+.tx-chapter-sub{font-size:.82rem;color:#8a7e72;margin:0;}
 
 /* ── Textbook skeleton loading ── */
 @keyframes tx-shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
@@ -635,14 +635,14 @@ body.tx2-mode #content {padding:0!important;max-width:unset!important;display:fl
 }
 
 /* h5 */
-.tx-h5{font-size:.88rem;font-weight:700;color:#37474f;margin:14px 0 6px;padding-left:12px;border-left:2px solid #b0bec5;}
+.tx-h5{font-size:.88rem;font-weight:700;color:#3d3028;margin:14px 0 6px;padding-left:12px;border-left:2px solid #b8b0a4;}
 /* ── 課文圖表樣式 ─────────────────────────────── */
-.tx-fig-wrap{margin:16px 0 20px;border:1px solid #e0e0e0;border-radius:10px;overflow:hidden;background:#fff;}
+.tx-fig-wrap{margin:16px 0 20px;border:1px solid #ede8e0;border-radius:10px;overflow:hidden;background:#fff;}
 .tx-fig-label{background:linear-gradient(135deg,#EEF4E8,#F4F7F0);padding:8px 14px;font-size:.78rem;font-weight:700;color:#4a6b3a;border-bottom:1px solid #C8DDB8;}
 
 .tx-fig-from-chart .tx-fig-chart-body{padding:12px 14px;}
 .tx-fig-note{padding:6px 14px;font-size:.72rem;color:#b71c1c;background:#fdf4e3;border-top:1px solid #f5d49a;}
-.tx-fig-src{padding:6px 14px;font-size:.7rem;color:#888;border-top:1px solid #f0f0f0;background:#fafafa;}
+.tx-fig-src{padding:6px 14px;font-size:.7rem;color:#8a7e72;border-top:1px solid #ede8e0;background:#faf8f4;}
 
 /* 概念圖 */
 .tx-concept-diagram{padding:16px;}
@@ -650,21 +650,21 @@ body.tx2-mode #content {padding:0!important;max-width:unset!important;display:fl
 .tx-col-box{border:2px solid;border-radius:10px;padding:12px;text-align:center;}
 .tx-col-icon{font-size:1.4rem;margin-bottom:6px;}
 .tx-col-title{font-weight:800;font-size:.82rem;margin-bottom:4px;}
-.tx-col-desc{font-size:.72rem;color:#555;line-height:1.5;}
+.tx-col-desc{font-size:.72rem;color:#5a4e42;line-height:1.5;}
 .tx-center-badge{text-align:center;background:#4a6b3a;color:#fff;border-radius:20px;padding:5px 16px;font-size:.75rem;font-weight:700;display:inline-block;margin:8px auto;display:flex;justify-content:center;}
 
 /* 趨勢/柱狀 */
 .tx-trend-chart,.tx-stacked-bars{padding:4px;}
-.tx-trend-title,.tx-stacked-title{font-size:.78rem;font-weight:700;color:#333;margin-bottom:10px;text-align:center;}
+.tx-trend-title,.tx-stacked-title{font-size:.78rem;font-weight:700;color:#3d3028;margin-bottom:10px;text-align:center;}
 .tx-trend-bars{display:flex;align-items:flex-end;gap:8px;height:80px;padding:0 8px;}
 .tx-trend-item{display:flex;flex-direction:column;align-items:center;flex:1;}
 .tx-trend-bar{width:100%;background:linear-gradient(180deg,#93B574,#4a6b3a);border-radius:3px 3px 0 0;}
-.tx-trend-year{font-size:.65rem;color:#888;margin-top:3px;}
-.tx-trend-note{font-size:.74rem;color:#555;text-align:center;margin-top:8px;padding:6px;background:#f5f5f5;border-radius:6px;}
+.tx-trend-year{font-size:.65rem;color:#8a7e72;margin-top:3px;}
+.tx-trend-note{font-size:.74rem;color:#5a4e42;text-align:center;margin-top:8px;padding:6px;background:#f5f2ec;border-radius:6px;}
 .tx-stacked-legend{display:flex;gap:12px;font-size:.72rem;margin-bottom:8px;flex-wrap:wrap;}
 .tx-legend-dot{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:3px;}
 .tx-bar-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;}
-.tx-bar-year{font-size:.7rem;color:#555;width:30px;flex-shrink:0;}
+.tx-bar-year{font-size:.7rem;color:#5a4e42;width:30px;flex-shrink:0;}
 .tx-bar-seg{height:18px;border-radius:2px;}
 
 /* 巢狀圖框 */
@@ -678,9 +678,9 @@ body.tx2-mode #content {padding:0!important;max-width:unset!important;display:fl
 .tx-formula{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
 .tx-f-pos{background:#ffebee;color:#c62828;border-radius:6px;padding:4px 10px;font-weight:700;font-size:.82rem;}
 .tx-f-neg{background:#EEF4E8;color:#4a6b3a;border-radius:6px;padding:4px 10px;font-weight:700;font-size:.82rem;}
-.tx-f-op{color:#555;font-size:1rem;font-weight:700;}
+.tx-f-op{color:#5a4e42;font-size:1rem;font-weight:700;}
 .tx-f-zero{background:#4a6b3a;color:#fff;border-radius:6px;padding:4px 14px;font-weight:800;font-size:1rem;}
-.tx-formula-note{font-size:.74rem;color:#555;}
+.tx-formula-note{font-size:.74rem;color:#5a4e42;}
 
 /* GRI樹 */
 .tx-gri-tree{padding:4px;}
@@ -689,7 +689,7 @@ body.tx2-mode #content {padding:0!important;max-width:unset!important;display:fl
 .tx-tree-branch{border:2px solid;border-radius:8px;padding:10px;overflow:hidden;}
 .tx-tree-branch-title{font-weight:800;font-size:.78rem;margin-bottom:6px;}
 .tx-tree-items{display:flex;flex-direction:column;gap:3px;}
-.tx-tree-item{font-size:.7rem;color:#555;background:#fff;padding:3px 6px;border-radius:4px;}
+.tx-tree-item{font-size:.7rem;color:#5a4e42;background:#fff;padding:3px 6px;border-radius:4px;}
 
 /* 範疇圖 */
 .tx-scope-diagram{padding:4px;}
@@ -697,16 +697,16 @@ body.tx2-mode #content {padding:0!important;max-width:unset!important;display:fl
 .tx-scope-box{border-radius:8px;padding:10px;}
 .tx-scope-num{font-size:.75rem;font-weight:800;margin-bottom:2px;}
 .tx-scope-name{font-size:.78rem;font-weight:700;margin-bottom:4px;}
-.tx-scope-desc{font-size:.71rem;color:#555;line-height:1.5;}
+.tx-scope-desc{font-size:.71rem;color:#5a4e42;line-height:1.5;}
 .tx-scope-items{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;}
 .tx-scope-tag{font-size:.7rem;background:#fff;border:1px solid #A8C48A;border-radius:12px;padding:2px 8px;color:#7A9A5A;}
 .s3-full{display:block;}
 
 /* 流程圖 */
 .tx-flow{display:flex;flex-direction:column;align-items:center;padding:8px;}
-.tx-flow-item{display:flex;align-items:flex-start;gap:10px;background:#f5f5f5;border-radius:8px;padding:10px 14px;width:100%;box-sizing:border-box;}
+.tx-flow-item{display:flex;align-items:flex-start;gap:10px;background:#f5f2ec;border-radius:8px;padding:10px 14px;width:100%;box-sizing:border-box;}
 .tx-flow-num{background:#7A9A5A;color:#fff;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:800;flex-shrink:0;}
-.tx-flow-text{font-size:.78rem;color:#333;line-height:1.6;}
+.tx-flow-text{font-size:.78rem;color:#3d3028;line-height:1.6;}
 .tx-flow-arrow{color:#7A9A5A;font-size:1rem;margin:2px 0;}
 
 /* 描述框 */
@@ -724,13 +724,13 @@ body.tx2-mode #content {padding:0!important;max-width:unset!important;display:fl
 .tx-table{width:100%;border-collapse:collapse;font-size:.84rem;min-width:320px;}
 .tx-table caption{font-size:.74rem;font-weight:700;color:#546e7a;text-align:left;padding:4px 0 6px;caption-side:top;}
 .tx-table th{background:#EEF4E8;color:#4a6b3a;font-weight:700;padding:8px 12px;border:1px solid #C8DDB8;text-align:left;font-size:.82rem;}
-.tx-table td{padding:7px 12px;border:1px solid #e0e0e0;vertical-align:top;line-height:1.7;color:#37474f;}
-.tx-table tr:nth-child(even) td{background:#fafafa;}
+.tx-table td{padding:7px 12px;border:1px solid #ede8e0;vertical-align:top;line-height:1.7;color:#3d3028;}
+.tx-table tr:nth-child(even) td{background:#faf8f4;}
 
 
 /* 正文段落 */
-.tx-p{font-size:.88rem;line-height:1.9;color:#37474f;margin:0 0 12px;}
-.tx-body p{font-size:.88rem;line-height:1.9;color:#37474f;margin:0 0 10px;}
+.tx-p{font-size:.88rem;line-height:1.9;color:#3d3028;margin:0 0 12px;}
+.tx-body p{font-size:.88rem;line-height:1.9;color:#3d3028;margin:0 0 10px;}
 
 /* JS清理後保留的有意義段落標籤（pill 樣式） */
 .tx-p-label{
@@ -745,7 +745,7 @@ body.tx2-mode #content {padding:0!important;max-width:unset!important;display:fl
 /* 清單 */
 .tx-ul{margin:6px 0 14px 0;padding:0;list-style:none;}
 .tx-ul li{
-  font-size:.87rem;line-height:1.75;color:#37474f;
+  font-size:.87rem;line-height:1.75;color:#3d3028;
   margin-bottom:6px;padding:5px 12px 5px 30px;
   position:relative;border-radius:4px;background:#f8fdf8;
 }
@@ -756,7 +756,7 @@ body.tx2-mode #content {padding:0!important;max-width:unset!important;display:fl
 
 /* 編號要點 ①② */
 .tx-point{
-  font-size:.83rem;line-height:1.7;color:#333;
+  font-size:.83rem;line-height:1.7;color:#3d3028;
   margin:4px 0 4px 4px;padding:4px 10px 4px 30px;
   position:relative;
 }
@@ -788,7 +788,7 @@ body.tx2-mode #content {padding:0!important;max-width:unset!important;display:fl
 
 /* 數據表格風格 */
 .tx-num{
-  font-size:.83rem;line-height:1.7;color:#333;margin:5px 0 6px;
+  font-size:.83rem;line-height:1.7;color:#3d3028;margin:5px 0 6px;
   display:flex;align-items:flex-start;gap:8px;
 }
 .tx-num-badge{
@@ -846,7 +846,7 @@ body.tx2-mode #content {padding:0!important;max-width:unset!important;display:fl
 .carbon-bar-row{
   display:flex;align-items:center;gap:10px;margin-bottom:10px;
 }
-.carbon-bar-label{width:110px;font-size:.75rem;font-weight:700;color:#263238;flex-shrink:0;}
+.carbon-bar-label{width:110px;font-size:.75rem;font-weight:700;color:#2a221a;flex-shrink:0;}
 .carbon-bar-track{flex:1;background:#f0f4f0;border-radius:6px;height:28px;overflow:hidden;position:relative;}
 .carbon-bar-fill{
   height:100%;border-radius:6px;
@@ -930,7 +930,7 @@ body.tx2-mode #content {padding:0!important;max-width:unset!important;display:fl
 }
 .net0-base-card{
   flex:1;border-radius:8px;padding:9px 12px;
-  background:#37474f;color:#fff;text-align:center;
+  background:#3d3028;color:#fff;text-align:center;
 }
 .net0-base-title{font-size:.72rem;font-weight:800;margin-bottom:4px;}
 .net0-base-body{font-size:.68rem;opacity:.8;line-height:1.5;}
@@ -1001,12 +1001,12 @@ body.tx2-mode #content {padding:0!important;max-width:unset!important;display:fl
 }
 .gfa-item:last-child::after{display:none;}
 .gfa-ver{font-size:.72rem;font-weight:800;margin-bottom:4px;}
-.gfa-year{font-size:.65rem;color:#888;margin-bottom:5px;}
+.gfa-year{font-size:.65rem;color:#8a7e72;margin-bottom:5px;}
 .gfa-theme{font-size:.73rem;font-weight:700;margin-bottom:4px;}
 .gfa-desc{font-size:.62rem;color:#546e7a;line-height:1.5;}
 .gfa1{border-color:#A8C48A;background:#F4F7F0;}
 .gfa1 .gfa-ver{color:#7A9A5A;}
-.gfa2{border-color:#42a5f5;background:#e8f4fe;}
+.gfa2{border-color:#89b4d4;background:#f0ece4;}
 .gfa2 .gfa-ver{color:#89b4d4;}
 .gfa3{border-color:#26a69a;background:#e0f2f1;}
 .gfa3 .gfa-ver{color:#7A9A5A;}
@@ -1277,7 +1277,7 @@ body.tx2-mode #content {padding:0!important;max-width:unset!important;display:fl
 /* Toast */
 .toast{
   position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);
-  background:#263238;color:#fff;padding:10px 20px;border-radius:8px;
+  background:#2a221a;color:#fff;padding:10px 20px;border-radius:8px;
   font-size:.85rem;z-index:999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;
 }
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -1337,7 +1337,7 @@ body.tx2-mode #content {padding:0!important;max-width:unset!important;display:fl
 .tb-opt.correct{border-color:#7A9A5A;background:#EEF4E8;color:#4a6b3a;font-weight:700;}
 .tb-opt.wrong{border-color:#c62828;background:#ffebee;color:#b71c1c;}
 .tb-opt:disabled{cursor:default;}
-.tb-explanation{margin-top:14px;padding:12px 14px;background:#f0f4ff;border-left:3px solid var(--blue);border-radius:0 8px 8px 0;font-size:.83rem;line-height:1.7;color:#37474f;display:none;}
+.tb-explanation{margin-top:14px;padding:12px 14px;background:#f5f2ec;border-left:3px solid var(--blue);border-radius:0 8px 8px 0;font-size:.83rem;line-height:1.7;color:#3d3028;display:none;}
 .tb-explanation.show{display:block;}
 .tb-nav{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
 .tb-nav button{padding:8px 20px;border-radius:10px;border:none;font-family:var(--font);font-weight:700;font-size:.85rem;cursor:pointer;transition:all var(--transition);}
@@ -1345,7 +1345,7 @@ body.tx2-mode #content {padding:0!important;max-width:unset!important;display:fl
 .tb-btn-next:hover{background:#4a6b3a;}
 .tb-btn-prev{background:var(--gp);color:var(--green);border:1.5px solid var(--green);}
 .tb-result{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:28px;text-align:center;}
-.tb-score-circle{width:100px;height:100px;border-radius:50%;background:linear-gradient(135deg,#89b4d4,#42a5f5);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0 auto 16px;box-shadow:0 4px 20px rgba(21,101,192,.3);}
+.tb-score-circle{width:100px;height:100px;border-radius:50%;background:linear-gradient(135deg,#89b4d4,#89b4d4);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0 auto 16px;box-shadow:0 4px 20px rgba(74,107,58,.25);}
 .tb-score-circle .score-num{font-size:1.8rem;font-weight:800;line-height:1;}
 .tb-score-circle .score-label{font-size:.68rem;opacity:.88;}
 .tb-stat-row{display:flex;justify-content:center;gap:24px;margin:12px 0 20px;}
@@ -1396,9 +1396,9 @@ body.tx2-mode #content {padding:0!important;max-width:unset!important;display:fl
   background:#fff; border:1.5px solid var(--border);
   border-radius:10px; padding:12px 14px; margin:8px 0 12px;
 }
-.kc-card-title{ font-weight:700; font-size:.85rem; margin-bottom:6px; color:#263238; }
+.kc-card-title{ font-weight:700; font-size:.85rem; margin-bottom:6px; color:#2a221a; }
 .kc-card.kc-green{ background:var(--gp); border-color:var(--gll); }
-.kc-card.kc-blue { background:#e8f2f9; border-color:#90caf9; }
+.kc-card.kc-blue { background:#e8f2f9; border-color:#89b4d4; }
 .kc-card.kc-info { background:#EEF4E8; border-color:var(--gll); }
 .kc-card.kc-warn { background:#fdf4e3; border-color:#d4a56a; }
 .kc-card.kc-orange{ background:#fdf0e0; border-color:#ffcc80; }
@@ -1425,7 +1425,7 @@ body.tx2-mode #content {padding:0!important;max-width:unset!important;display:fl
 }
 .kc-3cards{ grid-template-columns:repeat(3,1fr); }
 .kc-4cards{ grid-template-columns:repeat(4,1fr); }
-.kc-blue.kc-card{ background:#e8f2f9; border-color:#90caf9; }
+.kc-blue.kc-card{ background:#e8f2f9; border-color:#89b4d4; }
 
 /* ── 網格 ───────────────────────────────── */
 .kc-3col, .kc-4grid, .kc-5grid, .kc-6grid{
@@ -1467,7 +1467,7 @@ body.tx2-mode #content {padding:0!important;max-width:unset!important;display:fl
   position:relative; z-index:2;
 }
 .ht-body{
-  font-size:.74rem; line-height:1.5; color:#37474f;
+  font-size:.74rem; line-height:1.5; color:#3d3028;
   background:#fff; border:1px solid var(--border);
   border-radius:8px; padding:6px 8px; text-align:left;
 }
@@ -1611,7 +1611,7 @@ body.tx2-mode #content {padding:0!important;max-width:unset!important;display:fl
 }
 .def-term::after{ content:''; }
 .def-desc{
-  font-size:.83rem; color:#37474f; line-height:1.6; flex:1;
+  font-size:.83rem; color:#3d3028; line-height:1.6; flex:1;
 }
 
 /* ── 條列式清單 (note-list 升級) ─────── */
@@ -1621,7 +1621,7 @@ body.tx2-mode #content {padding:0!important;max-width:unset!important;display:fl
 .s-list > li{
   position:relative; padding:6px 10px 6px 26px;
   margin-bottom:4px; font-size:.83rem; line-height:1.65;
-  color:#37474f; border-radius:6px;
+  color:#3d3028; border-radius:6px;
   transition:background .15s;
 }
 .s-list > li::before{
@@ -1646,7 +1646,7 @@ ul.s-list > li::before{
 
 /* ── 段落 ───────────────────────────────── */
 .n-p{
-  font-size:.83rem; line-height:1.75; color:#37474f;
+  font-size:.83rem; line-height:1.75; color:#3d3028;
   margin:6px 0 10px;
 }
 
@@ -1782,7 +1782,7 @@ ul.s-list > li::before{
 .search-group-head .count{font-size:.8rem;color:var(--gray);}
 .search-item{padding:10px 16px;border-bottom:1px solid #f0ece4;font-size:.85rem;line-height:1.5;}
 .search-item:last-child{border-bottom:none;}
-.search-item .s-stem{color:#263238;}
+.search-item .s-stem{color:#2a221a;}
 .search-item .s-ans{font-size:.78rem;color:var(--green);font-weight:600;margin-left:8px;}
 .search-item .s-src{font-size:.72rem;color:var(--gray);margin-left:6px;}
 .search-highlight{background:#fff3cd;padding:0 2px;border-radius:2px;}
@@ -1793,7 +1793,7 @@ ul.s-list > li::before{
 }
 .bm-card-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;}
 .bm-card-stem{
-  font-size:.88rem;line-height:1.6;color:#263238;cursor:pointer;
+  font-size:.88rem;line-height:1.6;color:#2a221a;cursor:pointer;
   padding:4px 0;border-bottom:1px dashed var(--border);
 }
 .bm-card-stem:hover{color:var(--green);}
@@ -1801,7 +1801,7 @@ ul.s-list > li::before{
 .bm-opts{display:flex;flex-direction:column;gap:4px;}
 .bm-opt{
   padding:6px 12px;border-radius:8px;border:1px solid var(--border);
-  font-size:.82rem;line-height:1.5;background:#fafafa;
+  font-size:.82rem;line-height:1.5;background:#faf8f4;
 }
 .bm-opt.correct{border-color:#7A9A5A;background:#EEF4E8;color:#4a6b3a;font-weight:600;}
 
@@ -1840,7 +1840,7 @@ ul.s-list > li::before{
 .cb-axis{font-size:.7rem;color:var(--gray);}
 .cb-row{display:flex;align-items:center;gap:8px;}
 .cb-name{width:90px;font-size:.75rem;font-weight:600;flex-shrink:0;}
-.cb-bar-wrap{flex:1;background:#f5f5f5;border-radius:20px;height:18px;overflow:hidden;}
+.cb-bar-wrap{flex:1;background:#f5f2ec;border-radius:20px;height:18px;overflow:hidden;}
 .cb-bar{height:100%;border-radius:20px;}
 .cb-end{font-size:.7rem;font-weight:700;width:28px;flex-shrink:0;}
 /* SDGs */
@@ -1864,7 +1864,7 @@ ul.s-list > li::before{
 .gantt-years-h{flex:1;display:flex;justify-content:space-between;font-size:.7rem;color:var(--gray);}
 .gantt-section-title{font-size:.72rem;font-weight:700;color:var(--green);margin:4px 0 3px;}
 .gantt-row{display:flex;align-items:center;margin-bottom:3px;}
-.gantt-bars{flex:1;position:relative;height:16px;background:#f5f5f5;border-radius:3px;overflow:hidden;}
+.gantt-bars{flex:1;position:relative;height:16px;background:#f5f2ec;border-radius:3px;overflow:hidden;}
 .gantt-bar{position:absolute;height:100%;border-radius:3px;}
 .gb-scan{background:#93B574;}
 .gb-conf{background:#89b4d4;}
@@ -1875,15 +1875,15 @@ ul.s-list > li::before{
 .fw-compare{display:flex;gap:6px;}
 .fw-col{flex:1;display:flex;flex-direction:column;border-radius:8px;overflow:hidden;border:1px solid var(--border);}
 .fw-head{color:#fff;padding:6px;text-align:center;font-weight:700;font-size:.8rem;}
-.fw-row{padding:5px 7px;font-size:.72rem;border-bottom:1px solid #f0f0f0;display:flex;flex-direction:column;gap:1px;}
+.fw-row{padding:5px 7px;font-size:.72rem;border-bottom:1px solid #ede8e0;display:flex;flex-direction:column;gap:1px;}
 .fw-k{font-weight:700;color:var(--gray);font-size:.66rem;}
-.fw-v{color:#37474f;}
+.fw-v{color:#3d3028;}
 .fw-badge-sm{margin:3px 7px 7px;padding:3px 7px;border-radius:20px;font-size:.66rem;font-weight:700;text-align:center;}
 /* 範疇盒子 */
 .scope-boxes{display:flex;align-items:stretch;gap:5px;}
 .scope-box{flex:1;border-radius:8px;padding:8px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:3px;}
 .sb1{background:#ffebee;border:2px solid #ef9a9a;}
-.sb2{background:#e8f2f9;border:2px solid #90caf9;}
+.sb2{background:#e8f2f9;border:2px solid #89b4d4;}
 .sb3{background:#EEF4E8;border:2px solid #C8DDB8;}
 .sb-num{font-weight:800;font-size:.78rem;}
 .sb1 .sb-num{color:#c62828;}.sb2 .sb-num{color:#89b4d4;}.sb3 .sb-num{color:#7A9A5A;}
@@ -1904,8 +1904,8 @@ ul.s-list > li::before{
 .bond-table{width:100%;font-size:.74rem;}
 .bt-head,.bt-row{display:flex;}
 .bt-c{flex:1;padding:5px 6px;border:1px solid var(--border);text-align:center;}
-.bt-head .bt-c{background:#37474f;color:#fff;font-weight:700;}
-.bt-key{background:#f5f5f5;font-weight:700;text-align:left;}
+.bt-head .bt-c{background:#3d3028;color:#fff;font-weight:700;}
+.bt-key{background:#f5f2ec;font-weight:700;text-align:left;}
 .bt-slb{background:#fdf0e0;}
 /* 赤道原則 */
 .eq-levels{display:flex;flex-direction:column;gap:6px;}
@@ -1921,7 +1921,7 @@ ul.s-list > li::before{
 .im-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
 .im-item{border-radius:8px;padding:10px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:3px;}
 .im-pri{background:#EEF4E8;border:1.5px solid #C8DDB8;}
-.im-prb{background:#e8f2f9;border:1.5px solid #90caf9;}
+.im-prb{background:#e8f2f9;border:1.5px solid #89b4d4;}
 .im-psi{background:#fdf0e0;border:1.5px solid #ffcc80;}
 .im-ep{background:#ede8f7;border:1.5px solid #ce93d8;}
 .im-ico{font-size:1.3rem;}.im-n{font-weight:800;font-size:.95rem;}
@@ -1930,17 +1930,17 @@ ul.s-list > li::before{
 .im-d{font-size:.7rem;color:#546e7a;line-height:1.4;}
 /* 投資策略 */
 .strategy-list{display:flex;flex-direction:column;gap:5px;}
-.sl-item{display:flex;align-items:center;gap:8px;padding:7px;border-radius:7px;background:#fafafa;border:1px solid var(--border);}
+.sl-item{display:flex;align-items:center;gap:8px;padding:7px;border-radius:7px;background:#faf8f4;border:1px solid var(--border);}
 .sl-n{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:.78rem;flex-shrink:0;}
 .sl-name{font-weight:700;font-size:.8rem;}
 .sl-desc{font-size:.72rem;color:var(--gray);}
 /* SFDR */
 .sfdr-list{display:flex;flex-direction:column;gap:7px;}
 .sfdr-item{border-radius:8px;padding:9px 11px;}
-.sfdr-6{background:#f5f5f5;border-left:4px solid #bdbdbd;}
+.sfdr-6{background:#f5f2ec;border-left:4px solid #c4b8a8;}
 .sfdr-8{background:#EEF4E8;border-left:4px solid #A8C48A;}
 .sfdr-9{background:#C8DDB8;border-left:4px solid #7A9A5A;}
-.sfdr-art{font-weight:800;font-size:.82rem;color:#37474f;}
+.sfdr-art{font-weight:800;font-size:.82rem;color:#3d3028;}
 .sfdr-name{font-weight:700;font-size:.8rem;}
 .sfdr-desc{font-size:.72rem;color:#546e7a;line-height:1.4;}
 .sfdr-meter{display:flex;align-items:center;gap:7px;margin-top:5px;}
@@ -2020,9 +2020,9 @@ ul.s-list > li::before{
 .nz-neutral .nz-body{background:#e8f2f9;}
 .sdg-table{width:100%;border-collapse:collapse;font-size:.76rem;}
 .sdg-table th{padding:6px 8px;text-align:left;font-size:.72rem;color:#fff;}
-.sdg-table td{padding:6px 8px;border-bottom:1px solid #f0f0f0;vertical-align:top;line-height:1.5;}
+.sdg-table td{padding:6px 8px;border-bottom:1px solid #ede8e0;vertical-align:top;line-height:1.5;}
 .sdg-table tr:last-child td{border-bottom:none;}
-.sdg-table tr:nth-child(even) td{background:#fafafa;}
+.sdg-table tr:nth-child(even) td{background:#faf8f4;}
 .sdg-num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;color:#fff;font-weight:800;font-size:.72rem;flex-shrink:0;}
 .sdg-tip{color:#b71c1c;font-size:.7rem;}
 .sdg-star-row td{background:#fdf4e3 !important;border-left:3px solid #a21942;}
@@ -2030,17 +2030,17 @@ ul.s-list > li::before{
 .tl-svg{display:block;width:100%;min-width:520px;}
 .kp-tbl{width:100%;border-collapse:collapse;font-size:.75rem;}
 .kp-tbl th{padding:7px 10px;color:#fff;font-weight:700;font-size:.73rem;}
-.kp-tbl td{padding:7px 10px;border-bottom:1px solid #f0f0f0;vertical-align:top;line-height:1.6;}
+.kp-tbl td{padding:7px 10px;border-bottom:1px solid #ede8e0;vertical-align:top;line-height:1.6;}
 .kp-tbl tr:last-child td{border-bottom:none;}
 .kp-tbl .kp-label{font-weight:700;color:#546e7a;font-size:.72rem;width:90px;}
 .kp-trap{font-size:.7rem;color:#b71c1c;background:#ffebee;border-radius:4px;padding:1px 6px;}
 .sfdr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
 .sfdr-col{border-radius:10px;overflow:hidden;border:2px solid transparent;display:flex;flex-direction:column;}
-.sfdr-col-6{border-color:#90a4ae;}
+.sfdr-col-6{border-color:#a8a090;}
 .sfdr-col-8{border-color:#A8C48A;}
 .sfdr-col-9{border-color:#7A9A5A;}
 .sfdr-col-head{padding:10px 12px 8px;text-align:center;}
-.sfdr-col-6 .sfdr-col-head{background:#eceff1;}
+.sfdr-col-6 .sfdr-col-head{background:#f0ece4;}
 .sfdr-col-8 .sfdr-col-head{background:#C8DDB8;}
 .sfdr-col-9 .sfdr-col-head{background:#7A9A5A;}
 .sfdr-article-num{font-size:1rem;font-weight:900;letter-spacing:.5px;}
@@ -2048,18 +2048,18 @@ ul.s-list > li::before{
 .sfdr-col-8 .sfdr-article-num{color:#4a6b3a;}
 .sfdr-col-9 .sfdr-article-num{color:#fff;}
 .sfdr-badge{display:inline-block;margin-top:4px;padding:2px 10px;border-radius:20px;font-size:.72rem;font-weight:700;}
-.sfdr-col-6 .sfdr-badge{background:#cfd8dc;color:#37474f;}
+.sfdr-col-6 .sfdr-badge{background:#d4ccc0;color:#3d3028;}
 .sfdr-col-8 .sfdr-badge{background:#C8DDB8;color:#4a6b3a;}
 .sfdr-col-9 .sfdr-badge{background:rgba(255,255,255,.25);color:#fff;}
 .sfdr-col-body{padding:10px 12px;flex:1;display:flex;flex-direction:column;gap:6px;}
-.sfdr-col-6 .sfdr-col-body{background:#fafafa;}
+.sfdr-col-6 .sfdr-col-body{background:#faf8f4;}
 .sfdr-col-8 .sfdr-col-body{background:#f1f8e9;}
 .sfdr-col-9 .sfdr-col-body{background:#EEF4E8;}
-.sfdr-col-row{font-size:.76rem;line-height:1.5;color:#37474f;}
-.sfdr-col-row b{color:#263238;}
+.sfdr-col-row{font-size:.76rem;line-height:1.5;color:#3d3028;}
+.sfdr-col-row b{color:#2a221a;}
 .sfdr-esg-bar{height:8px;border-radius:4px;margin-top:8px;}
-.sfdr-col-6 .sfdr-esg-bar{background:linear-gradient(to right,#bdbdbd 20%,#e0e0e0 20%);}
-.sfdr-col-8 .sfdr-esg-bar{background:linear-gradient(to right,#A8C48A 60%,#e0e0e0 60%);}
+.sfdr-col-6 .sfdr-esg-bar{background:linear-gradient(to right,#c4b8a8 20%,#ede8e0 20%);}
+.sfdr-col-8 .sfdr-esg-bar{background:linear-gradient(to right,#A8C48A 60%,#ede8e0 60%);}
 .sfdr-col-9 .sfdr-esg-bar{background:#7A9A5A;}
 .sfdr-esg-label{font-size:.68rem;color:var(--gray);margin-top:3px;text-align:right;}
 .sfdr-arrow{display:flex;align-items:center;justify-content:center;gap:4px;margin:8px 0 2px;font-size:.7rem;color:var(--gray);}
@@ -2067,9 +2067,9 @@ ul.s-list > li::before{
 @media(max-width:600px){.sfdr-grid{grid-template-columns:1fr;}}
 .fw-table{width:100%;border-collapse:collapse;font-size:.76rem;table-layout:auto;}
 .fw-table th{padding:8px 10px;text-align:center;color:#fff;font-weight:800;font-size:.78rem;}
-.fw-table td{padding:7px 10px;border:1px solid #e0e0e0;vertical-align:top;line-height:1.5;word-break:break-word;}
-.fw-table .fw-row-label{background:#eceff1;font-weight:700;color:#37474f;font-size:.73rem;text-align:center;}
-.fw-table tr:hover td{background:#fafafa;}
+.fw-table td{padding:7px 10px;border:1px solid #ede8e0;vertical-align:top;line-height:1.5;word-break:break-word;}
+.fw-table .fw-row-label{background:#f0ece4;font-weight:700;color:#3d3028;font-size:.73rem;text-align:center;}
+.fw-table tr:hover td{background:#faf8f4;}
 .fw-must{margin-top:10px;background:#fff9c4;border:1.5px solid #d4a56a;border-radius:8px;padding:7px 10px;font-size:.75rem;color:#5d4037;}
 
 /* ══ 回到題目浮動按鈕 ══ */
@@ -2305,7 +2305,7 @@ ul.s-list > li::before{
 /* ── 頂部播放器區（固定顯示）── */
 #pod-top{
   flex-shrink:0;
-  background:linear-gradient(160deg, #1b4d20 0%, #7A9A5A 60%, #7A9A5A 100%);
+  background:linear-gradient(160deg, #4a6b3a 0%, #7A9A5A 60%, #7A9A5A 100%);
   color:#fff;
   padding:18px 20px 14px;
   position:relative; overflow:hidden;
@@ -2512,10 +2512,10 @@ ul.s-list > li::before{
 }
 .pod-ep:hover .pod-ep-thumb{ transform:scale(1.04); }
 .pod-ep[data-ch="1"] .pod-ep-thumb{ background:linear-gradient(135deg,#C8DDB8,#A8C48A); }
-.pod-ep[data-ch="2"] .pod-ep-thumb{ background:linear-gradient(135deg,#bbdefb,#89b4d4); }
+.pod-ep[data-ch="2"] .pod-ep-thumb{ background:linear-gradient(135deg,#c8d8c4,#89b4d4); }
 .pod-ep[data-ch="3"] .pod-ep-thumb{ background:linear-gradient(135deg,#ffe0b2,#ffb74d); }
 .pod-ep[data-ch="4"] .pod-ep-thumb{ background:linear-gradient(135deg,#e1bee7,#ba68c8); }
-.pod-ep[data-ch="5"] .pod-ep-thumb{ background:linear-gradient(135deg,#cfd8dc,#90a4ae); }
+.pod-ep[data-ch="5"] .pod-ep-thumb{ background:linear-gradient(135deg,#d4ccc0,#a8a090); }
 
 /* 播放中波形動畫 */
 .pod-wave{
@@ -2622,10 +2622,10 @@ ul.s-list > li::before{
 
 /* ══ 漂綠案例折疊卡 ══ */
 .tx-acc-wrap{display:flex;flex-direction:column;gap:8px;margin:14px 0}
-.tx-acc-item{border:.5px solid #e0e0e0;border-radius:10px;overflow:hidden}
+.tx-acc-item{border:.5px solid #ede8e0;border-radius:10px;overflow:hidden}
 .tx-acc-header{display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;background:#fff;user-select:none;-webkit-user-select:none}
 .tx-acc-header:hover{background:#f7f7f7}
-.tx-acc-co{font-size:12px;font-weight:600;padding:2px 9px;border-radius:5px;background:#f0f0f0;color:#555;flex-shrink:0;white-space:nowrap}
+.tx-acc-co{font-size:12px;font-weight:600;padding:2px 9px;border-radius:5px;background:#ede8e0;color:#5a4e42;flex-shrink:0;white-space:nowrap}
 .tx-acc-tag{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 9px;border-radius:5px;flex-shrink:0;white-space:nowrap}
 .tx-acc-tag svg{flex-shrink:0}
 .tx-acc-tag.t-false {background:#FAECE7;color:#712B13}
@@ -2637,14 +2637,14 @@ ul.s-list > li::before{
 .tx-acc-tag.t-cmp   {background:#FAEEDA;color:#633806}
 .tx-acc-tag.t-cond  {background:#EEEDFE;color:#3C3489}
 .tx-acc-tag.t-scope {background:#E1F5EE;color:#085041}
-.tx-acc-sum{font-size:12.5px;color:#666;line-height:1.45;flex:1;min-width:0}
+.tx-acc-sum{font-size:12.5px;color:#7a6e65;line-height:1.45;flex:1;min-width:0}
 .tx-acc-chev{flex-shrink:0;margin-left:4px;display:flex;align-items:center;color:#bbb;transition:transform .22s ease}
 .tx-acc-item.open .tx-acc-chev{transform:rotate(180deg)}
 .tx-acc-body{max-height:0;overflow:hidden;transition:max-height .28s ease}
 .tx-acc-item.open .tx-acc-body{max-height:400px}
 .tx-acc-inner{padding:0 14px 13px;display:flex;flex-direction:column;gap:8px;border-top:.5px solid #eee}
 .tx-acc-rlabel{font-size:10.5px;font-weight:600;color:#aaa;letter-spacing:.04em;text-transform:uppercase;margin-bottom:3px;display:flex;align-items:center;gap:4px;padding-top:10px}
-.tx-acc-claim{font-size:13px;color:#555;line-height:1.65}
+.tx-acc-claim{font-size:13px;color:#5a4e42;line-height:1.65}
 .tx-acc-prob{font-size:13px;color:#993C1D;line-height:1.65;padding:8px 11px;background:#FAECE7;border-radius:7px;display:flex;gap:8px;align-items:flex-start}
 .tx-acc-prob svg{flex-shrink:0;margin-top:2px}
 
@@ -2694,7 +2694,7 @@ ul.s-list > li::before{
 .tb-drop-info{padding:14px 16px;border-bottom:1px solid var(--border);}
 .tb-drop-name{font-size:.85rem;font-weight:700;color:#1a2e1a;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .tb-drop-email{font-size:.72rem;color:var(--gray);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.tb-drop-btn{display:flex;align-items:center;gap:8px;width:100%;padding:11px 16px;border:none;background:none;font-family:var(--font);font-size:.82rem;cursor:pointer;color:#263238;transition:background .12s;text-align:left;}
+.tb-drop-btn{display:flex;align-items:center;gap:8px;width:100%;padding:11px 16px;border:none;background:none;font-family:var(--font);font-size:.82rem;cursor:pointer;color:#2a221a;transition:background .12s;text-align:left;}
 .tb-drop-btn:hover{background:var(--lgray);}
 .tb-drop-btn.danger{color:var(--red);}
 .tb-drop-btn.danger:hover{background:var(--rp);}
@@ -2789,15 +2789,15 @@ ul.s-list > li::before{
       box.innerHTML = `
         <div style="font-size:36px;margin-bottom:12px;">🔒</div>
         <div style="font-size:17px;font-weight:700;color:#1E3554;margin-bottom:8px;">無法在此瀏覽器登入</div>
-        <div style="font-size:14px;color:#555;line-height:1.6;margin-bottom:18px;">
+        <div style="font-size:14px;color:#5a4e42;line-height:1.6;margin-bottom:18px;">
           Google 不支援在 LINE / Facebook 等 App 的內建瀏覽器中登入。<br>
           請複製下方網址，貼到 <b>Chrome</b> 或 <b>Safari</b> 開啟即可登入。
         </div>
         <div style="display:flex;gap:8px;margin-bottom:14px;">
-          <input id="webview-url" readonly value="${location.href}" style="flex:1;padding:9px 10px;border:1.5px solid #d0d5dd;border-radius:8px;font-size:13px;color:#333;background:#f9fafb;min-width:0;">
+          <input id="webview-url" readonly value="${location.href}" style="flex:1;padding:9px 10px;border:1.5px solid #e5ddd2;border-radius:8px;font-size:13px;color:#3d3028;background:#faf8f4;min-width:0;">
           <button id="webview-copy-btn" style="padding:9px 16px;border:none;border-radius:8px;background:#1E3554;color:#fff;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">複製網址</button>
         </div>
-        <button id="webview-close-btn" style="padding:8px 20px;border:1.5px solid #d0d5dd;border-radius:8px;background:transparent;color:#666;font-size:13px;cursor:pointer;">關閉</button>
+        <button id="webview-close-btn" style="padding:8px 20px;border:1.5px solid #e5ddd2;border-radius:8px;background:transparent;color:#7a6e65;font-size:13px;cursor:pointer;">關閉</button>
       `;
       overlay.appendChild(box);
       document.body.appendChild(overlay);
@@ -3232,7 +3232,7 @@ ul.s-list > li::before{
 
       <div style="text-align:center;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
         <p style="font-size:.78rem;color:var(--gray);margin-bottom:8px;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#c88a50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> 清除後無法復原，所有練習紀錄將永久刪除</p>
-        <button onclick="clearProgress()" style="padding:6px 16px;border-radius:8px;border:1px solid #e0e0e0;background:#fff;color:var(--gray);cursor:pointer;font-size:.78rem;">清除所有進度</button>
+        <button onclick="clearProgress()" style="padding:6px 16px;border-radius:8px;border:1px solid #ede8e0;background:#fff;color:var(--gray);cursor:pointer;font-size:.78rem;">清除所有進度</button>
       </div>
     </div>
 
@@ -3460,7 +3460,7 @@ ul.s-list > li::before{
       <div class="chart-card chart-card-wide" data-ch="ch1"><div class="chart-card-header"><span class="chart-tag ch1-tag">第一章</span><h3>SDGs 17項永續發展目標</h3></div><div class="chart-body">
 <div style="overflow-x:auto;"><table class="sdg-table">
   <thead>
-    <tr style="background:#37474f;">
+    <tr style="background:#3d3028;">
       <th style="width:38px;">#</th>
       <th>目標名稱</th>
       <th>常考細項 / 陷阱</th>
@@ -3473,15 +3473,15 @@ ul.s-list > li::before{
     <tr><td><span class="sdg-num" style="background:#c5192d">4</span></td><td><b>優質教育</b></td><td>產學合作（教育難以適性揚才）</td></tr>
     <tr><td><span class="sdg-num" style="background:#ff3a21">5</span></td><td><b>性別平等</b></td><td>消除暴力歧視、婦幼性生殖健康 <span class="sdg-tip"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#c62828" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>「確保弱勢社會保障」非此目標</span></td></tr>
     <tr><td><span class="sdg-num" style="background:#26bde2">6</span></td><td><b>淨水衛生</b></td><td>安全飲用水、水資源管理、建立水基礎設施</td></tr>
-    <tr><td><span class="sdg-num" style="background:#fcc30b;color:#333">7</span></td><td><b>可負擔能源</b></td><td>增電力供應、增再生能源 <span class="sdg-tip"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#c62828" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>「加強科技創新」非此目標</span></td></tr>
+    <tr><td><span class="sdg-num" style="background:#fcc30b;color:#3d3028">7</span></td><td><b>可負擔能源</b></td><td>增電力供應、增再生能源 <span class="sdg-tip"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#c62828" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>「加強科技創新」非此目標</span></td></tr>
     <tr class="sdg-star-row"><td><span class="sdg-num" style="background:#a21942">8</span></td><td><b>就業與經濟 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="#d4a56a" stroke="none" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></b></td><td><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="#d4a56a" stroke="none" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> <b>唯一提到「保險」的永續目標</b>（金融普及）</td></tr>
     <tr><td><span class="sdg-num" style="background:#fd6925">9</span></td><td><b>工業創新基礎</b></td><td>韌性基礎建設、工業永續化</td></tr>
     <tr><td><span class="sdg-num" style="background:#dd1367">10</span></td><td><b>減少不平等</b></td><td>提高弱勢收入、降低貧窮比率 <span class="sdg-tip"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#c62828" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>「確保言論自由」非此目標</span></td></tr>
-    <tr><td><span class="sdg-num" style="background:#fd9d24;color:#333">11</span></td><td><b>永續城市</b></td><td>可負擔住房、城市韌性；青年安心成家貸款</td></tr>
+    <tr><td><span class="sdg-num" style="background:#fd9d24;color:#3d3028">11</span></td><td><b>永續城市</b></td><td>可負擔住房、城市韌性；青年安心成家貸款</td></tr>
     <tr><td><span class="sdg-num" style="background:#bf8b2e">12</span></td><td><b>永續消費生產</b></td><td>促進綠色產品 <span class="sdg-tip"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#c62828" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>「推動生態旅遊」非此目標</span></td></tr>
     <tr><td><span class="sdg-num" style="background:#3f7e44">13</span></td><td><b>氣候行動</b></td><td>推動氣候相關金融機制與投資</td></tr>
     <tr><td><span class="sdg-num" style="background:#0a97d9">14</span></td><td><b>海洋生態</b></td><td>減少海洋污染、恢復沿岸生態 <span class="sdg-tip"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#c62828" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>「建立水基礎設施」屬SDG6</span></td></tr>
-    <tr><td><span class="sdg-num" style="background:#56c02b;color:#333">15</span></td><td><b>陸域生態</b></td><td>保護瀕危物種、推動生態旅遊</td></tr>
+    <tr><td><span class="sdg-num" style="background:#56c02b;color:#3d3028">15</span></td><td><b>陸域生態</b></td><td>保護瀕危物種、推動生態旅遊</td></tr>
     <tr><td><span class="sdg-num" style="background:#00689d">16</span></td><td><b>和平正義</b></td><td>防制洗錢、反貪腐</td></tr>
     <tr><td><span class="sdg-num" style="background:#19486a">17</span></td><td><b>全球夥伴關係</b></td><td>促進合作、資金技術援助 <span class="sdg-tip"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#c62828" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>「提供可負擔住房」屬SDG11</span></td></tr>
   </tbody>
@@ -3499,7 +3499,7 @@ ul.s-list > li::before{
   <!-- x(year) = 30 + (year-1972) * (700/51) -->
 
   <!-- 小刻度線 1975,1980,1985,1990,1995,2000,2005,2010,2015,2020 -->
-  <g stroke="#b0bec5" stroke-width="1">
+  <g stroke="#b8b0a4" stroke-width="1">
     <line x1="71"  y1="95" x2="71"  y2="105"/> <!-- 1975 -->
     <line x1="139" y1="95" x2="139" y2="105"/> <!-- 1980 -->
     <line x1="207" y1="95" x2="207" y2="105"/> <!-- 1985 -->
@@ -3581,16 +3581,16 @@ ul.s-list > li::before{
   <text x="730" y="67" fill="#546e7a" font-size="8" text-anchor="middle">再生能源 ×3倍</text>
 
   <!-- 間距標註：1972→1988 = 16年 -->
-  <line x1="30" y1="128" x2="250" y2="128" stroke="#b0bec5" stroke-width="1" marker-end="url(#arr)" marker-start="url(#arr)"/>
-  <text x="140" y="138" fill="#90a4ae" font-size="8" text-anchor="middle">16 年</text>
+  <line x1="30" y1="128" x2="250" y2="128" stroke="#b8b0a4" stroke-width="1" marker-end="url(#arr)" marker-start="url(#arr)"/>
+  <text x="140" y="138" fill="#a8a090" font-size="8" text-anchor="middle">16 年</text>
 
   <!-- 間距標註：1988→1992 = 4年 -->
-  <line x1="250" y1="128" x2="305" y2="128" stroke="#b0bec5" stroke-width="1"/>
-  <text x="277" y="138" fill="#90a4ae" font-size="8" text-anchor="middle">4年</text>
+  <line x1="250" y1="128" x2="305" y2="128" stroke="#b8b0a4" stroke-width="1"/>
+  <text x="277" y="138" fill="#a8a090" font-size="8" text-anchor="middle">4年</text>
 
   <!-- 間距標註：1997→2015 = 18年 -->
-  <line x1="373" y1="128" x2="620" y2="128" stroke="#b0bec5" stroke-width="1"/>
-  <text x="496" y="138" fill="#90a4ae" font-size="8" text-anchor="middle">── 18 年的空白 ──</text>
+  <line x1="373" y1="128" x2="620" y2="128" stroke="#b8b0a4" stroke-width="1"/>
+  <text x="496" y="138" fill="#a8a090" font-size="8" text-anchor="middle">── 18 年的空白 ──</text>
 
 </svg>
 </div>
@@ -3621,7 +3621,7 @@ ul.s-list > li::before{
       <div class="chart-card chart-card-wide" data-ch="ch1"><div class="chart-card-header"><span class="chart-tag ch1-tag">第一章</span><h3>臺灣 2050 淨零排放路徑</h3></div><div class="chart-body">
 <style>
 .nzr-wrap{display:flex;flex-direction:column;gap:10px;}
-.nzr-title{font-size:.75rem;font-weight:800;color:#666;letter-spacing:.05em;text-transform:uppercase;margin-bottom:2px;}
+.nzr-title{font-size:.75rem;font-weight:800;color:#7a6e65;letter-spacing:.05em;text-transform:uppercase;margin-bottom:2px;}
 .nzr-row{display:grid;gap:8px;}
 .nzr-4{grid-template-columns:repeat(4,1fr);}
 .nzr-2{grid-template-columns:repeat(2,1fr);}
@@ -3632,7 +3632,7 @@ ul.s-list > li::before{
 .nzr-strat b{color:#4a6b3a;}
 .nzr-gov{background:#fdf0e0;border:1.5px solid #ffcc80;}
 .nzr-gov b{color:#c87848;}
-.nzr-key{background:#e8f2f9;border:1.5px solid #90caf9;font-size:.7rem;padding:6px 8px;}
+.nzr-key{background:#e8f2f9;border:1.5px solid #89b4d4;font-size:.7rem;padding:6px 8px;}
 .nzr-key b{color:#89b4d4;font-size:.72rem;}
 </style>
 <div class="nzr-wrap">
@@ -3674,7 +3674,7 @@ ul.s-list > li::before{
       <div class="chart-card" data-ch="ch1"><div class="chart-card-header"><span class="chart-tag ch1-tag">第一章</span><h3>京都議定書 vs 巴黎協定</h3></div><div class="chart-body">
 <div style="overflow-x:auto;"><table class="kp-tbl">
   <thead><tr>
-    <th class="kp-label" style="background:#455a64;width:90px;">比較項目</th>
+    <th class="kp-label" style="background:#5a4e42;width:90px;">比較項目</th>
     <th style="background:#89b4d4;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#4e342e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> 京都議定書（1997 COP3）</th>
     <th style="background:#4a6b3a;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#7A9A5A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><path d="M17 8C8 10 5.9 16.17 3.82 22"/><path d="M2 16s3-1 6-3c3.5-2.3 4.5-5 4.5-5S10 13 8 15c-2.1 2.1-6 3-6 3z"/><path d="M22 2s-5 2-8 7c-2.3 3.5-2 7-2 7s2-3.5 5-6c3.1-2.6 5-8 5-8z"/></svg> 巴黎協定（2015 COP21）<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="#d4a56a" stroke="none" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></th>
   </tr></thead>
@@ -3695,7 +3695,7 @@ ul.s-list > li::before{
 .cbam-item{display:flex;gap:12px;align-items:stretch;}
 .cbam-dot-col{display:flex;flex-direction:column;align-items:center;width:36px;flex-shrink:0;}
 .cbam-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0;margin-top:4px;}
-.cbam-line{width:2px;flex:1;background:#cfd8dc;margin:2px 0;}
+.cbam-line{width:2px;flex:1;background:#d4ccc0;margin:2px 0;}
 .cbam-body{padding:8px 0 14px;}
 .cbam-year{font-size:.82rem;font-weight:800;}
 .cbam-desc{font-size:.74rem;color:#546e7a;line-height:1.6;margin-top:2px;}
@@ -3719,7 +3719,7 @@ ul.s-list > li::before{
     </div>
   </div>
   <div>
-    <div style="font-size:.72rem;font-weight:700;color:#666;margin-bottom:6px;">納入CBAM的五大高碳排產業：</div>
+    <div style="font-size:.72rem;font-weight:700;color:#7a6e65;margin-bottom:6px;">納入CBAM的五大高碳排產業：</div>
     <div class="cbam-ind">
       <div class="cbam-ind-box"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#546e7a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><path d="M12 22v-4"/><path d="M12 6V2"/><circle cx="12" cy="12" r="4"/><path d="M4.93 4.93l2.83 2.83"/><path d="M16.24 16.24l2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="M4.93 19.07l2.83-2.83"/><path d="M16.24 7.76l2.83-2.83"/></svg> 鋼鐵</div>
       <div class="cbam-ind-box"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#c88a50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><rect x="2" y="6" width="20" height="8" rx="1"/><path d="M17 14v7"/><path d="M7 14v7"/><path d="M17 3h.01"/><path d="M7 3h.01"/></svg> 水泥</div>
@@ -3735,7 +3735,7 @@ ul.s-list > li::before{
 .eut-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;}
 .eut-box{border-radius:10px;padding:10px 10px;font-size:.74rem;text-align:center;line-height:1.5;}
 .eut-box b{display:block;font-size:.78rem;margin-bottom:3px;}
-.eut-rule{background:#f5f5f5;border-radius:10px;padding:10px 14px;font-size:.74rem;line-height:1.7;}
+.eut-rule{background:#f5f2ec;border-radius:10px;padding:10px 14px;font-size:.74rem;line-height:1.7;}
 .eut-rule b{color:#4a6b3a;}
 .eut-dnsh{display:inline-block;background:#ffebee;color:#c62828;border-radius:6px;padding:2px 8px;font-size:.7rem;font-weight:700;}
 @media(max-width:480px){.eut-grid{grid-template-columns:repeat(2,1fr);}}
@@ -3743,7 +3743,7 @@ ul.s-list > li::before{
 <div class="eut-grid">
   <div class="eut-box" style="background:#EEF4E8;border:1.5px solid #C8DDB8;"><b style="color:#4a6b3a;">1️⃣ 氣候變遷減緩</b>減少溫室氣體排放</div>
   <div class="eut-box" style="background:#e1f5fe;border:1.5px solid #81d4fa;"><b style="color:#0277bd;">2️⃣ 氣候變遷調適</b>因應氣候衝擊風險</div>
-  <div class="eut-box" style="background:#e8f2f9;border:1.5px solid #90caf9;"><b style="color:#89b4d4;">3️⃣ 水資源永續利用</b>保護水及海洋資源</div>
+  <div class="eut-box" style="background:#e8f2f9;border:1.5px solid #89b4d4;"><b style="color:#89b4d4;">3️⃣ 水資源永續利用</b>保護水及海洋資源</div>
   <div class="eut-box" style="background:#ede8f7;border:1.5px solid #ce93d8;"><b style="color:#8872b8;">4️⃣ 轉型至循環經濟</b>廢棄物減量與再利用</div>
   <div class="eut-box" style="background:#fdf4e3;border:1.5px solid #ffcc02;"><b style="color:#c88a50;">5️⃣ 污染預防與控制</b>減少空氣、水土污染</div>
   <div class="eut-box" style="background:#f1f8e9;border:1.5px solid #aed581;"><b style="color:#33691e;">6️⃣ 生物多樣性保護</b>保護生態系統</div>
@@ -3756,10 +3756,10 @@ ul.s-list > li::before{
       <div class="chart-card chart-card-wide" data-ch="ch2"><div class="chart-card-header"><span class="chart-tag ch2-tag">第二章</span><h3>上市櫃溫室氣體盤查 × 確信時程</h3></div><div class="chart-body">
 <style>
 .timeline-matrix{width:100%;border-collapse:collapse;font-size:.78rem;table-layout:auto;}
-.timeline-matrix th{background:#37474f;color:#fff;padding:6px 3px;text-align:center;font-weight:700;font-size:.72rem;white-space:nowrap;}
-.timeline-matrix td{padding:4px 3px;border:1px solid #e0e0e0;text-align:center;vertical-align:middle;height:34px;}
-.timeline-matrix .row-label{text-align:left;font-weight:600;font-size:.73rem;color:#37474f;padding:4px 6px;white-space:nowrap;background:#fafafa;min-width:80px;}
-.timeline-matrix .row-group{background:#f5f5f5;font-weight:800;font-size:.73rem;color:#fff;padding:5px 6px;letter-spacing:.2px;}
+.timeline-matrix th{background:#3d3028;color:#fff;padding:6px 3px;text-align:center;font-weight:700;font-size:.72rem;white-space:nowrap;}
+.timeline-matrix td{padding:4px 3px;border:1px solid #ede8e0;text-align:center;vertical-align:middle;height:34px;}
+.timeline-matrix .row-label{text-align:left;font-weight:600;font-size:.73rem;color:#3d3028;padding:4px 6px;white-space:nowrap;background:#faf8f4;min-width:80px;}
+.timeline-matrix .row-group{background:#f5f2ec;font-weight:800;font-size:.73rem;color:#fff;padding:5px 6px;letter-spacing:.2px;}
 @media(max-width:480px){
   .timeline-matrix{font-size:.68rem;}
   .timeline-matrix th{font-size:.65rem;padding:5px 2px;}
@@ -3768,8 +3768,8 @@ ul.s-list > li::before{
   .tm-scan,.tm-conf{font-size:.62rem;padding:2px 3px;}
 }
 .tm-scan{background:#C8DDB8;color:#4a6b3a;font-weight:700;font-size:.7rem;border-radius:4px;padding:2px 4px;display:inline-block;line-height:1.3;}
-.tm-conf{background:#bbdefb;color:#5a8ab8;font-weight:700;font-size:.7rem;border-radius:4px;padding:2px 4px;display:inline-block;line-height:1.3;}
-.tm-both{background:linear-gradient(135deg,#C8DDB8 50%,#bbdefb 50%);color:#263238;font-weight:700;font-size:.66rem;border-radius:4px;padding:2px 3px;display:inline-block;line-height:1.4;}
+.tm-conf{background:#c8d8c4;color:#5a8ab8;font-weight:700;font-size:.7rem;border-radius:4px;padding:2px 4px;display:inline-block;line-height:1.3;}
+.tm-both{background:linear-gradient(135deg,#C8DDB8 50%,#c8d8c4 50%);color:#2a221a;font-weight:700;font-size:.66rem;border-radius:4px;padding:2px 3px;display:inline-block;line-height:1.4;}
 .tm-legend{display:flex;gap:14px;margin-top:10px;font-size:.76rem;align-items:center;flex-wrap:wrap;}
 .tm-legend span{display:flex;align-items:center;gap:5px;}
 .col-grp1{background:#EEF4E8;}
@@ -3780,13 +3780,13 @@ ul.s-list > li::before{
   <thead>
     <tr>
       <th style="text-align:left;padding-left:6px;">資本額 ／ 對象</th>
-      <th style="background:#455a64;">2023</th>
-      <th style="background:#455a64;">2024</th>
-      <th style="background:#455a64;">2025</th>
-      <th style="background:#455a64;">2026</th>
-      <th style="background:#455a64;">2027</th>
-      <th style="background:#455a64;">2028</th>
-      <th style="background:#455a64;">2029</th>
+      <th style="background:#5a4e42;">2023</th>
+      <th style="background:#5a4e42;">2024</th>
+      <th style="background:#5a4e42;">2025</th>
+      <th style="background:#5a4e42;">2026</th>
+      <th style="background:#5a4e42;">2027</th>
+      <th style="background:#5a4e42;">2028</th>
+      <th style="background:#5a4e42;">2029</th>
     </tr>
   </thead>
   <tbody>
@@ -3916,7 +3916,7 @@ ul.s-list > li::before{
 .issb-line{width:2px;flex:1;background:#C8DDB8;margin:3px 0;}
 .issb-body{padding:7px 0 12px;flex:1;}
 .issb-year{font-size:.82rem;font-weight:800;color:#4a6b3a;}
-.issb-desc{font-size:.74rem;color:#37474f;line-height:1.6;margin-top:2px;}
+.issb-desc{font-size:.74rem;color:#3d3028;line-height:1.6;margin-top:2px;}
 .issb-tag{display:inline-block;padding:1px 7px;border-radius:8px;font-size:.68rem;font-weight:700;}
 </style>
 <div class="issb-tl">
@@ -3950,7 +3950,7 @@ ul.s-list > li::before{
 <div class="ifrs-tl">
   <div class="ifrs-row">
     <div class="ifrs-year" style="background:#89b4d4;">2026</div>
-    <div class="ifrs-box" style="background:#e8f2f9;border:1.5px solid #90caf9;">
+    <div class="ifrs-box" style="background:#e8f2f9;border:1.5px solid #89b4d4;">
       <b style="color:#89b4d4;">第一階段</b>
       資本額 <b>100億元以上</b> 上市櫃公司<br>
       <small style="color:#546e7a;">首年僅需揭露氣候議題（S2）；免揭露比較期間資訊</small>
@@ -4061,7 +4061,7 @@ ul.s-list > li::before{
 .risk-box-body{padding:10px 12px;display:flex;flex-direction:column;gap:6px;}
 .risk-row{display:flex;gap:8px;align-items:flex-start;font-size:.76rem;line-height:1.5;}
 .risk-row-icon{font-size:.9rem;flex-shrink:0;margin-top:1px;}
-.risk-row-content b{color:#263238;display:block;font-size:.76rem;}
+.risk-row-content b{color:#2a221a;display:block;font-size:.76rem;}
 .risk-row-content small{color:#546e7a;font-size:.7rem;}
 .risk-trap{font-size:.7rem;color:#b71c1c;background:#ffebee;border-radius:5px;padding:2px 7px;display:inline-block;margin-top:1px;}
 /* transition */
@@ -4109,7 +4109,7 @@ ul.s-list > li::before{
 <style>
 .ghg-tbl{width:100%;border-collapse:collapse;font-size:.75rem;}
 .ghg-tbl th{padding:7px 10px;color:#fff;font-weight:700;font-size:.73rem;text-align:center;}
-.ghg-tbl td{padding:7px 10px;border-bottom:1px solid #f0f0f0;font-size:.73rem;line-height:1.5;text-align:center;}
+.ghg-tbl td{padding:7px 10px;border-bottom:1px solid #ede8e0;font-size:.73rem;line-height:1.5;text-align:center;}
 .ghg-tbl tr:last-child td{border-bottom:none;}
 .ghg-yes{color:#4a6b3a;font-weight:700;}
 .ghg-no{color:#b71c1c;}
@@ -4117,7 +4117,7 @@ ul.s-list > li::before{
 </style>
 <table class="ghg-tbl">
   <thead><tr>
-    <th style="background:#37474f;text-align:left;padding-left:14px;">溫室氣體</th>
+    <th style="background:#3d3028;text-align:left;padding-left:14px;">溫室氣體</th>
     <th style="background:#4a6b3a;">氣候變遷因應法<br><small>（台灣7種）</small></th>
     <th style="background:#89b4d4;">IPCC AR6<br><small>（預測關鍵驅動）</small></th>
   </tr></thead>
@@ -4173,8 +4173,8 @@ ul.s-list > li::before{
 <style>
 .bond-tbl{width:100%;border-collapse:collapse;font-size:.78rem;table-layout:auto;}
 .bond-tbl th{padding:9px 10px;text-align:center;color:#fff;font-weight:800;}
-.bond-tbl td{padding:8px 10px;border:1px solid #e0e0e0;text-align:center;vertical-align:middle;line-height:1.5;}
-.bond-tbl .bond-label{text-align:left;font-weight:700;color:#37474f;background:#f5f5f5;font-size:.74rem;}
+.bond-tbl td{padding:8px 10px;border:1px solid #ede8e0;text-align:center;vertical-align:middle;line-height:1.5;}
+.bond-tbl .bond-label{text-align:left;font-weight:700;color:#3d3028;background:#f5f2ec;font-size:.74rem;}
 .bond-tbl .bond-slb{background:#fdf0e0;}
 .bond-tbl .bond-slb-h{background:#c87848;}
 .bond-highlight{color:#c87848;font-weight:800;}
@@ -4183,7 +4183,7 @@ ul.s-list > li::before{
 <table class="bond-tbl">
   <thead>
     <tr>
-      <th style="width:18%;background:#37474f;text-align:left;padding-left:10px;">比較項目</th>
+      <th style="width:18%;background:#3d3028;text-align:left;padding-left:10px;">比較項目</th>
       <th style="background:#7A9A5A;">綠色債券</th>
       <th style="background:#89b4d4;">社會責任債券</th>
       <th style="background:#7A9A5A;">可持續發展債券</th>
@@ -4243,14 +4243,14 @@ ul.s-list > li::before{
 <style>
 .strat-tbl{width:100%;border-collapse:collapse;font-size:.76rem;}
 .strat-tbl th{padding:6px 8px;color:#fff;font-size:.73rem;text-align:left;}
-.strat-tbl td{padding:7px 8px;border-bottom:1px solid #f0f0f0;vertical-align:top;line-height:1.5;}
+.strat-tbl td{padding:7px 8px;border-bottom:1px solid #ede8e0;vertical-align:top;line-height:1.5;}
 .strat-tbl tr:last-child td{border-bottom:none;}
 .strat-num{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;color:#fff;font-weight:800;font-size:.7rem;flex-shrink:0;}
 .strat-key{font-size:.7rem;color:#b71c1c;background:#ffebee;border-radius:4px;padding:1px 6px;}
 </style>
 <table class="strat-tbl">
   <thead>
-    <tr style="background:#37474f;">
+    <tr style="background:#3d3028;">
       <th style="width:30px;">#</th>
       <th style="width:30%;">策略名稱</th>
       <th>說明 ／ 考點</th>
@@ -4302,7 +4302,7 @@ ul.s-list > li::before{
   <div class="sfdr-col sfdr-col-6">
     <div class="sfdr-col-head">
       <div class="sfdr-article-num">Article 6</div>
-      <div class="sfdr-badge"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="#e0e0e0" stroke="none" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><rect x="2" y="2" width="20" height="20" rx="2" fill="#e0e0e0" stroke="none"/></svg> 泛ESG基金</div>
+      <div class="sfdr-badge"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="#ede8e0" stroke="none" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><rect x="2" y="2" width="20" height="20" rx="2" fill="#ede8e0" stroke="none"/></svg> 泛ESG基金</div>
     </div>
     <div class="sfdr-col-body">
       <div class="sfdr-col-row"><b>定義：</b>僅將永續風險納入考量，揭露屬性未考慮歐盟永續標準</div>
@@ -4344,7 +4344,7 @@ ul.s-list > li::before{
   </div>
 
 </div>
-<div class="sfdr-arrow"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="#e0e0e0" stroke="none" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><rect x="2" y="2" width="20" height="20" rx="2" fill="#e0e0e0" stroke="none"/></svg> Article 6 &nbsp;→&nbsp; <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="#7A9A5A" stroke="none" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><circle cx="12" cy="12" r="8" fill="#7A9A5A" stroke="none"/></svg> Article 8 &nbsp;→&nbsp; <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#7A9A5A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><path d="M17 8C8 10 5.9 16.17 3.82 22"/><path d="M2 16s3-1 6-3c3.5-2.3 4.5-5 4.5-5S10 13 8 15c-2.1 2.1-6 3-6 3z"/><path d="M22 2s-5 2-8 7c-2.3 3.5-2 7-2 7s2-3.5 5-6c3.1-2.6 5-8 5-8z"/></svg> Article 9 &nbsp;&nbsp;（ESG 程度遞增）</div>
+<div class="sfdr-arrow"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="#ede8e0" stroke="none" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><rect x="2" y="2" width="20" height="20" rx="2" fill="#ede8e0" stroke="none"/></svg> Article 6 &nbsp;→&nbsp; <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="#7A9A5A" stroke="none" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><circle cx="12" cy="12" r="8" fill="#7A9A5A" stroke="none"/></svg> Article 8 &nbsp;→&nbsp; <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#7A9A5A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><path d="M17 8C8 10 5.9 16.17 3.82 22"/><path d="M2 16s3-1 6-3c3.5-2.3 4.5-5 4.5-5S10 13 8 15c-2.1 2.1-6 3-6 3z"/><path d="M22 2s-5 2-8 7c-2.3 3.5-2 7-2 7s2-3.5 5-6c3.1-2.6 5-8 5-8z"/></svg> Article 9 &nbsp;&nbsp;（ESG 程度遞增）</div>
 <div class="sfdr-must"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="#d4a56a" stroke="none" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> 考點：真正落實ESG精神的基金，至少必須符合 <b>Article 8</b> 或 <b>Article 9</b></div>
 
 </div><div class="chart-note"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;" ><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg> Article 6 = 泛ESG（非永續性）；Article 8 = 淺綠；Article 9 = 深綠最高級 ｜ 真正ESG需符合8或9</div></div>
@@ -4352,14 +4352,14 @@ ul.s-list > li::before{
 <style>
 .sl-tbl{width:100%;border-collapse:collapse;font-size:.75rem;}
 .sl-tbl th{padding:7px 8px;color:#fff;font-weight:700;font-size:.72rem;text-align:center;}
-.sl-tbl td{padding:7px 8px;border-bottom:1px solid #f0f0f0;vertical-align:top;line-height:1.5;text-align:center;}
+.sl-tbl td{padding:7px 8px;border-bottom:1px solid #ede8e0;vertical-align:top;line-height:1.5;text-align:center;}
 .sl-tbl tr:last-child td{border-bottom:none;}
 .sl-tbl .sl-label{text-align:left;font-weight:600;color:#546e7a;font-size:.72rem;width:72px;}
 .sl-key{font-size:.68rem;color:#b71c1c;background:#ffebee;border-radius:4px;padding:1px 5px;}
 </style>
 <table class="sl-tbl">
   <thead><tr>
-    <th style="background:#455a64;text-align:left;padding-left:10px;">項目</th>
+    <th style="background:#5a4e42;text-align:left;padding-left:10px;">項目</th>
     <th style="background:#7A9A5A;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#7A9A5A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><path d="M17 8C8 10 5.9 16.17 3.82 22"/><path d="M2 16s3-1 6-3c3.5-2.3 4.5-5 4.5-5S10 13 8 15c-2.1 2.1-6 3-6 3z"/><path d="M22 2s-5 2-8 7c-2.3 3.5-2 7-2 7s2-3.5 5-6c3.1-2.6 5-8 5-8z"/></svg> 綠色貸款（GL）</th>
     <th style="background:#89b4d4;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#89b4d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> 永續連結貸款（SLL）</th>
     <th style="background:#8872b8;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;" ><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> 轉型貸款</th>
@@ -4853,7 +4853,7 @@ function _questionCardHtml({ q, current, total, answered, userAnswer, letters, t
     }
     expHtml += `<strong style="color:var(--color-success)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#7A9A5A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> 正確答案：${L[q.a]}. ${_safeText(q.o[q.a])}</strong>`;
     expHtml += q.x
-      ? `<div style="margin-top:6px;font-size:.84rem;color:#37474f">【解析】${_safeTextNL(q.x)}</div>`
+      ? `<div style="margin-top:6px;font-size:.84rem;color:#3d3028">【解析】${_safeTextNL(q.x)}</div>`
       : '<div style="margin-top:4px;font-size:.78rem;color:var(--gray)">（本題無詳細解析）</div>';
     expHtml += _relatedCourseBtn(q);
     if(typeof _textbookBtn === 'function') expHtml += _textbookBtn(q);
@@ -5282,7 +5282,7 @@ const POD_CH_MAP = [
   { ch:'2', icon:`<svg viewBox="0 0 44 44" fill="none"><defs><linearGradient id="pod-g2" x1="0" y1="0" x2="44" y2="44"><stop stop-color="#89b4d4"/><stop offset="1" stop-color="#89b4d4"/></linearGradient></defs><rect width="44" height="44" rx="10" fill="url(#pod-g2)"/><rect x="10" y="28" width="5" height="8" rx="1.5" fill="white" opacity=".65"/><rect x="17" y="22" width="5" height="14" rx="1.5" fill="white" opacity=".75"/><rect x="24" y="16" width="5" height="20" rx="1.5" fill="white" opacity=".85"/><polyline points="12,26 19,20 26,14" stroke="white" stroke-width="2" stroke-linecap="round" fill="none"/></svg>`, cover:`<svg viewBox="0 0 60 60" fill="none"><defs><linearGradient id="pod-c2" x1="0" y1="0" x2="60" y2="60"><stop stop-color="#89b4d4"/><stop offset="1" stop-color="#89b4d4"/></linearGradient></defs><rect width="60" height="60" rx="14" fill="url(#pod-c2)"/><rect x="12" y="37" width="8" height="12" rx="2" fill="white" opacity=".6"/><rect x="23" y="29" width="8" height="20" rx="2" fill="white" opacity=".75"/><rect x="34" y="20" width="8" height="29" rx="2" fill="white" opacity=".85"/><polyline points="16,35 27,27 38,18" stroke="white" stroke-width="2.5" stroke-linecap="round" fill="none"/></svg>`, label:'第二章 · 永續資訊揭露' },
   { ch:'3', icon:`<svg viewBox="0 0 44 44" fill="none"><defs><linearGradient id="pod-g3" x1="0" y1="0" x2="44" y2="44"><stop stop-color="#ffb74d"/><stop offset="1" stop-color="#c87848"/></linearGradient></defs><rect width="44" height="44" rx="10" fill="url(#pod-g3)"/><path d="M22 11 L25.5 18 L33.5 19 L28 24.5 L29.5 33 L22 29 L14.5 33 L16 24.5 L10.5 19 L18.5 18 Z" fill="white" opacity=".85"/></svg>`, cover:`<svg viewBox="0 0 60 60" fill="none"><defs><linearGradient id="pod-c3" x1="0" y1="0" x2="60" y2="60"><stop stop-color="#ffb74d"/><stop offset="1" stop-color="#c87848"/></linearGradient></defs><rect width="60" height="60" rx="14" fill="url(#pod-c3)"/><path d="M30 14 L34.5 23.5 L45 25 L37.5 32 L39.5 44 L30 39 L20.5 44 L22.5 32 L15 25 L25.5 23.5 Z" fill="white" opacity=".85"/></svg>`, label:'第三章 · 永續風險與治理' },
   { ch:'4', icon:`<svg viewBox="0 0 44 44" fill="none"><defs><linearGradient id="pod-g4" x1="0" y1="0" x2="44" y2="44"><stop stop-color="#ce93d8"/><stop offset="1" stop-color="#8872b8"/></linearGradient></defs><rect width="44" height="44" rx="10" fill="url(#pod-g4)"/><circle cx="22" cy="22" r="11" stroke="white" stroke-width="2" fill="none" opacity=".6"/><line x1="22" y1="12" x2="22" y2="14" stroke="white" stroke-width="2.5" stroke-linecap="round"/><line x1="22" y1="30" x2="22" y2="32" stroke="white" stroke-width="2.5" stroke-linecap="round"/><text x="22" y="27" text-anchor="middle" font-size="14" font-weight="800" fill="white" font-family="sans-serif">$</text></svg>`, cover:`<svg viewBox="0 0 60 60" fill="none"><defs><linearGradient id="pod-c4" x1="0" y1="0" x2="60" y2="60"><stop stop-color="#ce93d8"/><stop offset="1" stop-color="#8872b8"/></linearGradient></defs><rect width="60" height="60" rx="14" fill="url(#pod-c4)"/><circle cx="30" cy="30" r="16" stroke="white" stroke-width="2.5" fill="none" opacity=".6"/><line x1="30" y1="15" x2="30" y2="18" stroke="white" stroke-width="3" stroke-linecap="round"/><line x1="30" y1="42" x2="30" y2="45" stroke="white" stroke-width="3" stroke-linecap="round"/><text x="30" y="37" text-anchor="middle" font-size="18" font-weight="800" fill="white" font-family="sans-serif">$</text></svg>`, label:'第四章 · 永續金融' },
-  { ch:'5', icon:`<svg viewBox="0 0 44 44" fill="none"><defs><linearGradient id="pod-g5" x1="0" y1="0" x2="44" y2="44"><stop stop-color="#90a4ae"/><stop offset="1" stop-color="#37474f"/></linearGradient></defs><rect width="44" height="44" rx="10" fill="url(#pod-g5)"/><circle cx="22" cy="19" r="8" stroke="white" stroke-width="2" fill="none" opacity=".75"/><path d="M16 29 L22 35 L28 29" stroke="white" stroke-width="2" stroke-linecap="round" fill="none" opacity=".8"/><line x1="22" y1="27" x2="22" y2="35" stroke="white" stroke-width="2" stroke-linecap="round" opacity=".6"/><circle cx="22" cy="19" r="3.5" fill="white" opacity=".5"/></svg>`, cover:`<svg viewBox="0 0 60 60" fill="none"><defs><linearGradient id="pod-c5" x1="0" y1="0" x2="60" y2="60"><stop stop-color="#90a4ae"/><stop offset="1" stop-color="#37474f"/></linearGradient></defs><rect width="60" height="60" rx="14" fill="url(#pod-c5)"/><circle cx="30" cy="26" r="11" stroke="white" stroke-width="2.5" fill="none" opacity=".75"/><path d="M22 40 L30 48 L38 40" stroke="white" stroke-width="2.5" stroke-linecap="round" fill="none" opacity=".8"/><line x1="30" y1="37" x2="30" y2="48" stroke="white" stroke-width="2.5" stroke-linecap="round" opacity=".6"/><circle cx="30" cy="26" r="5" fill="white" opacity=".5"/></svg>`, label:'精華總複習' },
+  { ch:'5', icon:`<svg viewBox="0 0 44 44" fill="none"><defs><linearGradient id="pod-g5" x1="0" y1="0" x2="44" y2="44"><stop stop-color="#a8a090"/><stop offset="1" stop-color="#3d3028"/></linearGradient></defs><rect width="44" height="44" rx="10" fill="url(#pod-g5)"/><circle cx="22" cy="19" r="8" stroke="white" stroke-width="2" fill="none" opacity=".75"/><path d="M16 29 L22 35 L28 29" stroke="white" stroke-width="2" stroke-linecap="round" fill="none" opacity=".8"/><line x1="22" y1="27" x2="22" y2="35" stroke="white" stroke-width="2" stroke-linecap="round" opacity=".6"/><circle cx="22" cy="19" r="3.5" fill="white" opacity=".5"/></svg>`, cover:`<svg viewBox="0 0 60 60" fill="none"><defs><linearGradient id="pod-c5" x1="0" y1="0" x2="60" y2="60"><stop stop-color="#a8a090"/><stop offset="1" stop-color="#3d3028"/></linearGradient></defs><rect width="60" height="60" rx="14" fill="url(#pod-c5)"/><circle cx="30" cy="26" r="11" stroke="white" stroke-width="2.5" fill="none" opacity=".75"/><path d="M22 40 L30 48 L38 40" stroke="white" stroke-width="2.5" stroke-linecap="round" fill="none" opacity=".8"/><line x1="30" y1="37" x2="30" y2="48" stroke="white" stroke-width="2.5" stroke-linecap="round" opacity=".6"/><circle cx="30" cy="26" r="5" fill="white" opacity=".5"/></svg>`, label:'精華總複習' },
 ];
 
 // 播放模式：sequence=接續, single=單曲, shuffle=隨機, loop=循環
@@ -6444,7 +6444,7 @@ function submitExam(){
   const wrongItems = examQ.map((q, i) => {
     const ua = examAns[i];
     const isCorrect = ua === q.a;
-    const statusIcon = isCorrect ? '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#7A9A5A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' : (ua !== undefined ? '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#c62828" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' : '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="#e0e0e0" stroke="none" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><rect x="2" y="2" width="20" height="20" rx="2" fill="#e0e0e0" stroke="none"/></svg>');
+    const statusIcon = isCorrect ? '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#7A9A5A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' : (ua !== undefined ? '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#c62828" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' : '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="#ede8e0" stroke="none" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><rect x="2" y="2" width="20" height="20" rx="2" fill="#ede8e0" stroke="none"/></svg>');
     const statusColor = isCorrect ? 'var(--color-success)' : 'var(--color-danger)';
     return `<div style="border:1px solid ${isCorrect?'#C8DDB8':'var(--border)'};border-radius:8px;padding:12px 14px;margin-bottom:8px;font-size:.83rem;background:${isCorrect?'#eef8f3':'#fff'}">
       <div style="font-weight:600;margin-bottom:6px;color:${statusColor};">${statusIcon} 第 ${i+1} 題　${_safeText(q.s.slice(0, 80))}…</div>
@@ -6452,7 +6452,7 @@ function submitExam(){
         ? `<div style="color:${statusColor};">${isCorrect?'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#7A9A5A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><polyline points="20 6 9 17 4 12"/></svg>':'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#c62828" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'} 你的答案：${L[ua]}. ${_safeText(q.o[ua])}</div>`
         : '<div style="color:var(--gray)">（未作答）</div>'}
       ${!isCorrect ? `<div style="color:var(--color-success)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#7A9A5A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><polyline points="20 6 9 17 4 12"/></svg> 正確答案：${L[q.a]}. ${_safeText(q.o[q.a])}</div>` : ''}
-      ${q.x ? `<div style="margin-top:6px;font-size:.8rem;color:#37474f;">【解析】${_safeTextNL(q.x)}</div>` : ''}
+      ${q.x ? `<div style="margin-top:6px;font-size:.8rem;color:#3d3028;">【解析】${_safeTextNL(q.x)}</div>` : ''}
       ${_relatedCourseBtn(q)}${typeof _textbookBtn==='function'?_textbookBtn(q):''}
     </div>`;
   }).join('');
@@ -6572,21 +6572,21 @@ function renderProgress(){
           display:flex;flex-direction:column;gap:3px;border:1.5px solid ${s.color}33;">
           <div style="font-size:.68rem;font-weight:700;color:${s.color};letter-spacing:.5px;">${s.label}</div>
           <div style="font-size:1.1rem;font-weight:900;color:${s.color};">${pctVal}${pctVal!=='-'?'%':''}</div>
-          <div style="font-size:.7rem;color:#666;">${cor}/${tot} 題・${s.data.length} 次</div>
+          <div style="font-size:.7rem;color:#7a6e65;">${cor}/${tot} 題・${s.data.length} 次</div>
         </div>`;
       }).join('')}
     </div>
     <div style="width:100%;display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;">
       <div style="flex:1;min-width:120px;background:#f8f8f8;border-radius:10px;padding:10px 14px;
         display:flex;align-items:center;justify-content:space-between;border:1px solid #eee;">
-        <span style="font-size:.78rem;color:#555;">模擬考及格</span>
+        <span style="font-size:.78rem;color:#5a4e42;">模擬考及格</span>
         <span style="font-size:1rem;font-weight:800;color:${passCount>0?'#7A9A5A':'#999'};">
           ${passCount} / ${examSessions} 次</span>
       </div>
       <div style="flex:1;min-width:120px;background:#f8f8f8;border-radius:10px;padding:10px 14px;
         display:flex;align-items:center;justify-content:space-between;border:1px solid #eee;">
-        <span style="font-size:.78rem;color:#555;">全部作答</span>
-        <span style="font-size:1rem;font-weight:800;color:#333;">${total} 題</span>
+        <span style="font-size:.78rem;color:#5a4e42;">全部作答</span>
+        <span style="font-size:1rem;font-weight:800;color:#3d3028;">${total} 題</span>
       </div>
     </div>`;
 
@@ -6635,8 +6635,8 @@ function renderProgress(){
           const sPct   = Math.round(sv.correct/sv.total*100);
           const sColor = sPct>=80?'#7A9A5A':sPct>=PASS_PCT?'#c8906a':'#d04555';
           return `<div style="display:flex;align-items:center;gap:6px;padding:3px 0 3px 12px;border-left:2px solid #eee;">
-            <span style="font-size:.72rem;color:#666;flex:1;">${sec}</span>
-            <div style="width:60px;height:5px;background:#f0f0f0;border-radius:99px;overflow:hidden;flex-shrink:0;">
+            <span style="font-size:.72rem;color:#7a6e65;flex:1;">${sec}</span>
+            <div style="width:60px;height:5px;background:#ede8e0;border-radius:99px;overflow:hidden;flex-shrink:0;">
               <div style="height:100%;width:${sPct}%;background:${sColor};border-radius:99px;"></div>
             </div>
             <span style="font-size:.7rem;font-weight:700;color:${sColor};width:40px;text-align:right;">${sPct}%</span>
@@ -6647,7 +6647,7 @@ function renderProgress(){
       return `<div style="margin-bottom:8px;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
           <span style="font-size:.75rem;font-weight:700;color:${chColor};flex:1;">${_CH_LABELS[ch]||ch}</span>
-          <div style="width:80px;height:7px;background:#f0f0f0;border-radius:99px;overflow:hidden;flex-shrink:0;">
+          <div style="width:80px;height:7px;background:#ede8e0;border-radius:99px;overflow:hidden;flex-shrink:0;">
             <div style="height:100%;width:${chPct}%;background:${chColor};border-radius:99px;"></div>
           </div>
           <span style="font-size:.75rem;font-weight:800;color:${chColor};width:40px;text-align:right;">${chPct}%</span>
@@ -6663,26 +6663,26 @@ function renderProgress(){
   const _histListEl = document.getElementById('history-list');
   _histListEl.innerHTML = p.history.length
     ? p.history.slice(0, _histLimit).map((h, i) => {
-        const tc      = _TYPE_COLOR[h.type] || {bg:'#f5f5f5',color:'#999'};
+        const tc      = _TYPE_COLOR[h.type] || {bg:'#f5f2ec',color:'#999'};
         const _hKey   = `${h.date}_${h.type}_${h.total}`;
         const isOpen  = !!window._histExpanded[_hKey];
         const hasDetail = h.chStats && Object.keys(h.chStats).length > 0;
         return `
-        <div style="border-radius:8px;margin-bottom:4px;border:1px solid #f0f0f0;overflow:hidden;">
+        <div style="border-radius:8px;margin-bottom:4px;border:1px solid #ede8e0;overflow:hidden;">
           <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;
-            background:${i%2===0?'#fafafa':'#fff'};
+            background:${i%2===0?'#faf8f4':'#fff'};
             cursor:${hasDetail?'pointer':'default'};"
             onclick="(()=>{if(!${hasDetail})return;window._histExpanded['${_hKey}']=!window._histExpanded['${_hKey}'];renderProgress();})()">
             <span style="font-size:.75rem;color:var(--gray);flex-shrink:0;width:56px;">${_safeText(h.date)}</span>
             <span style="font-size:.7rem;font-weight:700;padding:2px 7px;border-radius:20px;
               background:${tc.bg};color:${tc.color};flex-shrink:0;">${_safeText(h.type)}</span>
-            <span style="font-size:.78rem;color:#555;flex:1;">${h.correct}/${h.total} 題</span>
+            <span style="font-size:.78rem;color:#5a4e42;flex:1;">${h.correct}/${h.total} 題</span>
             <span style="font-size:.75rem;font-weight:800;padding:2px 10px;border-radius:20px;
               background:${h.pct>=PASS_PCT?'#EEF4E8':'#ffebee'};
               color:${h.pct>=PASS_PCT?'#7A9A5A':'#c62828'};">${h.pct}%</span>
             ${hasDetail?`<span style="font-size:.7rem;color:#aaa;flex-shrink:0;">${isOpen?'▲':'▼'}</span>`:''}
           </div>
-          ${isOpen ? `<div style="padding:10px 12px;background:#fdfdfd;border-top:1px solid #f0f0f0;">
+          ${isOpen ? `<div style="padding:10px 12px;background:#faf8f4;border-top:1px solid #ede8e0;">
             ${_renderHistoryDetail(h)}
           </div>` : ''}
         </div>`;
@@ -6693,8 +6693,8 @@ function renderProgress(){
     const _moreBtn = document.createElement('div');
     _moreBtn.style.cssText = 'text-align:center;margin-top:8px;';
     _moreBtn.innerHTML = `<button onclick="window._histShowAll=!window._histShowAll;renderProgress();"
-      style="font-size:.75rem;padding:5px 18px;border-radius:20px;border:1px solid #ddd;
-      background:#fff;color:#666;cursor:pointer;">
+      style="font-size:.75rem;padding:5px 18px;border-radius:20px;border:1px solid #e5ddd2;
+      background:#fff;color:#7a6e65;cursor:pointer;">
       ${window._histShowAll ? `▲ 收起（共 ${p.history.length} 筆）` : `▼ 顯示全部 ${p.history.length} 筆`}
     </button>`;
     _histListEl.appendChild(_moreBtn);
@@ -6717,13 +6717,13 @@ function renderProgress(){
       // 計算該 type 的筆數
       const cnt = val === 'all' ? p.history.length : p.history.filter(h=>h.type===val).length;
       if(cnt > 0) btn.textContent = `${label} (${cnt})`;
-      btn.style.cssText = `font-size:.72rem;padding:3px 10px;border-radius:20px;border:1.5px solid #ddd;
-        background:${val==='all'?'#333':'#fff'};color:${val==='all'?'#fff':'#666'};cursor:pointer;`;
+      btn.style.cssText = `font-size:.72rem;padding:3px 10px;border-radius:20px;border:1.5px solid #e5ddd2;
+        background:${val==='all'?'#3d3028':'#fff'};color:${val==='all'?'#fff':'#7a6e65'};cursor:pointer;`;
       btn.onclick = () => {
         document.querySelectorAll('#trend-tabs button').forEach(b=>{
-          b.style.background='#fff'; b.style.color='#666'; b.style.borderColor='#ddd';
+          b.style.background='#fff'; b.style.color='#7a6e65'; b.style.borderColor='#e5ddd2';
         });
-        btn.style.background='#333'; btn.style.color='#fff'; btn.style.borderColor='#333';
+        btn.style.background='#3d3028'; btn.style.color='#fff'; btn.style.borderColor='#3d3028';
         window._trendType = val;
         renderProgress();
       };
@@ -6735,9 +6735,9 @@ function renderProgress(){
   const _activeTrendType = window._trendType || 'all';
   document.querySelectorAll('#trend-tabs button').forEach(b => {
     const active = b.dataset.trendType === _activeTrendType;
-    b.style.background = active ? '#333' : '#fff';
-    b.style.color      = active ? '#fff' : '#666';
-    b.style.borderColor= active ? '#333' : '#ddd';
+    b.style.background = active ? '#3d3028' : '#fff';
+    b.style.color      = active ? '#fff' : '#7a6e65';
+    b.style.borderColor= active ? '#3d3028' : '#e5ddd2';
     // 更新筆數標籤
     const _tval = b.dataset.trendType;
     const _tLabelMap = {all:'全部',練習:'歷屆練習',模擬考試:'模擬考試',永續題庫:'官方題庫',隨堂:'隨堂練習'};
@@ -6780,7 +6780,7 @@ function renderProgress(){
 
       // Y 軸刻度
       const yTicks = [minV, Math.round((minV+maxV)/2), maxV].map(v=>`
-        <line x1="${pad.l}" y1="${yScale(v).toFixed(1)}" x2="${W-pad.r}" y2="${yScale(v).toFixed(1)}" stroke="#f0f0f0" stroke-width="1"/>
+        <line x1="${pad.l}" y1="${yScale(v).toFixed(1)}" x2="${W-pad.r}" y2="${yScale(v).toFixed(1)}" stroke="#ede8e0" stroke-width="1"/>
         <text x="${pad.l-4}" y="${(yScale(v)+4).toFixed(1)}" text-anchor="end" font-size="9" fill="#aaa">${Math.round(v)}%</text>`).join('');
 
       // 及格線
@@ -6841,7 +6841,7 @@ function renderProgress(){
       const linePts = pts.map((h,i)=>`${xScale(i).toFixed(1)},${yScale(h.pct).toFixed(1)}`).join(' ');
       const fillPts = `${pad.l},${H-pad.b} ` + linePts + ` ${xScale(pts.length-1).toFixed(1)},${H-pad.b}`;
       const yTicks = [minV, Math.round((minV+maxV)/2), maxV].map(v=>`
-        <line x1="${pad.l}" y1="${yScale(v).toFixed(1)}" x2="${W-pad.r}" y2="${yScale(v).toFixed(1)}" stroke="#f0f0f0" stroke-width="1"/>
+        <line x1="${pad.l}" y1="${yScale(v).toFixed(1)}" x2="${W-pad.r}" y2="${yScale(v).toFixed(1)}" stroke="#ede8e0" stroke-width="1"/>
         <text x="${pad.l-4}" y="${(yScale(v)+4).toFixed(1)}" text-anchor="end" font-size="9" fill="#aaa">${Math.round(v)}%</text>`).join('');
       const dots = pts.map((h,i)=>{
         const x=xScale(i).toFixed(1), y=yScale(h.pct).toFixed(1);
@@ -6882,8 +6882,8 @@ function renderProgress(){
       const pct_ch = Math.round(viewed_ch / total_ch * 100);
       const col_ch = pct_ch >= 80 ? '#7A9A5A' : pct_ch >= 50 ? '#c8906a' : '#89b4d4';
       return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-        <span style="font-size:.75rem;color:#555;width:60px;flex-shrink:0;">${ch}</span>
-        <div style="flex:1;height:7px;background:#f0f0f0;border-radius:99px;overflow:hidden;">
+        <span style="font-size:.75rem;color:#5a4e42;width:60px;flex-shrink:0;">${ch}</span>
+        <div style="flex:1;height:7px;background:#ede8e0;border-radius:99px;overflow:hidden;">
           <div style="height:100%;width:${pct_ch}%;background:${col_ch};border-radius:99px;transition:width .4s;"></div>
         </div>
         <span style="font-size:.72rem;font-weight:700;color:${col_ch};width:32px;text-align:right;">${pct_ch}%</span>
@@ -6894,10 +6894,10 @@ function renderProgress(){
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
         <div style="flex:1;">
           <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
-            <span style="font-size:.8rem;font-weight:600;color:#333;">已瀏覽 ${viewed_c} / ${total_c} 張</span>
+            <span style="font-size:.8rem;font-weight:600;color:#3d3028;">已瀏覽 ${viewed_c} / ${total_c} 張</span>
             <span style="font-size:.8rem;font-weight:800;color:${bar_c};">${pct_c}%</span>
           </div>
-          <div style="height:10px;background:#f0f0f0;border-radius:99px;overflow:hidden;">
+          <div style="height:10px;background:#ede8e0;border-radius:99px;overflow:hidden;">
             <div style="height:100%;width:${pct_c}%;background:${bar_c};border-radius:99px;transition:width .4s;"></div>
           </div>
         </div>
@@ -6952,8 +6952,8 @@ function renderProgress(){
       [['all','全部來源'],['練習','歷屆練習'],['模擬考試','模擬考試'],['永續題庫','官方題庫'],['隨堂','隨堂練習']].forEach(([val,label])=>{
         const chip = document.createElement('span');
         chip.dataset.chType = val;
-        chip.style.cssText = `font-size:.7rem;padding:2px 10px;border-radius:20px;border:1.5px solid #ddd;
-          background:${val==='all'?'#333':'#fff'};color:${val==='all'?'#fff':'#666'};cursor:pointer;`;
+        chip.style.cssText = `font-size:.7rem;padding:2px 10px;border-radius:20px;border:1.5px solid #e5ddd2;
+          background:${val==='all'?'#3d3028':'#fff'};color:${val==='all'?'#fff':'#7a6e65'};cursor:pointer;`;
         chip.onclick = ()=>{
         if(window._chAnalysisType !== val){
           // 切換來源時重置節次展開狀態
@@ -6970,9 +6970,9 @@ function renderProgress(){
     const _actChType = window._chAnalysisType || 'all';
     document.querySelectorAll('#ch-analysis-tabs span').forEach(c => {
       const active = c.dataset.chType === _actChType;
-      c.style.background = active ? '#333' : '#fff';
-      c.style.color = active ? '#fff' : '#666';
-      c.style.borderColor = active ? '#333' : '#ddd';
+      c.style.background = active ? '#3d3028' : '#fff';
+      c.style.color = active ? '#fff' : '#7a6e65';
+      c.style.borderColor = active ? '#3d3028' : '#e5ddd2';
       const _cv = c.dataset.chType;
       const _cLabelMap = {all:'全部來源',練習:'歷屆練習',模擬考試:'模擬考試',永續題庫:'官方題庫',隨堂:'隨堂練習'};
       const _cCnt = _cv === 'all' ? p.history.length : p.history.filter(h=>h.type===_cv).length;
@@ -7018,8 +7018,8 @@ function renderProgress(){
             const sPct = Math.round(sv.correct/sv.total*100);
             const sCol = sPct>=80?'#7A9A5A':sPct>=PASS_PCT?'#c8906a':'#d04555';
             return `<div style="display:flex;align-items:center;gap:6px;padding:4px 0 4px 10px;border-left:2px solid #eee;">
-              <span style="font-size:.72rem;color:#666;flex:1;">${sec}</span>
-              <div style="width:60px;height:5px;background:#f0f0f0;border-radius:99px;overflow:hidden;flex-shrink:0;">
+              <span style="font-size:.72rem;color:#7a6e65;flex:1;">${sec}</span>
+              <div style="width:60px;height:5px;background:#ede8e0;border-radius:99px;overflow:hidden;flex-shrink:0;">
                 <div style="height:100%;width:${sPct}%;background:${sCol};border-radius:99px;"></div>
               </div>
               <span style="font-size:.7rem;font-weight:700;color:${sCol};width:36px;text-align:right;">${sPct}%</span>
@@ -7033,16 +7033,16 @@ function renderProgress(){
 
         return `<div style="margin-bottom:12px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-            <span style="font-size:.82rem;font-weight:600;color:${isWeak?'#c62828':'#333'};">
+            <span style="font-size:.82rem;font-weight:600;color:${isWeak?'#c62828':'#3d3028'};">
               ${isWeak?'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#c88a50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> ':'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#7A9A5A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> '}${CH_LABELS[ch]||ch}
             </span>
             <div style="display:flex;align-items:center;gap:8px;">
               <span style="font-size:.8rem;font-weight:800;color:${bar_color};">${pct}% (${s.correct}/${s.total})</span>
               ${hasSecData ? `<span onclick="window['${expandKey}']=!window['${expandKey}'];renderProgress();"
-                style="font-size:.68rem;color:#aaa;cursor:pointer;padding:1px 6px;border:1px solid #e0e0e0;border-radius:10px;">${isExpanded?'▲收':('▼節')}</span>` : ''}
+                style="font-size:.68rem;color:#aaa;cursor:pointer;padding:1px 6px;border:1px solid #ede8e0;border-radius:10px;">${isExpanded?'▲收':('▼節')}</span>` : ''}
             </div>
           </div>
-          <div style="height:10px;background:#f0f0f0;border-radius:99px;overflow:hidden;">
+          <div style="height:10px;background:#ede8e0;border-radius:99px;overflow:hidden;">
             <div style="height:100%;width:${pct}%;background:${bar_color};border-radius:99px;transition:width .4s;"></div>
           </div>
           ${isExpanded && hasSecData ? `<div style="margin-top:6px;">${secRows}</div>` : ''}
@@ -7085,9 +7085,9 @@ function renderProgress(){
     if(weakChs.length === 0 && weakSecs.length === 0){
       // 沒有足夠答題資料，只顯示考點卡片提示（如果有的話）
       if(unviewedCnt > 0){
-        adviceEl.innerHTML = `<div style="background:#e8f2f9;border-left:3px solid #42a5f5;border-radius:0 8px 8px 0;padding:10px 14px;margin-bottom:8px;">
-          <div style="font-size:.8rem;font-weight:600;color:#333;margin-bottom:2px;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#89b4d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> 尚有 ${unviewedCnt} 張考點卡片未瀏覽</div>
-          <div style="font-size:.74rem;color:#666;">前往考點頁逐一展開複習</div>
+        adviceEl.innerHTML = `<div style="background:#e8f2f9;border-left:3px solid #89b4d4;border-radius:0 8px 8px 0;padding:10px 14px;margin-bottom:8px;">
+          <div style="font-size:.8rem;font-weight:600;color:#3d3028;margin-bottom:2px;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#89b4d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> 尚有 ${unviewedCnt} 張考點卡片未瀏覽</div>
+          <div style="font-size:.74rem;color:#7a6e65;">前往考點頁逐一展開複習</div>
         </div>
         <p style="color:var(--gray);font-size:.78rem;margin-top:6px;">完成更多練習後將自動產生章節建議</p>`;
       } else {
@@ -7131,14 +7131,14 @@ function renderProgress(){
         });
       }
 
-      const tipColors = {urgent:{bg:'#ffebee',border:'#d45060',icon:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#d45060" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'}, normal:{bg:'#fdf4e3',border:'#ffc107',icon:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#c88a50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>'}, info:{bg:'#e8f2f9',border:'#42a5f5',icon:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#89b4d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>'}};
+      const tipColors = {urgent:{bg:'#ffebee',border:'#d45060',icon:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#d45060" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'}, normal:{bg:'#fdf4e3',border:'#ffc107',icon:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#c88a50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>'}, info:{bg:'#e8f2f9',border:'#89b4d4',icon:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#89b4d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>'}};
       adviceEl.innerHTML = tips.length
         ? tips.map(t => {
             const tc = tipColors[t.level];
             return `<div style="background:${tc.bg};border-left:3px solid ${tc.border};border-radius:0 8px 8px 0;
               padding:10px 14px;margin-bottom:8px;">
-              <div style="font-size:.8rem;font-weight:600;color:#333;margin-bottom:2px;">${tc.icon} ${t.text}</div>
-              <div style="font-size:.74rem;color:#666;">${t.action}</div>
+              <div style="font-size:.8rem;font-weight:600;color:#3d3028;margin-bottom:2px;">${tc.icon} ${t.text}</div>
+              <div style="font-size:.74rem;color:#7a6e65;">${t.action}</div>
             </div>`;
           }).join('')
         : '<p style="color:var(--gray);font-size:.82rem;padding:8px 0;">目前各章節表現良好，繼續保持！</p>';
@@ -7164,8 +7164,8 @@ function renderProgress(){
       const unlocked = b.check();
       return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;
         padding:12px 10px;border-radius:12px;min-width:80px;text-align:center;
-        background:${unlocked?'#EEF4E8':'#f5f5f5'};
-        border:2px solid ${unlocked?'#93B574':'#e0e0e0'};
+        background:${unlocked?'#EEF4E8':'#f5f2ec'};
+        border:2px solid ${unlocked?'#93B574':'#ede8e0'};
         opacity:${unlocked?'1':'.45'};transition:all .2s;"
         title="${b.desc}">
         <span style="font-size:1.6rem;filter:${unlocked?'none':'grayscale(1)'};">${b.icon}</span>
@@ -7204,7 +7204,7 @@ function renderProgress(){
             border-radius:10px;padding:10px 8px;text-align:center;">
             <div style="font-size:.78rem;color:${CH_COLORS[ch]};font-weight:700;margin-bottom:4px;">${CH_LABELS[ch].split(' ')[0]}</div>
             <div style="font-size:1.3rem;font-weight:900;color:${CH_COLORS[ch]};">${pct}%</div>
-            <div style="font-size:.7rem;color:#666;margin-top:2px;">${n} 題</div>
+            <div style="font-size:.7rem;color:#7a6e65;margin-top:2px;">${n} 題</div>
           </div>`;
         }).join('')}
       </div>
@@ -7230,9 +7230,9 @@ function renderProgress(){
         </div>`;
       }).join('');
       return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;">
-        <span style="font-size:.75rem;color:#555;width:68px;flex-shrink:0;text-align:right;font-weight:600;">${e}</span>
+        <span style="font-size:.75rem;color:#5a4e42;width:68px;flex-shrink:0;text-align:right;font-weight:600;">${e}</span>
         <div style="flex:1;height:36px;display:flex;border-radius:7px;overflow:hidden;
-          border:1px solid #ddd;box-shadow:0 1px 3px rgba(0,0,0,.07);">
+          border:1px solid #e5ddd2;box-shadow:0 1px 3px rgba(0,0,0,.07);">
           ${bar}
         </div>
       </div>`;
@@ -7242,7 +7242,7 @@ function renderProgress(){
     const legendHtml = `<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;">
       ${chs.map(ch=>`<div style="display:flex;align-items:center;gap:4px;">
         <div style="width:12px;height:12px;border-radius:3px;background:${CH_COLORS[ch]};flex-shrink:0;"></div>
-        <span style="font-size:.72rem;color:#555;">${CH_LABELS[ch]}</span>
+        <span style="font-size:.72rem;color:#5a4e42;">${CH_LABELS[ch]}</span>
       </div>`).join('')}
     </div>`;
 
@@ -7413,10 +7413,10 @@ function _showResumePrompt(type, current, total, onResume, onNew){
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;';
   overlay.innerHTML = `<div style="background:#fff;border-radius:16px;padding:28px 32px;max-width:340px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2);text-align:center;">
     <div style="font-size:2rem;margin-bottom:8px;">📋</div>
-    <div style="font-size:.95rem;font-weight:700;color:#263238;margin-bottom:6px;">發現未完成的練習</div>
-    <div style="font-size:.85rem;color:#666;margin-bottom:18px;">上次做到第 ${current} / ${total} 題，要繼續嗎？</div>
+    <div style="font-size:.95rem;font-weight:700;color:#2a221a;margin-bottom:6px;">發現未完成的練習</div>
+    <div style="font-size:.85rem;color:#7a6e65;margin-bottom:18px;">上次做到第 ${current} / ${total} 題，要繼續嗎？</div>
     <div style="display:flex;gap:10px;justify-content:center;">
-      <button id="_resume-new" style="padding:9px 20px;border-radius:10px;border:1.5px solid #ddd;background:#f5f5f5;color:#555;font-weight:600;cursor:pointer;font-size:.85rem;">重新開始</button>
+      <button id="_resume-new" style="padding:9px 20px;border-radius:10px;border:1.5px solid #e5ddd2;background:#f5f2ec;color:#5a4e42;font-weight:600;cursor:pointer;font-size:.85rem;">重新開始</button>
       <button id="_resume-cont" style="padding:9px 20px;border-radius:10px;border:none;background:var(--green);color:#fff;font-weight:700;cursor:pointer;font-size:.85rem;">繼續練習</button>
     </div>
   </div>`;
@@ -7630,7 +7630,7 @@ function renderBookmarksPage(){
       <div class="bm-card-stem" onclick="_toggleBmDetail(${idx})">${_safeText(q.s)}</div>
       <div class="bm-card-detail" id="bm-detail-${idx}" style="display:none;">
         <div class="bm-opts">${q.o.map((opt,i) => `<div class="bm-opt${i===q.a?' correct':''}">${L[i]} ${_safeText(opt)}</div>`).join('')}</div>
-        ${q.x ? `<div style="margin-top:6px;font-size:.82rem;color:#37474f;line-height:1.6;">【解析】${_safeTextNL(q.x)}</div>` : ''}
+        ${q.x ? `<div style="margin-top:6px;font-size:.82rem;color:#3d3028;line-height:1.6;">【解析】${_safeTextNL(q.x)}</div>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -7860,7 +7860,7 @@ function renderSrQ(){
     const isCorrect = _srAnswers[_srIdx] === q.a;
     if(!isCorrect) expHtml += `<div style="color:var(--color-danger);margin-bottom:4px;">✗ 你的答案：${labels[_srAnswers[_srIdx]]} ${_safeText(q.o[_srAnswers[_srIdx]])}</div>`;
     expHtml += `<strong style="color:var(--color-success)">✓ 正確答案：${labels[q.a]} ${_safeText(q.o[q.a])}</strong>`;
-    if(q.x) expHtml += `<div style="margin-top:6px;font-size:.84rem;color:#37474f">【解析】${_safeTextNL(q.x)}</div>`;
+    if(q.x) expHtml += `<div style="margin-top:6px;font-size:.84rem;color:#3d3028">【解析】${_safeTextNL(q.x)}</div>`;
   }
   const navNext = _srIdx < pool.length - 1
     ? `<button class="btn-next" onclick="srNext()">下一題 →</button>`
