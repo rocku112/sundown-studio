@@ -7,7 +7,7 @@
 <link rel="icon" type="image/svg+xml" href="favicon_admin.svg">
 <style>
 :root{
-  --green:#1b5c42;--gl:#3fa068;--gp:#e2f5ec;--gll:#72c49a;--gd:#0f3a28;
+  --green:#7A9A5A;--gl:#93B574;--gp:#EEF4E8;--gll:#A8C48A;--gd:#4a6b3a;
   --orange:#c87848;--op:#fdf0e0;
   --red:#b71c1c;--rp:#ffebee;
   --blue:#2563a8;--bp:#e8f2f9;
@@ -54,7 +54,7 @@ body{font-family:var(--font);background:var(--bg);color:#263238;min-height:100vh
 .ev-page_view{background:var(--gp);color:var(--green);}
 .ev-exam_start{background:var(--bp);color:var(--blue);}
 .ev-exam_submit{background:var(--op);color:var(--orange);}
-.ev-login{background:#e8f5ec;color:#1b5c42;}
+.ev-login{background:#EEF4E8;color:#4a6b3a;}
 .ev-logout{background:var(--lgray);color:var(--gray);}
 .ev-feature_click{background:var(--pp);color:var(--purple);}
 .ev-uid{font-size:.7rem;color:var(--gray);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;}
@@ -558,8 +558,8 @@ const firebaseConfig = {
 const ADMIN_EMAILS = ["evil1203@gmail.com"];
 
 const CH_LABELS = {ch1:'第一章',ch2:'第二章',ch3:'第三章',ch4:'第四章'};
-const CH_COLORS = {ch1:'#2563a8',ch2:'#1b5c42',ch3:'#c87848',ch4:'#6d5fa6'};
-const SEC_COLORS = ['#3fa068','#2563a8','#c87848','#b71c1c','#6d5fa6','#4a9480','#c87848','#2563a8'];
+const CH_COLORS = {ch1:'#2563a8',ch2:'#7A9A5A',ch3:'#c87848',ch4:'#6d5fa6'};
+const SEC_COLORS = ['#93B574','#2563a8','#c87848','#b71c1c','#6d5fa6','#7A9A5A','#c87848','#2563a8'];
 
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -661,7 +661,7 @@ function renderAnalytics() {
   });
   const maxPv = Math.max(1, ...Object.values(pageCounts));
   const sorted = Object.entries(pageCounts).sort((a,b) => b[1]-a[1]);
-  const heatColors = ['#1b5c42','#3fa068','#72c49a','#2563a8','#89b4d4','#c87848','#8872b8','#4a9480','#b71c1c','#7a6e65'];
+  const heatColors = ['#4a6b3a','#7A9A5A','#A8C48A','#2563a8','#89b4d4','#c87848','#8872b8','#93B574','#b71c1c','#7a6e65'];
   document.getElementById('pg-heat-grid').innerHTML = sorted.map(([page, cnt], i) => `
     <div class="pg-heat-item">
       <div class="pg-heat-name">${PAGE_LABELS[page] || page}</div>
@@ -960,7 +960,7 @@ function renderGrid(q) {
     const avgColor = u.avgScore>=70?'var(--green)':u.avgScore>=50?'var(--orange)':'var(--red)';
     const r = 20, circ = 2*Math.PI*r;
     const dash = (u.avgScore/100)*circ;
-    const ringColor = u.avgScore>=70?'#3fa068':u.avgScore>=50?'#c87848':'#e57373';
+    const ringColor = u.avgScore>=70?'#93B574':u.avgScore>=50?'#c87848':'#e57373';
 
     const card = document.createElement('div');
     card.className = 'user-card' + (u.uid===activeUid?' active':'');
@@ -1093,7 +1093,7 @@ function historyItem(h) {
   return `<div class="h-item">
     <div class="h-num" style="background:${bgCol};color:${color}">${pct}%</div>
     <div class="h-info">
-      <div class="h-type">${h.type||'考試'}</div>
+      <div class="h-type">${h.type||'模擬考試'}</div>
       <div class="h-date">${h.date}</div>
     </div>
     <div class="h-score">
