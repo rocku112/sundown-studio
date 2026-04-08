@@ -39,12 +39,14 @@ body{font-family:var(--font);background:var(--bg);color:#263238;min-height:100vh
 .an-card{background:var(--card);border:1px solid var(--border2);border-radius:var(--radius);padding:20px;margin-bottom:20px;box-shadow:var(--shadow);}
 
 /* 頁面熱度圖 */
-.pg-heat-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;}
-.pg-heat-item{border-radius:var(--radius-sm);padding:16px 12px;text-align:center;border:1px solid var(--border);}
-.pg-heat-name{font-size:.72rem;color:var(--gray);margin-bottom:6px;}
-.pg-heat-count{font-size:1.6rem;font-weight:800;}
-.pg-heat-bar{height:5px;border-radius:3px;margin-top:8px;background:var(--lgray);overflow:hidden;}
-.pg-heat-fill{height:100%;border-radius:3px;background:var(--gl);transition:width .5s ease;}
+.pg-heat-grid{display:flex;flex-direction:column;gap:6px;}
+.pg-heat-item{display:flex;align-items:center;gap:10px;padding:0;}
+.pg-heat-rank{width:20px;font-size:.72rem;font-weight:700;color:var(--gray);text-align:right;flex-shrink:0;}
+.pg-heat-name{width:80px;font-size:.8rem;color:#444;font-weight:600;flex-shrink:0;text-align:right;}
+.pg-heat-bar{flex:1;height:24px;border-radius:6px;background:var(--lgray);overflow:hidden;position:relative;}
+.pg-heat-fill{height:100%;border-radius:6px;transition:width .6s ease;min-width:2px;}
+.pg-heat-count{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:.75rem;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.2);}
+.pg-heat-count.outside{position:static;transform:none;color:#888;text-shadow:none;margin-left:6px;flex-shrink:0;font-size:.78rem;}
 
 /* 事件時間軸 */
 .ev-list{display:flex;flex-direction:column;gap:6px;max-height:480px;overflow-y:auto;}
@@ -66,8 +68,8 @@ body{font-family:var(--font);background:var(--bg);color:#263238;min-height:100vh
 .an-chip.active{background:var(--green);color:#fff;border-color:var(--green);}
 .an-loading{display:flex;align-items:center;gap:10px;color:var(--gray);font-size:.85rem;padding:32px;justify-content:center;}
 
-@media(max-width:960px){.an-stats-row{grid-template-columns:repeat(2,1fr)}.pg-heat-grid{grid-template-columns:repeat(3,1fr)}}
-@media(max-width:600px){.ev-item{grid-template-columns:1fr auto;}.ev-time,.ev-uid{display:none;}.an-stats-row{grid-template-columns:1fr 1fr}.pg-heat-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:960px){.an-stats-row{grid-template-columns:repeat(2,1fr)}.pg-heat-name{width:70px;font-size:.75rem;}}
+@media(max-width:600px){.ev-item{grid-template-columns:1fr auto;}.ev-time,.ev-uid{display:none;}.an-stats-row{grid-template-columns:1fr 1fr}.pg-heat-name{width:60px;font-size:.7rem;}}
 
 /* ══════════════════ 訪客管理 ══════════════════ */
 #pane-visitors main{padding:24px 28px;max-width:1280px;width:100%;margin:0 auto;}
@@ -656,20 +658,39 @@ function renderAnalytics() {
     pastexam:'歷屆題庫', textbookq:'永續題庫', bookmarks:'收藏題目',
     search:'題目搜尋', keypoints:'考點卡片'
   };
-  const pageCounts = {};
+  // 合併相同中文名稱的頁面計數
+  const rawCounts = {};
   pvEvents.forEach(e => {
     const p = e.page || 'unknown';
-    pageCounts[p] = (pageCounts[p] || 0) + 1;
+    rawCounts[p] = (rawCounts[p] || 0) + 1;
   });
-  const maxPv = Math.max(1, ...Object.values(pageCounts));
-  const sorted = Object.entries(pageCounts).sort((a,b) => b[1]-a[1]);
-  const heatColors = ['#4a6b3a','#7A9A5A','#A8C48A','#2563a8','#89b4d4','#c87848','#8872b8','#93B574','#b71c1c','#7a6e65'];
-  document.getElementById('pg-heat-grid').innerHTML = sorted.map(([page, cnt], i) => `
-    <div class="pg-heat-item">
-      <div class="pg-heat-name">${PAGE_LABELS[page] || page}</div>
-      <div class="pg-heat-count" style="color:${heatColors[i%heatColors.length]}">${cnt}</div>
-      <div class="pg-heat-bar"><div class="pg-heat-fill" style="width:${(cnt/maxPv*100).toFixed(0)}%;background:${heatColors[i%heatColors.length]}"></div></div>
-    </div>`).join('') || '<div style="color:var(--gray);font-size:.85rem;padding:16px;">尚無頁面瀏覽資料</div>';
+  const mergedCounts = {};
+  Object.entries(rawCounts).forEach(([key, cnt]) => {
+    const label = PAGE_LABELS[key] || key;
+    mergedCounts[label] = (mergedCounts[label] || 0) + cnt;
+  });
+  const sorted = Object.entries(mergedCounts).sort((a,b) => b[1]-a[1]);
+  const maxPv = Math.max(1, sorted[0]?.[1] || 1);
+  const barColor = (i, n) => {
+    const t = n > 1 ? i / (n - 1) : 0;
+    const r = Math.round(74 + t * (168 - 74));
+    const g = Math.round(154 + t * (196 - 154));
+    const b2 = Math.round(90 + t * (138 - 90));
+    return `rgb(${r},${g},${b2})`;
+  };
+  document.getElementById('pg-heat-grid').innerHTML = sorted.map(([label, cnt], i) => {
+    const pct = (cnt / maxPv * 100).toFixed(0);
+    const isSmall = pct < 20;
+    return `<div class="pg-heat-item">
+      <div class="pg-heat-rank">${i + 1}</div>
+      <div class="pg-heat-name">${label}</div>
+      <div class="pg-heat-bar" style="position:relative;">
+        <div class="pg-heat-fill" style="width:${pct}%;background:${barColor(i, sorted.length)};"></div>
+        ${!isSmall ? `<div class="pg-heat-count">${cnt}</div>` : ''}
+      </div>
+      ${isSmall ? `<div class="pg-heat-count outside">${cnt}</div>` : ''}
+    </div>`;
+  }).join('') || '<div style="color:var(--gray);font-size:.85rem;padding:16px;">尚無頁面瀏覽資料</div>';
 
   renderEventList();
 
