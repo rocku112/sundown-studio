@@ -288,17 +288,38 @@ body{font-family:var(--font);background:var(--bg);color:#263238;overflow-x:hidde
 .stat-card{background:var(--card);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);text-align:center;}
 .stat-card .stat-num{font-size:1.8rem;font-weight:800;color:var(--green);}
 .stat-card .stat-label{font-size:.78rem;color:var(--gray);margin-top:4px;}
-.quick-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;}
-.quick-card{
-  background:var(--card);border-radius:var(--radius);padding:20px;
-  box-shadow:var(--shadow);cursor:pointer;
-  border-left:4px solid var(--green);transition:all var(--transition);
-  display:flex;align-items:flex-start;gap:14px;
+/* ── Learning Timeline ── */
+.learn-timeline{position:relative;padding-left:32px;}
+.learn-timeline::before{
+  content:'';position:absolute;left:13px;top:24px;bottom:24px;width:2.5px;
+  background:linear-gradient(to bottom,#89b4d4,#8872b8,#2e7a52);border-radius:2px;
 }
-.quick-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg);}
-.quick-card .q-icon{font-size:1.8rem;}
-.quick-card h3{font-size:.95rem;font-weight:700;margin-bottom:4px;}
-.quick-card p{font-size:.8rem;color:var(--gray);line-height:1.5;}
+.tl-phase{position:relative;margin-bottom:20px;}
+.tl-phase:last-child{margin-bottom:0;}
+.tl-dot{
+  position:absolute;left:-32px;top:0;width:28px;height:28px;
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:.75rem;font-weight:800;color:#fff;z-index:1;
+  box-shadow:0 2px 8px rgba(0,0,0,.15);
+}
+.tl-phase-head{
+  display:flex;align-items:center;gap:8px;margin-bottom:8px;
+}
+.tl-phase-title{font-weight:800;font-size:.9rem;}
+.tl-phase-sub{font-size:.72rem;color:var(--gray);font-weight:500;}
+.tl-steps{display:flex;flex-direction:column;gap:6px;}
+.tl-step{
+  background:var(--card);border-radius:10px;padding:10px 14px;
+  display:flex;align-items:center;gap:12px;cursor:pointer;
+  border:1px solid var(--border);transition:all .2s;
+}
+.tl-step:hover{transform:translateX(4px);box-shadow:0 3px 12px rgba(0,0,0,.1);}
+.tl-step-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.tl-step-icon svg{width:18px;height:18px;}
+.tl-step-label{font-weight:700;font-size:.83rem;}
+.tl-step-desc{font-size:.73rem;color:#666;line-height:1.4;margin-top:1px;}
+.tl-step-arrow{margin-left:auto;color:#ccc;font-size:1rem;flex-shrink:0;transition:color .2s;}
+.tl-step:hover .tl-step-arrow{color:#888;}
 
 /* ═══════════════════════════════════════════
    READER PAGE
@@ -360,7 +381,6 @@ body{font-family:var(--font);background:var(--bg);color:#263238;overflow-x:hidde
   .kc-card p{font-size:.81rem;}
   .kc-table table{font-size:.79rem;}
   .kc-table th,.kc-table td{padding:7px 8px;}
-  .quick-grid{grid-template-columns:1fr 1fr;}
   .stats-grid{grid-template-columns:repeat(2,1fr);}
 }
 @media(max-width:640px){
@@ -1249,7 +1269,6 @@ body.tx2-mode #content {padding:0!important;max-width:unset!important;display:fl
   .stats-grid{grid-template-columns:repeat(2,1fr);gap:10px;}
   .stat-card{padding:14px 10px;}
   .stat-card .stat-num{font-size:1.45rem;}
-  .quick-grid{grid-template-columns:1fr;}
   .progress-grid{grid-template-columns:1fr;}
   .exam-timer{margin:-12px -12px 14px;padding:8px 12px;}
   .result-stats{grid-template-columns:repeat(3,1fr);}
@@ -2971,11 +2990,11 @@ ul.s-list > li::before{
         </div>
         <div class="wb-right">
           <div class="wb-stat">
-            <div class="wb-num">1,040 題</div>
+            <div class="wb-num">2,376 題</div>
             <div class="wb-label">道道都有解析</div>
           </div>
           <div class="wb-stat">
-            <div class="wb-num">5 章</div>
+            <div class="wb-num">4 章</div>
             <div class="wb-label">濃縮到不能再縮</div>
           </div>
           <div class="wb-stat">
@@ -2986,50 +3005,6 @@ ul.s-list > li::before{
       </div>
       <div class="stats-grid" id="home-stats"></div>
       <div id="home-guide"></div>
-      <div class="quick-grid">
-        <div class="quick-card" onclick="goPage('notes')">
-          <div class="q-icon" style="background:var(--gp);color:var(--green);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></div>
-          <div>
-            <h3>精華筆記</h3>
-            <p>5 章 17 節濃縮筆記，左側目錄快速導航，考前快速複習用</p>
-          </div>
-        </div>
-        
-        <div class="quick-card" onclick="goPage('textbook')">
-          <div class="q-icon" style="background:#e8f2f9;color:#89b4d4;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg></div>
-          <div><h3>永續課文</h3><p>官方課本完整原文，第一章頁1–90，錨點導航，深度理解用</p></div>
-          <span class="q-arr">›</span>
-        </div>
-        <div class="quick-card" onclick="goPage('keypoints')">
-          <div class="q-icon" style="background:#fdf4e3;color:#c88a50;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
-          <div>
-            <h3>考點卡片</h3>
-            <p>精選必考考點，含對比表格與<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#c88a50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>常見錯誤提示，快速掌握高頻考題</p>
-          </div>
-        </div>
-        <div class="quick-card" onclick="goPage('pastexam')">
-          <div class="q-icon" style="background:#fce4ec;color:#c62828;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg></div>
-          <div>
-            <h3>歷屆題庫</h3>
-            <p>1040 題真實考古題，即時顯示答案，可依考試年次篩選</p>
-          </div>
-        </div>
-
-        <div class="quick-card" onclick="goPage('textbookq')">
-          <div class="q-icon" style="background:#e2f5ec;color:#2e7a52;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="13" y2="12"/></svg></div>
-          <div>
-            <h3>永續題庫</h3>
-            <p>永續發展相關規範與實務課本練習題，含詳細解析</p>
-          </div>
-        </div>
-        <div class="quick-card" onclick="goPage('exam')">
-          <div class="q-icon" style="background:#ede8f7;color:#8872b8;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M5 4h-1a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V6a2 2 0 00-2-2h-1"/><polyline points="9 12 11 14 15 10"/></svg></div>
-          <div>
-            <h3>模擬考試</h3>
-            <p>90 分鐘倒數計時，80 題隨機出題，交卷後完整成績單</p>
-          </div>
-        </div>
-      </div>
     </div>
 
     <!-- ══ READER PAGE ════════════════════════ -->
@@ -4595,13 +4570,15 @@ ul.s-list > li::before{
 <div id="bnav-overlay" onclick="closeBnavDrawer()"></div>
 <!-- 更多抽屜 -->
 <div id="bnav-more-drawer">
-  <div style="font-size:.72rem;font-weight:700;color:var(--gray);margin-bottom:10px;padding-left:2px;">更多功能</div>
+  <div style="font-size:.72rem;font-weight:700;color:var(--gray);margin-bottom:8px;padding-left:2px;">學習資源</div>
   <div class="bnav-drawer-grid">
-    <div class="bnav-drawer-item" data-page="progress" onclick="goPage('progress');closeBnavDrawer()"><span class="b-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>學習進度</div>
-    
+    <div class="bnav-drawer-item" data-page="keypoints" onclick="goPage('keypoints');closeBnavDrawer()"><span class="b-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span>考點卡片</div>
     <div class="bnav-drawer-item" data-page="textbookq" onclick="goPage('textbookq');closeBnavDrawer()"><span class="b-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="13" y2="12"/></svg></span>永續題庫</div>
-    <div class="bnav-drawer-item" data-page="podcast" onclick="goPage('podcast');closeBnavDrawer()"><span class="b-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="11" r="4"/><path d="M8 11a4 4 0 008 0"/><path d="M5 11a7 7 0 0014 0"/><line x1="12" y1="15" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg></span>Podcast</div>
     <div class="bnav-drawer-item" data-page="textbook" onclick="goPage('textbook');closeBnavDrawer()"><span class="b-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg></span>永續課文</div>
+    <div class="bnav-drawer-item" data-page="podcast" onclick="goPage('podcast');closeBnavDrawer()"><span class="b-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="11" r="4"/><path d="M8 11a4 4 0 008 0"/><path d="M5 11a7 7 0 0014 0"/><line x1="12" y1="15" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg></span>Podcast 聆聽</div>
+  </div>
+  <div style="font-size:.72rem;font-weight:700;color:var(--gray);margin:12px 0 8px;padding-left:2px;">工具</div>
+  <div class="bnav-drawer-grid">
     <div class="bnav-drawer-item" data-page="charts" onclick="goPage('charts');closeBnavDrawer()"><span class="b-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg></span>圖表總覽</div>
     <div class="bnav-drawer-item" data-page="bookmarks" onclick="goPage('bookmarks');closeBnavDrawer()"><span class="b-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>收藏題目</div>
     <div class="bnav-drawer-item" data-page="search" onclick="goPage('search');closeBnavDrawer()"><span class="b-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>題目搜尋</div>
@@ -4611,9 +4588,9 @@ ul.s-list > li::before{
 <div id="bottom-nav">
   <div class="bnav-item active" data-page="home" onclick="goPage('home')"><span class="b-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H5a1 1 0 01-1-1V9.5z"/><polyline points="9 21 9 12 15 12 15 21"/></svg></span><span>首頁</span></div>
   <div class="bnav-item" data-page="notes" onclick="goPage('notes')"><span class="b-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span><span>精華筆記</span></div>
-  <div class="bnav-item" data-page="keypoints" onclick="goPage('keypoints')"><span class="b-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span><span>考點</span></div>
-  <div class="bnav-item" data-page="pastexam" onclick="goPage('pastexam')"><span class="b-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg></span><span>題庫</span></div>
-  <div class="bnav-item" data-page="exam" onclick="goPage('exam')"><span class="b-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M5 4h-1a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V6a2 2 0 00-2-2h-1"/><polyline points="9 12 11 14 15 10"/></svg></span><span>考試</span></div>
+  <div class="bnav-item" data-page="progress" onclick="goPage('progress')"><span class="b-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span><span>學習進度</span></div>
+  <div class="bnav-item" data-page="pastexam" onclick="goPage('pastexam')"><span class="b-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg></span><span>歷屆題庫</span></div>
+  <div class="bnav-item" data-page="exam" onclick="goPage('exam')"><span class="b-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M5 4h-1a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V6a2 2 0 00-2-2h-1"/><polyline points="9 12 11 14 15 10"/></svg></span><span>模擬考試</span></div>
   <div class="bnav-item bnav-more-btn" onclick="toggleBnavDrawer()"><span class="b-icon"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></span><span>更多</span></div>
 </div>
 
@@ -5050,7 +5027,7 @@ function goPage(id){
   document.querySelectorAll(`.bnav-item[data-page="${id}"]`).forEach(n => n.classList.add('active'));
   document.querySelectorAll(`.bnav-drawer-item[data-page="${id}"]`).forEach(n => n.classList.add('active'));
   // 若切換到抽屜項目，更多按鈕也高亮
-  const _morePgs=['keypoints','progress','textbookq','charts','textbook','exam','bookmarks','search','more'];
+  const _morePgs=['keypoints','textbookq','charts','textbook','podcast','bookmarks','search','more'];
   if(_morePgs.includes(id)){document.querySelectorAll('.bnav-item[data-page="more"]').forEach(n=>n.classList.add('active'));}
   const _titleEl = document.getElementById('page-title');
   if(_titleEl){
@@ -5058,7 +5035,7 @@ function goPage(id){
     const _textEl = document.getElementById('page-title-text');
     if(_iconEl && _textEl){
       _iconEl.innerHTML = PAGE_ICONS[id] || '';
-      _textEl.textContent = (PAGE_TITLES[id] || id).replace(/^[^\s]+ /, '');
+      _textEl.textContent = PAGE_TITLES[id] || id;
     } else {
       _titleEl.textContent = PAGE_TITLES[id] || id;
     }
@@ -5104,7 +5081,7 @@ function goPage(id){
   // ── 頁面切換埋點 ──
   const _pageNames = {
     home:'首頁', notes:'精華筆記', textbook:'永續課文',
-    notes:'考點卡片', charts:'圖表總覽', podcast:'Podcast',
+    keypoints:'考點卡片', charts:'圖表總覽', podcast:'Podcast 聆聽',
     textbookq:'永續題庫', pastexam:'歷屆題庫', exam:'模擬考試', progress:'學習進度', bookmarks:'收藏題目'
   };
   window._logEvent && window._logEvent('page_view', { page: id, page_name: _pageNames[id] || id });
@@ -5576,7 +5553,7 @@ function renderHome(){
       phase: '第一階段', sub: '建立基礎概念', color: '#89b4d4', bg: '#e8f2f9', border: '#89b4d4',
       icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;" ><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
       steps: [
-        { pg: PAGES.NOTES,   icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;" ><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>', label: '精華筆記',   desc: '5章重點，快速掌握考試核心' },
+        { pg: PAGES.NOTES,   icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;" ><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>', label: '精華筆記',   desc: '4章重點，快速掌握考試核心' },
         { pg: PAGES.TEXTBOOK,'icon': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;" ><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>', label: '永續課文',   desc: '深入閱讀原文，鞏固理解' },
       ]
     },
@@ -5584,7 +5561,7 @@ function renderHome(){
       phase: '第二階段', sub: '強化記憶', color: '#8872b8', bg: '#ede8f7', border: '#7a64a8',
       icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;" ><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>',
       steps: [
-        { pg: PAGES.KEYPOINTS,    icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;" ><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>', label: '考點筆記',   desc: '高頻考點整理，含常見錯誤' },
+        { pg: PAGES.KEYPOINTS,    icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;" ><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>', label: '考點卡片',   desc: '高頻考點整理，含常見錯誤' },
         { pg: PAGES.TEXTBOOKQ, icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;" ><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>', label: '永續題庫',   desc: '課本練習題，搭配解析' },
       ]
     },
@@ -5592,37 +5569,30 @@ function renderHome(){
       phase: '第三階段', sub: '實戰練習', color: '#1b5c42', bg: '#e2f5ec', border: '#2e7a52',
       icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;" ><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',
       steps: [
-        { pg: PAGES.PASTEXAM,     icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;" ><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>', label: '歷屆題庫',   desc: '1040題真實考古題，即時解析' },
+        { pg: PAGES.PASTEXAM,     icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;" ><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>', label: '歷屆題庫',   desc: '1,040題真實考古題，即時解析' },
         { pg: PAGES.EXAM,     icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;" ><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>', label: '模擬考試',   desc: '90分鐘限時，80題模擬正式考試' },
       ]
     },
   ];
 
-  const phasesHtml = PHASES.map(ph => `
-    <div style="flex:1;min-width:180px;border:1.5px solid ${ph.border};border-radius:12px;overflow:hidden;">
-      <div style="background:${ph.color};color:#fff;padding:8px 14px;font-weight:800;font-size:.85rem;display:flex;align-items:center;gap:6px;">
-        <span>${ph.icon}</span>
-        <div>
-          <div>${ph.phase}</div>
-          <div style="font-size:.72rem;font-weight:500;opacity:.9;">${ph.sub}</div>
-        </div>
+  const phasesHtml = PHASES.map((ph, pi) => `
+    <div class="tl-phase">
+      <div class="tl-dot" style="background:${ph.color};">${pi + 1}</div>
+      <div class="tl-phase-head">
+        <span class="tl-phase-title" style="color:${ph.color};">${ph.phase}：${ph.sub}</span>
       </div>
-      <div style="background:${ph.bg};padding:8px 10px;display:flex;flex-direction:column;gap:7px;">
-        ${ph.steps.map((st,si) => `
-          <div onclick="goPage('${st.pg}')" style="background:#fff;border-radius:8px;padding:8px 12px;
-            cursor:pointer;display:flex;align-items:center;gap:10px;
-            border:1px solid ${ph.border};transition:box-shadow .15s;"
-            onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.12)'"
-            onmouseout="this.style.boxShadow='none'">
-            <span style="font-size:1.3rem;flex-shrink:0;">${st.icon}</span>
+      <div class="tl-steps">
+        ${ph.steps.map(st => `
+          <div class="tl-step" onclick="goPage('${st.pg}')">
+            <div class="tl-step-icon" style="background:${ph.bg};color:${ph.color};">${st.icon}</div>
             <div>
-              <div style="font-weight:700;font-size:.85rem;color:${ph.color};">${st.label}</div>
-              <div style="font-size:.75rem;color:#555;line-height:1.4;">${st.desc}</div>
+              <div class="tl-step-label" style="color:${ph.color};">${st.label}</div>
+              <div class="tl-step-desc">${st.desc}</div>
             </div>
+            <span class="tl-step-arrow">›</span>
           </div>`).join('')}
       </div>
-    </div>`).join(`
-    <div style="display:flex;align-items:center;color:#aaa;font-size:1.3rem;padding:0 4px;">›</div>`);
+    </div>`).join('');
 
   const lastDate  = p.history[0]?.date || '';
   const isToday   = lastDate === new Date().toLocaleDateString('zh-TW');
@@ -5646,7 +5616,7 @@ function renderHome(){
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#4a9480" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>️ 建議學習順序
       </div>
       ${statusHtml}
-      <div style="display:flex;gap:10px;align-items:stretch;flex-wrap:wrap;">
+      <div class="learn-timeline">
         ${phasesHtml}
       </div>
     </div>`;
