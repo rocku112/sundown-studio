@@ -1,0 +1,2279 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="/sundown-studio/favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>落霞千頁 · SunDown Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,200;0,300;0,400;0,600;0,700;0,800;0,900;1,300;1,400&family=Noto+Sans+TC:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>
+// Global error boundary — catches cross-origin worker/script errors before they go unhandled
+window.addEventListener('unhandledrejection', function(e) {
+  console.warn('[SDS] Unhandled promise rejection:', e.reason);
+  e.preventDefault(); // suppress console "Uncaught (in promise)" noise
+});
+window.addEventListener('error', function(e) {
+  // Worker and cross-origin script errors arrive here as "Script error." — just log & suppress
+  if (!e.filename || e.message === 'Script error.') {
+    console.warn('[SDS] Suppressed cross-origin/worker error:', e.message);
+    e.preventDefault();
+  }
+});
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/lucide@0.344.0/dist/umd/lucide.min.js" crossorigin="anonymous"></script>
+<style>
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+html, body { height:100%; }
+body { -webkit-font-smoothing:antialiased; font-family:'Outfit','Noto Sans TC','Microsoft JhengHei',sans-serif; }
+input[type=range] { -webkit-appearance:none; appearance:none; height:5px; border-radius:3px; outline:none; cursor:pointer; background:rgba(45,74,110,.15); }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:17px; height:17px; border-radius:50%; background:#E8B84B; cursor:pointer; border:2px solid #fff; box-shadow:0 1px 6px rgba(0,0,0,.2); }
+input[type=range]::-moz-range-thumb { width:17px; height:17px; border-radius:50%; background:#E8B84B; border:2px solid #fff; }
+select, input[type=number], input[type=text] { font-family:inherit; }
+
+:root {
+  --cream:#F5F0E8; --cream2:#EDE7D9; --cream3:#E4DDD0;
+  --warm-white:#FEFCF8;
+  --gold:#C9960A; --gold-mid:#E8B84B; --gold-light:#F2CC74;
+  --gold-pale:#FDF4DC; --gold-tint:rgba(232,184,75,.07);
+  --navy:#1E3554; --navy-mid:#2D4A6E; --navy-light:#3D5A80; --navy-bg:rgba(30,53,84,.07);
+  --text:#1A2535; --text2:#4A5568; --text3:#8A96A8;
+  --border:#DDD6C8; --border2:#E8E2D8;
+  --success:#3A8A62; --success-bg:rgba(58,138,98,.07);
+  --danger:#B03020; --danger-bg:rgba(176,48,32,.06);
+  --shadow:0 1px 8px rgba(30,53,84,.06);
+  --shadow-md:0 4px 16px rgba(30,53,84,.1);
+  --shadow-lg:0 8px 32px rgba(30,53,84,.13);
+  --sans:'Outfit','Noto Sans TC','Microsoft JhengHei',sans-serif;
+  --mono:'DM Mono','Consolas','Courier New',monospace;
+  --r:8px; --rs:6px;
+  --bg:var(--cream); --surface:var(--warm-white);
+  --accent:var(--gold-mid); --accent2:var(--gold);
+  --muted:var(--text3); --navy-muted:var(--navy-bg);
+  --navy-light-alias:var(--navy-mid);
+}
+
+/* ── App wrapper ── */
+#app-wrap { display:flex; flex-direction:column; min-height:100vh; background:var(--cream); }
+#app-wrap.hidden { display:none; }
+#lp-wrap.hidden { display:none; }
+
+/* ── App Header ── */
+#app-header {
+  position:sticky; top:0; z-index:100;
+  background:rgba(27,46,72,.98); backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid rgba(255,255,255,.07);
+  display:flex; flex-direction:column;
+  flex-shrink:0;
+}
+.header-top {
+  display:flex; align-items:center; height:54px;
+  padding:0 20px; gap:0; flex-shrink:0;
+}
+
+/* Back button */
+.header-back {
+  background:rgba(255,255,255,.08); border:none; color:rgba(255,255,255,.7);
+  padding:5px 11px 5px 8px; border-radius:22px; cursor:pointer;
+  font-family:var(--sans); font-size:11px; font-weight:600;
+  display:flex; align-items:center; gap:5px; transition:all .2s;
+  flex-shrink:0; margin-right:10px;
+}
+.header-back:hover { background:rgba(255,255,255,.15); color:#fff; }
+.header-back svg { width:11px; height:11px; }
+
+/* Brand in header */
+.brand { display:flex; align-items:center; gap:8px; text-decoration:none; flex-shrink:0; margin-right:6px; }
+.brand-ic { display:flex; align-items:center; }
+.brand-nm { font-size:13px; font-weight:800; color:#fff; letter-spacing:-.01em; }
+.brand-nm span { color:var(--gold-mid); }
+.brand-sub { font-size:8.5px; color:rgba(255,255,255,.4); display:block; margin-top:-1px; letter-spacing:.04em; }
+
+/* Tool nav — second row, always fully visible */
+.tool-nav {
+  display:flex; align-items:center; flex-wrap:wrap;
+  padding:0 16px 9px; gap:3px;
+  border-top:1px solid rgba(255,255,255,.05);
+}
+
+.tab-btn {
+  display:flex; align-items:center; gap:5px;
+  padding:6px 11px; border:none; border-radius:22px;
+  background:transparent; cursor:pointer; font-family:var(--sans);
+  font-size:11.5px; font-weight:700; color:rgba(255,255,255,.5);
+  transition:all .2s; white-space:nowrap; flex-shrink:0;
+}
+.tab-btn:hover { background:rgba(255,255,255,.08); color:rgba(255,255,255,.85); }
+.tab-btn.active { background:var(--gold-mid); color:var(--navy); }
+.tab-btn svg, .tab-btn i { width:12px; height:12px; flex-shrink:0; }
+
+.tab-pill {
+  display:inline-block; font-size:8px; font-weight:800;
+  letter-spacing:.06em; text-transform:uppercase;
+  padding:1px 5px; border-radius:3px;
+  background:rgba(255,255,255,.12); color:rgba(255,255,255,.6);
+}
+.tab-btn.active .tab-pill { background:rgba(30,53,84,.18); color:var(--navy); }
+
+.header-end {
+  display:flex; align-items:center; gap:7px;
+  padding-left:14px; flex-shrink:0; margin-left:auto;
+}
+.secure-dot { width:7px; height:7px; border-radius:50%; background:#3A8A62; flex-shrink:0; box-shadow:0 0 0 2px rgba(58,138,98,.25); }
+.secure-label { font-size:11px; font-weight:700; color:rgba(255,255,255,.5); letter-spacing:.06em; }
+
+/* ── Tool Layout ── */
+.tab-panel { display:none; flex:1; min-height:0; overflow:hidden; }
+.tab-panel.active { display:flex; flex-direction:column; }
+.tool-layout { display:grid; grid-template-columns:1fr auto; flex:1; min-height:0; }
+.tool-page-wrap { display:flex; flex-direction:column; flex:1; min-height:100vh; min-height:100dvh; }
+
+/* ── Drop Area / Main ── */
+.drop-area {
+  display:flex; flex-direction:column; gap:16px;
+  padding:28px; overflow-y:auto; background:var(--cream);
+  flex:1; min-height:0;
+}
+
+/* Drop Zone — the landing area before files */
+.drop-zone {
+  position:relative; flex:1; min-height:240px;
+  background:var(--warm-white);
+  border:2px dashed var(--border);
+  border-radius:16px;
+  padding:52px 32px; text-align:center; cursor:pointer;
+  transition:all .25s; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:0;
+}
+.drop-zone::after {
+  content:''; position:absolute; inset:0; border-radius:14px;
+  background:linear-gradient(135deg,rgba(232,184,75,.04) 0%,transparent 50%);
+  pointer-events:none;
+}
+.drop-zone:hover { border-color:var(--gold-mid); background:#fffef9; box-shadow:0 0 0 4px rgba(232,184,75,.1); }
+.drop-zone.dragover { border-color:var(--gold-mid); background:var(--gold-pale); box-shadow:0 0 0 4px rgba(232,184,75,.15); }
+
+.drop-icon {
+  width:72px; height:72px; border-radius:20px;
+  background:rgba(30,53,84,.05); border:1.5px solid var(--border);
+  display:flex; align-items:center; justify-content:center;
+  margin-bottom:18px; flex-shrink:0;
+  transition:all .25s;
+}
+.drop-zone:hover .drop-icon { background:var(--gold-tint); border-color:rgba(232,184,75,.4); }
+.drop-zone h2 { font-size:18px; font-weight:800; color:var(--text); margin-bottom:8px; letter-spacing:-.02em; }
+.drop-zone p { font-size:13px; color:var(--text3); line-height:1.6; margin-bottom:16px; }
+.drop-zone strong { color:var(--gold); }
+.drop-zone input[type=file] { display:none; }
+
+/* File select button inside drop zone */
+.drop-btn {
+  display:inline-flex; align-items:center; gap:7px;
+  padding:9px 20px; border-radius:22px;
+  background:var(--navy); color:#fff; border:none;
+  font-family:var(--sans); font-size:12px; font-weight:700;
+  cursor:pointer; transition:all .2s; letter-spacing:.02em;
+}
+.drop-btn:hover { background:var(--navy-mid); transform:translateY(-1px); box-shadow:var(--shadow-md); }
+
+/* ── File Grid ── */
+.fgrid {
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(148px,1fr));
+  gap:12px; align-content:start;
+}
+.fc {
+  background:var(--warm-white); border:1px solid var(--border);
+  border-radius:12px; overflow:hidden; position:relative;
+  transition:all .2s; display:flex; flex-direction:column;
+}
+.fc:hover { border-color:rgba(30,53,84,.2); box-shadow:var(--shadow-md); }
+.prev {
+  width:100%; aspect-ratio:3/4; background:var(--cream);
+  display:flex; align-items:center; justify-content:center;
+  overflow:hidden; position:relative; flex-shrink:0;
+}
+.prev img { width:100%; height:100%; object-fit:cover; }
+.fi { padding:10px 11px; }
+.fn {
+  font-size:11px; font-weight:700; color:var(--text);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  margin-bottom:3px; letter-spacing:-.01em;
+}
+.fm { font-size:10px; color:var(--text3); }
+.rb {
+  position:absolute; top:7px; right:7px; width:22px; height:22px;
+  border-radius:50%; border:none; background:rgba(30,53,84,.65);
+  color:#fff; cursor:pointer; font-size:11px; font-weight:700;
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; transition:opacity .2s;
+}
+.fc:hover .rb { opacity:1; }
+.sav { color:var(--success); font-weight:700; font-size:10px; }
+.sbadge {
+  position:absolute; bottom:5px; left:5px; right:5px;
+  font-size:9px; font-weight:800; text-align:center; letter-spacing:.08em;
+  text-transform:uppercase; padding:3px 0; border-radius:4px;
+}
+.sbadge.working { background:rgba(30,53,84,.85); color:rgba(255,255,255,.9); }
+.sbadge.done    { background:rgba(58,138,98,.9);  color:#fff; }
+.sbadge.err     { background:rgba(176,48,32,.9);  color:#fff; }
+
+/* ── Sidebar — dark navy (premium) ── */
+.sidebar {
+  width:280px; min-width:280px;
+  background:var(--warm-white);
+  border-left:1px solid var(--border);
+  display:flex; flex-direction:column;
+  overflow-y:auto; overflow-x:hidden;
+  transition:width .26s cubic-bezier(.22,1,.36,1),
+             min-width .26s cubic-bezier(.22,1,.36,1),
+             border-color .26s;
+}
+
+.ss { padding:16px 18px; border-bottom:1px solid var(--border2); flex-shrink:0; }
+.ss h3 {
+  font-size:9px; font-weight:800; letter-spacing:.24em; text-transform:uppercase;
+  color:var(--gold); margin-bottom:13px;
+  display:flex; align-items:center; gap:10px;
+}
+.ss h3::after { content:''; flex:1; height:1px; background:var(--border2); }
+
+/* Setting row */
+.sr { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+.sr:last-child { margin-bottom:0; }
+.sl { font-size:12px; font-weight:700; color:var(--text); letter-spacing:-.01em; }
+.sb { font-size:10px; color:var(--text3); margin-top:2px; }
+
+/* Range slider row */
+.sw { display:flex; align-items:center; gap:8px; }
+.sw input[type=range] { width:100px; }
+.rv { font-size:12px; font-weight:800; color:var(--navy); font-family:var(--mono); min-width:28px; text-align:right; }
+
+/* Select & Toggle in sidebar */
+.cs {
+  background:var(--cream); border:1px solid var(--border);
+  color:var(--text); border-radius:6px; padding:6px 10px;
+  font-family:var(--sans); font-size:12px; font-weight:600; cursor:pointer;
+}
+.cs:focus { outline:none; border-color:var(--gold-mid); }
+
+/* Toggle switch */
+.tg { display:flex; cursor:pointer; }
+.tg input { display:none; }
+.tg-t {
+  width:36px; height:20px; border-radius:10px; position:relative;
+  background:var(--border); transition:background .2s;
+}
+.tg input:checked + .tg-t { background:var(--gold-mid); }
+.tg-t::after {
+  content:''; position:absolute; top:3px; left:3px;
+  width:14px; height:14px; border-radius:50%;
+  background:#fff; transition:transform .2s;
+  box-shadow:0 1px 3px rgba(0,0,0,.15);
+}
+.tg input:checked + .tg-t::after { transform:translateX(16px); }
+
+/* Text input in sidebar */
+.ti {
+  background:var(--cream); border:1px solid var(--border);
+  color:var(--text); border-radius:6px; padding:6px 10px;
+  font-family:var(--sans); font-size:12px; transition:border-color .2s;
+}
+.ti:focus { outline:none; border-color:var(--gold-mid); }
+.ti::placeholder { color:var(--text3); }
+
+/* Stat grid in sidebar */
+.sg { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.sb2 { background:var(--cream); border:1px solid var(--border2); border-radius:8px; padding:10px 12px; text-align:center; }
+.sb2 .v { font-size:20px; font-weight:900; color:var(--navy); font-family:var(--mono); line-height:1; }
+.sb2 .l { font-size:9px; color:var(--text3); margin-top:4px; letter-spacing:.06em; }
+
+/* Progress bar */
+.pw { margin-top:10px; }
+.pl { display:flex; justify-content:space-between; margin-bottom:6px; font-size:11px; }
+.pl span:first-child { color:var(--text2); font-weight:600; }
+.pl span:last-child { color:var(--gold); font-weight:800; font-family:var(--mono); }
+.pt { height:5px; background:var(--border2); border-radius:3px; overflow:hidden; }
+.pf { height:100%; background:var(--gold-mid); border-radius:3px; transition:width .3s; }
+
+/* Sidebar button container */
+.bgc {
+  padding:14px 18px; display:flex; flex-direction:column; gap:8px;
+  margin-top:auto; flex-shrink:0;
+  border-top:1px solid var(--border2);
+  background:var(--cream);
+  position:sticky; bottom:0;
+}
+
+/* Buttons */
+.btn {
+  display:flex; align-items:center; justify-content:center; gap:7px;
+  padding:11px 16px; border:none; border-radius:10px;
+  font-family:var(--sans); font-size:13px; font-weight:800;
+  cursor:pointer; transition:all .2s; width:100%;
+  letter-spacing:.02em;
+}
+.btn-p { background:var(--navy); color:#fff; }
+.btn-p:hover { background:var(--navy-mid); transform:translateY(-1px); box-shadow:0 4px 16px rgba(30,53,84,.22); }
+.btn-p:disabled { background:var(--border); color:var(--text3); cursor:not-allowed; transform:none; box-shadow:none; }
+.btn-s { background:transparent; color:var(--text3); border:1px solid var(--border); }
+.btn-s:hover { background:var(--cream2); color:var(--text2); border-color:var(--border); }
+.btn-s:disabled { background:transparent; color:var(--border); cursor:not-allowed; border-color:var(--border2); }
+
+/* ── Sidebar toggle button (header) ── */
+.sb-toggle-btn {
+  display:flex; align-items:center; justify-content:center;
+  width:32px; height:32px; border-radius:8px; border:none;
+  background:rgba(255,255,255,.08); color:rgba(255,255,255,.65);
+  cursor:pointer; transition:all .2s; flex-shrink:0;
+}
+.sb-toggle-btn:hover { background:rgba(255,255,255,.16); color:#fff; }
+.sb-toggle-btn.sb-closed { background:rgba(232,184,75,.18); color:var(--gold-mid); }
+
+/* Toast */
+#toast {
+  position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px);
+  background:var(--navy); color:#fff;
+  padding:10px 22px; border-radius:24px; font-size:13px; font-weight:700;
+  opacity:0; pointer-events:none; transition:all .3s; z-index:1000; white-space:nowrap;
+  box-shadow:0 8px 24px rgba(30,53,84,.3);
+}
+#toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+#toast.err { background:var(--danger); }
+
+/* Progress bar in drop-area */
+.prog-wrap { background:var(--warm-white); border:1px solid var(--border); border-radius:10px; padding:14px 18px; }
+.prog-info { display:flex; justify-content:space-between; margin-bottom:8px; font-size:12px; }
+.prog-track { height:6px; background:var(--border); border-radius:3px; overflow:hidden; }
+.prog-fill { height:100%; background:var(--gold-mid); border-radius:3px; transition:width .3s; }
+
+/* Output log */
+.op-log { font-size:11px; font-family:var(--mono); color:var(--text3); line-height:1.7; max-height:120px; overflow-y:auto; background:var(--cream); border-radius:8px; padding:10px 14px; }
+
+/* Mixed merge list */
+.mx-list { display:flex; flex-direction:column; gap:6px; }
+.mx-item {
+  display:grid; grid-template-columns:22px 52px 1fr auto auto auto;
+  align-items:center; gap:9px;
+  background:var(--warm-white); border:1px solid var(--border);
+  padding:9px 12px; border-radius:8px; cursor:default; transition:border-color .2s;
+}
+.mx-item.dragging { opacity:.4; border-color:var(--gold-mid); background:var(--gold-tint); }
+.mx-item.drag-over { border-top:2px solid var(--gold-mid); }
+.mx-drag { cursor:grab; font-size:14px; color:var(--text3); }
+.mx-thumb { width:52px; aspect-ratio:3/4; object-fit:cover; border-radius:4px; background:var(--cream); display:flex; align-items:center; justify-content:center; font-size:18px; overflow:hidden; }
+.mx-name { font-size:12px; font-weight:700; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mx-size { font-size:10px; color:var(--text3); margin-top:2px; }
+.mx-type { font-size:9px; font-weight:800; letter-spacing:.08em; padding:2px 6px; border-radius:3px; }
+.mx-type.pdf { background:var(--navy-bg); color:var(--navy-mid); }
+.mx-type.img { background:var(--success-bg); color:var(--success); }
+.mx-del, .mx-move { background:none; border:none; cursor:pointer; color:var(--text3); padding:4px; border-radius:4px; transition:all .15s; }
+.mx-del:hover { color:var(--danger); background:var(--danger-bg); }
+
+/* Page size select in pdfmix */
+.mx-pgsz { font-size:10px; background:var(--cream); border:1px solid var(--border); border-radius:4px; padding:3px 6px; color:var(--text2); font-family:var(--sans); }
+
+/* ── HEIC panel — missing styles ── */
+.frows { display:flex; flex-direction:column; gap:6px; min-height:40px; }
+
+.action-row {
+  display:flex; gap:8px; flex-wrap:wrap;
+}
+.action-row .btn { flex:1; min-width:90px; }
+
+.btn-d {
+  background:transparent; color:var(--danger);
+  border:1px solid rgba(176,48,32,.22);
+}
+.btn-d:hover { background:var(--danger-bg); border-color:var(--danger); }
+.btn-d:disabled { background:transparent; color:var(--border); cursor:not-allowed; border-color:var(--border2); }
+
+/* Progress wrapper */
+.hpw {
+  background:var(--warm-white); border:1px solid var(--border);
+  border-radius:10px; padding:12px 16px; display:none;
+}
+.hpw.active { display:block; }
+.hph {
+  display:flex; justify-content:space-between; align-items:center;
+  margin-bottom:8px;
+}
+.hpl { font-size:11px; font-weight:700; color:var(--text2); letter-spacing:.02em; }
+.hpc { font-size:12px; font-weight:800; color:var(--gold); font-family:var(--mono); }
+
+/* Log output */
+.log-box {
+  font-size:11px; font-family:var(--mono); color:var(--text3);
+  line-height:1.75; max-height:110px; overflow-y:auto;
+  background:var(--cream); border:1px solid var(--border2);
+  border-radius:8px; padding:10px 14px; display:none;
+}
+.log-box:not(:empty) { display:block; }
+
+/* Stats strip */
+.hstats {
+  display:flex; align-items:stretch;
+  background:var(--warm-white); border:1px solid var(--border);
+  border-radius:10px; overflow:hidden;
+}
+.hs {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  flex:1; gap:4px; padding:14px 8px;
+}
+.hs-n {
+  font-size:22px; font-weight:900; color:var(--navy);
+  font-family:var(--mono); line-height:1;
+}
+.hs-l {
+  font-size:9px; font-weight:700; color:var(--text3);
+  letter-spacing:.08em; text-transform:uppercase;
+}
+.hsdiv { width:1px; background:var(--border2); flex-shrink:0; }
+
+/* ── Desktop sidebar collapse ── */
+@media(min-width:901px) {
+  .sidebar.sb-hidden {
+    width:0; min-width:0;
+    overflow:hidden; border-left-color:transparent;
+  }
+}
+
+/* ── Narrow / zoomed layout ── */
+@media(max-width:900px) {
+  .tool-layout { grid-template-columns:1fr; grid-template-rows:1fr auto; }
+  .sidebar {
+    width:auto; min-width:unset;
+    max-height:0; overflow:hidden;
+    transition:max-height .35s cubic-bezier(.22,1,.36,1);
+    border-top:none; border-left:none;
+  }
+  .sidebar.sb-open { max-height:70vh; overflow-y:auto; }
+  .drop-area { padding:16px; }
+  .tab-btn span.tab-pill { display:none; }
+  .tool-nav { padding:0 8px; }
+}
+</style>
+</head>
+<body>
+
+<style>
+  :root {
+    --gold:#E8B84B; --gold2:#CF9E2E; --gold-bg:rgba(232,184,75,.1);
+    --navy:#2D4A6E; --navy2:#1E3A5A; --navy-bg:rgba(45,74,110,.08);
+    --green:#5BAD85; --green-bg:rgba(91,173,133,.1);
+    --lp-text:#1E2D42; --lp-muted:#6B7685; --lp-border:rgba(45,74,110,.1);
+    --lp-bg:#FAFAF8; --lp-surface:#FFFFFF;
+  }
+  #lp-wrap { background:var(--lp-bg); color:var(--lp-text); -webkit-font-smoothing:antialiased; }
+  #lp-wrap.hidden { display:none; }
+  #app-wrap.hidden { display:none; }
+
+  /* Nav */
+  .lp-nav {
+    position:fixed; top:0; left:0; right:0; z-index:200;
+    height:62px; display:flex; align-items:center; justify-content:space-between; padding:0 40px;
+    background:rgba(250,250,248,.92); backdrop-filter:blur(20px);
+    border-bottom:1px solid var(--lp-border); transition:box-shadow .3s;
+    font-family:'Outfit','Noto Sans TC',sans-serif;
+  }
+  .lp-nav.scrolled { box-shadow:0 4px 24px rgba(45,74,110,.08); }
+  .lp-brand { display:flex; align-items:center; gap:10px; text-decoration:none; }
+  .lp-brand-name { font-size:15px; font-weight:800; color:var(--lp-text); }
+  .lp-brand-name b { color:var(--gold); font-weight:900; }
+  .lp-brand-sub { font-size:10px; color:var(--lp-muted); display:block; margin-top:-1px; }
+  .lp-nav-links { display:flex; align-items:center; gap:4px; }
+  .lp-nav-link { font-size:13px; color:var(--lp-muted); text-decoration:none; font-weight:600; padding:6px 12px; border-radius:20px; transition:all .15s; }
+  .lp-nav-link:hover { color:var(--lp-text); background:var(--navy-bg); }
+  .lp-nav-btn {
+    background:var(--navy); color:#fff; border:none;
+    padding:9px 22px; border-radius:22px; font-size:13px; font-weight:700;
+    cursor:pointer; font-family:inherit; transition:all .2s;
+    display:flex; align-items:center; gap:6px;
+  }
+  .lp-nav-btn:hover { background:var(--navy2); transform:translateY(-1px); box-shadow:0 4px 16px rgba(45,74,110,.3); }
+
+  /* Glow */
+  .lp-glow { position:absolute; border-radius:50%; pointer-events:none; }
+
+  /* Hero */
+  .lp-hero {
+    padding:130px 24px 80px; text-align:center;
+    position:relative; overflow:hidden;
+    font-family:'Outfit','Noto Sans TC',sans-serif;
+  }
+  .lp-hero-inner { position:relative; z-index:1; max-width:720px; margin:0 auto; }
+  .lp-pill {
+    display:inline-flex; align-items:center; gap:8px;
+    background:var(--gold-bg); border:1px solid rgba(232,184,75,.35);
+    color:#8A6210; padding:5px 14px 5px 10px; border-radius:20px;
+    font-size:12px; font-weight:700; margin-bottom:28px; letter-spacing:.3px;
+    font-family:'Outfit',sans-serif;
+  }
+  .lp-pill-dot {
+    width:20px; height:20px; border-radius:6px; background:var(--gold);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .lp-pill-dot svg { width:12px; height:12px; stroke:#fff; }
+  .lp-h1 {
+    font-size:clamp(36px,7vw,66px); font-weight:900;
+    line-height:1.05; letter-spacing:-1.5px; margin-bottom:20px;
+    color:var(--lp-text); font-family:'Outfit',sans-serif;
+  }
+  .lp-h1 .hl-gold { color:var(--gold2); }
+  .lp-sub {
+    font-size:clamp(14px,2vw,17px); color:var(--lp-muted);
+    line-height:1.75; margin-bottom:36px;
+    max-width:500px; margin-left:auto; margin-right:auto;
+    font-family:'Noto Sans TC',sans-serif;
+  }
+  .lp-actions { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-bottom:48px; }
+  .lp-btn-p {
+    background:var(--navy); color:#fff; border:none;
+    padding:14px 32px; border-radius:28px; font-size:15px; font-weight:800;
+    cursor:pointer; font-family:inherit; transition:all .25s;
+    display:inline-flex; align-items:center; gap:8px;
+  }
+  .lp-btn-p:hover { background:var(--navy2); transform:translateY(-2px); box-shadow:0 8px 28px rgba(45,74,110,.28); }
+  .lp-btn-s {
+    background:transparent; color:var(--navy);
+    border:1.5px solid var(--lp-border); padding:14px 24px;
+    border-radius:28px; font-size:15px; font-weight:600;
+    cursor:pointer; font-family:inherit; transition:all .2s;
+  }
+  .lp-btn-s:hover { border-color:rgba(45,74,110,.3); background:var(--navy-bg); }
+
+  /* Stats */
+  .lp-stats {
+    display:flex; justify-content:center; gap:0;
+    max-width:520px; margin:0 auto;
+    background:var(--lp-surface); border:1px solid var(--lp-border);
+    border-radius:16px; overflow:hidden; box-shadow:0 4px 24px rgba(45,74,110,.08);
+  }
+  .lp-stat { flex:1; padding:18px 12px; text-align:center; border-right:1px solid var(--lp-border); }
+  .lp-stat:last-child { border-right:none; }
+  .lp-stat-n { font-size:22px; font-weight:900; color:var(--navy); line-height:1; font-family:'Outfit',monospace; }
+  .lp-stat-l { font-size:10px; color:var(--lp-muted); margin-top:3px; }
+
+  /* Tool preview */
+  .lp-preview { padding:80px 24px 60px; font-family:'Outfit','Noto Sans TC',sans-serif; }
+  .lp-preview-inner { max-width:960px; margin:0 auto; }
+  .lp-section-eyebrow { font-size:11px; font-weight:700; letter-spacing:2px; color:var(--gold2); text-transform:uppercase; margin-bottom:10px; }
+  .lp-section-title { font-size:clamp(26px,4vw,38px); font-weight:900; color:var(--lp-text); margin-bottom:12px; letter-spacing:-.5px; line-height:1.2; font-family:'Outfit',sans-serif; }
+  .lp-frame {
+    background:var(--lp-surface); border:1px solid var(--lp-border);
+    border-radius:20px; overflow:hidden; box-shadow:0 20px 60px rgba(45,74,110,.12);
+  }
+  .lp-frame-bar {
+    background:#F0EDE8; border-bottom:1px solid var(--lp-border);
+    padding:10px 16px; display:flex; align-items:center; gap:6px;
+  }
+  .lp-dot { width:10px; height:10px; border-radius:50%; }
+  .lp-frame-body { padding:0; background:#F4F2EC; display:flex; overflow:hidden; }
+  .lp-frame-sidebar {
+    width:220px; flex-shrink:0; background:#2D4A6E;
+    padding:16px 14px; display:flex; flex-direction:column; gap:8px;
+  }
+  .lp-frame-main { flex:1; padding:16px; display:flex; flex-direction:column; gap:10px; }
+  .lp-frame-result { font-size:28px; font-weight:900; color:#E8B84B; font-family:monospace; line-height:1; }
+  .lp-frame-tab-row { display:flex; gap:4px; flex-wrap:wrap; }
+  .lp-frame-tab { padding:6px 14px; border-radius:20px; font-size:11px; font-weight:700; }
+  .lp-frame-card { background:#FEFEFE; border-radius:10px; padding:12px 14px; border:1px solid #DDD9CE; }
+
+  /* Tool grid */
+  .lp-tools-sect {
+    padding:80px 24px; background:var(--lp-surface);
+    border-top:1px solid var(--lp-border); border-bottom:1px solid var(--lp-border);
+    font-family:'Outfit','Noto Sans TC',sans-serif;
+  }
+  .lp-tools-inner { max-width:1060px; margin:0 auto; }
+  .lp-tc-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:16px; margin-top:48px; }
+  .tc {
+    background:var(--lp-surface); border:1px solid var(--lp-border);
+    border-radius:16px; padding:24px 26px 20px; cursor:pointer;
+    position:relative; overflow:hidden; display:flex; flex-direction:column;
+    transition:all .25s;
+  }
+  .tc::after {
+    content:''; position:absolute; bottom:0; left:0; right:0; height:3px;
+    background:var(--tca,var(--gold2)); transform:scaleX(0); transform-origin:left; transition:transform .3s;
+  }
+  .tc:hover { transform:translateY(-4px); box-shadow:0 12px 36px rgba(45,74,110,.1); border-color:rgba(45,74,110,.16); }
+  .tc:hover::after { transform:scaleX(1); }
+  .tc-num { font-size:10px; font-weight:800; letter-spacing:.2em; color:var(--tca,var(--gold2)); opacity:.4; margin-bottom:12px; }
+  .tc-icon {
+    width:44px; height:44px; border-radius:12px; background:var(--tcbg,var(--gold-bg));
+    display:flex; align-items:center; justify-content:center; margin-bottom:14px;
+  }
+  .tc-icon svg { width:22px; height:22px; }
+  .tc-tag { font-size:10px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--tca,var(--gold2)); margin-bottom:6px; opacity:.75; }
+  .tc-name { font-size:clamp(16px,2.2vw,19px); font-weight:900; color:var(--lp-text); margin-bottom:6px; line-height:1.1; font-family:'Outfit',sans-serif; }
+  .tc-desc { font-size:12px; color:var(--lp-muted); line-height:1.75; flex:1; margin-bottom:14px; font-family:'Noto Sans TC',sans-serif; }
+  .tc-enter {
+    display:flex; align-items:center; gap:8px; font-size:10px; font-weight:800;
+    letter-spacing:.15em; text-transform:uppercase; color:#5A6470;
+    padding-top:12px; border-top:1px solid var(--lp-border); transition:gap .2s;
+  }
+  .tc:hover .tc-enter { gap:14px; }
+  .tc-enter svg { width:12px; height:12px; }
+
+  /* Trust CTA */
+  .lp-trust {
+    padding:90px 24px 100px; text-align:center;
+    position:relative; overflow:hidden;
+    font-family:'Outfit','Noto Sans TC',sans-serif;
+  }
+  .lp-trust-glow {
+    position:absolute; bottom:-80px; left:50%; transform:translateX(-50%);
+    width:700px; height:400px; border-radius:50%;
+    background:radial-gradient(ellipse, rgba(232,184,75,.14) 0%, transparent 60%);
+    pointer-events:none;
+  }
+  .lp-trust-inner { position:relative; z-index:1; max-width:600px; margin:0 auto; }
+  .lp-trust h2 { font-size:clamp(26px,4vw,40px); font-weight:900; color:var(--lp-text); margin-bottom:14px; font-family:'Outfit',sans-serif; }
+  .lp-trust p { font-size:15px; color:var(--lp-muted); margin-bottom:36px; line-height:1.7; font-family:'Noto Sans TC',sans-serif; }
+  .lp-trust-badges { display:flex; justify-content:center; gap:8px; flex-wrap:wrap; margin-top:36px; }
+  .lp-trust-badge {
+    display:flex; align-items:center; gap:7px;
+    background:var(--lp-surface); border:1px solid var(--lp-border);
+    padding:8px 16px; border-radius:20px; font-size:12px; font-weight:600; color:var(--navy);
+  }
+  .lp-trust-badge svg { width:13px; height:13px; stroke:var(--green); }
+
+  /* Footer */
+  .lp-footer {
+    padding:28px 24px; text-align:center; border-top:1px solid var(--lp-border);
+    font-size:12px; color:var(--lp-muted); font-family:'Outfit','Noto Sans TC',sans-serif;
+  }
+  .lp-footer strong { color:#5A6470; }
+
+  /* Animations */
+  @keyframes lp-fu { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
+  .lp-fu1{animation:lp-fu .55s .00s both} .lp-fu2{animation:lp-fu .55s .10s both}
+  .lp-fu3{animation:lp-fu .55s .20s both} .lp-fu4{animation:lp-fu .55s .30s both}
+  .lp-fu5{animation:lp-fu .55s .40s both}
+
+  @media(max-width:640px){
+    .lp-nav{padding:0 16px;}
+    .lp-nav-links{display:none;}
+    .lp-frame-sidebar{display:none;}
+    .lp-stat{min-width:80px;padding:14px 8px;} .lp-stat-n{font-size:18px;}
+  }
+</style>
+
+<div id="lp-wrap">
+
+<!-- ── Nav ── -->
+<nav class="lp-nav" id="lp-main-nav">
+  <a class="lp-brand" href="#">
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+      <circle cx="16" cy="16" r="15" fill="#1E3554"/>
+      <path d="M2 16 A14 14 0 0 1 30 16" fill="#E8B84B"/>
+      <line x1="4"   y1="18.5" x2="28"  y2="18.5" stroke="#fff" stroke-width="1.5" opacity=".85"/>
+      <line x1="6.5" y1="21"   x2="25.5" y2="21"   stroke="#fff" stroke-width="1.5" opacity=".65"/>
+      <line x1="10"  y1="23.5" x2="22"   y2="23.5" stroke="#fff" stroke-width="1.5" opacity=".45"/>
+    </svg>
+    <div>
+      <div class="lp-brand-name">SunDown <b>Studio</b></div>
+      <span class="lp-brand-sub">落霞千頁 · 日落工作室</span>
+    </div>
+  </a>
+  <div class="lp-nav-links">
+    <a class="lp-nav-link" href="#lp-tools">工具</a>
+    <a class="lp-nav-link" href="#lp-preview">預覽</a>
+    <a class="lp-nav-link" href="#lp-trust">關於</a>
+  </div>
+  <button class="lp-nav-btn" onclick="launchTool('pdf')">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg>
+    開始使用
+  </button>
+</nav>
+
+<!-- ── Hero ── -->
+<section class="lp-hero">
+  <!-- Glows -->
+  <div class="lp-glow" style="top:-60px;left:50%;transform:translateX(-50%);width:800px;height:500px;background:radial-gradient(ellipse,rgba(232,184,75,.16) 0%,transparent 60%);"></div>
+  <div class="lp-glow" style="top:80px;left:-5%;width:500px;height:500px;background:radial-gradient(ellipse,rgba(45,74,110,.09) 0%,transparent 60%);"></div>
+  <div class="lp-glow" style="top:60px;right:-5%;width:450px;height:450px;background:radial-gradient(ellipse,rgba(91,173,133,.09) 0%,transparent 60%);"></div>
+
+  <div class="lp-hero-inner">
+    <div class="lp-pill lp-fu1">
+      <div class="lp-pill-dot">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      所有檔案本機處理，絕不上傳伺服器
+    </div>
+
+    <h1 class="lp-h1 lp-fu2">
+      文件處理，<br><span class="hl-gold">一頁搞定</span>
+    </h1>
+
+    <p class="lp-sub lp-fu3">
+      PDF 轉圖、照片轉換、圖片壓縮、PDF 合併壓縮。<br>
+      七種工具，完全在你的裝置上執行。<br>
+      免費、免帳號、免安裝。
+    </p>
+
+    <div class="lp-actions lp-fu4">
+      <button class="lp-btn-p" onclick="launchTool('pdf')">
+        立即免費使用
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </button>
+      <button class="lp-btn-s" onclick="document.getElementById('lp-tools').scrollIntoView({behavior:'smooth'})">
+        查看所有工具
+      </button>
+    </div>
+
+    <div class="lp-stats lp-fu5">
+      <div class="lp-stat"><div class="lp-stat-n">7</div><div class="lp-stat-l">文件工具</div></div>
+      <div class="lp-stat"><div class="lp-stat-n">100%</div><div class="lp-stat-l">本機處理</div></div>
+      <div class="lp-stat"><div class="lp-stat-n">0</div><div class="lp-stat-l">帳號需求</div></div>
+      <div class="lp-stat"><div class="lp-stat-n">$0</div><div class="lp-stat-l">完全免費</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Tool Preview ── -->
+<section class="lp-preview" id="lp-preview">
+  <div class="lp-preview-inner">
+    <div style="text-align:center;margin-bottom:32px">
+      <div class="lp-section-eyebrow">工具預覽</div>
+      <h2 class="lp-section-title" style="max-width:400px;margin:0 auto 12px">直覺操作，<br>拖放即可開始</h2>
+    </div>
+    <div class="lp-frame">
+      <div class="lp-frame-bar">
+        <div class="lp-dot" style="background:#FF5F57"></div>
+        <div class="lp-dot" style="background:#FEBC2E"></div>
+        <div class="lp-dot" style="background:#28C840"></div>
+        <div style="flex:1;background:#E8E4DC;height:22px;border-radius:6px;margin-left:8px;display:flex;align-items:center;padding:0 10px">
+          <span style="font-size:10px;color:#8A8E96;font-family:'Outfit',sans-serif;">落霞千頁 · SunDown Studio</span>
+        </div>
+      </div>
+      <div class="lp-frame-body" style="min-height:220px;">
+        <div class="lp-frame-sidebar">
+          <div style="font-size:9px;color:rgba(255,255,255,.4);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;">壓縮設定</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
+            <span style="font-size:11px;color:rgba(255,255,255,.65)">JPEG 品質</span>
+            <span style="font-size:13px;font-weight:800;color:#fff;font-family:monospace">82</span>
+          </div>
+          <div style="height:4px;background:rgba(255,255,255,.15);border-radius:2px;margin-bottom:10px;"><div style="width:78%;height:100%;background:#E8B84B;border-radius:2px;"></div></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
+            <span style="font-size:11px;color:rgba(255,255,255,.65)">色彩模式</span>
+            <span style="font-size:11px;font-weight:700;color:#E8B84B">自動偵測</span>
+          </div>
+          <div style="height:1px;background:rgba(255,255,255,.1);margin:10px 0;"></div>
+          <div style="font-size:9px;color:rgba(255,255,255,.4);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;">統計</div>
+          <div style="display:flex;justify-content:space-between;">
+            <span style="font-size:11px;color:rgba(255,255,255,.65)">PDF 數</span>
+            <span style="font-size:13px;font-weight:800;color:#fff;font-family:monospace">3</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span style="font-size:11px;color:rgba(255,255,255,.65)">壓縮率</span>
+            <span style="font-size:13px;font-weight:800;color:#5BAD85;font-family:monospace">-68%</span>
+          </div>
+        </div>
+        <div class="lp-frame-main">
+          <div class="lp-frame-tab-row">
+            <div class="lp-frame-tab" style="background:#E8B84B;color:#2D4A6E">PDF → JPG</div>
+            <div class="lp-frame-tab" style="background:#E8E4DC;color:#8A8E96">HEIC → JPG</div>
+            <div class="lp-frame-tab" style="background:#E8E4DC;color:#8A8E96">圖片壓縮</div>
+            <div class="lp-frame-tab" style="background:#E8E4DC;color:#8A8E96">PDF 壓縮</div>
+          </div>
+          <div class="lp-frame-card">
+            <div style="font-size:10px;font-weight:700;color:#8A8E96;margin-bottom:10px;letter-spacing:.5px;">拖放或點擊選取 PDF 檔案</div>
+            <div style="display:flex;gap:8px;">
+              <div style="flex:1;background:#F4F2EC;border-radius:8px;padding:10px;border:1px dashed #DDD9CE;text-align:center;">
+                <div style="font-size:20px;margin-bottom:4px;">📄</div>
+                <div style="font-size:9px;color:#8A8E96">report_2024.pdf</div>
+                <div style="font-size:9px;color:#5BAD85;font-weight:700;margin-top:2px;">✓ 完成</div>
+              </div>
+              <div style="flex:1;background:#F4F2EC;border-radius:8px;padding:10px;border:1px dashed #DDD9CE;text-align:center;">
+                <div style="font-size:20px;margin-bottom:4px;">📄</div>
+                <div style="font-size:9px;color:#8A8E96">scan_01.pdf</div>
+                <div style="font-size:9px;color:#E8B84B;font-weight:700;margin-top:2px;">處理中...</div>
+              </div>
+              <div style="flex:1;background:rgba(232,184,75,.08);border-radius:8px;padding:10px;border:2px dashed #E8B84B;text-align:center;display:flex;align-items:center;justify-content:center;">
+                <div style="font-size:10px;color:#C9960A;font-weight:700;">+ 加入</div>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <div style="flex:1;background:#FEFEFE;border-radius:10px;padding:10px 12px;border:1px solid #DDD9CE;">
+              <div style="font-size:9px;color:#8A8E96;font-weight:700;margin-bottom:4px;">輸出品質</div>
+              <div style="height:4px;background:#DDD9CE;border-radius:2px;"><div style="width:82%;height:100%;background:#E8B84B;border-radius:2px;"></div></div>
+            </div>
+            <div style="flex:1;background:#FEFEFE;border-radius:10px;padding:10px 12px;border:1px solid #DDD9CE;">
+              <div style="font-size:9px;color:#8A8E96;font-weight:700;margin-bottom:2px;">處理進度</div>
+              <div style="font-size:18px;font-weight:900;color:#2D4A6E;font-family:monospace">2/3</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Tools Grid ── -->
+<section class="lp-tools-sect" id="lp-tools">
+  <div class="lp-tools-inner">
+    <div style="text-align:center;margin-bottom:0;">
+      <div class="lp-section-eyebrow">選擇工具</div>
+      <h2 class="lp-section-title">七種功能，一站完成</h2>
+      <p style="font-size:15px;color:var(--lp-muted);max-width:420px;margin:0 auto;font-family:'Noto Sans TC',sans-serif;line-height:1.7;">
+        PDF、圖片、照片，各種文件格式問題，全部解決。
+      </p>
+    </div>
+    <div class="lp-tc-grid">
+      <div class="tc" style="--tca:#2D4A6E;--tcbg:rgba(45,74,110,.07)" onclick="launchTool('pdf')">
+          <div class="tc-num">01</div>
+          <div class="tc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#2D4A6E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><rect x="8" y="12" width="8" height="6" rx="1"/></svg></div>
+          <div class="tc-tag">PDF 轉換</div>
+          <div class="tc-name">PDF → JPG</div>
+          <p class="tc-desc">批量將 PDF 每頁輸出為 JPG，支援自訂 DPI 與品質。</p>
+          <div class="tc-enter">進入工具 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg></div>
+        </div>
+        <div class="tc" style="--tca:#1D7A6A;--tcbg:rgba(29,122,106,.07)" onclick="launchTool('heic')">
+          <div class="tc-num">02</div>
+          <div class="tc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#1D7A6A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="13" r="3"/></svg></div>
+          <div class="tc-tag">照片轉換</div>
+          <div class="tc-name">HEIC → JPG</div>
+          <p class="tc-desc">批量轉換 iPhone 拍的 HEIC 照片，ZIP 打包或逐一下載。</p>
+          <div class="tc-enter">進入工具 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg></div>
+        </div>
+        <div class="tc" style="--tca:#2D7D3A;--tcbg:rgba(45,125,58,.07)" onclick="launchTool('compress')">
+          <div class="tc-num">03</div>
+          <div class="tc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#2D7D3A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg></div>
+          <div class="tc-tag">圖片壓縮</div>
+          <div class="tc-name">圖片壓縮</div>
+          <p class="tc-desc">JPG、PNG、WebP 批量壓縮，品質或目標大小模式。</p>
+          <div class="tc-enter">進入工具 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg></div>
+        </div>
+        <div class="tc" style="--tca:#7B4E9E;--tcbg:rgba(123,78,158,.07)" onclick="launchTool('resize')">
+          <div class="tc-num">04</div>
+          <div class="tc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#7B4E9E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></div>
+          <div class="tc-tag">圖片縮放</div>
+          <div class="tc-name">尺寸調整</div>
+          <p class="tc-desc">批量縮放圖片，固定寬高、百分比或自訂尺寸。</p>
+          <div class="tc-enter">進入工具 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg></div>
+        </div>
+        <div class="tc" style="--tca:#C07830;--tcbg:rgba(192,120,48,.07)" onclick="launchTool('pdfops')">
+          <div class="tc-num">05</div>
+          <div class="tc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#C07830" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v6"/><path d="M16 19l2 2 4-4"/></svg></div>
+          <div class="tc-tag">PDF 操作 <span style="display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:#C07830;color:#fff;margin-left:6px;vertical-align:middle;opacity:.85">NEW</span></div>
+          <div class="tc-name">PDF 合併/拆分</div>
+          <p class="tc-desc">多個 PDF 合成一份，或依頁數拆開，可自由排序。</p>
+          <div class="tc-enter">進入工具 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg></div>
+        </div>
+        <div class="tc" style="--tca:#B03020;--tcbg:rgba(176,48,32,.07)" onclick="launchTool('pdfcmp')">
+          <div class="tc-num">06</div>
+          <div class="tc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#B03020" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8V5H3v3"/><path d="M21 16v3H3v-3"/><line x1="12" y1="8" x2="12" y2="16"/><polyline points="8 12 12 16 16 12"/></svg></div>
+          <div class="tc-tag">PDF 壓縮 <span style="display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:#B03020;color:#fff;margin-left:6px;vertical-align:middle;opacity:.85">NEW</span></div>
+          <div class="tc-name">PDF 壓縮</div>
+          <p class="tc-desc">自動偵測灰階、限制解析度，掃描 PDF 大幅縮小體積。</p>
+          <div class="tc-enter">進入工具 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg></div>
+        </div>
+        <div class="tc" style="--tca:#C9960A;--tcbg:rgba(201,150,10,.07)" onclick="launchTool('pdfmix')">
+          <div class="tc-num">07</div>
+          <div class="tc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#C9960A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg></div>
+          <div class="tc-tag">PDF 合成 <span style="display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:#C9960A;color:#fff;margin-left:6px;vertical-align:middle;opacity:.85">NEW</span></div>
+          <div class="tc-name">混合合併 PDF</div>
+          <p class="tc-desc">PDF 與圖片混排合成一份，可自由排序拖放。</p>
+          <div class="tc-enter">進入工具 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg></div>
+        </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Trust CTA ── -->
+<section class="lp-trust" id="lp-trust">
+  <div class="lp-trust-glow"></div>
+  <div class="lp-trust-inner">
+    <div class="lp-section-eyebrow" style="margin-bottom:10px;">安全 · 免費 · 本機</div>
+    <h2>你的檔案，只在你的裝置上</h2>
+    <p>落霞千頁所有處理都在瀏覽器本地執行。<br>沒有伺服器接收你的檔案，沒有帳號，沒有訂閱費用。</p>
+    <button class="lp-btn-p" onclick="launchTool('pdf')">
+      立即開始，完全免費
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg>
+    </button>
+    <div class="lp-trust-badges">
+      <div class="lp-trust-badge"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> 不上傳任何伺服器</div>
+      <div class="lp-trust-badge"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> 免帳號免登入</div>
+      <div class="lp-trust-badge"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> 完全免費</div>
+      <div class="lp-trust-badge"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> 無廣告</div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Footer ── -->
+<footer class="lp-footer">
+  <strong>SunDown Studio 日落工作室</strong> · 落霞千頁 &nbsp;·&nbsp;
+  所有檔案均在本機處理，不上傳至任何伺服器
+</footer>
+
+<script>
+window.addEventListener('scroll', function() {
+  var nav = document.getElementById('lp-main-nav');
+  if (nav) nav.classList.toggle('scrolled', window.scrollY > 20);
+});
+</script>
+
+</div>
+
+<div id="app-wrap" class="hidden">
+
+
+<div id="toast"></div>
+
+<!-- ═══════════ HEADER ═══════════ -->
+<header id="app-header">
+  <!-- Row 1: brand + controls -->
+  <div class="header-top">
+    <button class="header-back" onclick="goHome()">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M10 4l-5 4 5 4"/></svg>
+      返回
+    </button>
+    <div class="brand">
+      <div class="brand-ic">
+        <svg width="18" height="18" viewBox="0 0 28 28" fill="none">
+          <circle cx="14" cy="14" r="13" fill="#1E3554"/>
+          <path d="M2 14 A12 12 0 0 1 26 14" fill="#E8B84B"/>
+          <line x1="4"   y1="16"   x2="24"  y2="16"   stroke="#fff" stroke-width="1.4" opacity=".85"/>
+          <line x1="5"   y1="18.5" x2="23"  y2="18.5" stroke="#fff" stroke-width="1.4" opacity=".65"/>
+          <line x1="7"   y1="21"   x2="21"  y2="21"   stroke="#fff" stroke-width="1.4" opacity=".45"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-nm">Sun<span>Down</span> Studio</div>
+        <div class="brand-sub">落霞千頁 · 文件工具套件</div>
+      </div>
+    </div>
+    <div class="header-end">
+      <div class="secure-dot"></div>
+      <span class="secure-label">本機處理</span>
+      <button class="sb-toggle-btn" id="sbToggleBtn" onclick="toggleSidebar()" title="收合／展開設定">
+        <i data-lucide="panel-right-close" style="width:15px;height:15px;"></i>
+      </button>
+    </div>
+  </div>
+  <!-- Row 2: tool tabs — flex-wrap, never hidden -->
+  <nav class="tool-nav">
+    <button class="tab-btn active" data-tab="pdf"      onclick="switchTab('pdf')">
+      <i data-lucide="file-image" style="width:12px;height:12px;"></i> PDF → JPG
+      <span class="tab-pill">合併</span>
+    </button>
+    <button class="tab-btn" data-tab="heic"     onclick="switchTab('heic')">
+      <i data-lucide="smartphone" style="width:12px;height:12px;"></i> HEIC → JPG
+      <span class="tab-pill">批量</span>
+    </button>
+    <button class="tab-btn" data-tab="compress" onclick="switchTab('compress')">
+      <i data-lucide="minimize-2" style="width:12px;height:12px;"></i> 圖片壓縮
+      <span class="tab-pill">JPG/PNG</span>
+    </button>
+    <button class="tab-btn" data-tab="resize"   onclick="switchTab('resize')">
+      <i data-lucide="expand" style="width:12px;height:12px;"></i> 尺寸調整
+      <span class="tab-pill">批量</span>
+    </button>
+    <button class="tab-btn" data-tab="pdfops"   onclick="switchTab('pdfops')">
+      <i data-lucide="layers" style="width:12px;height:12px;"></i> PDF 合併/拆分
+      <span class="tab-pill">NEW</span>
+    </button>
+    <button class="tab-btn" data-tab="pdfcmp"   onclick="switchTab('pdfcmp')">
+      <i data-lucide="archive" style="width:12px;height:12px;"></i> PDF 壓縮
+      <span class="tab-pill">NEW</span>
+    </button>
+    <button class="tab-btn" data-tab="pdfmix"   onclick="switchTab('pdfmix')">
+      <i data-lucide="file-plus-2" style="width:12px;height:12px;"></i> 混合合併
+      <span class="tab-pill">NEW</span>
+    </button>
+  </nav>
+</header>
+
+<!-- ═══════════ PANEL: PDF→JPG ═══════════ -->
+<div class="tab-panel active" id="panel-pdf"><div class="tool-layout">
+  <div class="drop-area">
+    <div class="drop-zone" id="pdfDZ">
+      <span class="drop-icon"><i data-lucide="file-stack" style="width:48px;height:48px;stroke-width:1.3;"></i></span>
+      <h2>拖曳 PDF 至此</h2>
+      <p>支援批量匯入，或點擊選取 <strong>PDF 檔案</strong></p>
+      <button class="drop-btn" onclick="document.getElementById('pdfFI').click();event.stopPropagation()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg> 選擇檔案
+      </button>
+      <input type="file" id="pdfFI" accept=".pdf" multiple>
+    </div>
+    <div id="pdfGrid" class="fgrid" style="display:none;"></div>
+  </div>
+  <aside class="sidebar">
+    <div class="ss"><h3>基本設定</h3>
+      <div class="sr"><div><div class="sl">解析度 DPI</div><div class="sb">越高越清晰</div></div><div class="sw"><input type="range" class="cr" id="pdfDpi" min="72" max="300" step="12" value="150"><span class="rv" id="pdfDpiV">150</span></div></div>
+      <div class="sr"><div><div class="sl">JPG 品質</div></div><div class="sw"><input type="range" class="cr" id="pdfQual" min="50" max="100" step="5" value="90"><span class="rv" id="pdfQualV">90</span></div></div>
+      <div class="sr"><div><div class="sl">轉換頁面</div></div><select class="cs" id="pdfPM"><option value="all">全部</option><option value="first">僅第一頁</option><option value="range">自訂範圍</option></select></div>
+      <div class="sr" id="pdfRR" style="display:none;"><div><div class="sl">範圍</div><div class="sb">例：1-3,5</div></div><input class="ti" id="pdfRI" placeholder="1-3" style="width:80px;"></div>
+      <div class="sr"><div><div class="sl">打包 ZIP</div></div><label class="tg"><input type="checkbox" id="pdfZip" checked><div class="tg-t"></div></label></div>
+    </div>
+    <div class="ss"><h3>多頁合併</h3>
+      <div class="sr"><div><div class="sl">啟用合併</div><div class="sb">多頁拼成一張</div></div><label class="tg"><input type="checkbox" id="pdfMT"><div class="tg-t"></div></label></div>
+      <div id="pdfMO" style="opacity:.35;pointer-events:none;">
+        <div class="sr"><div><div class="sl">每張頁數</div></div><select class="cs" id="pdfMC"><option value="2">2頁</option><option value="3">3頁</option><option value="4">4頁</option><option value="6">6頁</option></select></div>
+        <div class="sr"><div><div class="sl">排列</div></div><select class="cs" id="pdfML"><option value="horizontal">橫排</option><option value="vertical">直排</option><option value="grid">格狀</option></select></div>
+        <div class="sr"><div><div class="sl">間距</div></div><div class="sw"><input type="range" class="cr" id="pdfGap" min="0" max="40" step="4" value="8"><span class="rv" id="pdfGapV">8px</span></div></div>
+        <div class="sr"><div><div class="sl">背景色</div></div><input type="color" id="pdfBG" value="#ffffff" style="width:34px;height:26px;border:1px solid var(--border);border-radius:3px;cursor:pointer;padding:2px;background:var(--cream);"></div>
+        <div class="merge-preview" id="pdfMP"></div>
+      </div>
+    </div>
+    <div class="ss"><h3>統計</h3>
+      <div class="sg">
+        <div class="sb2"><div class="v" id="ps1">0</div><div class="l">PDF</div></div>
+        <div class="sb2"><div class="v" id="ps2">0</div><div class="l">頁數</div></div>
+        <div class="sb2"><div class="v" id="ps3">0</div><div class="l">完成</div></div>
+        <div class="sb2"><div class="v" id="ps4">0</div><div class="l">輸出</div></div>
+      </div>
+      <div class="pw" id="pdfPW" style="display:none;"><div class="pl"><span id="pdfPT">轉換中...</span><span id="pdfPP">0%</span></div><div class="pt"><div class="pf" id="pdfPF"></div></div></div>
+    </div>
+    <div class="bgc">
+      <button class="btn btn-p" id="pdfCvt" disabled><i data-lucide="play" style="width:13px;height:13px;"></i> 開始轉換</button>
+      <button class="btn btn-s" id="pdfClr" disabled><i data-lucide="trash-2" style="width:12px;height:12px;"></i> 清除全部</button>
+    </div>
+  </aside>
+</div></div>
+
+<!-- ═══════════ PANEL: HEIC→JPG ═══════════ -->
+<div class="tab-panel" id="panel-heic"><div class="tool-layout">
+  <div class="drop-area" style="gap:12px;">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:9px;background:var(--warm-white);border:1px solid var(--border);padding:9px 13px;border-radius:var(--rs);flex:1;min-width:180px;">
+        <span style="font-size:9px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--text3);white-space:nowrap;">JPEG 品質</span>
+        <input type="range" class="cr" id="hQual" min="50" max="100" value="90" step="5" style="flex:1;width:auto;">
+        <span class="rv" id="hQualV">90%</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;background:var(--warm-white);border:1px solid var(--border);padding:9px 13px;border-radius:var(--rs);">
+        <span style="font-size:9px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--text3);white-space:nowrap;">下載</span>
+        <div class="radio-g"><label><input type="radio" name="hDL" value="zip" checked> ZIP</label><label><input type="radio" name="hDL" value="ind"> 逐一</label></div>
+      </div>
+    </div>
+    <div class="drop-zone" id="hDZ">
+      <span class="drop-icon"><i data-lucide="image" style="width:48px;height:48px;stroke-width:1.3;"></i></span>
+      <h2>拖放 HEIC 至此</h2>
+      <p>支援批量選取，或點擊選取 <strong>HEIC / HEIF 檔案</strong></p>
+      <button class="drop-btn" onclick="document.getElementById('hFI').click();event.stopPropagation()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg> 選擇檔案
+      </button>
+      <input type="file" id="hFI" multiple accept=".heic,.HEIC,.heif,.HEIF">
+    </div>
+    <div id="hRows" class="frows"><div style="font-size:13px;color:var(--text3);font-weight:600;text-align:center;padding:10px;">尚未選取任何檔案</div></div>
+    <div class="action-row">
+      <button class="btn btn-p" id="hCvt" disabled><i data-lucide="wand-2" style="width:13px;height:13px;"></i> 開始轉換</button>
+      <button class="btn btn-s" id="hAdd"><i data-lucide="plus" style="width:12px;height:12px;"></i> 新增</button>
+      <button class="btn btn-d" id="hClr" disabled><i data-lucide="trash-2" style="width:12px;height:12px;"></i> 清除</button>
+    </div>
+    <div class="hpw" id="hPW"><div class="hph"><span class="hpl">轉換進度</span><span class="hpc" id="hPC">0/0</span></div><div class="pt"><div class="pf" id="hPF"></div></div></div>
+    <div class="log-box" id="hLog"></div>
+    <div class="hstats" id="hSt">
+      <div class="hs"><span class="hs-n" id="hs1">0</span><span class="hs-l">已轉換</span></div>
+      <div class="hsdiv"></div>
+      <div class="hs"><span class="hs-n" id="hs2">0</span><span class="hs-l">失敗</span></div>
+      <div class="hsdiv"></div>
+      <div class="hs"><span class="hs-n" id="hs3">—</span><span class="hs-l">耗時(秒)</span></div>
+      <div class="hsdiv"></div>
+      <div class="hs"><span class="hs-n" id="hs4">—</span><span class="hs-l">輸出大小</span></div>
+    </div>
+  </div>
+  <aside class="sidebar" style="justify-content:flex-start;">
+    <div class="ss" style="flex:1;">
+      <h3>關於 HEIC</h3>
+      <p style="font-size:12px;color:var(--text3);line-height:1.85;font-family:'Noto Sans TC',sans-serif;">HEIC 是 Apple 裝置預設的照片格式，畫質優但 Windows 不易開啟。轉換後可得到通用 JPG。</p>
+      <div style="background:var(--gold-tint);border:1px solid rgba(232,184,75,.25);border-radius:var(--rs);padding:11px 13px;margin-top:12px;">
+        <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.2em;color:var(--gold);margin-bottom:7px;">使用提示</div>
+        <div style="font-size:11px;line-height:1.85;color:var(--text2);font-family:'Noto Sans TC',sans-serif;">• 從 iPhone 直接拖入<br>• 多張可一次全選<br>• 建議品質 85% 以上</div>
+      </div>
+    </div>
+    <div class="ss">
+      <h3>格式</h3>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <span style="background:var(--navy-bg);color:var(--navy-mid);font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 8px;border-radius:2px;">.heic</span>
+        <span style="background:var(--navy-bg);color:var(--navy-mid);font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 8px;border-radius:2px;">.heif</span>
+        <span style="background:rgba(58,138,98,.1);color:var(--success);font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 8px;border-radius:2px;">→ .jpg</span>
+      </div>
+    </div>
+  </aside>
+</div></div>
+
+<!-- ═══════════ PANEL: 圖片壓縮 ═══════════ -->
+<div class="tab-panel" id="panel-compress"><div class="tool-layout">
+  <div class="drop-area">
+    <div class="drop-zone" id="cpDZ">
+      <span class="drop-icon"><i data-lucide="minimize-2" style="width:48px;height:48px;stroke-width:1.3;"></i></span>
+      <h2>拖曳圖片至此</h2>
+      <p>支援 JPG、PNG、WebP、GIF，或點擊選取<br><strong>可同時匯入多張圖片</strong></p>
+      <button class="drop-btn" onclick="document.getElementById('cpFI').click();event.stopPropagation()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg> 選擇檔案
+      </button>
+      <input type="file" id="cpFI" accept="image/*" multiple>
+    </div>
+    <div id="cpGrid" class="fgrid" style="display:none;"></div>
+  </div>
+  <aside class="sidebar">
+    <div class="ss"><h3>壓縮設定</h3>
+      <div class="sr"><div><div class="sl">壓縮模式</div></div><select class="cs" id="cpMode"><option value="quality">品質模式</option><option value="target">目標大小</option></select></div>
+      <div class="sr" id="cpQR"><div><div class="sl">壓縮品質</div><div class="sb">越低檔案越小</div></div><div class="sw"><input type="range" class="cr" id="cpQual" min="10" max="95" step="5" value="75"><span class="rv" id="cpQualV">75</span></div></div>
+      <div class="sr" id="cpTR" style="display:none;"><div><div class="sl">目標大小</div><div class="sb">每張最大值</div></div><div style="display:flex;align-items:center;gap:5px;"><input class="ti" type="number" id="cpTKB" value="500" min="10" style="width:64px;"><span style="font-size:11px;color:var(--text3);font-weight:600;">KB</span></div></div>
+      <div class="sr"><div><div class="sl">輸出格式</div></div><select class="cs" id="cpFmt"><option value="image/jpeg">JPG（最佳壓縮）</option><option value="image/webp">WebP（推薦）</option><option value="keep">保持原格式</option></select></div>
+      <div class="sr"><div><div class="sl">打包 ZIP</div></div><label class="tg"><input type="checkbox" id="cpZip" checked><div class="tg-t"></div></label></div>
+    </div>
+    <div class="ss"><h3>統計</h3>
+      <div class="sg">
+        <div class="sb2"><div class="v" id="cps1">0</div><div class="l">圖片數</div></div>
+        <div class="sb2"><div class="v" id="cps2">0</div><div class="l">已完成</div></div>
+      </div>
+      <div style="margin-top:8px;background:var(--cream);border:1px solid var(--border2);border-radius:var(--rs);padding:9px 11px;">
+        <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.18em;color:var(--text3);margin-bottom:4px;">節省空間</div>
+        <div style="font-family:var(--mono);font-size:19px;font-weight:500;color:var(--gold);" id="cpSaved">—</div>
+      </div>
+      <div class="pw" id="cpPW" style="display:none;"><div class="pl"><span id="cpPT">壓縮中...</span><span id="cpPP">0%</span></div><div class="pt"><div class="pf" id="cpPF"></div></div></div>
+    </div>
+    <div class="bgc">
+      <button class="btn btn-p" id="cpCvt" disabled><i data-lucide="zap" style="width:13px;height:13px;"></i> 開始壓縮</button>
+      <button class="btn btn-s" id="cpClr" disabled><i data-lucide="trash-2" style="width:12px;height:12px;"></i> 清除全部</button>
+    </div>
+  </aside>
+</div></div>
+
+<!-- ═══════════ PANEL: 尺寸調整 ═══════════ -->
+<div class="tab-panel" id="panel-resize"><div class="tool-layout">
+  <div class="drop-area">
+    <div class="drop-zone" id="rzDZ">
+      <span class="drop-icon"><i data-lucide="scaling" style="width:48px;height:48px;stroke-width:1.3;"></i></span>
+      <h2>拖曳圖片至此</h2>
+      <p>支援 JPG、PNG、WebP 等，或點擊選取<br><strong>可同時匯入多張圖片</strong></p>
+      <button class="drop-btn" onclick="document.getElementById('rzFI').click();event.stopPropagation()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg> 選擇檔案
+      </button>
+      <input type="file" id="rzFI" accept="image/*" multiple>
+    </div>
+    <div id="rzGrid" class="fgrid" style="display:none;"></div>
+  </div>
+  <aside class="sidebar">
+    <div class="ss"><h3>縮放設定</h3>
+      <div class="sr"><div><div class="sl">縮放模式</div></div><select class="cs" id="rzMode"><option value="width">固定寬度</option><option value="height">固定高度</option><option value="percent">百分比</option><option value="custom">自訂尺寸</option></select></div>
+      <div id="rzWR" class="sr"><div><div class="sl">寬度</div><div class="sb">高度自動等比</div></div><div style="display:flex;align-items:center;gap:5px;"><input class="ti" type="number" id="rzW" value="1920" min="1" style="width:64px;"><span style="font-size:11px;color:var(--text3);font-weight:600;">px</span></div></div>
+      <div id="rzHR" class="sr" style="display:none;"><div><div class="sl">高度</div><div class="sb">寬度自動等比</div></div><div style="display:flex;align-items:center;gap:5px;"><input class="ti" type="number" id="rzH" value="1080" min="1" style="width:64px;"><span style="font-size:11px;color:var(--text3);font-weight:600;">px</span></div></div>
+      <div id="rzPR" class="sr" style="display:none;"><div><div class="sl">縮放比例</div></div><div class="sw"><input type="range" class="cr" id="rzPct" min="5" max="200" step="5" value="50"><span class="rv" id="rzPctV">50%</span></div></div>
+      <div id="rzCR" style="display:none;">
+        <div class="sr"><div><div class="sl">寬 × 高</div></div><div style="display:flex;align-items:center;gap:4px;"><input class="ti" type="number" id="rzCW" value="800" min="1" style="width:56px;"><span style="font-size:11px;color:var(--text3);">×</span><input class="ti" type="number" id="rzCH" value="600" min="1" style="width:56px;"></div></div>
+        <div class="sr"><div><div class="sl">鎖定比例</div></div><label class="tg"><input type="checkbox" id="rzLock" checked><div class="tg-t"></div></label></div>
+      </div>
+      <div class="sr"><div><div class="sl">輸出格式</div></div><select class="cs" id="rzFmt"><option value="keep">保持原格式</option><option value="image/jpeg">JPG</option><option value="image/png">PNG</option><option value="image/webp">WebP</option></select></div>
+      <div class="sr"><div><div class="sl">輸出品質</div><div class="sb">JPG/WebP 有效</div></div><div class="sw"><input type="range" class="cr" id="rzQual" min="50" max="100" step="5" value="90"><span class="rv" id="rzQualV">90</span></div></div>
+      <div class="sr"><div><div class="sl">打包 ZIP</div></div><label class="tg"><input type="checkbox" id="rzZip" checked><div class="tg-t"></div></label></div>
+    </div>
+    <div class="ss"><h3>統計</h3>
+      <div class="sg">
+        <div class="sb2"><div class="v" id="rzs1">0</div><div class="l">圖片數</div></div>
+        <div class="sb2"><div class="v" id="rzs2">0</div><div class="l">已完成</div></div>
+      </div>
+      <div class="pw" id="rzPW" style="display:none;"><div class="pl"><span id="rzPT">縮放中...</span><span id="rzPP">0%</span></div><div class="pt"><div class="pf" id="rzPF"></div></div></div>
+    </div>
+    <div class="bgc">
+      <button class="btn btn-p" id="rzCvt" disabled><i data-lucide="scaling" style="width:13px;height:13px;"></i> 開始縮放</button>
+      <button class="btn btn-s" id="rzClr" disabled><i data-lucide="trash-2" style="width:12px;height:12px;"></i> 清除全部</button>
+    </div>
+  </aside>
+</div></div>
+
+<!-- ═══════════ PANEL: PDF 合併/拆分 ═══════════ -->
+<div class="tab-panel" id="panel-pdfops"><div class="tool-layout">
+  <div class="drop-area">
+    <div class="subbar">
+      <button class="subbtn active" id="poMBtn" onclick="poSetMode('merge')"><i data-lucide="layers" style="width:13px;height:13px;"></i> 合併 PDF</button>
+      <button class="subbtn" id="poSBtn" onclick="poSetMode('split')"><i data-lucide="scissors" style="width:13px;height:13px;"></i> 拆分 PDF</button>
+    </div>
+    <!-- Merge -->
+    <div id="poMC" style="display:flex;flex-direction:column;gap:12px;">
+      <div class="drop-zone" id="poMDZ" style="padding:32px;">
+        <span class="drop-icon"><i data-lucide="layers" style="width:40px;height:40px;stroke-width:1.3;"></i></span>
+        <h2>拖曳多個 PDF 至此</h2>
+        <p>拖曳或點擊選取 <strong>PDF 檔案</strong>（支援批量）</p>
+        <button class="drop-btn" onclick="document.getElementById('poMFI').click();event.stopPropagation()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg> 選擇檔案
+      </button>
+      <input type="file" id="poMFI" accept=".pdf" multiple>
+      </div>
+      <div id="poMList" class="pdfo-list"></div>
+    </div>
+    <!-- Split -->
+    <div id="poSC" style="display:none;flex-direction:column;gap:12px;">
+      <div class="drop-zone" id="poSDZ" style="padding:32px;">
+        <span class="drop-icon"><i data-lucide="scissors" style="width:40px;height:40px;stroke-width:1.3;"></i></span>
+        <h2>拖曳一個 PDF 至此</h2>
+        <p>點擊選取 <strong>單一 PDF 檔案</strong> 進行拆分</p>
+        <button class="drop-btn" onclick="document.getElementById('poSFI').click();event.stopPropagation()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg> 選擇檔案
+      </button>
+      <input type="file" id="poSFI" accept=".pdf">
+      </div>
+      <div id="poSInfo" style="display:none;background:var(--warm-white);border:1px solid var(--border);border-radius:var(--rs);padding:12px 16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div><div style="font-size:13px;font-weight:700;" id="poSFName">—</div><div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-top:2px;" id="poSFMeta">—</div></div>
+          <button class="btn btn-s" style="width:auto;padding:6px 12px;font-size:10px;" onclick="poSClear()">換檔</button>
+        </div>
+      </div>
+      <div id="poSThumbGrid" class="pgtgrid"></div>
+    </div>
+  </div>
+  <aside class="sidebar">
+    <div id="poMSB">
+      <div class="ss"><h3>合併設定</h3>
+        <div class="sr"><div><div class="sl">輸出檔名</div></div><input class="ti" id="poMName" value="merged" style="width:114px;"></div>
+      </div>
+      <div class="ss"><h3>統計</h3>
+        <div class="sg">
+          <div class="sb2"><div class="v" id="poms1">0</div><div class="l">PDF 數</div></div>
+          <div class="sb2"><div class="v" id="poms2">0</div><div class="l">總頁數</div></div>
+        </div>
+      </div>
+      <div class="bgc">
+        <button class="btn btn-p" id="poMCvt" disabled><i data-lucide="layers" style="width:13px;height:13px;"></i> 合併輸出</button>
+        <button class="btn btn-s" id="poMClr" disabled><i data-lucide="trash-2" style="width:12px;height:12px;"></i> 清除全部</button>
+      </div>
+    </div>
+    <div id="poSSB" style="display:none;">
+      <div class="ss"><h3>拆分設定</h3>
+        <div class="sr"><div><div class="sl">拆分方式</div></div><select class="cs" id="poSMode"><option value="all">每頁獨立</option><option value="n">每 N 頁</option><option value="range">自訂範圍</option></select></div>
+        <div class="sr" id="poSNR" style="display:none;"><div><div class="sl">每組頁數</div></div><input class="ti" type="number" id="poSN" value="2" min="1" style="width:56px;"></div>
+        <div id="poSRR" style="display:none;"><div style="font-size:12px;font-weight:700;margin-bottom:6px;">頁面範圍 <span style="font-size:10px;color:var(--text3);font-weight:500;">例：1-3, 4-6, 7</span></div><textarea class="rtarea" id="poSRange" placeholder="1-3, 4-6, 7"></textarea></div>
+        <div class="sr" style="margin-top:10px;"><div><div class="sl">打包 ZIP</div></div><label class="tg"><input type="checkbox" id="poSZip" checked><div class="tg-t"></div></label></div>
+      </div>
+      <div class="ss"><h3>統計</h3>
+        <div class="sg">
+          <div class="sb2"><div class="v" id="poss1">0</div><div class="l">總頁數</div></div>
+          <div class="sb2"><div class="v" id="poss2">0</div><div class="l">預計輸出</div></div>
+        </div>
+      </div>
+      <div class="bgc">
+        <button class="btn btn-p" id="poSCvt" disabled><i data-lucide="scissors" style="width:13px;height:13px;"></i> 開始拆分</button>
+        <button class="btn btn-s" onclick="poSClear()"><i data-lucide="trash-2" style="width:12px;height:12px;"></i> 清除</button>
+      </div>
+    </div>
+  </aside>
+</div></div>
+
+<!-- ═══════════ PANEL: PDF 壓縮 ═══════════ -->
+<div class="tab-panel" id="panel-pdfcmp"><div class="tool-layout">
+  <div class="drop-area">
+    <div class="drop-zone" id="pcDZ">
+      <span class="drop-icon"><i data-lucide="minimize-2" style="width:48px;height:48px;stroke-width:1.3;"></i></span>
+      <h2>拖曳 PDF 至此</h2>
+      <p>支援批量匯入掃描型 PDF，或點擊選取 <strong>PDF 檔案</strong></p>
+      <button class="drop-btn" onclick="document.getElementById('pcFI').click();event.stopPropagation()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg> 選擇檔案
+      </button>
+      <input type="file" id="pcFI" accept=".pdf" multiple>
+    </div>
+    <div id="pcGrid" class="fgrid" style="display:none;"></div>
+  </div>
+  <aside class="sidebar">
+    <div class="ss"><h3>壓縮設定</h3>
+      <div class="sr"><div><div class="sl">JPEG 品質</div><div class="sb">建議 80–90</div></div><div class="sw"><input type="range" class="cr" id="pcQual" min="50" max="98" step="2" value="82"><span class="rv" id="pcQualV">82</span></div></div>
+      <div class="sr"><div><div class="sl">色彩模式</div></div>
+        <select class="cs" id="pcColor">
+          <option value="auto" selected>自動偵測（推薦）</option>
+          <option value="color">全彩</option>
+          <option value="gray">強制灰階</option>
+        </select>
+      </div>
+      <div class="sr"><div><div class="sl">最大解析度</div><div class="sb">限制最長邊像素數</div></div>
+        <select class="cs" id="pcMaxPx">
+          <option value="2000">2000px（高清）</option>
+          <option value="1500">1500px</option>
+          <option value="1200" selected>1200px（推薦）</option>
+          <option value="900">900px（輕量）</option>
+          <option value="0">不限制</option>
+        </select>
+      </div>
+      <div class="sr"><div><div class="sl">白色背景</div><div class="sb">防止透明底變黑</div></div><label class="tg"><input type="checkbox" id="pcWhite" checked><div class="tg-t"></div></label></div>
+    </div>
+    <div class="ss">
+      <h3>統計</h3>
+      <div class="sg">
+        <div class="sb2"><div class="v" id="pcs1">0</div><div class="l">PDF 數</div></div>
+        <div class="sb2"><div class="v" id="pcs2">0</div><div class="l">總頁數</div></div>
+        <div class="sb2"><div class="v" id="pcs3">—</div><div class="l">原始大小</div></div>
+        <div class="sb2"><div class="v" id="pcs4" style="color:var(--success);font-size:13px;">壓完後顯示</div><div class="l">壓縮率</div></div>
+      </div>
+      <div class="pw" id="pcPW" style="display:none;margin-top:10px;"><div class="pl"><span id="pcPT">壓縮中...</span><span id="pcPP">0%</span></div><div class="pt"><div class="pf" id="pcPF"></div></div></div>
+    </div>
+    <div class="ss" style="flex:1;">
+      <h3>使用說明</h3>
+      <div style="background:var(--cream);border:1px solid var(--border2);border-radius:var(--rs);padding:11px 13px;">
+        <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.18em;color:var(--gold);margin-bottom:7px;">適用情境</div>
+        <div style="font-size:11px;line-height:1.9;color:var(--text2);font-family:'Noto Sans TC',sans-serif;">• 掃描儀輸出的全彩 PDF<br>• 含大量圖片的文件<br>• 需 email 或上傳但太大</div>
+        <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.18em;color:var(--gold);margin-top:10px;margin-bottom:7px;">原理說明</div>
+        <div style="font-size:11px;line-height:1.9;color:var(--text3);font-family:'Noto Sans TC',sans-serif;">重新以指定 DPI 渲染每頁並用 JPEG 編碼，掃描 PDF 通常可縮小 <strong style="color:var(--navy);">50–80%</strong>，同時維持印刷清晰度。</div>
+      </div>
+    </div>
+    <div class="bgc">
+      <button class="btn btn-p" id="pcCvt" disabled><i data-lucide="archive" style="width:13px;height:13px;"></i> 開始壓縮</button>
+      <button class="btn btn-s" id="pcClr" disabled><i data-lucide="trash-2" style="width:12px;height:12px;"></i> 清除全部</button>
+    </div>
+  </aside>
+</div></div>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+
+// ─── Sidebar toggle ────────────────────────────────────────────────────────────
+function toggleSidebar() {
+  const isMobile = window.matchMedia('(max-width:900px)').matches;
+  const btn = document.getElementById('sbToggleBtn');
+  const icon = btn.querySelector('i');
+  if (isMobile) {
+    const sb = document.querySelector('.tab-panel.active .sidebar');
+    if (!sb) return;
+    const open = sb.classList.toggle('sb-open');
+    icon.setAttribute('data-lucide', open ? 'panel-right-close' : 'panel-right-open');
+    btn.classList.toggle('sb-closed', !open);
+  } else {
+    const hidden = !!document.querySelector('.sidebar.sb-hidden');
+    document.querySelectorAll('.sidebar').forEach(sb =>
+      hidden ? sb.classList.remove('sb-hidden') : sb.classList.add('sb-hidden'));
+    const nowHidden = !hidden;
+    icon.setAttribute('data-lucide', nowHidden ? 'panel-right-open' : 'panel-right-close');
+    btn.classList.toggle('sb-closed', nowHidden);
+    localStorage.setItem('sbPref', nowHidden ? 'hide' : 'show');
+  }
+  lucide.createIcons();
+}
+
+// ─── Shared ────────────────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  document.querySelector(`.tab-btn[data-tab="${name}"]`).classList.add('active');
+  // close mobile sidebar when switching tabs
+  if (window.matchMedia('(max-width:900px)').matches) {
+    document.querySelectorAll('.sidebar').forEach(sb => sb.classList.remove('sb-open'));
+    const btn = document.getElementById('sbToggleBtn');
+    if (btn) {
+      btn.querySelector('i').setAttribute('data-lucide','panel-right-open');
+      btn.classList.add('sb-closed');
+      lucide.createIcons();
+    }
+  }
+}
+let _tt;
+function toast(msg, err=false) {
+  const el=document.getElementById('toast'); el.textContent=msg; el.className=err?'error show':'show';
+  clearTimeout(_tt); _tt=setTimeout(()=>el.className='',3500);
+}
+function fmtSz(b) { return b<1024?b+' B':b<1048576?(b/1024).toFixed(1)+' KB':(b/1048576).toFixed(1)+' MB'; }
+function tick()    { return new Promise(r=>setTimeout(r,0)); }
+function dlBlob(blob,name) {
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1000);
+}
+function parsePageRange(str,total) {
+  const p=new Set();
+  str.split(',').forEach(s=>{const m=s.trim().match(/^(\d+)(?:-(\d+))?$/);if(m){const f=+m[1],t=m[2]?+m[2]:f;for(let i=f;i<=Math.min(t,total);i++)p.add(i);}});
+  return [...p].sort((a,b)=>a-b);
+}
+async function loadImg(file) {
+  return new Promise((res,rej)=>{const img=new Image(),url=URL.createObjectURL(file);img.onload=()=>{URL.revokeObjectURL(url);res(img);};img.onerror=(e)=>{URL.revokeObjectURL(url);rej(e);};img.src=url;});
+}
+function imgToCanvas(img,w,h,mime) {
+  const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+  const ctx=cv.getContext('2d');
+  if(mime==='image/jpeg'){ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);}
+  ctx.drawImage(img,0,0,w,h); return cv;
+}
+function ext(mime,orig) {
+  if(mime==='image/jpeg') return '.jpg';
+  if(mime==='image/png')  return '.png';
+  if(mime==='image/webp') return '.webp';
+  const m=orig.match(/\.[^.]+$/); return m?m[0]:'.jpg';
+}
+
+// ════════════════════════════════════════════════
+//  1. PDF → JPG
+// ════════════════════════════════════════════════
+const pS={files:[],conv:false,done:0,imgs:0};
+const pdfDZ=document.getElementById('pdfDZ'),pdfFI=document.getElementById('pdfFI'),pdfGrid=document.getElementById('pdfGrid');
+const pdfCvt=document.getElementById('pdfCvt'),pdfClr=document.getElementById('pdfClr');
+
+document.getElementById('pdfDpi').oninput=()=>document.getElementById('pdfDpiV').textContent=document.getElementById('pdfDpi').value;
+document.getElementById('pdfQual').oninput=()=>document.getElementById('pdfQualV').textContent=document.getElementById('pdfQual').value;
+document.getElementById('pdfGap').oninput=()=>{document.getElementById('pdfGapV').textContent=document.getElementById('pdfGap').value+'px';pdfMP();};
+document.getElementById('pdfPM').onchange=()=>document.getElementById('pdfRR').style.display=document.getElementById('pdfPM').value==='range'?'flex':'none';
+document.getElementById('pdfMT').onchange=()=>{const c=document.getElementById('pdfMT').checked;const o=document.getElementById('pdfMO');o.style.opacity=c?'1':'.35';o.style.pointerEvents=c?'auto':'none';pdfMP();};
+document.getElementById('pdfMC').onchange=pdfMP;
+document.getElementById('pdfML').onchange=pdfMP;
+
+function pdfMP() {
+  const preview=document.getElementById('pdfMP'),n=+document.getElementById('pdfMC').value,layout=document.getElementById('pdfML').value,en=document.getElementById('pdfMT').checked;
+  let cols=layout==='horizontal'?n:layout==='vertical'?1:Math.ceil(Math.sqrt(n));
+  let rows=layout==='horizontal'?1:layout==='vertical'?n:Math.ceil(n/cols);
+  const cw=layout==='vertical'?34:Math.max(20,Math.floor(140/cols)),ch=Math.round(cw*1.414);
+  const cells=Array.from({length:n},(_,i)=>`<div class="merge-cell" style="width:${cw}px;height:${ch}px;">p${i+1}</div>`).join('');
+  let ws='display:flex;gap:3px;';ws+=layout==='horizontal'?'flex-direction:row;align-items:center;':layout==='vertical'?'flex-direction:column;align-items:center;':`flex-direction:row;flex-wrap:wrap;width:${cols*(cw+3)}px;justify-content:center;`;
+  let rw=layout==='horizontal'?cw*n+3*(n-1):layout==='vertical'?cw:cw*cols+3*(cols-1),rh=layout==='horizontal'?ch:layout==='vertical'?ch*n+3*(n-1):ch*rows+3*(rows-1);
+  const sc=Math.min(1,110/rw);rw=Math.round(rw*sc);rh=Math.round(rh*sc);
+  preview.innerHTML=`<div class="merge-cells" style="${ws}">${cells}</div><div class="merge-arrow">↓</div><div class="merge-res" style="width:${rw}px;height:${rh}px;font-size:${Math.max(8,Math.min(10,rh/3))}px;">1 JPG</div><div class="merge-desc">${en?`每${n}頁合成一張（${['橫排','直排','格狀'][['horizontal','vertical','grid'].indexOf(layout)]}）`:'停用 — 每頁單獨輸出'}</div>`;
+}
+pdfMP();
+
+pdfDZ.onclick=()=>pdfFI.click();
+pdfFI.onchange=e=>pdfHF([...e.target.files]);
+pdfDZ.ondragover=e=>{e.preventDefault();pdfDZ.classList.add('dragover');};
+pdfDZ.ondragleave=()=>pdfDZ.classList.remove('dragover');
+pdfDZ.ondrop=e=>{e.preventDefault();pdfDZ.classList.remove('dragover');pdfHF([...e.dataTransfer.files].filter(f=>f.name.endsWith('.pdf')));};
+
+async function pdfHF(files){for(const f of files){if(pS.files.find(x=>x.name===f.name&&x.size===f.size))continue;const id='p'+Date.now()+Math.random().toString(36).slice(2);const en={name:f.name,size:f.size,id,pc:0,doc:null};pS.files.push(en);pdfAddCard(en);pdfLoad(f,en);}pdfUI();}
+async function pdfLoad(file,en){const card=document.getElementById(en.id),bar=card?.querySelector('.lbar');try{const ab=await file.arrayBuffer(),pdf=await pdfjsLib.getDocument({data:ab}).promise;en.doc=pdf;en.pc=pdf.numPages;if(bar){bar.style.width='100%';setTimeout(()=>bar.style.display='none',400);}const pg=await pdf.getPage(1),vp=pg.getViewport({scale:.5}),cv=document.createElement('canvas');cv.width=vp.width;cv.height=vp.height;await pg.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;const prev=card?.querySelector('.prev');if(prev){prev.innerHTML='';const img=document.createElement('img');img.src=cv.toDataURL('image/jpeg',.7);prev.appendChild(img);const pg2=document.createElement('div');pg2.className='pgc';pg2.textContent=pdf.numPages+'頁';prev.appendChild(pg2);}const m=card?.querySelector('.fm');if(m)m.textContent=pdf.numPages+'頁 · '+fmtSz(file.size);pdfSt();}catch(e){toast('無法讀取：'+en.name,true);pdfRm(en.id);}}
+function pdfAddCard(en){pdfGrid.style.display='grid';const c=document.createElement('div');c.className='fc';c.id=en.id;const _sn=escHtml(en.name);c.innerHTML=`<div class="prev"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#d8d2c8" stroke-width="1.5"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg><div class="lbar" style="width:0%"></div></div><div class="fi"><div class="fn" title="${_sn}">${_sn.replace(/\.pdf$/i,'')}</div><div class="fm">載入中…</div></div><button class="rb" onclick="pdfRm('${en.id}')"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"10\" height=\"10\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><line x1=\"18\" y1=\"6\" x2=\"6\" y2=\"18\"/><line x1=\"6\" y1=\"6\" x2=\"18\" y2=\"18\"/></svg></button>`;pdfGrid.appendChild(c);const bar=c.querySelector('.lbar');let w=0;const iv=setInterval(()=>{w=Math.min(w+Math.random()*15,85);bar.style.width=w+'%';if(w>=85)clearInterval(iv);},100);}
+function pdfRm(id){pS.files=pS.files.filter(f=>f.id!==id);document.getElementById(id)?.remove();pdfUI();}
+
+pdfCvt.onclick=async()=>{
+  if(pS.conv||!pS.files.length)return;
+  const ready=pS.files.filter(f=>f.doc);if(!ready.length){toast('PDF 尚未載入完成',true);return;}
+  pS.conv=true;pS.done=0;pS.imgs=0;pdfCvt.disabled=true;pdfClr.disabled=true;
+  document.getElementById('pdfPW').style.display='block';
+  const dpi=+document.getElementById('pdfDpi').value,qual=+document.getElementById('pdfQual').value/100,scale=dpi/72;
+  const doZip=document.getElementById('pdfZip').checked,mode=document.getElementById('pdfPM').value;
+  const doMerge=document.getElementById('pdfMT').checked,mN=+document.getElementById('pdfMC').value,mL=document.getElementById('pdfML').value,mG=+document.getElementById('pdfGap').value,mBG=document.getElementById('pdfBG').value;
+  const jobs=ready.map(en=>{let pages=mode==='all'?Array.from({length:en.pc},(_,i)=>i+1):mode==='first'?[1]:parsePageRange(document.getElementById('pdfRI').value||'1',en.pc);return{en,pages};});
+  let tot=jobs.reduce((s,{pages})=>s+(doMerge?Math.ceil(pages.length/mN):pages.length),0);
+  const zip=doZip?new JSZip():null;let out=0;
+
+  for(const{en,pages}of jobs){const card=document.getElementById(en.id);const bg=document.createElement('div');bg.className='sbadge working';bg.textContent='轉換中';card?.querySelector('.prev')?.appendChild(bg);const base=en.name.replace(/\.pdf$/i,'');
+    if(!doMerge){for(const pn of pages){document.getElementById('pdfPT').textContent=`${en.name} — 第${pn}頁`;const pg=await en.doc.getPage(pn),vp=pg.getViewport({scale}),cv=document.createElement('canvas');cv.width=vp.width;cv.height=vp.height;await pg.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;const blob=await new Promise(r=>cv.toBlob(r,'image/jpeg',qual));const fn=pages.length===1?`${base}.jpg`:`${base}_p${String(pn).padStart(3,'0')}.jpg`;if(doZip)zip.file(fn,blob);else dlBlob(blob,fn);out++;pS.imgs++;pdfProg(out,tot);await tick();}}
+    else{for(let i=0;i<pages.length;i+=mN){const chunk=pages.slice(i,i+mN);document.getElementById('pdfPT').textContent=`${en.name} — 合併第${chunk[0]}–${chunk[chunk.length-1]}頁`;const cvs=[];for(const pn of chunk){const pg=await en.doc.getPage(pn),vp=pg.getViewport({scale}),cv=document.createElement('canvas');cv.width=vp.width;cv.height=vp.height;await pg.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;cvs.push(cv);await tick();}const w0=cvs[0].width,h0=cvs[0].height;let cols=mL==='horizontal'?cvs.length:mL==='vertical'?1:Math.ceil(Math.sqrt(cvs.length)),rows=mL==='horizontal'?1:mL==='vertical'?cvs.length:Math.ceil(cvs.length/cols);const mc=document.createElement('canvas');mc.width=cols*w0+(cols-1)*mG;mc.height=rows*h0+(rows-1)*mG;const ctx=mc.getContext('2d');ctx.fillStyle=mBG;ctx.fillRect(0,0,mc.width,mc.height);cvs.forEach((c,j)=>ctx.drawImage(c,(j%cols)*(w0+mG),Math.floor(j/cols)*(h0+mG)));const blob=await new Promise(r=>mc.toBlob(r,'image/jpeg',qual));const gi=Math.floor(i/mN)+1;const fn=pages.length<=mN?`${base}.jpg`:`${base}_g${String(gi).padStart(3,'0')}_p${chunk[0]}-${chunk[chunk.length-1]}.jpg`;if(doZip)zip.file(fn,blob);else dlBlob(blob,fn);out++;pS.imgs++;pdfProg(out,tot);await tick();}}
+    pS.done++;pdfSt();const b=card?.querySelector('.sbadge');if(b){b.className='sbadge done';b.textContent='完成';}}
+
+  if(doZip&&zip){document.getElementById('pdfPT').textContent='打包 ZIP…';const zb=await zip.generateAsync({type:'blob'},m=>pdfProg(Math.round(m.percent),100,true));dlBlob(zb,`converted_${Date.now()}.zip`);}
+  pS.conv=false;pdfCvt.disabled=false;pdfClr.disabled=false;document.getElementById('pdfPT').textContent='完成 ✓';toast(`已輸出 ${pS.imgs} 張`);
+};
+function pdfProg(d,t,raw=false){const p=raw?d:Math.round(d/t*100);document.getElementById('pdfPF').style.width=p+'%';document.getElementById('pdfPP').textContent=p+'%';document.getElementById('ps4').textContent=pS.imgs;}
+pdfClr.onclick=()=>{pS.files=[];pdfGrid.innerHTML='';pdfGrid.style.display='none';pS.done=0;pS.imgs=0;document.getElementById('pdfPW').style.display='none';document.getElementById('pdfPF').style.width='0%';pdfSt();pdfUI();};
+function pdfUI(){const h=pS.files.length>0;pdfCvt.disabled=!h;pdfClr.disabled=!h;pdfDZ.style.display=h?'none':'block';pdfGrid.style.display=h?'grid':'none';pdfSt();}
+function pdfSt(){document.getElementById('ps1').textContent=pS.files.length;document.getElementById('ps2').textContent=pS.files.reduce((s,f)=>s+(f.pc||0),0);document.getElementById('ps3').textContent=pS.done;document.getElementById('ps4').textContent=pS.imgs;}
+
+// ════════════════════════════════════════════════
+//  2. HEIC → JPG
+// ════════════════════════════════════════════════
+(async()=>{
+  const s=document.createElement('script');
+  s.src='https://cdnjs.cloudflare.com/ajax/libs/heic2any/0.0.4/heic2any.min.js';
+  s.crossOrigin='anonymous';
+  document.head.appendChild(s);
+  await new Promise((r,j)=>{s.onload=r;s.onerror=j;});
+})().catch(()=>hLog('⚠ 無法載入 heic2any，請確認網路連線','err'));
+let hFiles=[],hConv=false;
+const hDZ=document.getElementById('hDZ'),hFI=document.getElementById('hFI'),hCvt=document.getElementById('hCvt'),hAdd=document.getElementById('hAdd'),hClr=document.getElementById('hClr');
+document.getElementById('hQual').oninput=()=>document.getElementById('hQualV').textContent=document.getElementById('hQual').value+'%';
+hDZ.onclick=()=>hFI.click();hAdd.onclick=()=>hFI.click();
+hDZ.ondragover=e=>{e.preventDefault();hDZ.classList.add('dragover');};hDZ.ondragleave=()=>hDZ.classList.remove('dragover');
+hDZ.ondrop=e=>{e.preventDefault();hDZ.classList.remove('dragover');hAddF([...e.dataTransfer.files]);};
+hFI.onchange=()=>{hAddF([...hFI.files]);hFI.value='';};
+function hAddF(fs){const v=fs.filter(f=>/\.(heic|heif)$/i.test(f.name));const sk=fs.length-v.length;if(sk)hLog(`跳過 ${sk} 個非 HEIC 檔案`,'info');v.forEach(f=>{if(!hFiles.find(x=>x.file.name===f.name&&x.file.size===f.size))hFiles.push({file:f,name:f.name,status:'pending',blob:null});});hRL();hUB();if(v.length)hLog(`已加入 ${v.length} 個`,'info');}
+function hRL(){const el=document.getElementById('hRows');if(!hFiles.length){el.innerHTML='<div style="font-size:13px;color:var(--muted);font-weight:600;text-align:center;padding:10px;">尚未選取任何檔案</div>';return;}el.innerHTML=hFiles.map((f,i)=>`<div class="frow ${f.status}" id="hr${i}"><span class="fidx">${String(i+1).padStart(2,'0')}</span><span class="fname">${f.name}</span><span class="fsize">${fmtSz(f.file.size)}</span><span class="fst ${f.status}" id="hs${i}">${hSL(f.status)}</span></div>`).join('');}
+function hSL(s){return{pending:'PENDING',converting:'⟳ 轉換中',done:'完成',error:'失敗'}[s]||s;}
+function hUR(i){const f=hFiles[i],r=document.getElementById('hr'+i),s=document.getElementById('hs'+i);if(!r||!s)return;r.className='frow '+f.status;s.className='fst '+f.status;if(f.status==='converting')s.innerHTML='<span class="spinning">⟳</span> 轉換中';else s.textContent=hSL(f.status);}
+hCvt.onclick=async()=>{
+  if(hConv||!hFiles.length)return;if(typeof heic2any==='undefined'){hLog('heic2any 未載入','err');return;}
+  hConv=true;const quality=+document.getElementById('hQual').value/100,dl=document.querySelector('input[name="hDL"]:checked').value;
+  hCvt.disabled=true;hClr.disabled=true;document.getElementById('hPW').style.display='block';document.getElementById('hLog').style.display='block';document.getElementById('hSt').classList.remove('show');
+  let done=0,fail=0,bytes=0;const t0=Date.now(),pending=hFiles.filter(f=>f.status!=='done');
+  for(let i=0;i<hFiles.length;i++){const f=hFiles[i];if(f.status==='done')continue;f.status='converting';hUR(i);document.getElementById('hPC').textContent=`${done}/${pending.length}`;
+    try{const blob=await heic2any({blob:f.file,toType:'image/jpeg',quality});f.blob=Array.isArray(blob)?blob[0]:blob;f.status='done';bytes+=f.blob.size;done++;hLog(`✓ ${f.name} → ${f.name.replace(/\.(heic|heif)$/i,'.jpg')} (${fmtSz(f.blob.size)})`,'ok');}
+    catch(e){f.status='error';fail++;hLog(`${f.name}: ${e.message||'轉換失敗'}`,'err');}
+    hUR(i);const p=done+fail;document.getElementById('hPF').style.width=(p/pending.length*100)+'%';document.getElementById('hPC').textContent=`${p}/${pending.length}`;await tick();}
+  const el=((Date.now()-t0)/1000).toFixed(1);hLog(`── 完成 ${done} 成功 · ${fail} 失敗 · ${el}s ──`,'info');
+  document.getElementById('hs1').textContent=done;document.getElementById('hs2').textContent=fail;document.getElementById('hs3').textContent=el;document.getElementById('hs4').textContent=fmtSz(bytes);document.getElementById('hSt').classList.add('show');
+  if(done>0){if(dl==='zip'){hLog('打包 ZIP…','info');const zip=new JSZip();hFiles.filter(f=>f.status==='done'&&f.blob).forEach(f=>zip.file(f.name.replace(/\.(heic|heif)$/i,'.jpg'),f.blob));const zb=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:1}});saveAs(zb,`heic2jpg_${Date.now()}.zip`);hLog('⬇ ZIP 完成','ok');}else{for(const f of hFiles.filter(f=>f.status==='done'&&f.blob)){saveAs(f.blob,f.name.replace(/\.(heic|heif)$/i,'.jpg'));await new Promise(r=>setTimeout(r,200));}}}
+  hConv=false;hCvt.disabled=false;hClr.disabled=false;toast(`已轉換 ${done} 張`);
+};
+hClr.onclick=()=>{hFiles=[];document.getElementById('hLog').innerHTML='';document.getElementById('hLog').style.display='none';document.getElementById('hPW').style.display='none';document.getElementById('hPF').style.width='0%';document.getElementById('hSt').classList.remove('show');hRL();hUB();};
+function hUB(){const hp=hFiles.some(f=>f.status!=='done');hCvt.disabled=!hFiles.length||!hp;hClr.disabled=!hFiles.length;}
+function hLog(msg,type='info'){const el=document.getElementById('hLog'),s=document.createElement('span');s.className='log-'+type;s.textContent='['+new Date().toLocaleTimeString('zh-TW',{hour12:false})+'] '+msg+'\n';el.appendChild(s);el.scrollTop=el.scrollHeight;}
+
+// ════════════════════════════════════════════════
+//  3. 圖片壓縮
+// ════════════════════════════════════════════════
+const cpS={files:[],conv:false,done:0,savedBytes:0};
+const cpDZ=document.getElementById('cpDZ'),cpFI=document.getElementById('cpFI'),cpGrid=document.getElementById('cpGrid'),cpCvt=document.getElementById('cpCvt'),cpClr=document.getElementById('cpClr');
+document.getElementById('cpQual').oninput=()=>document.getElementById('cpQualV').textContent=document.getElementById('cpQual').value;
+document.getElementById('cpMode').onchange=()=>{const m=document.getElementById('cpMode').value;document.getElementById('cpQR').style.display=m==='quality'?'flex':'none';document.getElementById('cpTR').style.display=m==='target'?'flex':'none';};
+cpDZ.onclick=()=>cpFI.click();cpFI.onchange=e=>{cpHF([...e.target.files]);cpFI.value='';};
+cpDZ.ondragover=e=>{e.preventDefault();cpDZ.classList.add('dragover');};cpDZ.ondragleave=()=>cpDZ.classList.remove('dragover');
+cpDZ.ondrop=e=>{e.preventDefault();cpDZ.classList.remove('dragover');cpHF([...e.dataTransfer.files].filter(f=>f.type.startsWith('image/')));};
+function cpHF(files){files.forEach(f=>{if(cpS.files.find(x=>x.name===f.name&&x.size===f.size))return;const id='c'+Date.now()+Math.random().toString(36).slice(2);const en={name:f.name,size:f.size,id,file:f};cpS.files.push(en);cpAddCard(en);});cpUI();}
+function cpAddCard(en){cpGrid.style.display='grid';const c=document.createElement('div');c.className='fc';c.id=en.id;en._url=URL.createObjectURL(en.file);c.innerHTML=`<div class="prev" style="aspect-ratio:4/3;"><img src="${en._url}"></div><div class="fi"><div class="fn" title="${en.name}">${en.name}</div><div class="fm">${fmtSz(en.size)}</div></div><button class="rb" onclick="cpRm('${en.id}')"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"10\" height=\"10\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><line x1=\"18\" y1=\"6\" x2=\"6\" y2=\"18\"/><line x1=\"6\" y1=\"6\" x2=\"18\" y2=\"18\"/></svg></button>`;cpGrid.appendChild(c);}
+function cpRm(id){const en=cpS.files.find(f=>f.id===id);if(en?._url)URL.revokeObjectURL(en._url);cpS.files=cpS.files.filter(f=>f.id!==id);document.getElementById(id)?.remove();cpUI();}
+cpCvt.onclick=async()=>{
+  if(cpS.conv||!cpS.files.length)return;cpS.conv=true;cpS.done=0;cpS.savedBytes=0;cpCvt.disabled=true;cpClr.disabled=true;
+  document.getElementById('cpPW').style.display='block';
+  const mode=document.getElementById('cpMode').value,qual=+document.getElementById('cpQual').value/100,targetB=+document.getElementById('cpTKB').value*1024,fmtOpt=document.getElementById('cpFmt').value,doZip=document.getElementById('cpZip').checked;
+  const zip=doZip?new JSZip():null;
+  for(let i=0;i<cpS.files.length;i++){const en=cpS.files[i];const card=document.getElementById(en.id);const bg=document.createElement('div');bg.className='sbadge working';bg.textContent='處理中';card?.querySelector('.prev')?.appendChild(bg);
+    document.getElementById('cpPT').textContent=en.name;
+    const mime=fmtOpt==='keep'?(en.file.type||'image/jpeg'):fmtOpt;
+    const img=await loadImg(en.file);let blob;
+    if(mode==='quality'){const cv=imgToCanvas(img,img.width,img.height,mime);blob=await new Promise(r=>cv.toBlob(r,mime,qual));}
+    else{const cv=imgToCanvas(img,img.width,img.height,mime);let lo=0.05,hi=1,best=null;for(let k=0;k<12;k++){const mid=(lo+hi)/2;const b=await new Promise(r=>cv.toBlob(r,mime,mid));if(b.size<=targetB){best=b;lo=mid;}else hi=mid;}blob=best||await new Promise(r=>cv.toBlob(r,mime,0.05));}
+    if(blob){const saved=en.size-blob.size;cpS.savedBytes+=Math.max(0,saved);const e2=ext(mime,en.name);const outName=en.name.replace(/\.[^.]+$/,'')+e2;if(doZip)zip.file(outName,blob);else dlBlob(blob,outName);
+      const prev=card?.querySelector('.prev');if(prev){const nb=URL.createObjectURL(blob);const img2=prev.querySelector('img');if(img2)img2.src=nb;}
+      const fm=card?.querySelector('.fm');if(fm){const pct=saved>0?` (-${Math.round(saved/en.size*100)}%)`:' (無壓縮)';fm.innerHTML=`${fmtSz(en.size)} → <span class="sav">${fmtSz(blob.size)}${pct}</span>`;}}
+    cpS.done++;document.getElementById('cps2').textContent=cpS.done;
+    const tot=cpS.savedBytes>=0?fmtSz(cpS.savedBytes):'—';document.getElementById('cpSaved').textContent=tot;
+    const pct=Math.round((i+1)/cpS.files.length*100);document.getElementById('cpPF').style.width=pct+'%';document.getElementById('cpPP').textContent=pct+'%';
+    const b=card?.querySelector('.sbadge');if(b){b.className='sbadge done';b.textContent='完成';}await tick();}
+  if(doZip&&zip){const zb=await zip.generateAsync({type:'blob'});dlBlob(zb,`compressed_${Date.now()}.zip`);}
+  cpS.conv=false;cpCvt.disabled=false;cpClr.disabled=false;document.getElementById('cpPT').textContent='完成 ✓';toast(`已壓縮 ${cpS.done} 張，節省 ${fmtSz(cpS.savedBytes)}`);
+};
+cpClr.onclick=()=>{cpS.files.forEach(en=>{if(en._url)URL.revokeObjectURL(en._url);});cpS.files=[];cpGrid.innerHTML='';cpGrid.style.display='none';cpS.done=0;cpS.savedBytes=0;document.getElementById('cpPW').style.display='none';document.getElementById('cpPF').style.width='0%';document.getElementById('cpSaved').textContent='—';document.getElementById('cps1').textContent='0';document.getElementById('cps2').textContent='0';cpUI();};
+function cpUI(){const h=cpS.files.length>0;cpCvt.disabled=!h;cpClr.disabled=!h;cpDZ.style.display=h?'none':'block';cpGrid.style.display=h?'grid':'none';document.getElementById('cps1').textContent=cpS.files.length;}
+
+// ════════════════════════════════════════════════
+//  4. 尺寸調整
+// ════════════════════════════════════════════════
+const rzS={files:[],conv:false,done:0};
+const rzDZ=document.getElementById('rzDZ'),rzFI=document.getElementById('rzFI'),rzGrid=document.getElementById('rzGrid'),rzCvt=document.getElementById('rzCvt'),rzClr=document.getElementById('rzClr');
+document.getElementById('rzQual').oninput=()=>document.getElementById('rzQualV').textContent=document.getElementById('rzQual').value;
+document.getElementById('rzPct').oninput=()=>document.getElementById('rzPctV').textContent=document.getElementById('rzPct').value+'%';
+document.getElementById('rzMode').onchange=()=>{const m=document.getElementById('rzMode').value;document.getElementById('rzWR').style.display=m==='width'?'flex':'none';document.getElementById('rzHR').style.display=m==='height'?'flex':'none';document.getElementById('rzPR').style.display=m==='percent'?'flex':'none';document.getElementById('rzCR').style.display=m==='custom'?'block':'none';};
+document.getElementById('rzCW').oninput=()=>{if(document.getElementById('rzLock').checked){const f=rzS.files[0];if(f&&f.w){document.getElementById('rzCH').value=Math.round(+document.getElementById('rzCW').value*f.h/f.w);}}};
+rzDZ.onclick=()=>rzFI.click();rzFI.onchange=e=>{rzHF([...e.target.files]);rzFI.value='';};
+rzDZ.ondragover=e=>{e.preventDefault();rzDZ.classList.add('dragover');};rzDZ.ondragleave=()=>rzDZ.classList.remove('dragover');
+rzDZ.ondrop=e=>{e.preventDefault();rzDZ.classList.remove('dragover');rzHF([...e.dataTransfer.files].filter(f=>f.type.startsWith('image/')));};
+async function rzHF(files){for(const f of files){if(rzS.files.find(x=>x.name===f.name&&x.size===f.size))continue;const id='r'+Date.now()+Math.random().toString(36).slice(2);const en={name:f.name,size:f.size,id,file:f,w:0,h:0};rzS.files.push(en);rzAddCard(en);rzLoadDim(f,en);}rzUI();}
+async function rzLoadDim(file,en){try{const img=await loadImg(file);en.w=img.width;en.h=img.height;const m=document.getElementById(en.id)?.querySelector('.fm');if(m)m.textContent=`${img.width} × ${img.height} · ${fmtSz(file.size)}`;}catch(e){}}
+function rzAddCard(en){rzGrid.style.display='grid';const c=document.createElement('div');c.className='fc';c.id=en.id;en._url=URL.createObjectURL(en.file);c.innerHTML=`<div class="prev" style="aspect-ratio:4/3;"><img src="${en._url}"></div><div class="fi"><div class="fn" title="${en.name}">${en.name}</div><div class="fm">載入中…</div></div><button class="rb" onclick="rzRm('${en.id}')"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"10\" height=\"10\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><line x1=\"18\" y1=\"6\" x2=\"6\" y2=\"18\"/><line x1=\"6\" y1=\"6\" x2=\"18\" y2=\"18\"/></svg></button>`;rzGrid.appendChild(c);}
+function rzRm(id){const en=rzS.files.find(f=>f.id===id);if(en?._url)URL.revokeObjectURL(en._url);rzS.files=rzS.files.filter(f=>f.id!==id);document.getElementById(id)?.remove();rzUI();}
+rzCvt.onclick=async()=>{
+  if(rzS.conv||!rzS.files.length)return;rzS.conv=true;rzS.done=0;rzCvt.disabled=true;rzClr.disabled=true;
+  document.getElementById('rzPW').style.display='block';
+  const mode=document.getElementById('rzMode').value,fmt=document.getElementById('rzFmt').value,qual=+document.getElementById('rzQual').value/100,doZip=document.getElementById('rzZip').checked;
+  const zip=doZip?new JSZip():null;
+  for(let i=0;i<rzS.files.length;i++){const en=rzS.files[i];if(!en.w){const img2=await loadImg(en.file);en.w=img2.width;en.h=img2.height;}
+    const card=document.getElementById(en.id);const bg=document.createElement('div');bg.className='sbadge working';bg.textContent='處理中';card?.querySelector('.prev')?.appendChild(bg);
+    document.getElementById('rzPT').textContent=en.name;
+    const img=await loadImg(en.file);
+    let nw,nh;
+    if(mode==='width'){nw=+document.getElementById('rzW').value;nh=Math.round(nw*en.h/en.w);}
+    else if(mode==='height'){nh=+document.getElementById('rzH').value;nw=Math.round(nh*en.w/en.h);}
+    else if(mode==='percent'){const p=+document.getElementById('rzPct').value/100;nw=Math.round(en.w*p);nh=Math.round(en.h*p);}
+    else{nw=+document.getElementById('rzCW').value;nh=document.getElementById('rzLock').checked?Math.round(nw*en.h/en.w):+document.getElementById('rzCH').value;}
+    nw=Math.max(1,nw);nh=Math.max(1,nh);
+    const mime=fmt==='keep'?(en.file.type||'image/jpeg'):fmt;
+    const cv=imgToCanvas(img,nw,nh,mime);const blob=await new Promise(r=>cv.toBlob(r,mime,qual));
+    const e2=ext(mime,en.name);const outName=en.name.replace(/\.[^.]+$/,'')+e2;
+    if(doZip)zip.file(outName,blob);else dlBlob(blob,outName);
+    const prev=card?.querySelector('.prev');if(prev){const nb=URL.createObjectURL(blob);const im2=prev.querySelector('img');if(im2)im2.src=nb;}
+    const fm=card?.querySelector('.fm');if(fm)fm.textContent=`${en.w}×${en.h} → ${nw}×${nh} · ${fmtSz(blob.size)}`;
+    rzS.done++;document.getElementById('rzs2').textContent=rzS.done;
+    const pct=Math.round((i+1)/rzS.files.length*100);document.getElementById('rzPF').style.width=pct+'%';document.getElementById('rzPP').textContent=pct+'%';
+    const b=card?.querySelector('.sbadge');if(b){b.className='sbadge done';b.textContent='完成';}await tick();}
+  if(doZip&&zip){const zb=await zip.generateAsync({type:'blob'});dlBlob(zb,`resized_${Date.now()}.zip`);}
+  rzS.conv=false;rzCvt.disabled=false;rzClr.disabled=false;document.getElementById('rzPT').textContent='完成 ✓';toast(`已縮放 ${rzS.done} 張`);
+};
+rzClr.onclick=()=>{rzS.files.forEach(en=>{if(en._url)URL.revokeObjectURL(en._url);});rzS.files=[];rzGrid.innerHTML='';rzGrid.style.display='none';rzS.done=0;document.getElementById('rzPW').style.display='none';document.getElementById('rzPF').style.width='0%';document.getElementById('rzs1').textContent='0';document.getElementById('rzs2').textContent='0';rzUI();};
+function rzUI(){const h=rzS.files.length>0;rzCvt.disabled=!h;rzClr.disabled=!h;rzDZ.style.display=h?'none':'block';rzGrid.style.display=h?'grid':'none';document.getElementById('rzs1').textContent=rzS.files.length;}
+
+// ════════════════════════════════════════════════
+//  5. PDF 合併/拆分
+// ════════════════════════════════════════════════
+let poMode='merge',poMFiles=[],poSPdf=null,poConv=false,_pdfLibLoaded=false;
+
+async function ensurePdfLib() {
+  if (_pdfLibLoaded && typeof PDFLib!=='undefined') return true;
+  return new Promise(resolve=>{
+    const urls=['https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js','https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js'];
+    let idx=0;
+    function tryNext(){if(idx>=urls.length){resolve(false);return;}const s=document.createElement('script');s.src=urls[idx++];s.crossOrigin='anonymous';s.onload=()=>{_pdfLibLoaded=true;resolve(true);};s.onerror=()=>tryNext();document.head.appendChild(s);}
+    tryNext();
+  });
+}
+
+function poSetMode(m){poMode=m;document.getElementById('poMBtn').classList.toggle('active',m==='merge');document.getElementById('poSBtn').classList.toggle('active',m==='split');document.getElementById('poMC').style.display=m==='merge'?'flex':'none';document.getElementById('poSC').style.display=m==='split'?'flex':'none';document.getElementById('poMSB').style.display=m==='merge'?'block':'none';document.getElementById('poSSB').style.display=m==='split'?'block':'none';}
+
+// Merge
+const poMDZ=document.getElementById('poMDZ'),poMFI=document.getElementById('poMFI');
+poMDZ.onclick=()=>poMFI.click();poMFI.onchange=e=>{poMAddF([...e.target.files]);poMFI.value='';};
+poMDZ.ondragover=e=>{e.preventDefault();poMDZ.classList.add('dragover');};poMDZ.ondragleave=()=>poMDZ.classList.remove('dragover');
+poMDZ.ondrop=e=>{e.preventDefault();poMDZ.classList.remove('dragover');poMAddF([...e.dataTransfer.files].filter(f=>f.name.endsWith('.pdf')));};
+async function poMAddF(files){
+  for(const f of files){if(poMFiles.find(x=>x.name===f.name&&x.size===f.size))continue;const id='m'+Date.now()+Math.random().toString(36).slice(2);const en={name:f.name,size:f.size,id,file:f,pc:0};poMFiles.push(en);
+    try{const ab=await f.arrayBuffer();const pdf=await pdfjsLib.getDocument({data:ab}).promise;en.pc=pdf.numPages;}catch(e){}
+    poMRender();}poMUI();
+}
+function poMRender(){const el=document.getElementById('poMList');if(!poMFiles.length){el.innerHTML='';document.getElementById('poMDZ').style.display='block';return;}document.getElementById('poMDZ').style.display='none';
+  el.innerHTML=poMFiles.map((f,i)=>`<div class="pdfo-item" id="poi${f.id}"><span class="pdfo-ix">${String(i+1).padStart(2,'0')}</span><span class="pdfo-nm" title="${f.name}">${f.name.replace(/\.pdf$/i,'')}</span><span class="pdfo-pg">${f.pc||'?'}頁</span><button class="reord" onclick="poMMove(${i},-1)" ${i===0?'disabled':''}><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"10\" height=\"10\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"18 15 12 9 6 15\"/></svg></button><button class="reord" onclick="poMMove(${i},1)" ${i===poMFiles.length-1?'disabled':''}><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"10\" height=\"10\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"6 9 12 15 18 9\"/></svg></button><button class="pdfo-rm" onclick="poMRm('${f.id}')"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"10\" height=\"10\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><line x1=\"18\" y1=\"6\" x2=\"6\" y2=\"18\"/><line x1=\"6\" y1=\"6\" x2=\"18\" y2=\"18\"/></svg></button></div>`).join('');
+  document.getElementById('poms1').textContent=poMFiles.length;document.getElementById('poms2').textContent=poMFiles.reduce((s,f)=>s+(f.pc||0),0);}
+function poMMove(i,d){const j=i+d;if(j<0||j>=poMFiles.length)return;[poMFiles[i],poMFiles[j]]=[poMFiles[j],poMFiles[i]];poMRender();}
+function poMRm(id){poMFiles=poMFiles.filter(f=>f.id!==id);poMRender();poMUI();}
+document.getElementById('poMClr').onclick=()=>{poMFiles=[];poMRender();poMUI();document.getElementById('poMDZ').style.display='block';};
+function poMUI(){const h=poMFiles.length>0;document.getElementById('poMCvt').disabled=!h;document.getElementById('poMClr').disabled=!h;}
+
+document.getElementById('poMCvt').onclick=async()=>{
+  if(poConv||!poMFiles.length)return;poConv=true;document.getElementById('poMCvt').disabled=true;document.getElementById('poMClr').disabled=true;
+  const ok=await ensurePdfLib();if(!ok){toast('PDF 處理函式庫載入失敗，請重新整理後再試',true);poConv=false;document.getElementById('poMCvt').disabled=false;document.getElementById('poMClr').disabled=false;return;}
+  try{const{PDFDocument}=PDFLib;const merged=await PDFDocument.create();
+    for(const en of poMFiles){const ab=await en.file.arrayBuffer();const src=await PDFDocument.load(ab);const pages=await merged.copyPages(src,src.getPageIndices());pages.forEach(p=>merged.addPage(p));}
+    const bytes=await merged.save();const blob=new Blob([bytes],{type:'application/pdf'});const name=(document.getElementById('poMName').value||'merged')+'.pdf';dlBlob(blob,name);
+    toast(`合併完成：${merged.getPageCount()} 頁`);}catch(e){toast('合併失敗：'+e.message,true);}
+  finally{poConv=false;document.getElementById('poMCvt').disabled=false;document.getElementById('poMClr').disabled=false;}
+};
+
+// Split
+const poSDZ=document.getElementById('poSDZ'),poSFI=document.getElementById('poSFI');
+poSDZ.onclick=()=>poSFI.click();poSFI.onchange=e=>{if(e.target.files[0])poSLoad(e.target.files[0]);poSFI.value='';};
+poSDZ.ondragover=e=>{e.preventDefault();poSDZ.classList.add('dragover');};poSDZ.ondragleave=()=>poSDZ.classList.remove('dragover');
+poSDZ.ondrop=e=>{e.preventDefault();poSDZ.classList.remove('dragover');const f=[...e.dataTransfer.files].find(x=>x.name.endsWith('.pdf'));if(f)poSLoad(f);};
+
+document.getElementById('poSMode').onchange=()=>{const m=document.getElementById('poSMode').value;document.getElementById('poSNR').style.display=m==='n'?'flex':'none';document.getElementById('poSRR').style.display=m==='range'?'block':'none';poSUpdateEst();};
+document.getElementById('poSN').oninput=poSUpdateEst;
+document.getElementById('poSRange').oninput=poSUpdateEst;
+
+async function poSLoad(file){
+  poSPdf={name:file.name,file,pc:0,pdfDoc:null};
+  const info=document.getElementById('poSInfo'),grid=document.getElementById('poSThumbGrid');
+  info.style.display='block';document.getElementById('poSFName').textContent=file.name;document.getElementById('poSFMeta').textContent='載入中…';poSDZ.style.display='none';grid.innerHTML='';
+  try{const ab=await file.arrayBuffer();poSPdf.pdfDoc=await pdfjsLib.getDocument({data:ab}).promise;poSPdf.pc=poSPdf.pdfDoc.numPages;
+    document.getElementById('poSFMeta').textContent=`${poSPdf.pc} 頁 · ${fmtSz(file.size)}`;
+    document.getElementById('poss1').textContent=poSPdf.pc;document.getElementById('poSCvt').disabled=false;poSUpdateEst();
+    // Render thumbnails (max 40)
+    const n=Math.min(poSPdf.pc,40);
+    for(let i=1;i<=n;i++){const th=document.createElement('div');th.className='pgth';th.innerHTML=`<div class="pgth-img" id="pgt${i}"><div style="width:100%;height:100%;background:var(--bg);display:flex;align-items:center;justify-content:center;"><span style="font-family:var(--mono);font-size:9px;color:var(--muted);">${i}</span></div></div><div class="pgth-lbl">第 ${i} 頁</div>`;grid.appendChild(th);}
+    if(poSPdf.pc>40){const more=document.createElement('div');more.style.cssText='grid-column:1/-1;text-align:center;font-size:12px;color:var(--muted);font-weight:600;padding:8px;';more.textContent=`+${poSPdf.pc-40} 頁未顯示`;grid.appendChild(more);}
+    // Render thumbs async
+    for(let i=1;i<=n;i++){const pg=await poSPdf.pdfDoc.getPage(i),vp=pg.getViewport({scale:.3}),cv=document.createElement('canvas');cv.width=vp.width;cv.height=vp.height;await pg.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;const box=document.getElementById('pgt'+i);if(box){box.innerHTML='';box.appendChild(cv);}await tick();}
+  }catch(e){toast('無法讀取 PDF',true);poSClear();}
+}
+function poSClear(){poSPdf=null;document.getElementById('poSInfo').style.display='none';document.getElementById('poSThumbGrid').innerHTML='';document.getElementById('poSDZ').style.display='block';document.getElementById('poSCvt').disabled=true;document.getElementById('poss1').textContent='0';document.getElementById('poss2').textContent='0';}
+function poSUpdateEst(){if(!poSPdf)return;const m=document.getElementById('poSMode').value,pc=poSPdf.pc;let est=pc;if(m==='n'){const n=Math.max(1,+document.getElementById('poSN').value);est=Math.ceil(pc/n);}else if(m==='range'){const r=document.getElementById('poSRange').value;est=r.split(',').filter(s=>s.trim().match(/^(\d+)(?:-(\d+))?$/)).length||0;}document.getElementById('poss2').textContent=est;}
+
+document.getElementById('poSCvt').onclick=async()=>{
+  if(poConv||!poSPdf?.pdfDoc)return;poConv=true;document.getElementById('poSCvt').disabled=true;
+  const ok=await ensurePdfLib();if(!ok){toast('PDF 處理函式庫載入失敗，請重新整理後再試',true);poConv=false;document.getElementById('poSCvt').disabled=false;return;}
+  try{const{PDFDocument}=PDFLib;const ab=await poSPdf.file.arrayBuffer();const src=await PDFDocument.load(ab);const total=src.getPageCount();
+    const m=document.getElementById('poSMode').value,doZip=document.getElementById('poSZip').checked,base=poSPdf.name.replace(/\.pdf$/i,'');
+    const zip=doZip?new JSZip():null;let outFiles=[];
+    if(m==='all'){for(let i=0;i<total;i++){const d=await PDFDocument.create();const[p]=await d.copyPages(src,[i]);d.addPage(p);outFiles.push({bytes:await d.save(),name:`${base}_p${String(i+1).padStart(3,'0')}.pdf`});}}
+    else if(m==='n'){const n=Math.max(1,+document.getElementById('poSN').value);for(let i=0;i<total;i+=n){const chunk=Array.from({length:Math.min(n,total-i)},(_,j)=>i+j);const d=await PDFDocument.create();const ps=await d.copyPages(src,chunk);ps.forEach(p=>d.addPage(p));const g=Math.floor(i/n)+1;outFiles.push({bytes:await d.save(),name:`${base}_g${String(g).padStart(3,'0')}_p${i+1}-${Math.min(i+n,total)}.pdf`});}}
+    else{const ranges=document.getElementById('poSRange').value.split(',').map(s=>{const mm=s.trim().match(/^(\d+)(?:-(\d+))?$/);if(!mm)return null;return{f:Math.max(0,+mm[1]-1),t:Math.min(total-1,(mm[2]?+mm[2]:+mm[1])-1)};}).filter(Boolean);for(let i=0;i<ranges.length;i++){const{f,t}=ranges[i];const d=await PDFDocument.create();const idx=Array.from({length:t-f+1},(_,j)=>f+j);const ps=await d.copyPages(src,idx);ps.forEach(p=>d.addPage(p));outFiles.push({bytes:await d.save(),name:`${base}_split${String(i+1).padStart(3,'0')}_p${f+1}-${t+1}.pdf`});}}
+    if(doZip&&zip){outFiles.forEach(o=>zip.file(o.name,o.bytes));const zb=await zip.generateAsync({type:'blob'});dlBlob(zb,`${base}_split_${Date.now()}.zip`);}
+    else{for(const o of outFiles){dlBlob(new Blob([o.bytes],{type:'application/pdf'}),o.name);await new Promise(r=>setTimeout(r,150));}}
+    toast(`已拆分為 ${outFiles.length} 個 PDF`);}
+  catch(e){toast('拆分失敗：'+e.message,true);}
+  finally{poConv=false;document.getElementById('poSCvt').disabled=false;}
+};
+
+// ════════════════════════════════════════════════
+//  6. PDF 壓縮
+// ════════════════════════════════════════════════
+const pcS={files:[],conv:false};
+const pcDZ=document.getElementById('pcDZ'),pcFI=document.getElementById('pcFI'),pcGrid=document.getElementById('pcGrid');
+const pcCvt=document.getElementById('pcCvt'),pcClr=document.getElementById('pcClr');
+
+document.getElementById('pcQual').oninput=()=>document.getElementById('pcQualV').textContent=document.getElementById('pcQual').value;
+// removed: pcDpi.onchange
+
+pcDZ.onclick=()=>pcFI.click();
+pcFI.onchange=e=>{pcHF([...e.target.files]);pcFI.value='';};
+pcDZ.ondragover=e=>{e.preventDefault();pcDZ.classList.add('dragover');};
+pcDZ.ondragleave=()=>pcDZ.classList.remove('dragover');
+pcDZ.ondrop=e=>{e.preventDefault();pcDZ.classList.remove('dragover');pcHF([...e.dataTransfer.files].filter(f=>f.name.toLowerCase().endsWith('.pdf')));};
+
+async function pcHF(files){
+  for(const f of files){
+    if(pcS.files.find(x=>x.name===f.name&&x.size===f.size))continue;
+    const id='pc'+Date.now()+Math.random().toString(36).slice(2);
+    const en={name:f.name,size:f.size,id,file:f,pc:0,doc:null};
+    pcS.files.push(en);pcAddCard(en);pcLoad(f,en);
+  }
+  pcUI();
+}
+
+async function pcLoad(file,en){
+  const card=document.getElementById(en.id),bar=card?.querySelector('.lbar');
+  try{
+    const ab=await file.arrayBuffer();
+    const pdf=await pdfjsLib.getDocument({data:ab}).promise;
+    en.doc=pdf;en.pc=pdf.numPages;
+    if(bar){bar.style.width='100%';setTimeout(()=>bar.style.display='none',400);}
+    const pg=await pdf.getPage(1),vp=pg.getViewport({scale:.5}),cv=document.createElement('canvas');
+    cv.width=vp.width;cv.height=vp.height;
+    await pg.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+    const prev=card?.querySelector('.prev');
+    if(prev){prev.innerHTML='';const img=document.createElement('img');img.src=cv.toDataURL('image/jpeg',.7);prev.appendChild(img);const pgb=document.createElement('div');pgb.className='pgc';pgb.textContent=en.pc+'頁';prev.appendChild(pgb);}
+    const fm=card?.querySelector('.fm');if(fm)fm.textContent=en.pc+'頁 · '+fmtSz(file.size);
+    pcStatUI();
+  }catch(e){toast('無法讀取：'+en.name,true);pcRm(en.id);}
+}
+
+function pcAddCard(en){
+  pcGrid.style.display='grid';
+  const c=document.createElement('div');c.className='fc';c.id=en.id;
+  const _sn=escHtml(en.name);c.innerHTML=`<div class="prev"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#d8d2c8" stroke-width="1.5"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg><div class="lbar" style="width:0%"></div></div><div class="fi"><div class="fn" title="${_sn}">${_sn.replace(/\.pdf$/i,'')}</div><div class="fm">載入中…</div></div><button class="rb" onclick="pcRm('${en.id}')"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"10\" height=\"10\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><line x1=\"18\" y1=\"6\" x2=\"6\" y2=\"18\"/><line x1=\"6\" y1=\"6\" x2=\"18\" y2=\"18\"/></svg></button>`;
+  pcGrid.appendChild(c);
+  const bar=c.querySelector('.lbar');let w=0;
+  const iv=setInterval(()=>{w=Math.min(w+Math.random()*15,85);bar.style.width=w+'%';if(w>=85)clearInterval(iv);},100);
+}
+
+function pcRm(id){pcS.files=pcS.files.filter(f=>f.id!==id);document.getElementById(id)?.remove();pcUI();pcStatUI();}
+
+function pcUI(){
+  const h=pcS.files.length>0;
+  pcCvt.disabled=!h;pcClr.disabled=!h;
+  pcDZ.style.display=h?'none':'block';
+  pcGrid.style.display=h?'grid':'none';
+  document.getElementById('pcs1').textContent=pcS.files.length;
+}
+
+function pcStatUI(){
+  const total=pcS.files.reduce((s,f)=>s+f.pc,0);
+  const totalSize=pcS.files.reduce((s,f)=>s+f.size,0);
+  document.getElementById('pcs2').textContent=total;
+  document.getElementById('pcs3').textContent=totalSize>0?fmtSz(totalSize):'—';
+}
+
+// removed: pcGetDpi
+
+pcCvt.onclick=async()=>{
+  if(pcS.conv)return;
+  const ready=pcS.files.filter(f=>f.doc);
+  if(!ready.length){toast('PDF 尚未載入完成',true);return;}
+  pcS.conv=true;pcCvt.disabled=true;pcClr.disabled=true;
+  // Reset progress on every run
+  document.getElementById('pcPW').style.display='block';
+  document.getElementById('pcPF').style.width='0%';
+  document.getElementById('pcPP').textContent='0%';
+  document.getElementById('pcPT').textContent='準備中...';
+
+  const ok=await ensurePdfLib();
+  if(!ok){toast('PDF 函式庫載入失敗，請重新整理後再試',true);pcS.conv=false;pcCvt.disabled=false;pcClr.disabled=false;return;}
+
+  try{
+  const qual=+document.getElementById('pcQual').value/100;
+  const colorMode=document.getElementById('pcColor').value;
+  const maxPx=+document.getElementById('pcMaxPx').value;
+  const whiteBg=document.getElementById('pcWhite').checked;
+  const {PDFDocument}=PDFLib;
+
+  let totalOrigSize=0,totalOutSize=0;
+  let doneFiles=0;
+  const totalFiles=ready.length;
+
+  for(let fi=0;fi<ready.length;fi++){
+    const en=ready[fi];
+    totalOrigSize+=en.size;
+    const card=document.getElementById(en.id);
+    const badge=document.createElement('div');badge.className='sbadge working';badge.textContent='壓縮中';card?.querySelector('.prev')?.appendChild(badge);
+
+    try{
+      const outPdf=await PDFDocument.create();
+      const numPages=en.doc.numPages;
+
+      for(let pi=1;pi<=numPages;pi++){
+        // Update progress
+        const globalDone=fi*100/totalFiles+((pi-1)/numPages)*(100/totalFiles);
+        document.getElementById('pcPF').style.width=Math.round(globalDone)+'%';
+        document.getElementById('pcPP').textContent=Math.round(globalDone)+'%';
+        document.getElementById('pcPT').textContent=`${en.name.replace(/\.pdf$/i,'')} · 第${pi}/${numPages}頁`;
+
+        const page=await en.doc.getPage(pi);
+        const origVP=page.getViewport({scale:1});
+        // Cap to maxPx on longest side, base scale 150dpi
+        const baseScale=150/72;
+        const rawW=origVP.width*baseScale, rawH=origVP.height*baseScale;
+        const pxCap=maxPx>0 ? maxPx : Infinity;
+        const effectiveScale=baseScale*Math.min(1, pxCap/Math.max(rawW,rawH));
+        const renderVP=page.getViewport({scale:effectiveScale});
+        const cv=document.createElement('canvas');
+        cv.width=Math.round(renderVP.width);
+        cv.height=Math.round(renderVP.height);
+        const ctx=cv.getContext('2d');
+
+        if(whiteBg){ctx.fillStyle='#ffffff';ctx.fillRect(0,0,cv.width,cv.height);}
+
+        await page.render({canvasContext:ctx,viewport:renderVP}).promise;
+
+        // Grayscale: auto-detect by sampling colour variance, forced, or keep colour
+        let doGray=(colorMode==='gray');
+        if(colorMode==='auto'){
+          const sd=ctx.getImageData(0,0,cv.width,cv.height).data;
+          let diff=0,n=0;
+          for(let j=0;j<sd.length;j+=16){diff+=Math.abs(sd[j]-sd[j+1])+Math.abs(sd[j+1]-sd[j+2]);n++;}
+          doGray=(diff/n)<18;
+        }
+        if(doGray){
+          const imgData=ctx.getImageData(0,0,cv.width,cv.height);
+          const d=imgData.data;
+          for(let j=0;j<d.length;j+=4){
+            const g=Math.round(0.299*d[j]+0.587*d[j+1]+0.114*d[j+2]);
+            d[j]=d[j+1]=d[j+2]=g;
+          }
+          ctx.putImageData(imgData,0,0);
+        }
+
+        // Encode as JPEG
+        const blob=await new Promise(r=>cv.toBlob(r,'image/jpeg',qual));
+        const imgBytes=new Uint8Array(await blob.arrayBuffer());
+        const embImg=await outPdf.embedJpg(imgBytes);
+
+        // Add page at original PDF dimensions (DPI is metadata in image resolution)
+        const newPage=outPdf.addPage([origVP.width,origVP.height]);
+        newPage.drawImage(embImg,{x:0,y:0,width:origVP.width,height:origVP.height});
+        await tick();
+      }
+
+      const outBytes=await outPdf.save();
+      const outSize=outBytes.byteLength;
+      totalOutSize+=outSize;
+      const saved=en.size-outSize;
+      const pct=en.size>0?Math.round(saved/en.size*100):0;
+
+      const outName=en.name.replace(/\.pdf$/i,`_compressed.pdf`);
+      dlBlob(new Blob([outBytes],{type:'application/pdf'}),outName);
+
+      const fm=card?.querySelector('.fm');
+      if(fm)fm.innerHTML=`${fmtSz(en.size)} → <span class="sav">${fmtSz(outSize)} (-${pct}%)</span>`;
+      if(badge){badge.className='sbadge done';badge.textContent='完成';}
+
+    }catch(e){
+      toast(`壓縮失敗：${en.name} — ${e.message}`,true);
+      if(badge){badge.className='sbadge';badge.textContent='失敗';badge.style.background='var(--danger-bg)';badge.style.color='var(--danger)';}
+    }
+
+    doneFiles++;
+    const finalPct=Math.round(doneFiles/totalFiles*100);
+    document.getElementById('pcPF').style.width=finalPct+'%';
+    document.getElementById('pcPP').textContent=finalPct+'%';
+  }
+
+  // Show overall compression rate
+  if(totalOrigSize>0){
+    const overallPct=Math.round((totalOrigSize-totalOutSize)/totalOrigSize*100);
+    document.getElementById('pcs4').textContent=`-${overallPct}%`;
+  }
+
+  document.getElementById('pcPT').textContent='完成 ✓';
+  const saved=totalOrigSize-totalOutSize;
+  const pctSaved=totalOrigSize>0?Math.round(saved/totalOrigSize*100):0;
+  toast(`壓縮完成！節省 ${fmtSz(Math.max(0,saved))}（${pctSaved}%）`);
+  }catch(err){
+    document.getElementById('pcPT').textContent='發生錯誤';
+    toast('壓縮過程發生錯誤：'+err.message,true);
+  }finally{
+    pcS.conv=false;pcCvt.disabled=false;pcClr.disabled=false;
+  }
+};
+
+pcClr.onclick=()=>{
+  pcS.files=[];pcGrid.innerHTML='';pcGrid.style.display='none';
+  document.getElementById('pcPW').style.display='none';
+  document.getElementById('pcPF').style.width='0%';
+  document.getElementById('pcs1').textContent='0';document.getElementById('pcs2').textContent='0';
+  document.getElementById('pcs3').textContent='—';document.getElementById('pcs4').textContent='壓完後顯示';document.getElementById('pcs4').style.fontSize='13px';
+  pcUI();
+};
+</script>
+
+<!-- ═══════════ PANEL: 混合合併 PDF ═══════════ -->
+<div class="tab-panel" id="panel-pdfmix"><div class="tool-layout">
+  <div class="drop-area">
+    <div class="drop-zone" id="mxDZ" style="padding:30px;">
+      <span class="drop-icon"><i data-lucide="file-plus-2" style="width:44px;height:44px;stroke-width:1.3;"></i></span>
+      <h2>拖曳 PDF 或圖片至此</h2>
+      <p>支援 <strong>PDF、JPG、PNG、WebP</strong> 混合匯入，可自由排序後合併成一份 PDF</p>
+      <button class="drop-btn" onclick="document.getElementById('mxFI').click();event.stopPropagation()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg> 選擇檔案
+      </button>
+      <input type="file" id="mxFI" accept=".pdf,image/jpeg,image/png,image/webp,image/gif" multiple>
+    </div>
+    <div id="mxAddBar" style="display:none;align-items:center;gap:10px;background:var(--warm-white);border:1px dashed var(--border);border-radius:var(--rs);padding:10px 16px;cursor:pointer;transition:all .2s;" onclick="mxFI.click()" ondragover="event.preventDefault();this.style.borderColor='var(--gold-mid)'" ondragleave="this.style.borderColor='var(--border)'" ondrop="this.style.borderColor='var(--border)';event.preventDefault();mxHF([...event.dataTransfer.files].filter(f=>f.type.startsWith('image/')||f.name.toLowerCase().endsWith('.pdf')))">
+      <span><i data-lucide="plus-circle" style="width:22px;height:22px;color:var(--navy-mid);"></i></span>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:var(--navy);">繼續新增檔案</div>
+        <div style="font-size:11px;color:var(--text3);font-family:'Noto Sans TC',sans-serif;">拖曳或點擊，可從不同資料夾多次匯入</div>
+      </div>
+    </div>
+    <div id="mxList" style="display:none;flex-direction:column;gap:5px;"></div>
+  </div>
+
+  <aside class="sidebar">
+    <div class="ss"><h3>合併設定</h3>
+      <div class="sr"><div><div class="sl">輸出檔名</div></div><input class="ti" id="mxName" value="merged" style="width:112px;"></div>
+      <div class="sr"><div><div class="sl">圖片頁面尺寸</div><div class="sb">圖片轉為 PDF 頁時</div></div>
+        <select class="cs" id="mxPgSz">
+          <option value="a4">A4（210×297mm）</option>
+          <option value="letter">Letter（8.5×11吋）</option>
+          <option value="fit">符合圖片原始尺寸</option>
+        </select>
+      </div>
+      <div class="sr"><div><div class="sl">圖片對齊</div></div>
+        <select class="cs" id="mxAlign">
+          <option value="center">置中</option>
+          <option value="fill">填滿（裁切）</option>
+          <option value="contain">等比縮放</option>
+        </select>
+      </div>
+      <div class="sr"><div><div class="sl">圖片背景色</div></div><input type="color" id="mxBg" value="#ffffff" style="width:34px;height:26px;border:1px solid var(--border);border-radius:3px;cursor:pointer;padding:2px;background:var(--cream);"></div>
+    </div>
+    <div class="ss"><h3>統計</h3>
+      <div class="sg">
+        <div class="sb2"><div class="v" id="mxs1">0</div><div class="l">項目數</div></div>
+        <div class="sb2"><div class="v" id="mxs2">0</div><div class="l">預估頁數</div></div>
+      </div>
+      <div class="pw" id="mxPW" style="display:none;margin-top:10px;">
+        <div class="pl"><span id="mxPT">處理中...</span><span id="mxPP">0%</span></div>
+        <div class="pt"><div class="pf" id="mxPF"></div></div>
+      </div>
+    </div>
+    <div class="ss" style="flex:1;">
+      <h3>排序說明</h3>
+      <div style="background:var(--cream);border:1px solid var(--border2);border-radius:var(--rs);padding:11px 13px;">
+        <div style="font-size:11px;line-height:1.9;color:var(--text3);font-family:'Noto Sans TC',sans-serif;">
+          • 拖曳 <strong style="color:var(--text);">⠿</strong> 圖示可重新排序<br>
+          • ▲▼ 按鈕微調位置<br>
+          • PDF 檔案會帶入全部頁面<br>
+          • 圖片各自成為一頁
+        </div>
+      </div>
+    </div>
+    <div class="bgc">
+      <button class="btn btn-p" id="mxCvt" disabled><i data-lucide="file-plus-2" style="width:13px;height:13px;"></i> 合併輸出 PDF</button>
+      <button class="btn btn-s" id="mxClr" disabled><i data-lucide="trash-2" style="width:12px;height:12px;"></i> 清除全部</button>
+    </div>
+  </aside>
+</div></div>
+
+<style>
+/* Mixed merge list items */
+.mx-item{display:grid;grid-template-columns:22px 52px 1fr auto auto auto;align-items:center;gap:9px;background:var(--warm-white);border:1px solid var(--border);padding:9px 12px;border-radius:var(--rs);animation:slideIn .2s;transition:border-color .2s;cursor:default;user-select:none;}
+.mx-item.dragging{opacity:.4;border-color:var(--gold-mid);background:var(--gold-tint);}
+.mx-item.drag-over{border-top:2px solid var(--gold-mid);}
+.mx-drag{cursor:grab;font-size:15px;color:var(--text3);line-height:1;display:flex;align-items:center;justify-content:center;width:22px;}
+.mx-drag:active{cursor:grabbing;}
+.mx-thumb{width:52px;height:68px;border-radius:2px;overflow:hidden;background:var(--cream);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.mx-thumb img,.mx-thumb canvas{width:100%;height:100%;object-fit:cover;}
+.mx-info{min-width:0;}
+.mx-name{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;}
+.mx-meta{font-size:10px;font-family:var(--mono);color:var(--text3);}
+.mx-type{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;padding:2px 6px;border-radius:2px;white-space:nowrap;}
+.mx-type.pdf{background:var(--navy-bg);color:var(--navy-mid);}
+.mx-type.img{background:rgba(58,138,98,.1);color:var(--success);}
+</style>
+
+<script>
+// ════════════════════════════════════════════════
+//  7. 混合合併 PDF
+// ════════════════════════════════════════════════
+const mxS={items:[],conv:false};
+const mxDZ=document.getElementById('mxDZ'),mxFI=document.getElementById('mxFI');
+const mxCvt=document.getElementById('mxCvt'),mxClr=document.getElementById('mxClr');
+const mxList=document.getElementById('mxList');
+
+function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+// ── Drag-to-reorder state ──
+let mxDragIdx=null;
+
+mxDZ.onclick=()=>mxFI.click();
+mxFI.onchange=e=>{mxHF([...e.target.files]);mxFI.value='';};
+mxDZ.ondragover=e=>{e.preventDefault();mxDZ.classList.add('dragover');};
+mxDZ.ondragleave=()=>mxDZ.classList.remove('dragover');
+mxDZ.ondrop=e=>{
+  e.preventDefault();mxDZ.classList.remove('dragover');
+  const files=[...e.dataTransfer.files].filter(f=>f.type.startsWith('image/')||f.name.toLowerCase().endsWith('.pdf'));
+  if(files.length)mxHF(files);
+};
+
+async function mxHF(files){
+  for(const f of files){
+    if(mxS.items.find(x=>x.name===f.name&&x.size===f.size))continue;
+    const id='mx'+Date.now()+Math.random().toString(36).slice(2);
+    const isPdf=f.name.toLowerCase().endsWith('.pdf');
+    const en={id,name:f.name,size:f.size,file:f,isPdf,pc:isPdf?0:1,doc:null,thumbUrl:null};
+    mxS.items.push(en);
+    if(isPdf)mxLoadPdf(f,en); else mxLoadImg(f,en);
+  }
+  mxRender();mxUI();
+}
+
+async function mxLoadPdf(file,en){
+  try{
+    const ab=await file.arrayBuffer();
+    const pdf=await pdfjsLib.getDocument({data:ab}).promise;
+    en.doc=pdf;en.pc=pdf.numPages;
+    const pg=await pdf.getPage(1),vp=pg.getViewport({scale:.5});
+    const cv=document.createElement('canvas');cv.width=vp.width;cv.height=vp.height;
+    await pg.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+    en.thumbUrl=cv.toDataURL('image/jpeg',.7);
+  }catch(e){en.thumbUrl=null;}
+  mxRender();mxUI();
+}
+
+async function mxLoadImg(file,en){
+  en._thumbRevokeUrl=URL.createObjectURL(file);
+  en.thumbUrl=en._thumbRevokeUrl;
+  mxRender();mxUI();
+}
+
+function mxRender(){
+  const hasItems=mxS.items.length>0;
+  mxDZ.style.display=hasItems?'none':'block';
+  document.getElementById('mxAddBar').style.display=hasItems?'flex':'none';
+  mxList.style.display=hasItems?'flex':'none';
+  if(!hasItems){mxList.innerHTML='';return;}
+
+  mxList.innerHTML=mxS.items.map((en,i)=>{
+    const typeLabel=en.isPdf?'PDF':'IMG';
+    const typeCls=en.isPdf?'pdf':'img';
+    const metaTxt=en.isPdf?(en.pc?`${en.pc} 頁 · ${fmtSz(en.size)}`:'載入中…'):`圖片 · ${fmtSz(en.size)}`;
+    const safeName=escHtml(en.name);
+    const thumbInner=en.thumbUrl?`<img src="${en.thumbUrl}">`:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d8d2c8" stroke-width="1.5"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>`;
+    return `<div class="mx-item" id="${en.id}" draggable="true"
+      ondragstart="mxDragStart(event,${i})"
+      ondragover="mxDragOver(event,${i})"
+      ondragleave="mxDragLeave(event)"
+      ondrop="mxDrop(event,${i})"
+      ondragend="mxDragEnd()">
+      <div class="mx-drag">⠿</div>
+      <div class="mx-thumb">${thumbInner}</div>
+      <div class="mx-info">
+        <div class="mx-name" title="${safeName}">${safeName}</div>
+        <div class="mx-meta">${metaTxt}</div>
+      </div>
+      <span class="mx-type ${typeCls}">${typeLabel}</span>
+      <div style="display:flex;flex-direction:column;gap:3px;">
+        <button class="reord" onclick="mxMove(${i},-1)" ${i===0?'disabled':''}><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"10\" height=\"10\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"18 15 12 9 6 15\"/></svg></button>
+        <button class="reord" onclick="mxMove(${i},1)" ${i===mxS.items.length-1?'disabled':''}><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"10\" height=\"10\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"6 9 12 15 18 9\"/></svg></button>
+      </div>
+      <button class="pdfo-rm" onclick="mxRm('${en.id}')"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"10\" height=\"10\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><line x1=\"18\" y1=\"6\" x2=\"6\" y2=\"18\"/><line x1=\"6\" y1=\"6\" x2=\"18\" y2=\"18\"/></svg></button>
+    </div>`;
+  }).join('');
+
+  // Stats
+  document.getElementById('mxs1').textContent=mxS.items.length;
+  document.getElementById('mxs2').textContent=mxS.items.reduce((s,en)=>s+en.pc,0)||'?';
+}
+
+// ── Drag reorder ──
+function mxDragStart(e,i){mxDragIdx=i;setTimeout(()=>document.getElementById(mxS.items[i].id)?.classList.add('dragging'),0);}
+function mxDragOver(e,i){e.preventDefault();if(i===mxDragIdx)return;document.querySelectorAll('.mx-item').forEach(el=>el.classList.remove('drag-over'));document.getElementById(mxS.items[i]?.id)?.classList.add('drag-over');}
+function mxDragLeave(e){e.currentTarget.classList.remove('drag-over');}
+function mxDrop(e,toIdx){
+  e.preventDefault();
+  if(mxDragIdx===null||mxDragIdx===toIdx)return;
+  const moved=mxS.items.splice(mxDragIdx,1)[0];
+  mxS.items.splice(toIdx,0,moved);
+  mxRender();mxUI();
+}
+function mxDragEnd(){mxDragIdx=null;document.querySelectorAll('.mx-item').forEach(el=>el.classList.remove('dragging','drag-over'));}
+
+function mxMove(i,d){const j=i+d;if(j<0||j>=mxS.items.length)return;[mxS.items[i],mxS.items[j]]=[mxS.items[j],mxS.items[i]];mxRender();mxUI();}
+function mxRm(id){const en=mxS.items.find(x=>x.id===id);if(en?._thumbRevokeUrl)URL.revokeObjectURL(en._thumbRevokeUrl);mxS.items=mxS.items.filter(x=>x.id!==id);mxRender();mxUI();}
+
+function mxUI(){
+  const h=mxS.items.length>0;
+  mxCvt.disabled=!h;mxClr.disabled=!h;
+}
+
+// ── Page size helpers ──
+const A4_W=595.28,A4_H=841.89;     // PDF points
+const LT_W=612,LT_H=792;
+
+function mxGetPageDims(imgW,imgH,mode){
+  if(mode==='fit') return {pw:imgW,ph:imgH};
+  const[pw,ph]=mode==='a4'?[A4_W,A4_H]:[LT_W,LT_H];
+  return {pw,ph};
+}
+
+function mxCalcImgRect(imgW,imgH,pw,ph,align){
+  if(align==='fill'){
+    // cover: crop to fill
+    const scaleW=pw/imgW,scaleH=ph/imgH,s=Math.max(scaleW,scaleH);
+    const dw=imgW*s,dh=imgH*s;
+    return {x:-(dw-pw)/2,y:-(dh-ph)/2,w:dw,h:dh};
+  }
+  if(align==='contain'){
+    // contain: letterbox
+    const scaleW=pw/imgW,scaleH=ph/imgH,s=Math.min(scaleW,scaleH);
+    const dw=imgW*s,dh=imgH*s;
+    return {x:(pw-dw)/2,y:(ph-dh)/2,w:dw,h:dh};
+  }
+  // center: 1:1 but clamped
+  const scaleW=pw/imgW,scaleH=ph/imgH,s=Math.min(1,scaleW,scaleH);
+  const dw=imgW*s,dh=imgH*s;
+  return {x:(pw-dw)/2,y:(ph-dh)/2,w:dw,h:dh};
+}
+
+// ── Main convert ──
+mxCvt.onclick=async()=>{
+  if(mxS.conv||!mxS.items.length)return;
+  mxS.conv=true;mxCvt.disabled=true;mxClr.disabled=true;
+
+  // Reset progress bar at the start of every run
+  const mxPW=document.getElementById('mxPW');
+  mxPW.style.display='block';
+  document.getElementById('mxPF').style.width='0%';
+  document.getElementById('mxPP').textContent='0%';
+  document.getElementById('mxPT').textContent='準備中...';
+
+  const ok=await ensurePdfLib();
+  if(!ok){toast('PDF 函式庫載入失敗，請重新整理後再試',true);mxS.conv=false;mxCvt.disabled=false;mxClr.disabled=false;return;}
+
+  const {PDFDocument,rgb} = PDFLib;
+  const pgSzMode=document.getElementById('mxPgSz').value;
+  const alignMode=document.getElementById('mxAlign').value;
+  const bgHex=document.getElementById('mxBg').value;
+  const bgR=parseInt(bgHex.slice(1,3),16)/255,bgG=parseInt(bgHex.slice(3,5),16)/255,bgB=parseInt(bgHex.slice(5,7),16)/255;
+
+  try{
+    const outPdf=await PDFDocument.create();
+    const allItems=mxS.items;
+    const totalItems=allItems.length;
+
+    for(let ii=0;ii<allItems.length;ii++){
+      const en=allItems[ii];
+      document.getElementById('mxPT').textContent=en.name;
+      document.getElementById('mxPF').style.width=Math.round(ii/totalItems*100)+'%';
+      document.getElementById('mxPP').textContent=Math.round(ii/totalItems*100)+'%';
+
+      if(en.isPdf){
+        // Always read fresh from the File object — safe to call multiple times
+        const ab=await en.file.arrayBuffer();
+        const srcPdf=await PDFDocument.load(ab);
+        const copied=await outPdf.copyPages(srcPdf,srcPdf.getPageIndices());
+        copied.forEach(p=>outPdf.addPage(p));
+      } else {
+        // Embed image as a page
+        const ab=await en.file.arrayBuffer();
+        const bytes=new Uint8Array(ab);
+        let embImg;
+        const mime=en.file.type||'';
+        try{
+          if(mime==='image/png') embImg=await outPdf.embedPng(bytes);
+          else embImg=await outPdf.embedJpg(bytes);
+        }catch(e){
+          // fallback: render via canvas to JPEG
+          const imgEl=await loadImg(en.file);
+          const cv=document.createElement('canvas');cv.width=imgEl.naturalWidth;cv.height=imgEl.naturalHeight;
+          const ctx=cv.getContext('2d');ctx.fillStyle='#ffffff';ctx.fillRect(0,0,cv.width,cv.height);ctx.drawImage(imgEl,0,0);
+          const blob=await new Promise(r=>cv.toBlob(r,'image/jpeg',.92));
+          const jb=new Uint8Array(await blob.arrayBuffer());
+          embImg=await outPdf.embedJpg(jb);
+        }
+
+        const {width:imgW,height:imgH}=embImg;
+        const {pw,ph}=mxGetPageDims(imgW,imgH,pgSzMode);
+        const page=outPdf.addPage([pw,ph]);
+
+        // Draw background
+        page.drawRectangle({x:0,y:0,width:pw,height:ph,color:rgb(bgR,bgG,bgB)});
+
+        // Calculate image rect (pdf-lib Y axis starts from bottom)
+        const rect=mxCalcImgRect(imgW,imgH,pw,ph,alignMode);
+        page.drawImage(embImg,{x:rect.x,y:ph-rect.y-rect.h,width:rect.w,height:rect.h});
+      }
+      await tick();
+    }
+
+    const outBytes=await outPdf.save();
+    const outName=(document.getElementById('mxName').value||'merged')+'.pdf';
+    dlBlob(new Blob([outBytes],{type:'application/pdf'}),outName);
+
+    document.getElementById('mxPF').style.width='100%';
+    document.getElementById('mxPP').textContent='100%';
+    document.getElementById('mxPT').textContent='完成 ✓';
+    const totalPg=outPdf.getPageCount();
+    toast(`合併完成：${totalPg} 頁 · ${fmtSz(outBytes.byteLength)}`);
+
+  }catch(e){
+    document.getElementById('mxPT').textContent='發生錯誤';
+    toast('合併失敗：'+e.message,true);
+  }finally{
+    // Always re-enable — runs whether success or error
+    mxS.conv=false;mxCvt.disabled=false;mxClr.disabled=false;
+  }
+};
+
+mxClr.onclick=()=>{
+  mxS.items.forEach(en=>{if(en._thumbRevokeUrl)URL.revokeObjectURL(en._thumbRevokeUrl);});
+  mxS.items=[];mxRender();mxUI();
+  document.getElementById('mxPW').style.display='none';
+  document.getElementById('mxPF').style.width='0%';
+  document.getElementById('mxPT').textContent='處理中...';
+  document.getElementById('mxPP').textContent='0%';
+  document.getElementById('mxs1').textContent='0';document.getElementById('mxs2').textContent='0';
+};
+
+// Initialise Lucide icons
+// Lucide icons — wait for library then render all data-lucide elements
+(function waitLucide(){
+  try {
+    if(typeof lucide!=='undefined') lucide.createIcons();
+    else setTimeout(waitLucide, 80);
+  } catch(e) {
+    console.warn('[SDS] lucide.createIcons failed:', e.message);
+  }
+})();
+</script>
+
+<footer style="flex-shrink:0;border-top:1px solid var(--border);background:var(--cream2);padding:12px 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;font-family:var(--sans);">
+  <div style="display:flex;align-items:center;gap:8px;">
+    <svg width="18" height="18" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="13" fill="#1E3554"/><path d="M2 14 A12 12 0 0 1 26 14" fill="#E8B84B"/><line x1="4" y1="16" x2="24" y2="16" stroke="#fff" stroke-width="1.4" opacity=".85"/><line x1="5" y1="18.5" x2="23" y2="18.5" stroke="#fff" stroke-width="1.4" opacity=".65"/><line x1="7" y1="21" x2="21" y2="21" stroke="#fff" stroke-width="1.4" opacity=".45"/></svg>
+    <span style="font-size:12px;font-weight:800;color:var(--navy);letter-spacing:.02em;">Sun<span style="color:var(--gold-mid);">Down</span> Studio</span>
+    <span style="color:var(--border);font-size:14px;">·</span>
+    <span style="font-size:12px;font-weight:700;color:var(--text2);">落霞千頁</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:6px;">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#3A8A62" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+    <span style="font-size:11px;color:var(--text3);font-family:'Noto Sans TC',sans-serif;">所有檔案均在本機處理，不上傳至任何伺服器</span>
+  </div>
+</footer>
+</div>
+
+<script>
+function launchTool(tid) {
+  document.getElementById('lp-wrap').classList.add('hidden');
+  var aw = document.getElementById('app-wrap');
+  aw.classList.remove('hidden');
+  switchTab(tid);
+  window.scrollTo({top:0,behavior:'smooth'});
+  if(typeof lucide!=='undefined') try{lucide.createIcons();}catch(e){}
+}
+function goHome() {
+  document.getElementById('app-wrap').classList.add('hidden');
+  document.getElementById('lp-wrap').classList.remove('hidden');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+// back button is in HTML
+
+// ─── Restore sidebar pref on load ──────────────────────────────────────────
+(function() {
+  if (localStorage.getItem('sbPref') === 'hide') {
+    document.querySelectorAll('.sidebar').forEach(sb => sb.classList.add('sb-hidden'));
+    const btn = document.getElementById('sbToggleBtn');
+    if (btn) {
+      btn.querySelector('i').setAttribute('data-lucide', 'panel-right-open');
+      btn.classList.add('sb-closed');
+    }
+  }
+})();
+</script>
+
+
+<script>
+window.SD_CONFIG = {
+  product: '落霞千頁',
+  productColor: '#2D4A6E',
+  portalUrl: '../../index.html',
+};
+</script>
+<script src="../../brand.js"></script>
+</body>
+</html>
