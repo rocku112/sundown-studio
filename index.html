@@ -155,18 +155,23 @@ nav.scrolled{background:rgba(245,240,232,.92);backdrop-filter:blur(16px);border-
 .hero-studio-word{font-size:clamp(18px,3vw,28px);font-weight:200;letter-spacing:.35em;color:var(--text3);text-transform:uppercase}
 .hero-studio-zh{font-size:clamp(12px,1.8vw,15px);font-family:'Noto Sans TC',sans-serif;font-weight:400;letter-spacing:.3em;color:var(--gold);padding-left:16px;border-left:1px solid rgba(200,150,30,.35)}
 .hero-tagline{font-size:clamp(13px,1.6vw,16px);font-weight:300;letter-spacing:.04em;color:var(--text2);line-height:1.85;max-width:420px;border-left:2px solid rgba(200,150,30,.4);padding-left:16px;animation:fadein-up .7s cubic-bezier(.22,1,.36,1) both;animation-delay:.68s;font-family:'Noto Sans TC',sans-serif}
-.hero-cta{margin-top:44px;display:inline-flex;align-items:center;gap:10px;font-size:13px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#fff;background:var(--navy);padding:14px 28px;border-radius:4px;text-decoration:none;cursor:pointer;border:none;font-family:inherit;transition:background .2s,transform .2s;animation:fadein-up .7s cubic-bezier(.22,1,.36,1) both;animation-delay:.8s}
+.hero-cta{display:inline-flex;align-items:center;gap:10px;font-size:13px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#fff;background:var(--navy);padding:14px 28px;border-radius:4px;text-decoration:none;cursor:pointer;border:none;font-family:inherit;transition:background .2s,transform .2s;animation:fadein-up .7s cubic-bezier(.22,1,.36,1) both;animation-delay:.8s}
 .hero-cta:hover{background:var(--navy-mid);transform:translateY(-2px)}
 .hero-cta svg{width:14px;height:14px;transition:transform .2s}
 .hero-cta:hover svg{transform:translateX(3px)}
+.hero-cta-secondary{margin-left:16px;display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--navy);background:none;border:none;padding:14px 4px;cursor:pointer;font-family:inherit;transition:gap .2s,color .2s;animation:fadein-up .7s cubic-bezier(.22,1,.36,1) both;animation-delay:.88s;text-decoration:none}
+.hero-cta-secondary:hover{color:var(--gold);gap:12px}
+.hero-cta-secondary svg{width:13px;height:13px;transition:transform .2s}
+.hero-cta-secondary:hover svg{transform:translateX(3px)}
+.hero-ctas{display:flex;align-items:center;flex-wrap:wrap;margin-top:44px}
 .scroll-indicator{position:absolute;bottom:36px;left:8vw;z-index:3;display:flex;flex-direction:column;align-items:center;gap:8px;animation:fadein-up .7s cubic-bezier(.22,1,.36,1) both;animation-delay:1s}
 .scroll-label{font-size:9px;font-weight:700;letter-spacing:.25em;color:var(--text3);text-transform:uppercase}
 .scroll-line{width:1px;height:40px;background:linear-gradient(to bottom,var(--gold-mid),transparent);animation:scrollpulse 2s ease-in-out infinite}
 @keyframes scrollpulse{0%,100%{opacity:.3;transform:scaleY(.6);transform-origin:top}50%{opacity:1;transform:scaleY(1);transform-origin:top}}
 @keyframes fadein-up{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
 
-/* wave */
-.wave-divider{display:block;width:100%;height:56px;background:var(--warm-white);clip-path:ellipse(55% 100% at 50% 100%);margin-top:-1px}
+/* section transition */
+.wave-divider{display:block;width:100%;height:64px;background:linear-gradient(to bottom,var(--cream) 0%,var(--warm-white) 100%);margin-top:-1px}
 
 /* home product preview */
 .home-preview{background:var(--warm-white);padding:64px 8vw 80px;position:relative}
@@ -175,7 +180,7 @@ nav.scrolled{background:rgba(245,240,232,.92);backdrop-filter:blur(16px);border-
 .home-preview-more{font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--navy);cursor:pointer;display:flex;align-items:center;gap:6px;transition:gap .2s;background:none;border:none;font-family:inherit}
 .home-preview-more:hover{gap:10px}
 .home-preview-more svg{width:13px;height:13px}
-.home-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:2px}
+.home-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
 @media(max-width:720px){.home-cards{grid-template-columns:1fr}}
 
 /* home about strip — gold tint */
@@ -232,7 +237,7 @@ nav.scrolled{background:rgba(245,240,232,.92);backdrop-filter:blur(16px);border-
 .products-page::before{content:'';position:absolute;top:0;left:8vw;width:48px;height:3px;background:var(--gold-mid)}
 .products-page-header{margin-bottom:52px}
 .products-page-sub{font-size:16px;color:var(--text2);font-weight:300;margin-top:12px;max-width:500px;line-height:1.7;font-family:'Noto Sans TC',sans-serif}
-.products-full-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:2px}
+.products-full-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
 @media(max-width:720px){.products-full-grid{grid-template-columns:1fr}}
 
 /* ════════════════════════════════
@@ -259,7 +264,7 @@ nav.scrolled{background:rgba(245,240,232,.92);backdrop-filter:blur(16px);border-
 .pd-launch svg{width:14px;height:14px}
 .pd-divider{height:1px;background:var(--border);margin:64px 0}
 .pd-more-title{font-size:11px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--text3);margin-bottom:24px}
-.pd-more-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px}
+.pd-more-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 @media(max-width:720px){.pd-more-grid{grid-template-columns:1fr}}
 
 /* ════════════════════════════════
@@ -276,7 +281,7 @@ nav.scrolled{background:rgba(245,240,232,.92);backdrop-filter:blur(16px);border-
 .about-manifesto strong{color:var(--text);font-weight:700}
 
 /* values — warm cards */
-.about-values{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin-top:64px}
+.about-values{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:64px}
 @media(max-width:720px){.about-values{grid-template-columns:1fr}}
 .about-value{padding:32px 28px;background:var(--warm-white);border:1px solid var(--border2)}
 .av-num{font-size:32px;font-weight:900;color:var(--gold-mid);opacity:.5;line-height:1;margin-bottom:16px;letter-spacing:-.02em}
@@ -319,17 +324,32 @@ footer{
 
 <!-- NAV -->
 <nav id="nav">
-  <div class="nav-brand" onclick="goTo('home')">Sun<span>Down</span> Studio</div>
-  <div class="nav-links">
+  <div class="nav-brand" onclick="goTo('home')" role="button" tabindex="0" aria-label="SunDown Studio 首頁">Sun<span>Down</span> Studio</div>
+  <div class="nav-links" role="navigation" aria-label="主要導覽">
     <button class="nav-link" onclick="goTo('home')" data-page="home">首頁</button>
     <button class="nav-link" onclick="goTo('products')" data-page="products">產品</button>
     <button class="nav-link" onclick="goTo('about')" data-page="about">關於</button>
     <button class="nav-link cta" onclick="goTo('products')">立即使用</button>
   </div>
+  <button class="nav-hamburger" id="nav-hamburger" aria-label="開啟選單" aria-expanded="false" onclick="toggleDrawer()">
+    <span></span><span></span><span></span>
+  </button>
 </nav>
 
+<div class="mobile-drawer" id="mobile-drawer" role="dialog" aria-modal="true" aria-label="導覽選單">
+  <div class="mobile-drawer-backdrop" onclick="toggleDrawer()"></div>
+  <div class="mobile-drawer-panel">
+    <nav class="mobile-drawer-nav">
+      <button onclick="goTo('home');toggleDrawer()">首頁</button>
+      <button onclick="goTo('products');toggleDrawer()">產品</button>
+      <button onclick="goTo('about');toggleDrawer()">關於</button>
+    </nav>
+    <button class="mobile-drawer-cta" onclick="goTo('products');toggleDrawer()">立即使用</button>
+  </div>
+</div>
+
 <!-- ════ PAGE: HOME ════ -->
-<div id="page-home" class="page">
+<div id="page-home" class="page" role="main">
   <section class="hero">
     <div class="hero-dots"></div>
     <div class="sunset">
@@ -345,13 +365,19 @@ footer{
         <span class="hero-studio-word">日落工作室</span>
         <span class="hero-studio-zh">台灣在地專業工具</span>
       </div>
-      <p class="hero-tagline">法律損害評估・退休財務規劃<br>ESG 永續學習・文書效率工具</p>
-      <button class="hero-cta" onclick="goTo('products')">
-        探索產品
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3 8h10M8 3l5 5-5 5"/></svg>
-      </button>
+      <p class="hero-tagline">法律損害評估・退休財務規劃<br>ESG 永續學習・落霞千頁文件工具</p>
+      <div class="hero-ctas">
+        <button class="hero-cta" onclick="goTo('products')">
+          探索產品
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3 8h10M8 3l5 5-5 5"/></svg>
+        </button>
+        <button class="hero-cta-secondary" onclick="goTo('about')">
+          品牌故事
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3 8h10M8 3l5 5-5 5"/></svg>
+        </button>
+      </div>
     </div>
-    <div class="scroll-indicator"><div class="scroll-line"></div><span class="scroll-label">Scroll</span></div>
+    <div class="scroll-indicator" aria-hidden="true"><span class="scroll-label">Scroll</span><div class="scroll-line"></div></div>
   </section>
 
   <div class="wave-divider"></div>
@@ -362,9 +388,9 @@ footer{
         <div class="section-overline">Our Products · 旗下應用</div>
         <h2 class="section-title">四款<em>專業工具</em></h2>
       </div>
-      <button class="home-preview-more" onclick="goTo('products')">
+      <button class="home-preview-more" onclick="goTo('products')" aria-label="查看全部產品">
         查看全部
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3 8h10M8 3l5 5-5 5"/></svg>
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M3 8h10M8 3l5 5-5 5"/></svg>
       </button>
     </div>
     <div class="home-cards" id="home-cards"></div>
@@ -375,7 +401,7 @@ footer{
       <div class="home-about-overline">About · 關於我們</div>
       <div class="home-about-title">台灣的事，用<span>台灣的方式</span>算清楚。</div>
     </div>
-    <button class="home-about-btn" onclick="goTo('about')">了解更多</button>
+    <button class="home-about-btn" onclick="goTo('about')" aria-label="了解 SunDown Studio 品牌故事">了解更多</button>
   </section>
 
   <footer>
@@ -502,7 +528,7 @@ footer{
     </div>
     <div class="about-closing reveal">
       <div class="about-closing-text">準備好了嗎？<br><span>選一款工具開始。</span></div>
-      <button class="about-closing-btn" onclick="goTo('products')">查看所有產品</button>
+      <button class="about-closing-btn" onclick="goTo('products')" aria-label="查看所有產品">查看所有產品</button>
     </div>
   </section>
   <footer>
@@ -549,6 +575,17 @@ function buildCard(p,showNum=true){
     ${cs?`<div class="card-link" style="opacity:.4">敬請期待</div>`:`<div class="card-link">了解更多 <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3 8h10M8 3l5 5-5 5"/></svg></div>`}
   </div>`;
 }
+
+function toggleDrawer(){
+  const drawer=document.getElementById('mobile-drawer');
+  const btn=document.getElementById('nav-hamburger');
+  const open=drawer.classList.toggle('open');
+  btn.classList.toggle('open',open);
+  btn.setAttribute('aria-expanded',open);
+  document.body.style.overflow=open?'hidden':'';
+}
+// close drawer on Escape
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('mobile-drawer').classList.contains('open'))toggleDrawer();});
 
 let _toastTimer=null;
 function showToast(msg){
