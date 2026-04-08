@@ -2728,6 +2728,12 @@ ul.s-list > li::before{
     };
 
     window.fbSignIn = async function() {
+      // 偵測 LINE / FB / IG 等 App 內建瀏覽器（WebView）
+      const ua = navigator.userAgent || '';
+      if (/Line|FBAV|FBAN|Instagram|WeChat|MicroMessenger/i.test(ua)) {
+        _showWebViewModal();
+        return;
+      }
       try {
         await signInWithPopup(auth, provider);
       } catch(e) {
@@ -2735,6 +2741,49 @@ ul.s-list > li::before{
         showToast('登入失敗，請再試一次');
       }
     };
+
+    /* WebView 提示彈窗：引導使用者複製網址到外部瀏覽器開啟 */
+    function _showWebViewModal() {
+      if (document.getElementById('webview-modal')) return;
+      const overlay = document.createElement('div');
+      overlay.id = 'webview-modal';
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:20px;';
+      const box = document.createElement('div');
+      box.style.cssText = 'background:#fff;border-radius:16px;padding:28px 24px;max-width:340px;width:100%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.25);';
+      box.innerHTML = `
+        <div style="font-size:36px;margin-bottom:12px;">🔒</div>
+        <div style="font-size:17px;font-weight:700;color:#1E3554;margin-bottom:8px;">無法在此瀏覽器登入</div>
+        <div style="font-size:14px;color:#555;line-height:1.6;margin-bottom:18px;">
+          Google 不支援在 LINE / Facebook 等 App 的內建瀏覽器中登入。<br>
+          請複製下方網址，貼到 <b>Chrome</b> 或 <b>Safari</b> 開啟即可登入。
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:14px;">
+          <input id="webview-url" readonly value="${location.href}" style="flex:1;padding:9px 10px;border:1.5px solid #d0d5dd;border-radius:8px;font-size:13px;color:#333;background:#f9fafb;min-width:0;">
+          <button id="webview-copy-btn" style="padding:9px 16px;border:none;border-radius:8px;background:#1E3554;color:#fff;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">複製網址</button>
+        </div>
+        <button id="webview-close-btn" style="padding:8px 20px;border:1.5px solid #d0d5dd;border-radius:8px;background:transparent;color:#666;font-size:13px;cursor:pointer;">關閉</button>
+      `;
+      overlay.appendChild(box);
+      document.body.appendChild(overlay);
+      overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+      box.querySelector('#webview-close-btn').onclick = () => overlay.remove();
+      box.querySelector('#webview-copy-btn').onclick = () => {
+        const inp = box.querySelector('#webview-url');
+        inp.select();
+        navigator.clipboard.writeText(inp.value).then(() => {
+          const btn = box.querySelector('#webview-copy-btn');
+          btn.textContent = '已複製 ✓';
+          btn.style.background = '#38a169';
+          setTimeout(() => { btn.textContent = '複製網址'; btn.style.background = '#1E3554'; }, 2000);
+        }).catch(() => {
+          document.execCommand('copy');
+          const btn = box.querySelector('#webview-copy-btn');
+          btn.textContent = '已複製 ✓';
+          btn.style.background = '#38a169';
+          setTimeout(() => { btn.textContent = '複製網址'; btn.style.background = '#1E3554'; }, 2000);
+        });
+      };
+    }
 
     window.fbSignOut = async function() {
       window._logEvent('logout', { email: window._fbUser?.email || '' });
