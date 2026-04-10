@@ -28,6 +28,9 @@ NEGATIVE_PATTERNS = [
     "不包含", "不正確", "不屬於", "不是", "不在", "未包含", "未列入",
     "何者非", "何者錯誤", "何者不", "錯誤的是", "錯誤的為", "非屬",
     "下列何者不", "下列何者非", "以下何者不", "以下何者非",
+    "何者為非", "何者有誤", "何者錯", "下列何者為非", "以下何者為非",
+    "哪項非", "哪一項非", "哪個非", "哪一個非", "哪項不", "哪一項不",
+    "何者不正確", "何者非正確", "並非", "未涵蓋", "不符", "有誤",
 ]
 
 
@@ -143,10 +146,16 @@ NEG_MARKERS = [
     "非屬", "並非", "不是", "未包含", "未列入", "未涵蓋",
 ]
 
-# Strategy 0：解析中明確以 (N) 或 （N） 標出某選項是錯誤答案
+# Strategy 0a：負面標記在前，(N) 在後  例：「不包含(3)之敘述」
 EXPLICIT_NEG_RE = re.compile(
     r"(?:不包含|不屬於|不列入|不在|不正確|非屬|並非|不是|未包含|未列入|未涵蓋|錯誤的是|錯誤的為)"
     r"[^。；]{0,20}?[\(（](\d)[\)）]"
+)
+
+# Strategy 0b：(N) 在前，負面標記在後  例：「選項(4)不正確」「(4)應為...」
+EXPLICIT_NEG_REVERSE_RE = re.compile(
+    r"[\(（](\d)[\)）][^。；]{0,20}?"
+    r"(?:不正確|不包含|不屬於|不列入|錯誤|應為|應改為|有誤|非屬|並非|不是)"
 )
 
 
@@ -159,6 +168,11 @@ def score_option(option_text, explanation):
 
     if opt in explanation:
         return 100
+
+    # 去除括號註解後再試一次完整匹配（例：「盡職調查(如人權問題)比例」→「盡職調查比例」）
+    stripped = re.sub(r"[\(（][^()（）]*[\)）]", "", opt)
+    if stripped != opt and stripped and stripped in explanation:
+        return 95
 
     chunks = [c.strip() for c in SPLIT_RE.split(opt) if len(c.strip()) >= 2]
     if not chunks:
@@ -173,10 +187,15 @@ def score_option(option_text, explanation):
 # ─────────────────────────────────────────────
 def find_negative_answer(options, explanation):
     """回傳 (idx, confidence, reason)；找不到時 idx=None"""
-    # 策略 0：解析以「不包含(N)」「並非(N)」等明確標出
+    # 策略 0a：解析以「不包含(N)」「並非(N)」等明確標出
     explicit = set()
     for m in EXPLICIT_NEG_RE.finditer(explanation):
         n = int(m.group(1)) - 1  # 1-based → 0-based
+        if 0 <= n < len(options):
+            explicit.add(n)
+    # 策略 0b：解析以「選項(N)不正確」「(N)應為...」等反向順序標出
+    for m in EXPLICIT_NEG_REVERSE_RE.finditer(explanation):
+        n = int(m.group(1)) - 1
         if 0 <= n < len(options):
             explicit.add(n)
     if len(explicit) == 1:
@@ -240,6 +259,16 @@ def find_positive_answer(options, explanation):
         non_last = [s for i, s in scores[:-1]]
         if non_last and all(s >= 80 for s in non_last):
             return len(options) - 1, "HIGH", "解析提及所有前項 → 以上皆是"
+        # 保護：若解析本身明寫「以上皆是/以上皆對/皆是」，保留以上皆是為答案
+        explanation_says_all = bool(re.search(r"以上皆是|以上皆對|以上皆正確|皆是|皆對|全部皆是", explanation))
+        # 策略：解析只 verbatim 命中單一前項選項（其他分數極低）→ 指該選項
+        high_hits = [(i, s) for i, s in scores[:-1] if s >= 90]
+        low_hits = [(i, s) for i, s in scores[:-1] if s < 30]
+        if (not explanation_says_all
+                and len(high_hits) == 1
+                and len(low_hits) == len(non_last) - 1):
+            idx = high_hits[0][0]
+            return idx, "HIGH", f"解析僅 verbatim 命中選項({idx + 1})，非以上皆是"
         return None, "LOW", "以上皆是型，部分選項未被解析涵蓋，難以判斷"
 
     desc = sorted(scores, key=lambda x: -x[1])
