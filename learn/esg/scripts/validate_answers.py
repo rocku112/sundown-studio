@@ -139,9 +139,15 @@ SPLIT_RE = re.compile(r"[、,，。\s\(\)（）「」『』:：；;/]+")
 
 # 負面標記（依優先序排列：越前面越強）
 NEG_MARKERS = [
-    "不包含", "不屬於", "不列入", "不在內", "不正確", "不為", "不應",
-    "非屬", "並非", "不是", "未包含", "未列入",
+    "不包含", "不屬於", "不列入", "不在內", "不在", "不正確", "不為", "不應",
+    "非屬", "並非", "不是", "未包含", "未列入", "未涵蓋",
 ]
+
+# Strategy 0：解析中明確以 (N) 或 （N） 標出某選項是錯誤答案
+EXPLICIT_NEG_RE = re.compile(
+    r"(?:不包含|不屬於|不列入|不在|不正確|非屬|並非|不是|未包含|未列入|未涵蓋|錯誤的是|錯誤的為)"
+    r"[^。；]{0,20}?[\(（](\d)[\)）]"
+)
 
 
 def score_option(option_text, explanation):
@@ -167,6 +173,16 @@ def score_option(option_text, explanation):
 # ─────────────────────────────────────────────
 def find_negative_answer(options, explanation):
     """回傳 (idx, confidence, reason)；找不到時 idx=None"""
+    # 策略 0：解析以「不包含(N)」「並非(N)」等明確標出
+    explicit = set()
+    for m in EXPLICIT_NEG_RE.finditer(explanation):
+        n = int(m.group(1)) - 1  # 1-based → 0-based
+        if 0 <= n < len(options):
+            explicit.add(n)
+    if len(explicit) == 1:
+        idx = next(iter(explicit))
+        return idx, "HIGH", f"解析明確標出選項({idx + 1})為錯誤答案"
+
     # 策略 1：選項在解析中被「」或『』引號包圍
     quoted = []
     for i, opt in enumerate(options):
@@ -177,7 +193,7 @@ def find_negative_answer(options, explanation):
     if len(quoted) == 1:
         return quoted[0], "HIGH", "唯一被「」引號標出"
 
-    # 策略 2：選項後緊接負面標記
+    # 策略 2：選項後緊接負面標記（tail 會被句號/分號截斷，避免跨句誤判）
     matches = []
     for i, opt in enumerate(options):
         if not opt:
@@ -185,7 +201,14 @@ def find_negative_answer(options, explanation):
         pos = explanation.find(opt)
         if pos < 0:
             continue
-        tail = explanation[pos + len(opt) : pos + len(opt) + 30]
+        raw_tail = explanation[pos + len(opt) : pos + len(opt) + 30]
+        # 截斷到下一個句子邊界，避免「opt2 ... 。opt4 並非」這種跨句誤判
+        cut = len(raw_tail)
+        for sep in ("。", "；", "！", "？"):
+            j = raw_tail.find(sep)
+            if 0 <= j < cut:
+                cut = j
+        tail = raw_tail[:cut]
         for m in NEG_MARKERS:
             if m in tail:
                 matches.append((i, m))
