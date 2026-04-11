@@ -816,8 +816,45 @@ select,input[type=number],input[type=text],input[type=date]{font-family:'Outfit'
 .method-info-bd table{width:100%;border-collapse:collapse;font-size:10px;margin-top:6px;}
 .method-info-bd th{text-align:left;padding:5px 8px;background:var(--sd-warm);color:var(--navy);font-weight:700;border:1px solid var(--sd-warm3);}
 .method-info-bd td{padding:5px 8px;border:1px solid var(--sd-warm3);color:var(--text2);}
+/* ── 財物損害頁面 ── */
+.prop-header{background:linear-gradient(135deg,#2D3748 0%,#4A5568 100%);color:#fff;padding:16px 20px;border-radius:var(--radius);margin-bottom:16px;}
+.prop-header h2{font-size:17px;font-weight:800;margin:0 0 4px;letter-spacing:-.3px;}
+.prop-header p{font-size:11px;opacity:.8;margin:0;line-height:1.5;}
+.prop-vehicle-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
+.prop-veh-btn{padding:6px 12px;border:1.5px solid var(--sd-warm3);border-radius:20px;background:var(--sd-white);font-size:12px;font-weight:600;cursor:pointer;color:var(--text2);transition:all .15s;}
+.prop-veh-btn.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+.prop-stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+@media(min-width:600px){.prop-stats-grid{grid-template-columns:repeat(3,1fr);}}
+@media(min-width:900px){.prop-stats-grid{grid-template-columns:repeat(4,1fr);}}
+.prop-stat-card{background:var(--sd-white);border:1px solid var(--sd-warm3);border-radius:var(--radius);padding:12px 14px;}
+.prop-stat-card.highlight{border-color:#E8B84B;background:#fffbf0;}
+.prop-stat-label{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.04em;text-transform:uppercase;margin-bottom:6px;}
+.prop-stat-median{font-size:20px;font-weight:900;color:var(--navy);letter-spacing:-.5px;}
+.prop-stat-median span{font-size:11px;font-weight:600;color:var(--text3);margin-left:2px;}
+.prop-stat-range{font-size:10px;color:var(--text3);margin-top:4px;line-height:1.5;}
+.prop-stat-n{font-size:10px;color:var(--text3);margin-top:2px;}
+.prop-section{background:var(--sd-white);border:1px solid var(--sd-warm3);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;}
+.prop-section-title{font-size:12px;font-weight:800;color:var(--navy);margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+.prop-calc-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;}
+.prop-calc-label{font-size:12px;color:var(--text2);font-weight:600;min-width:100px;}
+.prop-calc-input{border:1px solid var(--sd-warm3);border-radius:6px;padding:6px 10px;font-size:13px;font-weight:700;width:130px;color:var(--navy);font-family:inherit;}
+.prop-calc-unit{font-size:11px;color:var(--text3);}
+.prop-percentile-bar{background:#f0f2f5;border-radius:6px;height:8px;margin-top:6px;position:relative;overflow:visible;}
+.prop-percentile-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,#5BAD85,#E8B84B,#C0392B);transition:width .3s;}
+.prop-percentile-dot{position:absolute;top:-4px;width:16px;height:16px;border-radius:50%;background:var(--navy);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);transform:translateX(-50%);transition:left .3s;}
+.prop-percentile-label{font-size:11px;color:var(--text3);margin-top:8px;}
+.prop-verdict{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;margin-top:6px;}
+.prop-verdict.low{background:#e8f5e9;color:#2e7d32;}
+.prop-verdict.mid{background:#fff8e1;color:#f57f17;}
+.prop-verdict.high{background:#fce4ec;color:#c62828;}
+.prop-dv-note{background:#f8f4ff;border:1px solid #d1c4e9;border-radius:var(--radius);padding:12px 14px;font-size:11px;line-height:1.7;color:#4a148c;margin-bottom:12px;}
+.prop-dv-note strong{font-weight:800;}
+.prop-breakdown-table{width:100%;border-collapse:collapse;font-size:11px;margin-top:8px;}
+.prop-breakdown-table th{background:#e8edf8;color:#1a237e;font-weight:700;padding:5px 10px;text-align:left;border:1px solid #dde3f0;}
+.prop-breakdown-table td{padding:5px 10px;border:1px solid #e8ecf5;color:#333;}
+.prop-breakdown-table tr:nth-child(even) td{background:#f8faff;}
 </style>
-<script src="xm_data.js"></script>
+<script src="xm_data_v8.js"></script>
 </head>
 <body>
 
@@ -1000,8 +1037,8 @@ select,input[type=number],input[type=text],input[type=date]{font-family:'Outfit'
 <!-- App Header -->
 <div class="app-hdr">
   <div class="app-hdr-left">
-    <div style="width:34px;height:34px;border-radius:9px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-      <svg width="22" height="22" viewBox="0 0 64 64" fill="none">
+    <div style="display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      <svg width="40" height="40" viewBox="0 0 64 64" fill="none">
         <defs><clipPath id="sdc-app-clip"><circle cx="32" cy="32" r="29"/></clipPath></defs>
         <g clip-path="url(#sdc-app-clip)">
           <circle cx="32" cy="32" r="30" fill="#1E3554"/>
@@ -1052,6 +1089,7 @@ select,input[type=number],input[type=text],input[type=date]{font-family:'Outfit'
   <button class="app-tab" onclick="switchAppTab('results',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2D4A6E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> 精算結果</button>
   <button class="app-tab" onclick="switchAppTab('arsenal',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5BAD85" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21V12h6v9"/></svg> 武器庫</button>
   <button class="app-tab" onclick="switchAppTab('reverse',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C0392B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> 反向查詢</button>
+  <button class="app-tab" onclick="switchAppTab('property',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7B6F3A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> 財物損害</button>
 </div>
 
 <!-- ═══ PANE 1: 輸入設定 ═══ -->
@@ -1361,6 +1399,10 @@ select,input[type=number],input[type=text],input[type=date]{font-family:'Outfit'
 
         <!-- DISABILITY MODE -->
         <div id="panel_disability" style="display:none">
+          <div style="background:#fff4e5;border:1.5px solid #e67e22;border-radius:8px;padding:10px 12px;margin:0 0 10px 0;font-size:12px;color:#7a3e00;line-height:1.55;">
+            <div style="font-weight:700;margin-bottom:4px;">⚠ 失能模型資料升級中（Phase B）</div>
+            此模式仍採 2026-Q1 前的舊估算公式 <code>max(醫療×1.5, 80萬)</code>，非實證查表。現有 19,838 筆判例中，純失能案件僅 64 筆（有金額 31 筆），無法直接實證建模。Pipeline v8 修正 <code>detect_modes</code> 互斥分類 + 抽取 AMA%／年齡後將重建此模式。體傷、死亡模式已切換為資料驅動。
+          </div>
           <div class="sub tw">
             <div class="sub-h"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2D4A6E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><circle cx="12" cy="12" r="10"/><path d="M9 12h6"/><path d="M12 9v6"/></svg> 勞動力減損 (民法193條)</div>
             <div class="fg" style="border:none;padding:4px 0;margin:0"><label>AMA減損比例 (%)</label><input type="number" id="loss_pct" value="23.07" oninput="calcDeferred()"></div>
@@ -1914,6 +1956,111 @@ select,input[type=number],input[type=text],input[type=date]{font-family:'Outfit'
   </div>
 </div>
 
+<!-- ═══ PANE: 財物損害 ═══ -->
+<div class="app-pane" id="pane-property">
+  <div class="page" style="padding-top:12px;">
+    <div class="prop-header">
+      <h2>🚗 財物損害計算機</h2>
+      <p>民法第 196 條 · 台灣交通事故財物損害實證統計（n=16,917 件）</p>
+    </div>
+
+    <!-- 車種選擇 -->
+    <div class="prop-section">
+      <div class="prop-section-title">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+        選擇車種
+      </div>
+      <div class="prop-vehicle-row" id="prop_veh_btns">
+        <button class="prop-veh-btn active" onclick="propSelectVeh('overall',this)">全部車種</button>
+        <button class="prop-veh-btn" onclick="propSelectVeh('car_private',this)">自用小客車</button>
+        <button class="prop-veh-btn" onclick="propSelectVeh('motorcycle_heavy',this)">重機</button>
+        <button class="prop-veh-btn" onclick="propSelectVeh('motorcycle',this)">普通機車</button>
+        <button class="prop-veh-btn" onclick="propSelectVeh('motorcycle_light',this)">輕型機車</button>
+        <button class="prop-veh-btn" onclick="propSelectVeh('taxi',this)">計程車</button>
+        <button class="prop-veh-btn" onclick="propSelectVeh('truck_small',this)">小貨車</button>
+        <button class="prop-veh-btn" onclick="propSelectVeh('bicycle',this)">自行車</button>
+        <button class="prop-veh-btn" onclick="propSelectVeh('ebike',this)">電動自行車</button>
+      </div>
+    </div>
+
+    <!-- 統計卡片 -->
+    <div class="prop-stats-grid" id="prop_stats_grid">
+      <!-- 由 JS 填充 -->
+    </div>
+
+    <!-- 車價減損說明 -->
+    <div class="prop-dv-note">
+      <strong>車價減損（交易性貶值）§196</strong>｜COVID 後台灣訴訟件數大幅攀升。車輛雖修復但二手市場估值下降，受害人可獨立請求。
+      <br>實務：法院准許率約 <strong>21%</strong>（108件/507件），但一旦准許，中位數賠償額達 <strong>$105,700</strong>。
+      主要影響因素：車齡、車款稀有度、事故嚴重程度、修復紀錄完整性。
+    </div>
+
+    <!-- 修復費計算機 -->
+    <div class="prop-section">
+      <div class="prop-section-title">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+        修復費評估
+      </div>
+      <div class="prop-calc-row">
+        <span class="prop-calc-label">修復費請求額</span>
+        <input class="prop-calc-input" type="number" id="prop_repair_input" placeholder="0" oninput="propCalc()">
+        <span class="prop-calc-unit">元</span>
+      </div>
+      <div class="prop-percentile-bar">
+        <div class="prop-percentile-fill" id="prop_repair_fill" style="width:0%"></div>
+        <div class="prop-percentile-dot" id="prop_repair_dot" style="left:0%;display:none"></div>
+      </div>
+      <div class="prop-percentile-label" id="prop_repair_label"></div>
+    </div>
+
+    <!-- 車價減損計算機 -->
+    <div class="prop-section">
+      <div class="prop-section-title">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        車價減損請求評估
+      </div>
+      <div class="prop-calc-row">
+        <span class="prop-calc-label">減損請求額</span>
+        <input class="prop-calc-input" type="number" id="prop_dv_input" placeholder="0" oninput="propCalc()">
+        <span class="prop-calc-unit">元</span>
+      </div>
+      <div class="prop-percentile-bar">
+        <div class="prop-percentile-fill" id="prop_dv_fill" style="width:0%"></div>
+        <div class="prop-percentile-dot" id="prop_dv_dot" style="left:0%;display:none"></div>
+      </div>
+      <div class="prop-percentile-label" id="prop_dv_label"></div>
+    </div>
+
+    <!-- 代步/租車計算機 -->
+    <div class="prop-section">
+      <div class="prop-section-title">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        代步車 / 租車費用
+      </div>
+      <div class="prop-calc-row">
+        <span class="prop-calc-label">租車費請求額</span>
+        <input class="prop-calc-input" type="number" id="prop_rental_input" placeholder="0" oninput="propCalc()">
+        <span class="prop-calc-unit">元</span>
+      </div>
+      <div class="prop-percentile-bar">
+        <div class="prop-percentile-fill" id="prop_rental_fill" style="width:0%"></div>
+        <div class="prop-percentile-dot" id="prop_rental_dot" style="left:0%;display:none"></div>
+      </div>
+      <div class="prop-percentile-label" id="prop_rental_label"></div>
+    </div>
+
+    <!-- 修復費細項拆分表 -->
+    <div class="prop-section" id="prop_breakdown_section">
+      <div class="prop-section-title">實務修復費構成參考（全車種整體）</div>
+      <table class="prop-breakdown-table">
+        <thead><tr><th>項目</th><th>中位數</th><th>Q1</th><th>Q3</th><th>件數</th><th>折舊說明</th></tr></thead>
+        <tbody id="prop_breakdown_tbody"></tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
 <!-- SD Footer (in-app) -->
 <div class="sd-footer">
   <svg width="13" height="13" viewBox="0 0 64 64" fill="none" style="opacity:.6;flex-shrink:0;">
@@ -1963,7 +2110,7 @@ function _flag(cc){
 // 'use strict'; // removed in V19 to avoid TDZ with hash routing
 
 // ── 資料變數宣告（延遲到 _initData() 才賦值）──
-var _xd, G, S, L;
+var _xd, G, S, L, _TWStats;
 var KR_SOL, DE_MID, UK_MID;
 var JP_T1, JP_T2;
 var FR_DFP, AU_ISV, AU_DEATH;
@@ -2000,6 +2147,38 @@ function _initData(){
       D.push([grp[0],grp[1]+'：'+t+'骨折',grp[2+ti][0],grp[2+ti][1],grp[5],'g'+gi,ti]);
     });
   });
+
+  // ── _TWStats：xm_data.js 查表驅動引擎（Phase C, 2026-04）──
+  // 把 _XM_DATA.CAT_STATS 與 BONE_STATS 包成可查詢的實證分位數來源
+  // 所有台灣計算結果都應能回溯到「n=XXX 筆判例，median/q1/q3 = XX 萬」
+  var CAT_STATS = _xd.CAT_STATS || {};
+  var BONE_STATS = _xd.BONE_STATS || {};
+  // G 表骨頭名稱 → CAT_STATS 鍵（n 足夠才有）
+  var G_BONE2CAT = {
+    '鼻骨':'骨折慰撫金-鼻骨','眶骨/顴骨':'骨折慰撫金-眶骨顴骨','下顎骨':'骨折慰撫金-下顎骨',
+    '鎖骨':'骨折慰撫金-鎖骨','肩胛骨':'骨折慰撫金-肩胛骨','肋骨':'骨折慰撫金-肋骨',
+    '椎骨/胸椎/腰椎/尾骨':'骨折慰撫金-脊椎','骨架/腸骨/坐骨/薦骨':'骨折慰撫金-骨盆',
+    '橈骨/尺骨':'骨折慰撫金-橈尺骨','腕骨':'骨折慰撫金-腕骨','掌骨/指骨':'骨折慰撫金-掌指骨',
+    '肱骨':'骨折慰撫金-肱骨','大股骨頭':'骨折慰撫金-髖骨','股骨':'骨折慰撫金-股骨',
+    '膝蓋骨':'骨折慰撫金-膝蓋骨','脛骨/腓骨':'骨折慰撫金-脛腓骨','踝骨':'骨折慰撫金-踝骨',
+    '蹠骨/趾骨':'骨折慰撫金-蹠趾骨'
+  };
+  _TWStats = {
+    cat: function(key){ return CAT_STATS[key] || null; },
+    // 依 G 表骨頭名稱回傳 CAT_STATS 統計（含 n / median / q1 / q3）
+    boneCat: function(gname){
+      var k = G_BONE2CAT[gname]; if(!k) return null;
+      var s = CAT_STATS[k]; if(!s) return null;
+      return {key:k, n:s.n, median:s.median, q1:s.q1, q3:s.q3, mean:s.mean};
+    },
+    // 死亡慰撫金實證中位（依身分）
+    deathBase: function(role){
+      var map = {spouse:'死亡慰撫金-配偶', parent:'死亡慰撫金-父母', child:'死亡慰撫金-子女', sibling:'死亡慰撫金-手足'};
+      var s = CAT_STATS[map[role]]; return s ? {n:s.n, median:s.median, q1:s.q1, q3:s.q3} : null;
+    },
+    // 產生可溯源註記字串
+    cite: function(s){ return s ? ('n='+s.n+'、中位'+Math.round(s.median/10000)+'萬、q1–q3 '+Math.round(s.q1/10000)+'–'+Math.round(s.q3/10000)+'萬') : '無實證'; }
+  };
 }
 
 function jpLookup(t,h,o){return t[Math.min(Math.max(Math.round(h),0),6)][Math.min(Math.max(Math.round(o),0),6)]*10000;}
@@ -2336,8 +2515,8 @@ var DE_LEIBNIZ_BASE      = 0.035; // 德國萊布尼茲折現率（BGB §843 基
 var TW_DISC_RATE         = 0.05;  // 台灣霍夫曼/萊布尼茲標準折現率
 var TW_WAGE_GROWTH_RATE  = 0.025; // 台灣薪資成長率（勾選工資成長時）
 var NO_DISC_RATE         = 0.025; // 挪威萊布尼茲折現率（2022.10新規）
-var TW_INJURY_DISC       = 0.85;  // 台灣體傷最高值折扣（實務酌減）
-var TW_INJURY_MULTI_CAP  = 0.80;  // 複數傷害超過2項折扣
+// Phase C (2026-04) 已移除：TW_INJURY_DISC / TW_INJURY_MULTI_CAP
+// 改用 _TWStats.boneCat() 實證 CAT_STATS median；非骨頭項目於 calc() 內就地 *0.85 回退
 var CARE_FAMILY_CAP     = 2200; // 親屬看護日費上限（台灣）
 var DK_FIXED_FACTOR     = 10;   // 丹麥 EAL 資本化係數
 var AMA_SUBJ_DISCOUNT   = 0.70; // 主觀疼痛無AMA鑑定折扣
@@ -2701,11 +2880,37 @@ function calc(){
   let permCare=0, aidsAnnuity=0, homeMod=0;
 
   if(!isDeath){
+    // ── Phase C：資料驅動查表計算（2026-04）──
+    // 舊版：max(G表range)*TW_INJURY_DISC(0.85)；複數>2項再*TW_INJURY_MULTI_CAP(0.80)
+    // 新版：以 CAT_STATS median 為每項基準（n 足夠的骨頭），無中位者退回 G 表 max*0.85
+    // 每張判例都回溯 n 筆數，不再使用無出處魔術係數
     let sel=[];
-    document.querySelectorAll('#injury_list input:checked').forEach(cb=>sel.push({min:parseFloat(cb.getAttribute('data-min')),max:parseFloat(cb.value)}));
+    document.querySelectorAll('#injury_list input:checked').forEach(cb=>{
+      const gname=cb.getAttribute('data-gname');
+      const btype=cb.getAttribute('data-btype'); // 0=閉鎖 1=開放 2=粉碎
+      const raw=parseFloat(cb.value); // G 表上界（回退用）
+      let base=null, n=0;
+      if(gname && _TWStats){
+        const s=_TWStats.boneCat(gname);
+        if(s && s.n>=20){
+          base=s.median;
+          // 開放/粉碎比閉鎖嚴重（G 表同骨頭3型比例固定），套用 G 表內部比值
+          if(btype==='1') base*=1.3;
+          else if(btype==='2') base*=1.5;
+          n=s.n;
+        }
+      }
+      if(base==null) base=raw*0.85; // 回退：非骨頭 / 樣本不足
+      sel.push({base, n});
+    });
     if(sel.length>0){
-      if(g('same_limb').checked){let mx=sel.reduce((p,c)=>p.max>c.max?p:c);in_p_med=mx.max*TW_INJURY_DISC;}
-      else{sel.forEach(i=>in_p_med+=i.max*TW_INJURY_DISC);if(sel.length>2)in_p_med*=TW_INJURY_MULTI_CAP;}
+      if(g('same_limb').checked){
+        // 同肢同部位：只取最大單項
+        in_p_med=sel.reduce((p,c)=>c.base>p?c.base:p,0);
+      } else {
+        // 否則直接累加各項 median（不再套人為上限）
+        sel.forEach(i=>in_p_med+=i.base);
+      }
     }
   }
 
@@ -2723,17 +2928,17 @@ function calc(){
     const spouseDep=sc?db*0.5*getDisc(sYears,rate):0;
     future=parentDep+childDep+adultChildDep+spouseDep;
 
-    // ── 精神慰撫金：判例精算模型 ──
-    // 司法院103-105年統計基準（各身分每人平均）
-    const BASE_SPOUSE=1404000;  // 配偶 140.4萬
-    const BASE_PARENT=1579000;  // 父母 157.9萬
-    const BASE_CHILD =1030000;  // 子女 103萬
-    // 請求人數遞減表（司法院統計：人數→每人乘數）
-    const totalClaimants=sc+(pc>0?1:0)+(cc+caCount>0?1:0); // 以「類別」計算人數組
-    const totalPersons=sc+pc+cc+caCount;
-    // 遞減係數：依總請求人數（人次）查表
-    const decayTable={1:1.0,2:0.969,3:0.946,4:0.583,5:0.545,6:0.500,7:0.411};
-    const decayFactor=decayTable[Math.min(totalPersons,7)]||(totalPersons>7?0.35:1.0);
+    // ── 精神慰撫金：Phase C 資料驅動（2026-04）──
+    // 舊版：hardcoded 配偶140.4萬/父母157.9萬/子女103萬 + 可疑遞減表（3→4人斷崖0.946→0.583）
+    // 新版：CAT_STATS 實證中位（n=1292/56/78/16）；遞減表暫禁（Phase B 補請求人數抽取後再建）
+    const dbSpouse =_TWStats&&_TWStats.deathBase('spouse');
+    const dbParent =_TWStats&&_TWStats.deathBase('parent');
+    const dbChild  =_TWStats&&_TWStats.deathBase('child');
+    const BASE_SPOUSE=dbSpouse?dbSpouse.median:1000000;
+    const BASE_PARENT=dbParent?dbParent.median:280000;
+    const BASE_CHILD =dbChild ?dbChild.median :250000;
+    // 遞減係數：Phase B 未完成前一律 1.0（不套無實證的斷崖表）
+    const decayFactor=1.0;
     // 身分加減與加害情節
     const victimRole=gv('victim_role',1.0);
     const aggFactor=gv('aggravation',1.0);
@@ -2745,6 +2950,9 @@ function calc(){
     tw_pain=spousePain+parentPain+childPain;
   } else if(isD){
     future=sal*12*lossPctDecimal*getDisc(Math.max(0,gi('retire_age',65)-age),rate)*lossRF;
+    // Phase C：失能慰撫金暫用舊公式（max(醫療×1.5, 80萬)）並加 UI 警示
+    // Why：現有資料 pure disability 僅 31 筆有金額，tag OR 邏輯污染 47.7%，無法實證建模
+    // → 待 Phase B pipeline v8 修正 detect_modes / 抽 AMA% / 補年齡後重算
     tw_pain=Math.max(in_p_med*1.5,800000)*assetC*propAll;
     // 永久增加生活費用
     permCare=gv('perm_care_monthly',0)*12*getDisc(gv('perm_care_years',0),rate);
@@ -3031,10 +3239,10 @@ function calc(){
   // ── 各國說明文字（依模式動態）──
   const COUNTRY_NOTES={
     tw: isDeath
-      ?'台灣死亡慰撫金依司法院103–105年統計：配偶140.4萬、父母157.9萬、子女103萬，請求人數遞減。數字反映台灣法院真實判決水準，為本工具攻防計算基準。'
+      ?`台灣死亡慰撫金依 19,838 筆判例實證：配偶 ${_TWStats?.cite(_TWStats.deathBase('spouse'))}；父母 ${_TWStats?.cite(_TWStats.deathBase('parent'))}；子女 ${_TWStats?.cite(_TWStats.deathBase('child'))}。Phase C 已移除無實證的請求人數遞減表（Phase B 補抽取後重建）。`
       :isD
-      ?'台灣失能慰撫金以醫療費1.5倍為下限（至少80萬）。薪損霍夫曼現值，AMA鑑定比例為準，主觀疼痛適用30%折扣（111重上54）。數字反映台灣法院真實判決水準，為本工具攻防計算基準。'
-      :'台灣慰撫金法官個案裁量，本模型依50年判例資料庫取85%分位數。數字反映台灣法院真實判決水準，為本工具攻防計算基準。',
+      ?'⚠ 失能模型 Phase B 資料升級中。目前沿用 max(醫療×1.5, 80萬) 舊公式，純失能樣本僅 31 筆有金額（tag OR 邏輯污染 47.7%）。待 pipeline v8 修正互斥分類 + 抽取 AMA%／年齡後重建。'
+      :'台灣體傷慰撫金 Phase C 資料驅動：依 CAT_STATS 骨折慰撫金分位表（n ≥ 20 的骨頭使用實證 median，開放×1.3、粉碎×1.5），已移除 TW_INJURY_DISC=0.85 / MULTI_CAP=0.80 無出處係數。',
     kr: isDeath
       ?'韓國死亡慰撫金法定上限1億₩，逸失利益萊布尼茲3%折現，生活費控除50%。數字反映韓國法定賠償標準，慰撫金偏低但薪損嚴謹，為本工具最低值參考。'
       :isD
@@ -3534,7 +3742,7 @@ function buildInjuryList(filter=''){
       availTypes.forEach(({t,ti,range})=>{
         const di=D.findIndex(d=>d[5]==='g'+gi&&d[6]===ti);
         if(di<0) return;
-        html+='<label class="type-chip" style="background:'+TYPE_BG[ti]+';color:'+TYPE_COLORS[ti]+';"><input type="checkbox" id="inj_'+di+'" value="'+(range[1]*10000)+'" data-min="'+(range[0]*10000)+'" onchange="syncChip(this)"> '+t+' ('+range[0]+'–'+range[1]+'萬)</label>';
+        html+='<label class="type-chip" style="background:'+TYPE_BG[ti]+';color:'+TYPE_COLORS[ti]+';"><input type="checkbox" id="inj_'+di+'" value="'+(range[1]*10000)+'" data-min="'+(range[0]*10000)+'" data-gname="'+grp[1]+'" data-btype="'+ti+'" onchange="syncChip(this)"> '+t+' ('+range[0]+'–'+range[1]+'萬)</label>';
       });
       html+='</div>';
     });
@@ -3644,6 +3852,146 @@ window.addEventListener('scroll', function() {
   var nav = document.getElementById('main-nav');
   if (nav) nav.classList.toggle('scrolled', window.scrollY > 20);
 });
+
+// ══════════════════════════════════════════
+//  財物損害計算機
+// ══════════════════════════════════════════
+var _propVeh = 'overall';
+var _propInited = false;
+
+var PROP_VEH_LABELS = {
+  overall:'全部', car_private:'自用小客車', motorcycle_heavy:'重機',
+  motorcycle:'普通機車', motorcycle_light:'輕型機車', taxi:'計程車',
+  truck_small:'小貨車', bicycle:'自行車', ebike:'電動自行車',
+  unknown:'不明', truck_small_private:'自用小貨車', car_rental:'租賃車',
+  bus_commercial:'營業客車', truck_large:'大貨車', semi_trailer:'聯結車'
+};
+
+var PROP_FIELD_LABELS = {
+  repair_claimed:   {label:'修復費請求',     note:'零件+工資+烤漆', dep:false},
+  repair_awarded:   {label:'修復費獲准',     note:'含折舊後零件',   dep:false},
+  parts_claimed:    {label:'零件費（請求）', note:'依定率遞減法折舊', dep:true},
+  labor_claimed:    {label:'工資',           note:'不折舊',         dep:false},
+  paint_claimed:    {label:'烤漆/鈑噴',      note:'不折舊',         dep:false},
+  tow_fee:          {label:'拖吊費',         note:'',               dep:false},
+  rental_fee:       {label:'代步/租車費',    note:'',               dep:false},
+  diminished_value_claimed:{label:'車價減損（請求）',note:'§196',   dep:false},
+  diminished_value_awarded:{label:'車價減損（獲准）',note:'',       dep:false},
+  business_loss:    {label:'營業損失',       note:'',               dep:false},
+  parts_after_dep:  {label:'零件折舊後',     note:'千分之369',      dep:false}
+};
+
+function _propGetStats() {
+  _initData();
+  var ps = (_xd && _xd.PROPERTY_STATS) || null;
+  if (!ps) return null;
+  if (_propVeh === 'overall') return ps.overall || null;
+  return (ps.by_vehicle && ps.by_vehicle[_propVeh]) || ps.overall || null;
+}
+
+function _fmt(n) {
+  if (n == null) return '—';
+  if (n >= 10000) return '$' + Math.round(n/1000) + 'K';
+  return '$' + n.toLocaleString();
+}
+
+function _pct(val, q1, median, q3) {
+  // map val to 0-100 percentile estimate using Q1/median/Q3 as anchors
+  if (val <= 0) return 0;
+  if (val <= q1) return Math.round((val / q1) * 25);
+  if (val <= median) return Math.round(25 + (val - q1) / (median - q1) * 25);
+  if (val <= q3) return Math.round(50 + (val - median) / (q3 - median) * 25);
+  return Math.min(99, Math.round(75 + (val - q3) / (q3 * 2) * 25));
+}
+
+function propSelectVeh(veh, btn) {
+  _propVeh = veh;
+  document.querySelectorAll('.prop-veh-btn').forEach(function(b){ b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  propRender();
+  propCalc();
+}
+
+function propRender() {
+  var ps = _propGetStats();
+  if (!ps) { document.getElementById('prop_stats_grid').innerHTML = '<div style="color:var(--text3);font-size:12px;padding:8px;">資料載入中…</div>'; return; }
+
+  // Stats cards: show key fields
+  var show = ['repair_claimed','repair_awarded','diminished_value_claimed','diminished_value_awarded','rental_fee','business_loss','tow_fee','parts_claimed'];
+  var html = '';
+  show.forEach(function(k) {
+    var s = ps[k];
+    if (!s) return;
+    var fl = PROP_FIELD_LABELS[k] || {label:k, note:''};
+    var isHL = (k === 'diminished_value_claimed' || k === 'diminished_value_awarded');
+    html += '<div class="prop-stat-card' + (isHL ? ' highlight' : '') + '">';
+    html += '<div class="prop-stat-label">' + fl.label + (fl.note ? '<br><span style="font-weight:400;text-transform:none">' + fl.note + '</span>' : '') + '</div>';
+    html += '<div class="prop-stat-median">' + _fmt(s.median) + '<span>中位數</span></div>';
+    html += '<div class="prop-stat-range">Q1 ' + _fmt(s.q1) + ' ／ Q3 ' + _fmt(s.q3) + '</div>';
+    html += '<div class="prop-stat-n">n=' + s.n.toLocaleString() + ' 件</div>';
+    html += '</div>';
+  });
+  document.getElementById('prop_stats_grid').innerHTML = html;
+
+  // Breakdown table (overall only)
+  var ov = ((_xd && _xd.PROPERTY_STATS && _xd.PROPERTY_STATS.overall) || {});
+  var rows = [
+    ['parts_claimed','零件費','依定率遞減法折舊（千分之369×年數）'],
+    ['labor_claimed','工資','不折舊'],
+    ['paint_claimed','烤漆/鈑噴','不折舊'],
+    ['tow_fee','拖吊費','—'],
+    ['parts_after_dep','零件折舊後','折舊後實際獲准金額']
+  ];
+  var tbody = '';
+  rows.forEach(function(r) {
+    var s = ov[r[0]]; if (!s) return;
+    tbody += '<tr><td><b>' + r[1] + '</b><br><span style="color:var(--text3);font-size:10px">' + r[2] + '</span></td>';
+    tbody += '<td>' + _fmt(s.median) + '</td><td>' + _fmt(s.q1) + '</td><td>' + _fmt(s.q3) + '</td>';
+    tbody += '<td>' + s.n.toLocaleString() + '</td><td style="font-size:10px;color:var(--text3)">' + r[2] + '</td></tr>';
+  });
+  document.getElementById('prop_breakdown_tbody').innerHTML = tbody;
+}
+
+function propCalc() {
+  var ps = _propGetStats();
+  if (!ps) return;
+
+  function renderBar(inputId, fillId, dotId, labelId, fieldKey) {
+    var val = parseInt(document.getElementById(inputId).value) || 0;
+    var s = ps[fieldKey];
+    if (!s || val <= 0) {
+      document.getElementById(fillId).style.width = '0%';
+      document.getElementById(dotId).style.display = 'none';
+      document.getElementById(labelId).textContent = '';
+      return;
+    }
+    var p = _pct(val, s.q1, s.median, s.q3);
+    document.getElementById(fillId).style.width = p + '%';
+    document.getElementById(dotId).style.left = p + '%';
+    document.getElementById(dotId).style.display = 'block';
+    var verdict = p <= 25 ? '偏低' : p <= 60 ? '合理範圍' : p <= 80 ? '偏高' : '極高';
+    var cls = p <= 25 ? 'low' : p <= 60 ? 'mid' : 'high';
+    var medLabel = PROP_FIELD_LABELS[fieldKey] ? PROP_FIELD_LABELS[fieldKey].label : fieldKey;
+    document.getElementById(labelId).innerHTML =
+      '約落在第 <b>' + p + '</b> 百分位 ／ ' + medLabel + '中位數 ' + _fmt(s.median) +
+      '（Q1 ' + _fmt(s.q1) + ' ～ Q3 ' + _fmt(s.q3) + '，n=' + s.n + '）' +
+      ' <span class="prop-verdict ' + cls + '">' + verdict + '</span>';
+  }
+
+  renderBar('prop_repair_input',  'prop_repair_fill',  'prop_repair_dot',  'prop_repair_label',  'repair_claimed');
+  renderBar('prop_dv_input',      'prop_dv_fill',      'prop_dv_dot',      'prop_dv_label',      'diminished_value_claimed');
+  renderBar('prop_rental_input',  'prop_rental_fill',  'prop_rental_dot',  'prop_rental_label',  'rental_fee');
+}
+
+// lazy init property pane on first visit
+var _origSwitchAppTab = switchAppTab;
+switchAppTab = function(pane, btn) {
+  _origSwitchAppTab(pane, btn);
+  if (pane === 'property' && !_propInited) {
+    _propInited = true;
+    propRender();
+  }
+};
 </script>
 </body>
 </html>
