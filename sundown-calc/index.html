@@ -2548,7 +2548,7 @@ function _captureCalcResult(){
     return item.modes.includes('injury');
   }).slice(0,5).map(item=>({
     cat:item.cat,
-    ref:item.ref.replace('參考字號（未核驗）：','').replace('✅ ',''),
+    ref:(item.jid||item.ref).replace('參考字號（未核驗）：','').replace('✅ ',''),
     dir:item.dir,
     txt:item.txt
   }));
@@ -2597,7 +2597,7 @@ function generateReport(){
 
   const caseRows=r.relatedCases.map(ca=>{
     const dl=ca.dir==='atk'?'🔴攻擊':ca.dir==='def'?'🔵防禦':'🟣雙向';
-    return '<tr><td>'+dl+'</td><td style="color:#1565c0;font-size:10px">'+ca.ref+'</td>'
+    return '<tr><td>'+dl+'</td><td style="color:#1565c0;font-size:10px">'+(ca.jid||ca.ref)+'</td>'
       +'<td>'+ca.cat+'</td><td style="font-size:10px;color:#555">'+ca.txt.slice(0,60)+'…</td></tr>';
   }).join('');
 
@@ -3522,7 +3522,7 @@ function renderLaw(){
     if(lawState.scene&&!item.modes.includes(lawState.scene)) return false;
     // v7.0: court 從 ref 解析（臺灣XX地方法院 → district, XX高等法院 → high）
     if(lawState.court!=='all'){
-      var r=item.ref||'';
+      var r=item.jid||item.ref||'';
       var ct='district';
       if(/最高法院|最高/.test(r)) ct='supreme';
       else if(/高等法院|高分/.test(r)) ct='high';
@@ -3538,7 +3538,7 @@ function renderLaw(){
     }
     // v7.0: job 暫不篩選（資料無此欄位），選非全部時不過濾
     if(kw){
-      var s=[item.cat,item.ref,item.txt].join(' ').toLowerCase();
+      var s=[item.cat,item.jid||item.ref,item.txt].join(' ').toLowerCase();
       if(!s.includes(kw)) return false;
     }
     return true;
@@ -3660,14 +3660,14 @@ function renderCard(item,bid,modeKey,dl,sceneLabel){
     </div>
     <div class="law-body" id="${bid}">
       <div class="law-ref">${
-        item.ref.startsWith('參考字號')
-        ? `<span style="color:#e65100;font-size:10px;font-weight:700">⚠️ ${item.ref}</span><a href="https://judgment.judicial.gov.tw/FJUD/default.aspx" target="_blank" style="font-size:9px;color:#1565c0;margin-left:6px" title="至司法院裁判書系統查驗">🔗查驗</a>`
-        : /民法第|強制汽車|民事訴訟法第|全民健|道路交通|國家賠償|刑法第|勞動基準|職業安全/.test(item.ref)
-        ? `<span style="color:#2e7d32;font-size:10px;font-style:italic">⚖️ ${item.ref}</span><span style="font-size:9px;color:#888;margin-left:6px">（法條依據）</span>`
-        : `<span style="color:#1a237e;font-size:10px;font-weight:700">✅ ${item.ref}</span><a href="https://judgment.judicial.gov.tw/FJUD/default.aspx" target="_blank" style="font-size:9px;color:#1565c0;margin-left:6px" title="至司法院查驗全文">🔗查驗</a>`
+        ((item.jid||item.ref).startsWith('參考字號'))
+        ? `<span style="color:#e65100;font-size:10px;font-weight:700">⚠️ ${item.jid||item.ref}</span><a href="https://judgment.judicial.gov.tw/FJUD/default.aspx" target="_blank" style="font-size:9px;color:#1565c0;margin-left:6px" title="至司法院裁判書系統查驗">🔗查驗</a>`
+        : /民法第|強制汽車|民事訴訟法第|全民健|道路交通|國家賠償|刑法第|勞動基準|職業安全/.test(item.jid||item.ref)
+        ? `<span style="color:#2e7d32;font-size:10px;font-style:italic">⚖️ ${item.jid||item.ref}</span><span style="font-size:9px;color:#888;margin-left:6px">（法條依據）</span>`
+        : `<span style="color:#1a237e;font-size:10px;font-weight:700">✅ ${item.jid||item.ref}</span><a href="https://judgment.judicial.gov.tw/FJUD/default.aspx" target="_blank" style="font-size:9px;color:#1565c0;margin-left:6px" title="至司法院查驗全文">🔗查驗</a>`
       }</div>
       <div class="law-txt">${item.txt}</div>
-      <button class="law-copy" onclick="copyLaw('${item.ref.replace(/'/g,"\\'")}','${item.txt.replace(/'/g,"\\'").replace(/\n/g,' ')}',this)">複製引用</button>
+      <button class="law-copy" onclick="copyLaw('${(item.jid||item.ref).replace(/'/g,"\\'")}','${item.txt.replace(/'/g,"\\'").replace(/\n/g,' ')}',this)">複製引用</button>
     </div>
   </div>`;
 }
