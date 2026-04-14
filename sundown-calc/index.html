@@ -555,6 +555,14 @@ select,input[type=number],input[type=text],input[type=date]{font-family:'Outfit'
 .anchor-label{font-size:11px;opacity:.85;margin-bottom:4px;}
 .anchor-val{font-size:clamp(18px,4vw,28px);font-weight:900;font-family:monospace;margin:4px 0;}
 .anchor-sub{font-size:10px;opacity:.7;}
+/* AWARD RATE BOX */
+.award-rate-box{background:#f1f8e9;border:1px solid #c5e1a5;border-radius:var(--radius-sm);
+  padding:10px 14px;margin:4px 0 12px;display:none;}
+.award-rate-box.show{display:block;}
+.award-rate-hd{font-size:11px;font-weight:700;color:#33691e;margin-bottom:5px;}
+.award-rate-row{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:11px;color:#37474f;margin-bottom:3px;}
+.award-rate-note{font-size:10px;color:#558b2f;margin-top:3px;}
+.award-rate-courts{font-size:10px;color:#558b2f;margin-top:4px;line-height:1.9;}
 
 /* TACTICS */
 .tac{border:2px solid var(--sd-navy);border-radius:var(--radius);overflow:hidden;margin-top:16px;display:none;}
@@ -1771,6 +1779,17 @@ select,input[type=number],input[type=text],input[type=date]{font-family:'Outfit'
       <div class="anchor pml"><div class="anchor-label">國際上限</div><div class="anchor-val" id="pml_val">—</div><div class="anchor-sub">英國 JCG + 易科罰金</div></div>
     </div>
 
+    <!-- 法院折扣率 -->
+    <div class="award-rate-box" id="award_rate_box">
+      <div class="award-rate-hd">⚖️ 台灣法院折扣率 <span id="ar_cat_label" style="font-weight:400;color:#558b2f;font-size:10px"></span></div>
+      <div class="award-rate-row">
+        <span>中位：<strong id="ar_median" style="color:#2e7d32"></strong></span>
+        <span>Q1–Q3：<span id="ar_range" style="color:#555"></span></span>
+        <span style="color:#90a4ae">n=<span id="ar_n"></span>件</span>
+      </div>
+      <div id="ar_note" class="award-rate-note"></div>
+      <div id="ar_courts" class="award-rate-courts"></div>
+    </div>
 
     <!-- 遲延利息試算 -->
     <div class="delay-box">
@@ -3373,6 +3392,50 @@ function calc(){
   g('pml_val').innerText='$'+Math.round(fp).toLocaleString();
   g('results').style.display='block';
   var _re=document.getElementById('results_empty');if(_re)_re.style.display='none';
+
+  // ── 法院折扣率（award_rate）顯示 ──
+  (function(){
+    var arBox=document.getElementById('award_rate_box');
+    if(!arBox||typeof CAT_STATS==='undefined') return;
+    // 依模式選 cat key
+    var catKey=null;
+    var _tryKeys=function(keys){ for(var i=0;i<keys.length;i++){ if(CAT_STATS[keys[i]]&&CAT_STATS[keys[i]].award_rate) return keys[i]; } return null; };
+    if(isDeath){
+      catKey=_tryKeys(['死亡慰撫金-配偶','死亡慰撫金-父母','死亡慰撫金']);
+    } else if(isD){
+      catKey=_tryKeys(['損害賠償','損害賠償-失能']);
+    } else {
+      // 優先用勾選骨頭對應的 cat key
+      var boneKey=null;
+      document.querySelectorAll('#injury_list input:checked').forEach(function(cb){
+        if(boneKey) return;
+        var gname=cb.getAttribute('data-gname');
+        if(gname&&_TWStats){ var bc=_TWStats.boneCat(gname); if(bc&&CAT_STATS[bc.key]&&CAT_STATS[bc.key].award_rate) boneKey=bc.key; }
+      });
+      catKey=boneKey||_tryKeys(['損害賠償','骨折慰撫金']);
+      // 最終 fallback：找 award_rate n 最大的 key
+      if(!catKey){ var bestN=0; Object.keys(CAT_STATS).forEach(function(k){ var ar=CAT_STATS[k].award_rate; if(ar&&ar.n>bestN){bestN=ar.n;catKey=k;} }); }
+    }
+    if(!catKey||!CAT_STATS[catKey]||!CAT_STATS[catKey].award_rate){ arBox.classList.remove('show'); return; }
+    var ar=CAT_STATS[catKey].award_rate;
+    document.getElementById('ar_cat_label').textContent='（'+catKey+'）';
+    document.getElementById('ar_median').textContent=Math.round(ar.median*100)+'%';
+    document.getElementById('ar_range').textContent=Math.round(ar.q1*100)+'–'+Math.round(ar.q3*100)+'%';
+    document.getElementById('ar_n').textContent=ar.n.toLocaleString();
+    // note：反推請求金額
+    var fbAmt=Math.round(fb);
+    var impliedClaim=ar.median>0?Math.round(fbAmt/ar.median):0;
+    var noteEl=document.getElementById('ar_note');
+    noteEl.textContent=fbAmt>0&&impliedClaim>0
+      ?'即：台灣底線 $'+fbAmt.toLocaleString()+'，推估原告請求約 $'+impliedClaim.toLocaleString()+'（中位折扣率反推）'
+      :'即：請求100萬，法院平均判給'+Math.round(ar.median*100)+'萬';
+    // by_court：n 前五
+    var courts=ar.by_court||{};
+    var topC=Object.keys(courts).map(function(c){return{c:c,d:courts[c]};}).sort(function(a,b){return b.d.n-a.d.n;}).slice(0,5);
+    var courtsEl=document.getElementById('ar_courts');
+    courtsEl.innerHTML=topC.length?'各院中位：'+topC.map(function(x){return x.c+' <strong>'+Math.round(x.d.median*100)+'%</strong>(n='+x.d.n+')';}).join('　'):'';
+    arBox.classList.add('show');
+  })();
 
   const lN=liab<1?`依民法217條過失相抵（對方負擔${Math.round((1-liab)*100)}%），`:'';
   const cN=assetC!==1?`資力係數${assetC}x(111台上82)調整，`:'';
