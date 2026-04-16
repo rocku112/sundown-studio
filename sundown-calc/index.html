@@ -1634,17 +1634,22 @@ select,input[type=number],input[type=text],input[type=date]{font-family:'Outfit'
             <div style="font-size:10px;color:#555;line-height:1.6;margin-top:2px">填入年齡時自動套用 85-年齡估算餘命（內政部簡易生命表）。若年齡填0則改用手動年限。</div>
           </div>
 
-          <!-- 死亡慰撫金行情參考框 -->
-          <div style="background:#fff8f0;border:1px solid #e8c87a;border-radius:6px;padding:10px 12px;margin-top:10px;font-size:11px;line-height:1.7;color:#5a3e00;">
-            <div style="font-weight:700;margin-bottom:6px;color:#8a5000;">ℹ 臺灣死亡慰撫金參考行情（立法院第9屆第4會期）</div>
-            <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:6px;">
-              <div><span style="color:#888;">身分</span><br><b>父母</b> 157.9萬<br><b>配偶</b> 140.4萬<br><b>子女</b> 103.0萬</div>
-              <div><span style="color:#888;">同案人數→每人平均</span><br>
-                1人 173.8萬　2人 168.3萬　3人 164.3萬<br>
-                <span style="color:#c0392b;font-weight:700;">4人 101.2萬↓</span>　5人 94.7萬　6人 86.9萬　7人 71.3萬
+          <!-- 死亡慰撫金行情參考框（雙資料來源對照） -->
+          <div style="background:#fff8f0;border:1px solid #e8c87a;border-radius:6px;padding:10px 12px;margin-top:10px;font-size:11px;line-height:1.7;color:#5a3e00;" id="death_ref_box">
+            <div style="font-weight:700;margin-bottom:6px;color:#8a5000;">ℹ 臺灣死亡慰撫金行情對照（每人獲判）</div>
+            <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:6px;">
+              <div>
+                <div style="color:#888;font-size:10px;margin-bottom:2px;">身分別（立法院第9屆第4會期，均值）</div>
+                <b>父母</b> 157.9萬　<b>配偶</b> 140.4萬　<b>子女</b> 103.0萬
               </div>
             </div>
-            <div style="color:#888;font-size:10px;">資料：103-105年民事通常訴訟一審判決，每人平均獲判慰撫金。計算器已自動套用人數遞減係數。</div>
+            <div style="margin-bottom:4px;">
+              <span style="color:#888;font-size:10px;">同案人數→每人中位數（近5年實證 n≥20用此值；括號為立法院103-105均值）</span>
+            </div>
+            <div id="death_decay_display" style="letter-spacing:0.02em;">
+              1人 <b>150萬</b>(174)　2人 <b>150萬</b>(168)　3人 <b>120萬</b>(164)　<span style="color:#c0392b;font-weight:700;">4人↓ 100萬</span>(101)　5人 <b>100萬</b>(95)　<span style="color:#aaa;">6人 87萬†　7人 71萬†</span>
+            </div>
+            <div style="color:#888;font-size:10px;margin-top:4px;">† 6-7人 n&lt;20，計算器回退立法院值。計算器已依同案人數自動套用遞減係數。</div>
           </div>
 
           <div class="panel-collapse" style="margin-top:8px">
@@ -3007,12 +3012,22 @@ function calc(){
     const BASE_SPOUSE=dbSpouse?dbSpouse.median:1404000;  // fallback: 立法院 140.4萬
     const BASE_PARENT=dbParent?dbParent.median:1579000;  // fallback: 立法院 157.9萬
     const BASE_CHILD =dbChild ?dbChild.median :1030000;  // fallback: 立法院 103.0萬
-    // 遞減係數：立法院第9屆第4會期（103-105年）同案請求人數統計
-    // 每人平均：1人=173.8萬, 2人=168.3萬, 3人=164.3萬, 4人=101.2萬（3→4人斷崖）
-    // 5人=94.7萬, 6人=86.9萬, 7人+=71.3萬；正規化以1人=1.0
-    const _DECAY_TBL=[1.000,0.968,0.945,0.582,0.545,0.500,0.410];
+    // 遞減係數：優先用 DEATH_SOL_BY_COUNT 近5年中位數（n≥20）；fallback 立法院103-105年均值
+    // 立法院：1=173.8萬, 2=168.3萬, 3=164.3萬, 4=101.2萬, 5=94.7萬, 6=86.9萬, 7=71.3萬
+    // 近5年：1=150萬(n=648), 2=150萬(n=292), 3=120萬(n=138), 4=100萬(n=116), 5=100萬(n=38)
+    const _DBC=(typeof _XM_DATA!=='undefined'&&_XM_DATA.DEATH_SOL_BY_COUNT)||null;
+    const _LEG_DECAY=[1.000,0.968,0.945,0.582,0.545,0.500,0.410]; // 立法院正規化值
     const totalBereaved=Math.max(1,(sc?1:0)+pc+cc+caCount);
-    const decayFactor=_DECAY_TBL[Math.min(totalBereaved,7)-1];
+    const _bn=Math.min(totalBereaved,7);
+    // 動態決定遞減係數：以 n≥20 為可信門檻，優先用近5年中位數正規化
+    var decayFactor;
+    if(_DBC&&_DBC['1']&&_DBC['1'].median){
+      var _base1=_DBC['1'].median;
+      var _grp=_DBC[String(_bn)];
+      decayFactor=(_grp&&_grp.n>=20)?(_grp.median/_base1):_LEG_DECAY[_bn-1];
+    } else {
+      decayFactor=_LEG_DECAY[_bn-1];
+    }
     // 身分加減與加害情節
     const victimRole=gv('victim_role',1.0);
     const aggFactor=gv('aggravation',1.0);
@@ -3323,7 +3338,11 @@ function calc(){
   // ── 各國說明文字（依模式動態）──
   const COUNTRY_NOTES={
     tw: isDeath
-      ?`台灣死亡慰撫金：身分基準採 CAT_STATS 實證中位（配偶 ${_TWStats?.cite(_TWStats.deathBase('spouse'))}；父母 ${_TWStats?.cite(_TWStats.deathBase('parent'))}；子女 ${_TWStats?.cite(_TWStats.deathBase('child'))}）；請求人數遞減係數採立法院第9屆第4會期統計（1人=1.00, 2人=0.97, 3人=0.95, 4人↓=0.58, 5人=0.55, 6人=0.50, 7人=0.41）。`
+      ?(()=>{
+        const _dbc=(typeof _XM_DATA!=='undefined'&&_XM_DATA.DEATH_SOL_BY_COUNT)||null;
+        const _src=_dbc?`近5年實證中位（n=1,194，n≥20群組優先）`:`立法院103-105年均值（fallback）`;
+        return `台灣死亡慰撫金：身分基準採 CAT_STATS 實證中位（配偶 ${_TWStats?.cite(_TWStats.deathBase('spouse'))}；父母 ${_TWStats?.cite(_TWStats.deathBase('parent'))}；子女 ${_TWStats?.cite(_TWStats.deathBase('child'))}）；遞減表來源：${_src}（1=150萬, 2=150萬, 3=120萬, 4↓=100萬）。6-7人回退立法院值。`;
+      })()
       :isD
       ?`失能慰撫金 Phase C v2：DISABILITY_SOL_STATS 實證中位（n=4,194，v8 互斥分類 mode=disability）。AMA 0-10% median=50萬（n≥1,200）；20-40% median=30萬（n=25）；40%+ median=80萬–120萬（n≤20，信賴區間寬）。已移除 max(醫療×1.5, 80萬) 舊公式。`
       :'台灣體傷慰撫金 Phase C 資料驅動：依 CAT_STATS 骨折慰撫金分位表（n ≥ 20 的骨頭使用實證 median，開放×1.3、粉碎×1.5），已移除 TW_INJURY_DISC=0.85 / MULTI_CAP=0.80 無出處係數。',
