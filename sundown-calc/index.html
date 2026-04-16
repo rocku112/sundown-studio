@@ -1118,6 +1118,7 @@ select,input[type=number],input[type=text],input[type=date]{font-family:'Outfit'
   <button class="app-tab" onclick="switchAppTab('arsenal',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5BAD85" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21V12h6v9"/></svg> 武器庫</button>
   <button class="app-tab" onclick="switchAppTab('reverse',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C0392B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> 反向查詢</button>
   <button class="app-tab" onclick="switchAppTab('property',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7B6F3A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> 財物損害</button>
+  <button class="app-tab" onclick="switchAppTab('accident',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C0392B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> 事故類型</button>
 </div>
 
 <!-- ═══ PANE 1: 輸入設定 ═══ -->
@@ -2127,6 +2128,27 @@ select,input[type=number],input[type=text],input[type=date]{font-family:'Outfit'
       </table>
     </div>
 
+  </div>
+</div>
+
+<!-- ═══ PANE: 事故類型 ═══ -->
+<div class="app-pane" id="pane-accident">
+  <div class="page" style="padding-top:16px;">
+    <div style="padding:0 16px 20px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:var(--sd-gold);text-transform:uppercase;margin-bottom:8px;">事故類型</div>
+      <div style="font-size:22px;font-weight:900;color:var(--sd-navy);margin-bottom:6px;">法院認定被告過失比例</div>
+      <div style="font-size:13px;color:var(--text3);line-height:1.7;margin-bottom:16px;">
+        依據 18,000+ 件民事判決，按事故類型統計被告（加害人）負擔的過失比例分布。<br>
+        <span style="color:#b00;font-weight:600;">中位數</span>為最常見判決結果，Q1–Q3 為中間 50% 案件的範圍。
+      </div>
+      <div style="font-size:10px;color:var(--text3);background:rgba(232,184,75,.08);border:1px solid rgba(232,184,75,.3);border-radius:6px;padding:8px 12px;margin-bottom:20px;">
+        ⚖️ <strong>王澤鑑教授視角</strong>：酒駕、超速、無照駕駛屬違反保護他人之法律（§184 II），被告舉證責任倒置，實務上過失比例確實偏高。迴轉、逆向行駛亦屬高度危險行為，法院課以較重責任。
+      </div>
+      <div id="accident_cards" style="display:grid;gap:12px;grid-template-columns:1fr 1fr;"></div>
+      <div style="font-size:10px;color:var(--text3);margin-top:16px;line-height:1.6;">
+        * 資料來源：司法院裁判書 2010–2026，民事交通事故損害賠償案件。一件案件可能同時符合多種類型。
+      </div>
+    </div>
   </div>
 </div>
 
@@ -4042,6 +4064,54 @@ function goToHome() {
 }
 
 var _lawRendered = false;
+var _accidentRendered = false;
+
+function renderAccidentStats() {
+  var stats = (typeof _XM_DATA !== 'undefined') ? _XM_DATA.ACCIDENT_FAULT_STATS : null;
+  var el = document.getElementById('accident_cards');
+  if (!el || !stats) return;
+
+  var ORDER = ['drunk','no_license','u_turn','head_on','run_red','speeding','lane_change','rear_end','intersection','pedestrian'];
+  var COLOR = {
+    drunk:'#b71c1c', no_license:'#880e4f', u_turn:'#e65100',
+    head_on:'#bf360c', run_red:'#c62828', speeding:'#4527a0',
+    lane_change:'#1a237e', rear_end:'#01579b', intersection:'#006064', pedestrian:'#1b5e20'
+  };
+  var NOTE = {
+    drunk:'§184 II — 舉證責任倒置', no_license:'§184 II — 舉證責任倒置',
+    speeding:'§184 II — 舉證責任倒置', u_turn:'高危險行為',
+    head_on:'高危險行為', run_red:'§184 II — 違規',
+    lane_change:'注意義務違反', rear_end:'後車注意義務',
+    intersection:'路口禮讓義務', pedestrian:'行人優先原則'
+  };
+
+  var html = '';
+  ORDER.forEach(function(key) {
+    var d = stats[key]; if (!d) return;
+    var color = COLOR[key] || '#2D4A6E';
+    var barW = Math.round(d.median);
+    html += '<div style="background:var(--card);border:1px solid var(--card-border);border-radius:10px;padding:14px 16px;border-top:3px solid '+color+';">';
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">';
+    html += '<div style="font-size:15px;font-weight:900;color:'+color+';">'+d.label+'</div>';
+    html += '<div style="font-size:10px;color:var(--text3);">'+d.n.toLocaleString()+' 件</div>';
+    html += '</div>';
+    html += '<div style="font-size:10px;color:var(--text3);margin-bottom:10px;">'+NOTE[key]+'</div>';
+    // Bar
+    html += '<div style="background:#e8ecf5;border-radius:4px;height:8px;margin-bottom:8px;position:relative;">';
+    html += '<div style="position:absolute;left:'+d.q1+'%;width:'+(d.q3-d.q1)+'%;height:100%;background:'+color+'33;border-radius:4px;"></div>';
+    html += '<div style="position:absolute;left:'+barW+'%;transform:translateX(-50%);width:3px;height:100%;background:'+color+';border-radius:2px;"></div>';
+    html += '</div>';
+    // Numbers
+    html += '<div style="display:flex;justify-content:space-between;font-size:11px;">';
+    html += '<div><span style="color:var(--text3);">Q1 </span><strong>'+d.q1+'%</strong></div>';
+    html += '<div style="text-align:center;"><span style="color:'+color+';font-size:14px;font-weight:900;">'+d.median+'%</span><div style="font-size:9px;color:var(--text3);">中位數</div></div>';
+    html += '<div style="text-align:right;"><span style="color:var(--text3);">Q3 </span><strong>'+d.q3+'%</strong></div>';
+    html += '</div>';
+    html += '</div>';
+  });
+  el.innerHTML = html;
+}
+
 
 function switchAppTab(pane, btn) {
   document.querySelectorAll('.app-pane').forEach(p => p.classList.remove('active'));
@@ -4060,6 +4130,11 @@ function switchAppTab(pane, btn) {
   if (pane === 'arsenal' && !_lawRendered) {
     _lawRendered = true;
     renderLaw();
+  }
+  // Lazy render accident type pane
+  if (pane === 'accident' && !_accidentRendered) {
+    _accidentRendered = true;
+    renderAccidentStats();
   }
 }
 
