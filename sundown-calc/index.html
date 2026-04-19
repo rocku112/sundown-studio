@@ -2222,7 +2222,10 @@ var D=[];
 function _initData(){
   if(_xd) return; // 已初始化
   _xd=_XM_DATA;
-  G=_xd.G||[]; S=_xd.S||[]; L=_xd.L||[];
+  // P2：原始陣列 → 命名欄位物件（xm_core 資料保持緊湊陣列格式不變）
+  var _rawG=_xd.G||[], _rawS=_xd.S||[]; L=_xd.L||[];
+  G=_rawG.map(function(g){return{cat:g[0],name:g[1],ranges:[g[2],g[3],g[4]],note:g[5]};});
+  S=_rawS.map(function(s){return{cat:s[0],name:s[1],min:s[2],max:s[3],note:s[4]};});
   KR_SOL=_xd.KR_SOL||[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]; DE_MID=_xd.DE_MID||{}; UK_MID=_xd.UK_MID||{};
   JP_T1=_xd.JP_T1||[[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0]];
   JP_T2=_xd.JP_T2||[[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0]];
@@ -2232,13 +2235,19 @@ function _initData(){
   DK_MENER_RATE=_xd.DK_MENER_RATE||0; DK_PAIN_DAILY=_xd.DK_PAIN_DAILY||0; DK_DEATH_PER=_xd.DK_DEATH_PER||0; DK_OVERGANG=_xd.DK_OVERGANG||[];
   SE_PAIN_HOSPITAL=_xd.SE_PAIN_HOSPITAL||[]; SE_PAIN_OTHER=_xd.SE_PAIN_OTHER||[]; SE_INVAL_PER_PCT=_xd.SE_INVAL_PER_PCT||0; SE_DEATH_PER=_xd.SE_DEATH_PER||0;
   MIN_WAGE=_xd.min_wage||27470;
-  // 建立平坦 D 供計算引擎使用
+  // 建立平坦 D 供計算引擎使用（P2：每筆為命名欄位物件）
+  // 欄位：{cat, name, min, max, note, src, ft}
+  //   src = null(S 項) | 'g'+gi(G 骨折組)
+  //   ft  = null(S 項) | 0=閉合 1=開放 2=粉碎(G 項)
   D=[];
-  S.forEach(function(item){ D.push([item[0],item[1],item[2],item[3],item[4],null,null]); });
+  S.forEach(function(item){
+    D.push({cat:item.cat,name:item.name,min:item.min,max:item.max,note:item.note,src:null,ft:null});
+  });
   G.forEach(function(grp,gi){
     TYPES.forEach(function(t,ti){
-      if(!grp[2+ti]) return;
-      D.push([grp[0],grp[1]+'：'+t+'骨折',grp[2+ti][0],grp[2+ti][1],grp[5],'g'+gi,ti]);
+      var range=grp.ranges[ti];
+      if(!range) return;
+      D.push({cat:grp.cat,name:grp.name+'：'+t+'骨折',min:range[0],max:range[1],note:grp.note,src:'g'+gi,ft:ti});
     });
   });
 
@@ -2806,7 +2815,7 @@ function calc(){
 
   // ── 自動同步各國等級（體傷模式限定，依台灣勾選傷勢性質映射）──
   if(!isD&&!isDeath&&document.getElementById('auto_sync_grades')?.checked){
-    // 收集勾選的傷勢：從 D 陣列查找 [cat, 名稱, min, max, ref, groupKey, typeIdx]
+    // 收集勾選的傷勢：從 D 陣列查找 {cat, name, min, max, note, src, ft}
     const checkedItems=[];
     document.querySelectorAll('#injury_list input:checked').forEach(cb=>{
       const di=parseInt(cb.id.replace('inj_',''));
@@ -2817,7 +2826,7 @@ function calc(){
       // 傷勢→各國等級評分函式（回傳物件，數字越高代表越嚴重）
       // KR: 1=最重 14=最輕 → 用 severityScore 1(最輕)–14(最重) 再轉換
       function getInjuryGrades(item){
-        const cat=item[0], name=item[1], typeIdx=item[6]; // typeIdx: 0=閉鎖,1=開放,2=粉碎,null=非骨折
+        const cat=item.cat, name=item.name, typeIdx=item.ft; // ft: 0=閉合,1=開放,2=粉碎,null=非骨折(S項)
         const n=name;
 
         // ── cat1 腦部/神經 ──
@@ -3957,26 +3966,23 @@ function buildInjuryList(filter=''){
   const kw=filter.toLowerCase();
 
   // 建立群組 index map: groupId → G item
-  const gMap={};
-  G.forEach((item,gi)=>gMap['g'+gi]=item);
-
   // 決定哪些群組要顯示
   const shownGroups=new Set();
   const shownSingle=[];
 
   // 掃 S (單一項目)
   S.forEach((item,si)=>{
-    if(item[0]===9) return;
-    const match=!kw||item[1].toLowerCase().includes(kw)||(item[4]&&item[4].toLowerCase().includes(kw));
+    if(item.cat===9) return;
+    const match=!kw||item.name.toLowerCase().includes(kw)||(item.note&&item.note.toLowerCase().includes(kw));
     if(match) shownSingle.push({si,item});
   });
 
-  // 掃群組：若部位名稱或任一型態名稱或ref符合，顯示整組
+  // 掃群組：若部位名稱或任一型態名稱或 note 符合，顯示整組
   G.forEach((g2,gi)=>{
     if(!kw){shownGroups.add(gi);return;}
-    const nameMatch=g2[1].toLowerCase().includes(kw);
-    const refMatch=g2[5]&&g2[5].toLowerCase().includes(kw);
-    const typeMatch=TYPES.some((t,ti)=>g2[2+ti]&&t.includes(kw));
+    const nameMatch=g2.name.toLowerCase().includes(kw);
+    const refMatch=g2.note&&g2.note.toLowerCase().includes(kw);
+    const typeMatch=TYPES.some((t,ti)=>g2.ranges[ti]&&t.includes(kw));
     if(nameMatch||refMatch||typeMatch) shownGroups.add(gi);
   });
 
@@ -3984,31 +3990,31 @@ function buildInjuryList(filter=''){
   var html='';
   for(var cat=0;cat<C.length;cat++){
     if(cat===9) continue;
-    const catSingles=shownSingle.filter(x=>x.item[0]===cat);
-    const catGroups=[...shownGroups].filter(gi=>G[gi][0]===cat);
+    const catSingles=shownSingle.filter(x=>x.item.cat===cat);
+    const catGroups=[...shownGroups].filter(gi=>G[gi].cat===cat);
     if(catSingles.length===0&&catGroups.length===0) continue;
 
     html+='<div class="inj-cat">'+C[cat]+'</div>';
 
     // 單一項目先渲染
     catSingles.forEach(({si,item})=>{
-      const ref=item[4]?'<span style="font-size:10px;color:#888;display:block;margin-top:1px;">'+item[4]+'</span>':'';
-      const di=D.findIndex(d=>d[1]===item[1]&&d[0]===item[0]&&d[5]===null);
+      const ref=item.note?'<span style="font-size:10px;color:#888;display:block;margin-top:1px;">'+item.note+'</span>':'';
+      const di=D.findIndex(d=>d.name===item.name&&d.cat===item.cat&&d.src===null);
       if(di<0) return;
-      html+='<div class="inj-item"><input type="checkbox" id="inj_'+di+'" value="'+(item[3]*10000)+'" data-min="'+(item[2]*10000)+'" onchange="calcDeferred()"><label for="inj_'+di+'" style="flex:1;cursor:pointer;"><span style="font-size:12px;">'+item[1]+'</span><span style="font-size:11px;color:#555;"> ('+item[2]+'–'+item[3]+'萬)</span>'+ref+'</label></div>';
+      html+='<div class="inj-item"><input type="checkbox" id="inj_'+di+'" value="'+(item.max*10000)+'" data-min="'+(item.min*10000)+'" onchange="calcDeferred()"><label for="inj_'+di+'" style="flex:1;cursor:pointer;"><span style="font-size:12px;">'+item.name+'</span><span style="font-size:11px;color:#555;"> ('+item.min+'–'+item.max+'萬)</span>'+ref+'</label></div>';
     });
 
     // 群組骨折後渲染
     catGroups.sort((a,b)=>a-b).forEach(gi=>{
       const grp=G[gi];
-      const availTypes=TYPES.map((t,ti)=>grp[2+ti]?{t,ti,range:grp[2+ti]}:null).filter(Boolean);
+      const availTypes=TYPES.map((t,ti)=>grp.ranges[ti]?{t,ti,range:grp.ranges[ti]}:null).filter(Boolean);
       const typeLabels=availTypes.map(({t})=>t).join('／');
-      const ref=grp[5]?'<span class="grp-ref">'+grp[5]+'</span>':'';
-      html+='<div class="grp-row" onclick="toggleGrp(this)"><span class="grp-arrow">▶</span><span class="grp-name">'+grp[1]+' <span style="font-size:10px;color:#888;font-weight:400;">['+typeLabels+']</span>'+ref+'</span></div><div class="grp-types">';
+      const ref=grp.note?'<span class="grp-ref">'+grp.note+'</span>':'';
+      html+='<div class="grp-row" onclick="toggleGrp(this)"><span class="grp-arrow">▶</span><span class="grp-name">'+grp.name+' <span style="font-size:10px;color:#888;font-weight:400;">['+typeLabels+']</span>'+ref+'</span></div><div class="grp-types">';
       availTypes.forEach(({t,ti,range})=>{
-        const di=D.findIndex(d=>d[5]==='g'+gi&&d[6]===ti);
+        const di=D.findIndex(d=>d.src==='g'+gi&&d.ft===ti);
         if(di<0) return;
-        html+='<label class="type-chip" style="background:'+TYPE_BG[ti]+';color:'+TYPE_COLORS[ti]+';"><input type="checkbox" id="inj_'+di+'" value="'+(range[1]*10000)+'" data-min="'+(range[0]*10000)+'" data-gname="'+grp[1]+'" data-btype="'+ti+'" onchange="syncChip(this)"> '+t+' ('+range[0]+'–'+range[1]+'萬)</label>';
+        html+='<label class="type-chip" style="background:'+TYPE_BG[ti]+';color:'+TYPE_COLORS[ti]+';"><input type="checkbox" id="inj_'+di+'" value="'+(range[1]*10000)+'" data-min="'+(range[0]*10000)+'" data-gname="'+grp.name+'" data-btype="'+ti+'" onchange="syncChip(this)"> '+t+' ('+range[0]+'–'+range[1]+'萬)</label>';
       });
       html+='</div>';
     });
