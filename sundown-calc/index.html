@@ -2203,6 +2203,8 @@ function _flag(cc){
 
 // ── 資料變數宣告（延遲到 _initData() 才賦值）──
 var _xd, G, S, L, _TWStats;
+var CAT_STATS, BONE_STATS, ITEM_SUBCAT_STATS;
+var DISABILITY_SOL_STATS, DEATH_SOL_BY_COUNT, DEATH_SOL_BY_COMBO, ACCIDENT_FAULT_STATS;
 var KR_SOL, DE_MID, UK_MID;
 var JP_T1, JP_T2;
 var FR_DFP, AU_ISV, AU_DEATH;
@@ -2240,11 +2242,18 @@ function _initData(){
     });
   });
 
-  // ── _TWStats：xm_data.js 查表驅動引擎（Phase C, 2026-04）──
-  // 把 _XM_DATA.CAT_STATS 與 BONE_STATS 包成可查詢的實證分位數來源
+  // ── 統計全域變數（P1 統一架構：所有 stats 均由此處設全域）──
+  CAT_STATS            = _xd.CAT_STATS            || {};
+  BONE_STATS           = _xd.BONE_STATS           || {};
+  ITEM_SUBCAT_STATS    = _xd.ITEM_SUBCAT_STATS    || {};
+  DISABILITY_SOL_STATS = _xd.DISABILITY_SOL_STATS || null;
+  DEATH_SOL_BY_COUNT   = _xd.DEATH_SOL_BY_COUNT   || null;
+  DEATH_SOL_BY_COMBO   = _xd.DEATH_SOL_BY_COMBO   || null;
+  ACCIDENT_FAULT_STATS = _xd.ACCIDENT_FAULT_STATS  || null;
+
+  // ── _TWStats：查表驅動引擎（Phase C, 2026-04）──
+  // 把 CAT_STATS / BONE_STATS 包成可查詢的實證分位數來源
   // 所有台灣計算結果都應能回溯到「n=XXX 筆判例，median/q1/q3 = XX 萬」
-  var CAT_STATS = _xd.CAT_STATS || {};
-  var BONE_STATS = _xd.BONE_STATS || {};
   // G 表骨頭名稱 → CAT_STATS 鍵（n 足夠才有）
   var G_BONE2CAT = {
     '鼻骨':'骨折慰撫金-鼻骨','眶骨/顴骨':'骨折慰撫金-眶骨顴骨','下顎骨':'骨折慰撫金-下顎骨',
@@ -3038,7 +3047,7 @@ function calc(){
     // 遞減係數：優先用 DEATH_SOL_BY_COUNT 近5年中位數（n≥20）；fallback 立法院103-105年均值
     // 立法院：1=173.8萬, 2=168.3萬, 3=164.3萬, 4=101.2萬, 5=94.7萬, 6=86.9萬, 7=71.3萬
     // 近5年：1=150萬(n=648), 2=150萬(n=292), 3=120萬(n=138), 4=100萬(n=116), 5=100萬(n=38)
-    const _DBC=(typeof _XM_DATA!=='undefined'&&_XM_DATA.DEATH_SOL_BY_COUNT)||null;
+    const _DBC=DEATH_SOL_BY_COUNT||null;
     const _LEG_DECAY=[1.000,0.968,0.945,0.582,0.545,0.500,0.410]; // 立法院正規化值
     const totalBereaved=Math.max(1,(sc?1:0)+pc+cc+caCount);
     const _bn=Math.min(totalBereaved,7);
@@ -3066,7 +3075,7 @@ function calc(){
     // 資料來源：mode=disability + solatium_injury，n=4,194（v8 互斥分類後 disability=18.2%）
     // AMA 群組：0-5% n=1,283 median=500k；5-10% n=1,732 median=500k；fallback 全體 median=500k
     {
-      var _DSS = (typeof _XM_DATA!=='undefined' && _XM_DATA.DISABILITY_SOL_STATS) || null;
+      var _DSS = DISABILITY_SOL_STATS || null;
       var _dsBase = 500000; // 資料 fallback
       if(_DSS && _DSS.median){
         var _dgrp = lossPctRaw<5?'0-5%':lossPctRaw<10?'5-10%':lossPctRaw<15?'10-15%':lossPctRaw<20?'15-20%':
@@ -3362,7 +3371,7 @@ function calc(){
   const COUNTRY_NOTES={
     tw: isDeath
       ?(()=>{
-        const _dbc=(typeof _XM_DATA!=='undefined'&&_XM_DATA.DEATH_SOL_BY_COUNT)||null;
+        const _dbc=DEATH_SOL_BY_COUNT||null;
         const _src=_dbc?`近5年實證中位（n=1,194，n≥20群組優先）`:`立法院103-105年均值（fallback）`;
         return `台灣死亡慰撫金：身分基準採 CAT_STATS 實證中位（配偶 ${_TWStats?.cite(_TWStats.deathBase('spouse'))}；父母 ${_TWStats?.cite(_TWStats.deathBase('parent'))}；子女 ${_TWStats?.cite(_TWStats.deathBase('child'))}）；遞減表來源：${_src}（1=150萬, 2=150萬, 3=120萬, 4↓=100萬）。6-7人回退立法院值。`;
       })()
@@ -4068,7 +4077,7 @@ var _lawRendered = false;
 var _accidentRendered = false;
 
 function renderAccidentStats() {
-  var stats = (typeof _XM_DATA !== 'undefined') ? _XM_DATA.ACCIDENT_FAULT_STATS : null;
+  var stats = ACCIDENT_FAULT_STATS || null;
   var el = document.getElementById('accident_cards');
   if (!el || !stats) return;
 
