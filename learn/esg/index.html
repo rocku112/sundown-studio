@@ -3344,6 +3344,9 @@ ul.s-list > li::before{
           <button type="button" class="wrong-filter-btn active" id="tb-all-filter" onclick="document.getElementById('tb-all-filter').classList.add('active');document.getElementById('tb-wrong-filter').classList.remove('active');initTextbook();">全部</button>
           <button type="button" class="wrong-filter-btn" id="tb-wrong-filter" onclick="document.getElementById('tb-wrong-filter').classList.add('active');document.getElementById('tb-all-filter').classList.remove('active');initTextbook();">錯題</button>
         </div>
+        <label class="tb-disabled-toggle" style="display:inline-flex;align-items:center;gap:4px;font-size:.78rem;color:var(--gray);margin-left:8px;cursor:pointer;user-select:none;">
+          <input type="checkbox" id="tb-include-disabled" onchange="initTextbook()" style="accent-color:var(--green);cursor:pointer;"> 含停用題
+        </label>
         <button class="tb-btn-start" onclick="startTextbook()"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12" fill="#89b4d4" stroke="none" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><polygon points="5 3 19 12 5 21 5 3"/></svg> 開始練習</button>
         <span id="tb-count-label" style="font-size:.8rem;color:var(--gray);margin-left:auto;"></span>
       </div>
@@ -6324,6 +6327,7 @@ function startExam(forceNew){
   const _seen = new Set();
   const fullPool = [];
   [...PASTEXAM_Q, ...TEXTBOOKQ_DATA, ...PRACTICE_Q].forEach(q => {
+    if(q.d) return; // skip disabled questions
     const key = (q.s || '').trim();
     if(key && !_seen.has(key)){
       _seen.add(key);
@@ -7380,7 +7384,10 @@ let tbQuestions=[], tbIdx=0, tbCorrect=0, tbAnswered=[];
 
 function _getTbPool(){
   const filter = document.getElementById('tb-chapter-filter').value;
-  return filter === FILTER_ALL ? [...TEXTBOOKQ_DATA] : TEXTBOOKQ_DATA.filter(q => q.e === filter);
+  const inclDisabled = document.getElementById('tb-include-disabled')?.checked;
+  let pool = filter === FILTER_ALL ? [...TEXTBOOKQ_DATA] : TEXTBOOKQ_DATA.filter(q => q.e === filter);
+  if(!inclDisabled) pool = pool.filter(q => !q.d);
+  return pool;
 }
 
 function initTextbook(){
@@ -7465,7 +7472,7 @@ function renderTbQ(){
   document.getElementById('tb-score-text').textContent = `答對 ${tbCorrect} 題`;
   document.getElementById('tb-prog-bar').style.width   = pct + '%';
   const _depBanner = document.getElementById('tb-dep-banner');
-  if(_depBanner) _depBanner.style.display = q.deprecated ? 'flex' : 'none';
+  if(_depBanner) _depBanner.style.display = (q.deprecated || q.d) ? 'flex' : 'none';
   // 題目使用 textContent 防 XSS
   document.getElementById('tb-stem').textContent = q.s;
   // bookmark & wrong count badges
@@ -7653,6 +7660,7 @@ function renderBookmarksPage(){
       <div class="bm-card-head">
         ${qLabel?`<span class="q-tag tag-green" style="font-size:.7rem;">${_safeText(qLabel)}</span>`:''}
         <span class="q-tag tag-blue" style="font-size:.7rem;">${srcLabel}</span>
+        ${q.d?'<span class="q-tag" style="font-size:.65rem;background:#c87848;color:#fff;">停用</span>':''}
         ${item.wc>0?`<span class="wrong-count-badge">✗ ${item.wc}</span>`:''}
         <button type="button" class="btn-bookmark active" style="margin-left:auto;" onclick="_removeBm(${idx})">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="#d4a56a" stroke="#d4a56a" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
@@ -7782,6 +7790,7 @@ function renderWrongListPage(){
       '<div class="bm-card-head">' +
         (qLabel ? '<span class="q-tag tag-green" style="font-size:.7rem;">' + _safeText(qLabel) + '</span>' : '') +
         (srcLabel ? '<span class="q-tag tag-blue" style="font-size:.7rem;">' + srcLabel + '</span>' : '') +
+        (q.d ? '<span class="q-tag" style="font-size:.65rem;background:#c87848;color:#fff;">停用</span>' : '') +
         '<span class="wrong-count-badge">✗ ' + item.info.count + '</span>' +
         (dateText ? '<span style="font-size:.7rem;color:var(--gray);">' + dateText + '</span>' : '') +
         '<button type="button" class="btn-remove-wrong" style="margin-left:auto;" onclick="_removeWl(' + idx + ')">' +
@@ -7901,15 +7910,15 @@ function _getAllQuestionBanks(){
   const banks = [];
   // 永續題庫
   if(typeof TEXTBOOKQ_DATA !== 'undefined'){
-    TEXTBOOKQ_DATA.forEach(q => { if(!q.deprecated) banks.push({q, source:'永續題庫', sourceKey:'textbookq'}); });
+    TEXTBOOKQ_DATA.forEach(q => { if(!q.d) banks.push({q, source:'永續題庫', sourceKey:'textbookq'}); });
   }
   // 歷屆題庫
   if(typeof PASTEXAM_Q !== 'undefined'){
-    PASTEXAM_Q.forEach(q => { if(!q.deprecated) banks.push({q, source:'歷屆題庫', sourceKey:'pastexam'}); });
+    PASTEXAM_Q.forEach(q => { if(!q.d) banks.push({q, source:'歷屆題庫', sourceKey:'pastexam'}); });
   }
   // 隨堂練習
   if(typeof READER_Q !== 'undefined'){
-    READER_Q.forEach(q => { if(!q.deprecated) banks.push({q, source:'隨堂練習', sourceKey:'practice'}); });
+    READER_Q.forEach(q => { if(!q.d) banks.push({q, source:'隨堂練習', sourceKey:'practice'}); });
   }
   return banks;
 }
