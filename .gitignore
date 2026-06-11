@@ -1,0 +1,6 @@
+# 傷當有計 — 建置產物與備份不入庫
+sundown-calc/_temp/
+sundown-calc/xm_data.js
+sundown-calc/xm_data_v8.js
+sundown-calc/*_backup*.js
+.claude/

@@ -2234,7 +2234,7 @@ function _initData(){
   NO_G=_xd.NO_G||[]; NO_MENER_GROUPS=_xd.NO_MENER_GROUPS||[]; NO_MENER_THRESHOLDS=_xd.NO_MENER_THRESHOLDS||[]; NO_PAIN_DAILY=_xd.NO_PAIN_DAILY||[];
   DK_MENER_RATE=_xd.DK_MENER_RATE||0; DK_PAIN_DAILY=_xd.DK_PAIN_DAILY||0; DK_DEATH_PER=_xd.DK_DEATH_PER||0; DK_OVERGANG=_xd.DK_OVERGANG||[];
   SE_PAIN_HOSPITAL=_xd.SE_PAIN_HOSPITAL||[]; SE_PAIN_OTHER=_xd.SE_PAIN_OTHER||[]; SE_INVAL_PER_PCT=_xd.SE_INVAL_PER_PCT||0; SE_DEATH_PER=_xd.SE_DEATH_PER||0;
-  MIN_WAGE=_xd.min_wage||27470;
+  MIN_WAGE=_xd.min_wage||29500;
   // 建立平坦 D 供計算引擎使用（P2：每筆為命名欄位物件）
   // 欄位：{cat, name, min, max, note, src, ft}
   //   src = null(S 項) | 'g'+gi(G 骨折組)
@@ -4024,7 +4024,7 @@ function buildInjuryList(filter=''){
 }
 
 function initSystem(){
-  _initData(); // 確保 xm_data.js 資料已解構
+  _initData(); // 確保 xm_core_v8.js 資料已解構
   // 顯示資料版本
   const ver=_xd.updated||'';
   const dv=document.getElementById('data_ver');
