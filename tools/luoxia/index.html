@@ -3113,6 +3113,25 @@ function anSampleBg(nx,ny){
     return '#'+[d[0],d[1],d[2]].map(v=>v.toString(16).padStart(2,'0')).join('');
   }catch(e){return '#ffffff';}
 }
+// Estimate original ink colour by averaging the darker pixels inside a text run's box
+function anSampleTextColor(it){
+  try{
+    const cw=annPageCanvas.width,ch=annPageCanvas.height,ctx=annPageCanvas.getContext('2d');
+    const x0=Math.max(0,Math.floor(it.nx*cw)),y0=Math.max(0,Math.floor(it.ny*ch));
+    const x1=Math.min(cw,Math.ceil((it.nx+it.nw)*cw)),y1=Math.min(ch,Math.ceil((it.ny+it.nh)*ch));
+    if(x1<=x0||y1<=y0)return '#111111';
+    const data=ctx.getImageData(x0,y0,x1-x0,y1-y0).data;
+    let rs=0,gs=0,bs=0,ws=0,n=0;
+    for(let i=0;i<data.length;i+=4){
+      if(data[i+3]<128)continue;
+      const r=data[i],g=data[i+1],b=data[i+2],lum=0.299*r+0.587*g+0.114*b;
+      if(lum<200){const w=200-lum;rs+=r*w;gs+=g*w;bs+=b*w;ws+=w;n++;}   // weight darker (core ink) over light AA edges
+    }
+    if(n<3||ws<=0)return '#111111';
+    const to=v=>Math.round(v/ws).toString(16).padStart(2,'0');
+    return '#'+to(rs)+to(gs)+to(bs);
+  }catch(e){return '#111111';}
+}
 
 function anRedraw(){
   const cw=annOverlay.width,ch=annOverlay.height;
@@ -3203,8 +3222,9 @@ annOverlay.addEventListener('pointerdown',e=>{
     const it=anHitTextItem(x,y);
     if(!it){toast('這裡沒有偵測到可改的文字（掃描 PDF 無文字層）',true);return;}
     const fill=anSampleBg(it.cx-0.006,it.cy+it.ch*0.5);   // sample just left of the run
+    const inkColor=anSampleTextColor(it);                  // match original text colour
     const cover={id:anUID(),type:'cover',x:it.cx,y:it.cy,w:it.cw,h:it.ch,fill};
-    const txt={id:anUID(),type:'text',x:it.nx,y:it.ny,text:it.str,size:Math.max(6,it.size),color:'#111111',font:it.font||anFont(),bold:!!it.bold,italic:!!it.italic};
+    const txt={id:anUID(),type:'text',x:it.nx,y:it.ny,text:it.str,orig:it.str,coverId:cover.id,size:Math.max(6,it.size),color:inkColor,font:it.font||anFont(),bold:!!it.bold,italic:!!it.italic};
     anCurArr().push(cover);anCurArr().push(txt);
     anSel=txt;anSyncControls(txt);anShowTextEdit(txt,true);
     return;
@@ -3271,18 +3291,24 @@ function anCommitText(){
   const ta=document.getElementById('annTextEdit');if(ta){el.text=ta.value;ta.remove();}
   const arr=anCurArr();
   const toSelect=annCommitToSelect;annCommitToSelect=false;
-  if(!el.text||!el.text.trim()){const k=arr.indexOf(el);if(k>=0)arr.splice(k,1);anSel=null;anRedraw();anStats();return;}
-  // On explicit finish (Esc / Ctrl+Enter): switch to Select tool and select it so it can be
-  // dragged / resized right away. On plain click-away, stay in Text tool (place more).
-  if(toSelect){
+  const removeEl=()=>{const k=arr.indexOf(el);if(k>=0)arr.splice(k,1);};
+  const removeCover=()=>{if(el.coverId){const ci=arr.findIndex(x=>x.id===el.coverId);if(ci>=0)arr.splice(ci,1);}};
+  // 改字 with no actual change → revert: drop the new text AND its white-out, keep the original intact
+  if(el.orig!=null && el.text.trim()===el.orig.trim()){removeEl();removeCover();anSel=null;anRedraw();anStats();return;}
+  // Empty text → remove the text (a 改字 cover stays = pure white-out / erase)
+  if(!el.text||!el.text.trim()){removeEl();anSel=null;anRedraw();anStats();return;}
+  // Keep it selected so the sidebar (colour/font/size) edits it live.
+  // 改字 edits and explicit finish (Esc/Ctrl+Enter) also switch to the Select tool.
+  anSel=el;anSyncControls(el);
+  if(toSelect||el.orig!=null){
     setTimeout(()=>{
       anS.tool='select';
       document.querySelectorAll('#panel-pdfann .ann-tool[data-tool]').forEach(b=>b.classList.toggle('active',b.dataset.tool==='select'));
       annOverlay.className='tool-select';
       anSel=el;anSyncControls(el);anRedraw();
     },0);
-  }else{anSel=null;anRedraw();}
-  anStats();
+  }
+  anRedraw();anStats();
 }
 function anHideTextEdit(){const ta=document.getElementById('annTextEdit');if(ta){annTextEl=null;ta.remove();}}
 
