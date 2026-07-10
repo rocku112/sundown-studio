@@ -2875,12 +2875,7 @@ document.getElementById('wmExport').onclick=async()=>{
     <div class="ss"><h3>樣式 <span style="font-size:9px;font-weight:600;color:var(--text3);">選中文字可即時調整</span></h3>
       <div class="sr"><div><div class="sl">顏色</div></div><input type="color" id="annColor" value="#1E3554" style="width:34px;height:26px;border:1px solid var(--border);border-radius:3px;cursor:pointer;padding:2px;background:var(--cream);"></div>
       <div class="sr"><div><div class="sl">字體</div></div>
-        <select class="cs" id="annFont">
-          <option value="'Noto Sans TC','Microsoft JhengHei','微軟正黑體',sans-serif">黑體</option>
-          <option value="'Noto Serif TC','新細明體','PMingLiU',serif">明體</option>
-          <option value="'標楷體','DFKai-SB','KaiTi',serif">楷體</option>
-          <option value="'DM Mono','Consolas',monospace">等寬</option>
-        </select>
+        <select class="cs" id="annFont" style="max-width:132px;"></select>
       </div>
       <div class="sr"><div><div class="sl">文字大小</div></div><div class="sw"><input type="range" class="cr" id="annTextSize" min="8" max="120" step="1" value="18"><span class="rv" id="annTextSizeV">18</span></div></div>
       <div class="sr"><div><div class="sl">筆畫粗細</div><div class="sb">簽名／矩形</div></div><div class="sw"><input type="range" class="cr" id="annStroke" min="1" max="16" step="1" value="3"><span class="rv" id="annStrokeV">3</span></div></div>
@@ -2928,19 +2923,50 @@ let anResize=null;         // {el,handle,fx,fy,w0,h0,size0,pts0} resize state
 let anTextItems=[];        // current page's extracted text runs (for 改字), normalized coords
 const anUID=()=>'an'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const AN_FONTS={
-  hei:"'Noto Sans TC','Microsoft JhengHei','微軟正黑體',sans-serif",
-  ming:"'Noto Serif TC','新細明體','PMingLiU',serif",
-  kai:"'標楷體','DFKai-SB','KaiTi',serif",
-  mono:"'DM Mono','Consolas',monospace"
+  hei:"'Microsoft JhengHei','微軟正黑體','Noto Sans TC',sans-serif",
+  ming:"'PMingLiU','新細明體','Noto Serif TC',serif",
+  kai:"'DFKai-SB','標楷體','BiauKai','KaiTi',serif",
+  mono:"Consolas,'DM Mono','Courier New',monospace"
 };
+// Font picker menu — common CJK + Latin fonts (rendered via system fonts, Noto fallbacks)
+const AN_FONT_LIST=[
+  {g:'中文字體',label:'微軟正黑體',css:AN_FONTS.hei},
+  {g:'中文字體',label:'思源黑體',css:"'Noto Sans TC','Source Han Sans TC',sans-serif"},
+  {g:'中文字體',label:'新細明體',css:AN_FONTS.ming},
+  {g:'中文字體',label:'細明體',css:"'MingLiU','細明體','Noto Serif TC',serif"},
+  {g:'中文字體',label:'思源宋體',css:"'Noto Serif TC','Source Han Serif TC',serif"},
+  {g:'中文字體',label:'標楷體',css:AN_FONTS.kai},
+  {g:'中文字體',label:'微軟雅黑（簡）',css:"'Microsoft YaHei','微软雅黑','Noto Sans SC',sans-serif"},
+  {g:'中文字體',label:'宋體（簡）',css:"'SimSun','宋体','Noto Serif SC',serif"},
+  {g:'中文字體',label:'黑體（簡）',css:"'SimHei','黑体',sans-serif"},
+  {g:'中文字體',label:'楷體（簡）',css:"'KaiTi','楷体',serif"},
+  {g:'西文字體',label:'Arial',css:"Arial,Helvetica,sans-serif"},
+  {g:'西文字體',label:'Helvetica',css:"Helvetica,Arial,sans-serif"},
+  {g:'西文字體',label:'Times New Roman',css:"'Times New Roman',Times,serif"},
+  {g:'西文字體',label:'Georgia',css:"Georgia,'Times New Roman',serif"},
+  {g:'西文字體',label:'Verdana',css:"Verdana,Geneva,sans-serif"},
+  {g:'西文字體',label:'Tahoma',css:"Tahoma,Geneva,sans-serif"},
+  {g:'西文字體',label:'Trebuchet MS',css:"'Trebuchet MS',Helvetica,sans-serif"},
+  {g:'西文字體',label:'Courier New',css:"'Courier New',Courier,monospace"},
+  {g:'西文字體',label:'Consolas',css:AN_FONTS.mono},
+  {g:'西文字體',label:'Comic Sans MS',css:"'Comic Sans MS','Comic Sans',cursive"},
+  {g:'西文字體',label:'Impact',css:"Impact,Charcoal,sans-serif"}
+];
 const AN_FONT_DEFAULT=AN_FONTS.hei;
 const anFont=()=>document.getElementById('annFont').value||AN_FONT_DEFAULT;
-// Map a detected PDF font (base name + pdf.js category) to the closest available stack
+function anBuildFontMenu(){
+  const sel=document.getElementById('annFont');if(!sel)return;
+  const groups={},order=[];
+  AN_FONT_LIST.forEach(f=>{if(!groups[f.g]){groups[f.g]=[];order.push(f.g);}groups[f.g].push(f);});
+  sel.innerHTML=order.map(g=>`<optgroup label="${g}">`+groups[g].map(f=>`<option value="${f.css.replace(/"/g,'&quot;')}" style="font-family:${f.css};">${f.label}</option>`).join('')+`</optgroup>`).join('');
+  sel.value=AN_FONTS.hei;
+}
+// Map a detected PDF font (base name + pdf.js category) to one of the base stacks (all in the menu)
 function anDetectFont(name,category){
   const n=(name||'').replace(/^[A-Z]{6}\+/,'').toLowerCase();   // strip subset prefix ABCDEF+
-  if(/kai|楷/.test(n))return AN_FONTS.kai;
+  if(/kai|dfkai|biaukai|楷/.test(n))return AN_FONTS.kai;
   if(/courier|mono|consol|等寬|等宽|gothic\s*mono/.test(n)||category==='monospace')return AN_FONTS.mono;
-  if(/ming|mincho|song|sung|times|georgia|roman|serif|宋|明體|明体|細明|新細明/.test(n)||category==='serif')return AN_FONTS.ming;
+  if(/ming|mincho|song|sung|times|georgia|roman|serif|simsun|宋|明體|明体|細明|新細明/.test(n)||category==='serif')return AN_FONTS.ming;
   return AN_FONTS.hei;   // default sans / 黑體
 }
 // Build a canvas/CSS font shorthand honouring bold+italic
@@ -2979,6 +3005,7 @@ function anSyncControls(el){
   }
   if(el.type==='rect'||el.type==='draw'){document.getElementById('annStroke').value=el.width;document.getElementById('annStrokeV').textContent=el.width;}
 }
+anBuildFontMenu();
 document.getElementById('annColor').oninput=e=>anEditSelected('color',e.target.value);
 document.getElementById('annFont').onchange=e=>anEditSelected('font',e.target.value);
 document.getElementById('annTextSize').oninput=e=>{document.getElementById('annTextSizeV').textContent=e.target.value;anEditSelected('size',+e.target.value);};
