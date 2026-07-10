@@ -2871,9 +2871,17 @@ document.getElementById('wmExport').onclick=async()=>{
       <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" id="annFName">—</div>
       <div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-top:2px;" id="annFMeta">—</div>
     </div>
-    <div class="ss"><h3>樣式</h3>
+    <div class="ss"><h3>樣式 <span style="font-size:9px;font-weight:600;color:var(--text3);">選中文字可即時調整</span></h3>
       <div class="sr"><div><div class="sl">顏色</div></div><input type="color" id="annColor" value="#1E3554" style="width:34px;height:26px;border:1px solid var(--border);border-radius:3px;cursor:pointer;padding:2px;background:var(--cream);"></div>
-      <div class="sr"><div><div class="sl">文字大小</div></div><div class="sw"><input type="range" class="cr" id="annTextSize" min="8" max="72" step="1" value="18"><span class="rv" id="annTextSizeV">18</span></div></div>
+      <div class="sr"><div><div class="sl">字體</div></div>
+        <select class="cs" id="annFont">
+          <option value="'Noto Sans TC','Microsoft JhengHei','微軟正黑體',sans-serif">黑體</option>
+          <option value="'Noto Serif TC','新細明體','PMingLiU',serif">明體</option>
+          <option value="'標楷體','DFKai-SB','KaiTi',serif">楷體</option>
+          <option value="'DM Mono','Consolas',monospace">等寬</option>
+        </select>
+      </div>
+      <div class="sr"><div><div class="sl">文字大小</div></div><div class="sw"><input type="range" class="cr" id="annTextSize" min="8" max="120" step="1" value="18"><span class="rv" id="annTextSizeV">18</span></div></div>
       <div class="sr"><div><div class="sl">筆畫粗細</div><div class="sb">簽名／矩形</div></div><div class="sw"><input type="range" class="cr" id="annStroke" min="1" max="16" step="1" value="3"><span class="rv" id="annStrokeV">3</span></div></div>
     </div>
     <div class="ss"><h3>統計</h3>
@@ -2916,6 +2924,8 @@ let anDraft=null;          // in-progress element (draw stroke / rect)
 let anDrag=null;           // {sx,sy} move drag state
 let anResize=null;         // {el,handle,fx,fy,w0,h0,size0,pts0} resize state
 const anUID=()=>'an'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const AN_FONT_DEFAULT="'Noto Sans TC','Microsoft JhengHei','微軟正黑體',sans-serif";
+const anFont=()=>document.getElementById('annFont').value||AN_FONT_DEFAULT;
 
 const annDZ=document.getElementById('annDZ'),annFI=document.getElementById('annFI');
 const annPageCanvas=document.getElementById('annPageCanvas'),annOverlay=document.getElementById('annOverlay');
@@ -2927,8 +2937,33 @@ annDZ.ondragover=e=>{e.preventDefault();annDZ.classList.add('dragover');};
 annDZ.ondragleave=()=>annDZ.classList.remove('dragover');
 annDZ.ondrop=e=>{e.preventDefault();annDZ.classList.remove('dragover');const f=[...e.dataTransfer.files].find(x=>x.name.toLowerCase().endsWith('.pdf'));if(f)anLoad(f);};
 
-document.getElementById('annTextSize').oninput=e=>document.getElementById('annTextSizeV').textContent=e.target.value;
-document.getElementById('annStroke').oninput=e=>document.getElementById('annStrokeV').textContent=e.target.value;
+// Style controls double as: (a) defaults for new elements, (b) live-edit the selected/editing element
+function anEditSelected(prop,value){
+  const el=anSel||annTextEl;
+  if(!el)return;
+  if(prop==='color'&&('color'in el))el.color=value;
+  else if(prop==='size'&&el.type==='text')el.size=value;
+  else if(prop==='font'&&el.type==='text')el.font=value;
+  else if(prop==='width'&&(el.type==='rect'||el.type==='draw'))el.width=value;
+  else return;
+  // reflect live onto the open text editor if it's this element
+  if(annTextEl===el){const ta=document.getElementById('annTextEdit');if(ta){const cw=annOverlay.width,pxPerPt=cw/(anS.pageWpt||cw);ta.style.color=el.color;ta.style.fontFamily=el.font||AN_FONT_DEFAULT;ta.style.fontSize=(el.size*pxPerPt)+'px';}}
+  anRedraw();
+}
+function anSyncControls(el){
+  if(!el)return;
+  if('color'in el)document.getElementById('annColor').value=el.color;
+  if(el.type==='text'){
+    const sz=Math.min(120,Math.max(8,Math.round(el.size)));
+    document.getElementById('annTextSize').value=sz;document.getElementById('annTextSizeV').textContent=sz;
+    if(el.font)document.getElementById('annFont').value=el.font;
+  }
+  if(el.type==='rect'||el.type==='draw'){document.getElementById('annStroke').value=el.width;document.getElementById('annStrokeV').textContent=el.width;}
+}
+document.getElementById('annColor').oninput=e=>anEditSelected('color',e.target.value);
+document.getElementById('annFont').onchange=e=>anEditSelected('font',e.target.value);
+document.getElementById('annTextSize').oninput=e=>{document.getElementById('annTextSizeV').textContent=e.target.value;anEditSelected('size',+e.target.value);};
+document.getElementById('annStroke').oninput=e=>{document.getElementById('annStrokeV').textContent=e.target.value;anEditSelected('width',+e.target.value);};
 
 function anSetTool(t){
   anS.tool=t;anSel=null;anHideTextEdit();
@@ -2998,7 +3033,7 @@ function anRenderLayer(ctx,cw,ch,pxPerPt,anns,imgs){
   for(const el of anns){
     if(el.type==='text'){
       const px=el.size*pxPerPt;
-      ctx.font=`${px}px 'Noto Sans TC','Microsoft JhengHei',sans-serif`;
+      ctx.font=`${px}px ${el.font||AN_FONT_DEFAULT}`;
       ctx.fillStyle=el.color;ctx.textBaseline='top';ctx.textAlign='left';
       const lines=(el.text||'').split('\n');const lh=px*1.25;
       lines.forEach((ln,k)=>ctx.fillText(ln,el.x*cw,el.y*ch+k*lh));
@@ -3039,7 +3074,7 @@ function anRedraw(){
 function anBBox(el,cw,ch,ctx,pxPerPt){
   if(el.type==='image'||el.type==='rect')return {x:el.x*cw,y:el.y*ch,w:el.w*cw,h:el.h*ch};
   if(el.type==='text'){
-    const px=el.size*pxPerPt;ctx.font=`${px}px 'Noto Sans TC','Microsoft JhengHei',sans-serif`;
+    const px=el.size*pxPerPt;ctx.font=`${px}px ${el.font||AN_FONT_DEFAULT}`;
     const lines=(el.text||' ').split('\n');let mw=0;lines.forEach(l=>mw=Math.max(mw,ctx.measureText(l||' ').width));
     return {x:el.x*cw,y:el.y*ch,w:mw,h:lines.length*px*1.25};
   }
@@ -3055,7 +3090,7 @@ function anContentBBoxN(el){
   const cw=annOverlay.width,ch=annOverlay.height,ctx=annOverlay.getContext('2d'),pxPerPt=cw/(anS.pageWpt||cw);
   if(el.type==='image'||el.type==='rect')return {x:el.x,y:el.y,w:el.w,h:el.h};
   if(el.type==='text'){
-    const px=el.size*pxPerPt;ctx.font=`${px}px 'Noto Sans TC','Microsoft JhengHei',sans-serif`;
+    const px=el.size*pxPerPt;ctx.font=`${px}px ${el.font||AN_FONT_DEFAULT}`;
     const lines=(el.text||' ').split('\n');let mw=0;lines.forEach(l=>mw=Math.max(mw,ctx.measureText(l||' ').width));
     return {x:el.x,y:el.y,w:Math.max(mw/cw,0.02),h:Math.max(lines.length*px*1.25/ch,0.02)};
   }
@@ -3100,7 +3135,7 @@ function anHit(nx,ny){
 }
 
 annOverlay.addEventListener('pointerdown',e=>{
-  if(anS.tool==='text'){const {x,y}=anXY(e);const el={id:anUID(),type:'text',x,y,text:'',size:+document.getElementById('annTextSize').value,color:document.getElementById('annColor').value};anCurArr().push(el);anSel=el;anShowTextEdit(el,true);return;}
+  if(anS.tool==='text'){const {x,y}=anXY(e);const el={id:anUID(),type:'text',x,y,text:'',size:+document.getElementById('annTextSize').value,color:document.getElementById('annColor').value,font:anFont()};anCurArr().push(el);anSel=el;anShowTextEdit(el,true);return;}
   const {x,y}=anXY(e);
   if(anS.tool==='select'){
     // grab a resize handle on the currently-selected element first
@@ -3111,7 +3146,7 @@ annOverlay.addEventListener('pointerdown',e=>{
       annOverlay.setPointerCapture(e.pointerId);return;
     }
     const hit=anHit(x,y);anSel=hit;
-    if(hit){anDrag={sx:x,sy:y};annOverlay.setPointerCapture(e.pointerId);}
+    if(hit){anDrag={sx:x,sy:y};annOverlay.setPointerCapture(e.pointerId);anSyncControls(hit);}
     anRedraw();
     if(hit&&hit.type==='text'&&e.detail>=2)anShowTextEdit(hit,false);
     return;
@@ -3151,12 +3186,12 @@ function anShowTextEdit(el,isNew){
   const ta=document.createElement('textarea');ta.className='ann-textedit';ta.id='annTextEdit';
   const cw=annOverlay.width,pxPerPt=cw/(anS.pageWpt||cw),px=el.size*pxPerPt;
   ta.style.left=(el.x*annOverlay.width)+'px';ta.style.top=(el.y*annOverlay.height)+'px';
-  ta.style.fontSize=px+'px';ta.style.color=el.color;ta.style.minWidth='40px';ta.style.minHeight=(px*1.3)+'px';
+  ta.style.fontSize=px+'px';ta.style.color=el.color;ta.style.fontFamily=el.font||AN_FONT_DEFAULT;ta.style.minWidth='40px';ta.style.minHeight=(px*1.3)+'px';
   ta.value=el.text||'';ta.rows=1;
   ta.oninput=()=>{el.text=ta.value;};
   ta.onblur=()=>anCommitText();
   ta.onkeydown=ev=>{if(ev.key==='Escape'){ev.preventDefault();annCommitToSelect=true;ta.blur();}else if(ev.key==='Enter'&&(ev.ctrlKey||ev.metaKey)){ev.preventDefault();annCommitToSelect=true;ta.blur();}};
-  annHost.appendChild(ta);setTimeout(()=>{ta.focus();ta.select();},0);
+  annHost.appendChild(ta);anSyncControls(el);setTimeout(()=>{ta.focus();ta.select();},0);
 }
 function anCommitText(){
   if(!annTextEl)return;const el=annTextEl;annTextEl=null;
@@ -3171,7 +3206,7 @@ function anCommitText(){
       anS.tool='select';
       document.querySelectorAll('#panel-pdfann .ann-tool[data-tool]').forEach(b=>b.classList.toggle('active',b.dataset.tool==='select'));
       annOverlay.className='tool-select';
-      anSel=el;anRedraw();
+      anSel=el;anSyncControls(el);anRedraw();
     },0);
   }else{anSel=null;anRedraw();}
   anStats();
