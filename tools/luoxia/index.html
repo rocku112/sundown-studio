@@ -2901,7 +2901,7 @@ document.getElementById('wmExport').onclick=async()=>{
           • <strong style="color:var(--text);">簽名</strong>：按住拖曳手寫<br>
           • <strong style="color:var(--text);">圖章</strong>：選圖片後自動放中央<br>
           • <strong style="color:var(--text);">矩形</strong>：拖曳畫框<br>
-          • <strong style="color:var(--text);">改字</strong>：點原文字→自動蓋白底並帶出原文供修改（新字用選定字體；彩色/圖片底會有補丁、不自動重排，可再微調）<br>
+          • <strong style="color:var(--text);">改字</strong>：點原文字→自動蓋白底、帶出原文、<strong style="color:var(--text);">自動比對原字體</strong>（黑/明/楷/等寬＋粗斜體）供修改（彩色/圖片底會有補丁、不自動重排，可再微調）<br>
           • <strong style="color:var(--text);">選取</strong>：點選後拖曳移動；拖<strong style="color:var(--text);">四角控點</strong>可縮放（文字改字級、圖片鎖比例）；Delete 刪除<br>
           • 全程本機處理，不上傳
         </div>
@@ -2927,8 +2927,24 @@ let anDrag=null;           // {sx,sy} move drag state
 let anResize=null;         // {el,handle,fx,fy,w0,h0,size0,pts0} resize state
 let anTextItems=[];        // current page's extracted text runs (for 改字), normalized coords
 const anUID=()=>'an'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const AN_FONT_DEFAULT="'Noto Sans TC','Microsoft JhengHei','微軟正黑體',sans-serif";
+const AN_FONTS={
+  hei:"'Noto Sans TC','Microsoft JhengHei','微軟正黑體',sans-serif",
+  ming:"'Noto Serif TC','新細明體','PMingLiU',serif",
+  kai:"'標楷體','DFKai-SB','KaiTi',serif",
+  mono:"'DM Mono','Consolas',monospace"
+};
+const AN_FONT_DEFAULT=AN_FONTS.hei;
 const anFont=()=>document.getElementById('annFont').value||AN_FONT_DEFAULT;
+// Map a detected PDF font (base name + pdf.js category) to the closest available stack
+function anDetectFont(name,category){
+  const n=(name||'').replace(/^[A-Z]{6}\+/,'').toLowerCase();   // strip subset prefix ABCDEF+
+  if(/kai|楷/.test(n))return AN_FONTS.kai;
+  if(/courier|mono|consol|等寬|等宽|gothic\s*mono/.test(n)||category==='monospace')return AN_FONTS.mono;
+  if(/ming|mincho|song|sung|times|georgia|roman|serif|宋|明體|明体|細明|新細明/.test(n)||category==='serif')return AN_FONTS.ming;
+  return AN_FONTS.hei;   // default sans / 黑體
+}
+// Build a canvas/CSS font shorthand honouring bold+italic
+function anFontStr(el,px){return `${el.italic?'italic ':''}${el.bold?'700':'400'} ${px}px ${el.font||AN_FONT_DEFAULT}`;}
 
 const annDZ=document.getElementById('annDZ'),annFI=document.getElementById('annFI');
 const annPageCanvas=document.getElementById('annPageCanvas'),annOverlay=document.getElementById('annOverlay');
@@ -3038,7 +3054,7 @@ function anRenderLayer(ctx,cw,ch,pxPerPt,anns,imgs){
   for(const el of anns){
     if(el.type==='text'){
       const px=el.size*pxPerPt;
-      ctx.font=`${px}px ${el.font||AN_FONT_DEFAULT}`;
+      ctx.font=anFontStr(el,px);
       ctx.fillStyle=el.color;ctx.textBaseline='top';ctx.textAlign='left';
       const lines=(el.text||'').split('\n');const lh=px*1.25;
       lines.forEach((ln,k)=>ctx.fillText(ln,el.x*cw,el.y*ch+k*lh));
@@ -3064,6 +3080,8 @@ async function anExtractText(pg,v1){
   anTextItems=[];
   try{
     const tc=await pg.getTextContent();
+    // Load fonts so we can read real names + bold/italic (best-effort; category still works if it fails)
+    try{await pg.getOperatorList();}catch(e){}
     const vpW=v1.width,vpH=v1.height;
     for(const it of tc.items){
       if(!it.str||!it.str.trim())continue;
@@ -3071,8 +3089,11 @@ async function anExtractText(pg,v1){
       const fontH=Math.hypot(m[2],m[3])||it.height||12;
       const baseX=m[4],baseY=m[5];         // baseline-left in viewport coords (top-left origin)
       const w=it.width||fontH;
+      const cat=(tc.styles[it.fontName]&&tc.styles[it.fontName].fontFamily)||'';
+      let fname='',bold=false,italic=false;
+      try{const fo=pg.commonObjs.get(it.fontName);if(fo){fname=fo.name||'';bold=!!fo.bold;italic=!!fo.italic;}}catch(e){}
       anTextItems.push({
-        str:it.str, size:fontH,
+        str:it.str, size:fontH, font:anDetectFont(fname,cat), bold, italic,
         nx:baseX/vpW, ny:(baseY-0.8*fontH)/vpH, nw:w/vpW, nh:fontH/vpH,
         cx:(baseX-fontH*0.05)/vpW, cy:(baseY-0.9*fontH)/vpH, cw:(w+fontH*0.1)/vpW, ch:(fontH*1.15)/vpH
       });
@@ -3115,7 +3136,7 @@ function anRedraw(){
 function anBBox(el,cw,ch,ctx,pxPerPt){
   if(el.type==='image'||el.type==='rect'||el.type==='cover')return {x:el.x*cw,y:el.y*ch,w:el.w*cw,h:el.h*ch};
   if(el.type==='text'){
-    const px=el.size*pxPerPt;ctx.font=`${px}px ${el.font||AN_FONT_DEFAULT}`;
+    const px=el.size*pxPerPt;ctx.font=anFontStr(el,px);
     const lines=(el.text||' ').split('\n');let mw=0;lines.forEach(l=>mw=Math.max(mw,ctx.measureText(l||' ').width));
     return {x:el.x*cw,y:el.y*ch,w:mw,h:lines.length*px*1.25};
   }
@@ -3131,7 +3152,7 @@ function anContentBBoxN(el){
   const cw=annOverlay.width,ch=annOverlay.height,ctx=annOverlay.getContext('2d'),pxPerPt=cw/(anS.pageWpt||cw);
   if(el.type==='image'||el.type==='rect'||el.type==='cover')return {x:el.x,y:el.y,w:el.w,h:el.h};
   if(el.type==='text'){
-    const px=el.size*pxPerPt;ctx.font=`${px}px ${el.font||AN_FONT_DEFAULT}`;
+    const px=el.size*pxPerPt;ctx.font=anFontStr(el,px);
     const lines=(el.text||' ').split('\n');let mw=0;lines.forEach(l=>mw=Math.max(mw,ctx.measureText(l||' ').width));
     return {x:el.x,y:el.y,w:Math.max(mw/cw,0.02),h:Math.max(lines.length*px*1.25/ch,0.02)};
   }
@@ -3183,7 +3204,7 @@ annOverlay.addEventListener('pointerdown',e=>{
     if(!it){toast('這裡沒有偵測到可改的文字（掃描 PDF 無文字層）',true);return;}
     const fill=anSampleBg(it.cx-0.006,it.cy+it.ch*0.5);   // sample just left of the run
     const cover={id:anUID(),type:'cover',x:it.cx,y:it.cy,w:it.cw,h:it.ch,fill};
-    const txt={id:anUID(),type:'text',x:it.nx,y:it.ny,text:it.str,size:Math.max(6,it.size),color:'#111111',font:anFont()};
+    const txt={id:anUID(),type:'text',x:it.nx,y:it.ny,text:it.str,size:Math.max(6,it.size),color:'#111111',font:it.font||anFont(),bold:!!it.bold,italic:!!it.italic};
     anCurArr().push(cover);anCurArr().push(txt);
     anSel=txt;anSyncControls(txt);anShowTextEdit(txt,true);
     return;
@@ -3238,7 +3259,7 @@ function anShowTextEdit(el,isNew){
   const ta=document.createElement('textarea');ta.className='ann-textedit';ta.id='annTextEdit';
   const cw=annOverlay.width,pxPerPt=cw/(anS.pageWpt||cw),px=el.size*pxPerPt;
   ta.style.left=(el.x*annOverlay.width)+'px';ta.style.top=(el.y*annOverlay.height)+'px';
-  ta.style.fontSize=px+'px';ta.style.color=el.color;ta.style.fontFamily=el.font||AN_FONT_DEFAULT;ta.style.minWidth='40px';ta.style.minHeight=(px*1.3)+'px';
+  ta.style.fontSize=px+'px';ta.style.color=el.color;ta.style.fontFamily=el.font||AN_FONT_DEFAULT;ta.style.fontWeight=el.bold?'700':'400';ta.style.fontStyle=el.italic?'italic':'normal';ta.style.minWidth='40px';ta.style.minHeight=(px*1.3)+'px';
   ta.value=el.text||'';ta.rows=1;
   ta.oninput=()=>{el.text=ta.value;};
   ta.onblur=()=>anCommitText();
