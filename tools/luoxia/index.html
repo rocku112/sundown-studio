@@ -2847,6 +2847,7 @@ document.getElementById('wmExport').onclick=async()=>{
         <button class="ann-tool" data-tool="draw" onclick="anSetTool('draw')"><i data-lucide="pen-line"></i> 簽名</button>
         <button class="ann-tool" data-tool="image" onclick="document.getElementById('annImgFI').click()"><i data-lucide="image"></i> 圖章</button>
         <button class="ann-tool" data-tool="rect" onclick="anSetTool('rect')"><i data-lucide="square"></i> 矩形</button>
+        <button class="ann-tool" data-tool="edittext" onclick="anSetTool('edittext')"><i data-lucide="replace"></i> 改字</button>
         <input type="file" id="annImgFI" accept="image/*" style="display:none;">
         <div class="ann-sep"></div>
         <button class="ann-tool" onclick="anUndo()"><i data-lucide="undo-2"></i> 復原</button>
@@ -2900,6 +2901,7 @@ document.getElementById('wmExport').onclick=async()=>{
           • <strong style="color:var(--text);">簽名</strong>：按住拖曳手寫<br>
           • <strong style="color:var(--text);">圖章</strong>：選圖片後自動放中央<br>
           • <strong style="color:var(--text);">矩形</strong>：拖曳畫框<br>
+          • <strong style="color:var(--text);">改字</strong>：點原文字→自動蓋白底並帶出原文供修改（新字用選定字體；彩色/圖片底會有補丁、不自動重排，可再微調）<br>
           • <strong style="color:var(--text);">選取</strong>：點選後拖曳移動；拖<strong style="color:var(--text);">四角控點</strong>可縮放（文字改字級、圖片鎖比例）；Delete 刪除<br>
           • 全程本機處理，不上傳
         </div>
@@ -2923,6 +2925,7 @@ let anSel=null;            // selected element
 let anDraft=null;          // in-progress element (draw stroke / rect)
 let anDrag=null;           // {sx,sy} move drag state
 let anResize=null;         // {el,handle,fx,fy,w0,h0,size0,pts0} resize state
+let anTextItems=[];        // current page's extracted text runs (for 改字), normalized coords
 const anUID=()=>'an'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const AN_FONT_DEFAULT="'Noto Sans TC','Microsoft JhengHei','微軟正黑體',sans-serif";
 const anFont=()=>document.getElementById('annFont').value||AN_FONT_DEFAULT;
@@ -3018,6 +3021,8 @@ async function anGoPage(idx){
   const W=Math.round(vp.width),H=Math.round(vp.height);
   annPageCanvas.width=W;annPageCanvas.height=H;annOverlay.width=W;annOverlay.height=H;
   annHost.style.width=W+'px';annHost.style.height=H+'px';
+  anS.pageWpt=v1.width;anS.pageHpt=v1.height;
+  await anExtractText(pg,v1);   // detect existing text runs for 改字 (before render so ready early)
   await pg.render({canvasContext:annPageCanvas.getContext('2d'),viewport:vp}).promise;
   anS.scale=S;anS.pageWpt=v1.width;anS.pageHpt=v1.height;
   document.getElementById('annPgLabel').textContent=`${idx+1} / ${anS.pc}`;
@@ -3048,8 +3053,44 @@ function anRenderLayer(ctx,cw,ch,pxPerPt,anns,imgs){
       const im=(imgs||anImgs)[el.imgId];if(im)ctx.drawImage(im,el.x*cw,el.y*ch,el.w*cw,el.h*ch);
     }else if(el.type==='rect'){
       ctx.strokeStyle=el.color;ctx.lineWidth=Math.max(1,el.width*pxPerPt);ctx.strokeRect(el.x*cw,el.y*ch,el.w*cw,el.h*ch);
+    }else if(el.type==='cover'){
+      ctx.fillStyle=el.fill||'#ffffff';ctx.fillRect(el.x*cw,el.y*ch,el.w*cw,el.h*ch);
     }
   }
+}
+
+// ── 改字：extract existing text runs (normalized, top-left origin) ──
+async function anExtractText(pg,v1){
+  anTextItems=[];
+  try{
+    const tc=await pg.getTextContent();
+    const vpW=v1.width,vpH=v1.height;
+    for(const it of tc.items){
+      if(!it.str||!it.str.trim())continue;
+      const m=pdfjsLib.Util.transform(v1.transform,it.transform);
+      const fontH=Math.hypot(m[2],m[3])||it.height||12;
+      const baseX=m[4],baseY=m[5];         // baseline-left in viewport coords (top-left origin)
+      const w=it.width||fontH;
+      anTextItems.push({
+        str:it.str, size:fontH,
+        nx:baseX/vpW, ny:(baseY-0.8*fontH)/vpH, nw:w/vpW, nh:fontH/vpH,
+        cx:(baseX-fontH*0.05)/vpW, cy:(baseY-0.9*fontH)/vpH, cw:(w+fontH*0.1)/vpW, ch:(fontH*1.15)/vpH
+      });
+    }
+  }catch(e){anTextItems=[];}
+}
+function anHitTextItem(nx,ny){
+  for(let i=anTextItems.length-1;i>=0;i--){const t=anTextItems[i];if(nx>=t.cx-0.004&&nx<=t.cx+t.cw+0.004&&ny>=t.cy-0.004&&ny<=t.cy+t.ch+0.004)return t;}
+  return null;
+}
+function anSampleBg(nx,ny){
+  try{
+    const cw=annPageCanvas.width,ch=annPageCanvas.height;
+    const px=Math.max(0,Math.min(cw-1,Math.round(nx*cw))),py=Math.max(0,Math.min(ch-1,Math.round(ny*ch)));
+    const d=annPageCanvas.getContext('2d').getImageData(px,py,1,1).data;
+    if(d[3]===0)return '#ffffff';   // blank/transparent → assume white paper
+    return '#'+[d[0],d[1],d[2]].map(v=>v.toString(16).padStart(2,'0')).join('');
+  }catch(e){return '#ffffff';}
 }
 
 function anRedraw(){
@@ -3072,7 +3113,7 @@ function anRedraw(){
 }
 
 function anBBox(el,cw,ch,ctx,pxPerPt){
-  if(el.type==='image'||el.type==='rect')return {x:el.x*cw,y:el.y*ch,w:el.w*cw,h:el.h*ch};
+  if(el.type==='image'||el.type==='rect'||el.type==='cover')return {x:el.x*cw,y:el.y*ch,w:el.w*cw,h:el.h*ch};
   if(el.type==='text'){
     const px=el.size*pxPerPt;ctx.font=`${px}px ${el.font||AN_FONT_DEFAULT}`;
     const lines=(el.text||' ').split('\n');let mw=0;lines.forEach(l=>mw=Math.max(mw,ctx.measureText(l||' ').width));
@@ -3088,7 +3129,7 @@ function anBBox(el,cw,ch,ctx,pxPerPt){
 // ── Resize handles (normalized content bbox + corners) ──
 function anContentBBoxN(el){
   const cw=annOverlay.width,ch=annOverlay.height,ctx=annOverlay.getContext('2d'),pxPerPt=cw/(anS.pageWpt||cw);
-  if(el.type==='image'||el.type==='rect')return {x:el.x,y:el.y,w:el.w,h:el.h};
+  if(el.type==='image'||el.type==='rect'||el.type==='cover')return {x:el.x,y:el.y,w:el.w,h:el.h};
   if(el.type==='text'){
     const px=el.size*pxPerPt;ctx.font=`${px}px ${el.font||AN_FONT_DEFAULT}`;
     const lines=(el.text||' ').split('\n');let mw=0;lines.forEach(l=>mw=Math.max(mw,ctx.measureText(l||' ').width));
@@ -3112,7 +3153,7 @@ function anPlaceFromFixed(handle,fx,fy,nw,nh){
 }
 function anApplyResize(R,x,y){
   const el=R.el;
-  if(el.type==='rect'){
+  if(el.type==='rect'||el.type==='cover'){
     el.x=Math.min(x,R.fx);el.y=Math.min(y,R.fy);el.w=Math.max(0.01,Math.abs(x-R.fx));el.h=Math.max(0.01,Math.abs(y-R.fy));return;
   }
   const sx=R.w0>1e-6?Math.abs(x-R.fx)/R.w0:1, sy=R.h0>1e-6?Math.abs(y-R.fy)/R.h0:1;
@@ -3136,6 +3177,17 @@ function anHit(nx,ny){
 
 annOverlay.addEventListener('pointerdown',e=>{
   if(anS.tool==='text'){const {x,y}=anXY(e);const el={id:anUID(),type:'text',x,y,text:'',size:+document.getElementById('annTextSize').value,color:document.getElementById('annColor').value,font:anFont()};anCurArr().push(el);anSel=el;anShowTextEdit(el,true);return;}
+  if(anS.tool==='edittext'){
+    const {x,y}=anXY(e);
+    const it=anHitTextItem(x,y);
+    if(!it){toast('這裡沒有偵測到可改的文字（掃描 PDF 無文字層）',true);return;}
+    const fill=anSampleBg(it.cx-0.006,it.cy+it.ch*0.5);   // sample just left of the run
+    const cover={id:anUID(),type:'cover',x:it.cx,y:it.cy,w:it.cw,h:it.ch,fill};
+    const txt={id:anUID(),type:'text',x:it.nx,y:it.ny,text:it.str,size:Math.max(6,it.size),color:'#111111',font:anFont()};
+    anCurArr().push(cover);anCurArr().push(txt);
+    anSel=txt;anSyncControls(txt);anShowTextEdit(txt,true);
+    return;
+  }
   const {x,y}=anXY(e);
   if(anS.tool==='select'){
     // grab a resize handle on the currently-selected element first
@@ -3232,7 +3284,7 @@ function anStats(){
 
 function anClearAll(){
   anHideTextEdit();
-  anS.file=null;anS.doc=null;anS.pc=0;anS.cur=0;anPages=[];anImgs={};anSel=null;anDraft=null;anDrag=null;
+  anS.file=null;anS.doc=null;anS.pc=0;anS.cur=0;anPages=[];anImgs={};anSel=null;anDraft=null;anDrag=null;anResize=null;anTextItems=[];
   document.getElementById('annInfo').style.display='none';
   document.getElementById('annStage').style.display='none';
   document.getElementById('annDZ').style.display='block';
