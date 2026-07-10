@@ -2888,11 +2888,11 @@ document.getElementById('wmExport').onclick=async()=>{
       <h3>操作說明</h3>
       <div style="background:var(--cream);border:1px solid var(--border2);border-radius:var(--rs);padding:11px 13px;">
         <div style="font-size:11px;line-height:1.95;color:var(--text3);font-family:'Noto Sans TC',sans-serif;">
-          • <strong style="color:var(--text);">文字</strong>：點一下放置，直接打字（可多行）<br>
+          • <strong style="color:var(--text);">文字</strong>：點一下放置，直接打字（可多行）；<strong style="color:var(--text);">Esc / Ctrl+Enter</strong> 完成並自動選取<br>
           • <strong style="color:var(--text);">簽名</strong>：按住拖曳手寫<br>
           • <strong style="color:var(--text);">圖章</strong>：選圖片後自動放中央<br>
           • <strong style="color:var(--text);">矩形</strong>：拖曳畫框<br>
-          • <strong style="color:var(--text);">選取</strong>：點選後拖曳移動、可刪除<br>
+          • <strong style="color:var(--text);">選取</strong>：點選後拖曳移動；拖<strong style="color:var(--text);">四角控點</strong>可縮放（文字改字級、圖片鎖比例）；Delete 刪除<br>
           • 全程本機處理，不上傳
         </div>
       </div>
@@ -2914,6 +2914,7 @@ let anImgs={};             // imgId -> HTMLImageElement
 let anSel=null;            // selected element
 let anDraft=null;          // in-progress element (draw stroke / rect)
 let anDrag=null;           // {sx,sy} move drag state
+let anResize=null;         // {el,handle,fx,fy,w0,h0,size0,pts0} resize state
 const anUID=()=>'an'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 
 const annDZ=document.getElementById('annDZ'),annFI=document.getElementById('annFI');
@@ -3024,7 +3025,14 @@ function anRedraw(){
   if(anDraft)anRenderLayer(ctx,cw,ch,pxPerPt,[anDraft],anImgs);
   if(anSel){
     const b=anBBox(anSel,cw,ch,ctx,pxPerPt);
-    if(b){ctx.save();ctx.strokeStyle='#C9960A';ctx.lineWidth=1.5;ctx.setLineDash([5,4]);ctx.strokeRect(b.x-4,b.y-4,b.w+8,b.h+8);ctx.restore();}
+    if(b){
+      ctx.save();ctx.strokeStyle='#C9960A';ctx.lineWidth=1.5;ctx.setLineDash([5,4]);ctx.strokeRect(b.x-4,b.y-4,b.w+8,b.h+8);ctx.restore();
+      // resize handles at the four content corners
+      const c=anCorners(anSel);
+      ctx.save();ctx.setLineDash([]);ctx.fillStyle='#C9960A';ctx.strokeStyle='#fff';ctx.lineWidth=1.5;
+      ['nw','ne','sw','se'].forEach(k=>{const hx=c[k].x*cw,hy=c[k].y*ch;ctx.beginPath();ctx.rect(hx-5,hy-5,10,10);ctx.fill();ctx.stroke();});
+      ctx.restore();
+    }
   }
 }
 
@@ -3042,6 +3050,46 @@ function anBBox(el,cw,ch,ctx,pxPerPt){
   return null;
 }
 
+// ── Resize handles (normalized content bbox + corners) ──
+function anContentBBoxN(el){
+  const cw=annOverlay.width,ch=annOverlay.height,ctx=annOverlay.getContext('2d'),pxPerPt=cw/(anS.pageWpt||cw);
+  if(el.type==='image'||el.type==='rect')return {x:el.x,y:el.y,w:el.w,h:el.h};
+  if(el.type==='text'){
+    const px=el.size*pxPerPt;ctx.font=`${px}px 'Noto Sans TC','Microsoft JhengHei',sans-serif`;
+    const lines=(el.text||' ').split('\n');let mw=0;lines.forEach(l=>mw=Math.max(mw,ctx.measureText(l||' ').width));
+    return {x:el.x,y:el.y,w:Math.max(mw/cw,0.02),h:Math.max(lines.length*px*1.25/ch,0.02)};
+  }
+  if(el.type==='draw'){let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;el.pts.forEach(p=>{x0=Math.min(x0,p.x);y0=Math.min(y0,p.y);x1=Math.max(x1,p.x);y1=Math.max(y1,p.y);});return {x:x0,y:y0,w:Math.max(x1-x0,0.005),h:Math.max(y1-y0,0.005)};}
+  return {x:0,y:0,w:0,h:0};
+}
+function anCorners(el){const b=anContentBBoxN(el);return {nw:{x:b.x,y:b.y},ne:{x:b.x+b.w,y:b.y},sw:{x:b.x,y:b.y+b.h},se:{x:b.x+b.w,y:b.y+b.h},box:b};}
+function anHandleHit(nx,ny){
+  if(!anSel)return null;
+  const cw=annOverlay.width,ch=annOverlay.height,c=anCorners(anSel),tol=12;
+  for(const k of ['nw','ne','sw','se'])if(Math.abs(nx*cw-c[k].x*cw)<=tol&&Math.abs(ny*ch-c[k].y*ch)<=tol)return k;
+  return null;
+}
+function anPlaceFromFixed(handle,fx,fy,nw,nh){
+  if(handle==='se')return {x:fx,y:fy};
+  if(handle==='ne')return {x:fx,y:fy-nh};
+  if(handle==='nw')return {x:fx-nw,y:fy-nh};
+  return {x:fx-nw,y:fy}; // sw
+}
+function anApplyResize(R,x,y){
+  const el=R.el;
+  if(el.type==='rect'){
+    el.x=Math.min(x,R.fx);el.y=Math.min(y,R.fy);el.w=Math.max(0.01,Math.abs(x-R.fx));el.h=Math.max(0.01,Math.abs(y-R.fy));return;
+  }
+  const sx=R.w0>1e-6?Math.abs(x-R.fx)/R.w0:1, sy=R.h0>1e-6?Math.abs(y-R.fy)/R.h0:1;
+  const s=Math.max(0.05,Math.max(sx,sy));   // uniform scale keeps aspect
+  if(el.type==='draw'){el.pts=R.pts0.map(p=>({x:R.fx+(p.x-R.fx)*s,y:R.fy+(p.y-R.fy)*s}));return;}
+  const nw=Math.max(0.02,R.w0*s),nh=Math.max(0.02,R.h0*s);
+  const pos=anPlaceFromFixed(R.handle,R.fx,R.fy,nw,nh);
+  el.x=pos.x;el.y=pos.y;
+  if(el.type==='image'){el.w=nw;el.h=nh;}
+  else if(el.type==='text'){el.size=Math.min(400,Math.max(6,R.size0*s));}
+}
+
 // ── Pointer interaction ──
 function anXY(e){const r=annOverlay.getBoundingClientRect();return {x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height};}
 function anHit(nx,ny){
@@ -3055,8 +3103,15 @@ annOverlay.addEventListener('pointerdown',e=>{
   if(anS.tool==='text'){const {x,y}=anXY(e);const el={id:anUID(),type:'text',x,y,text:'',size:+document.getElementById('annTextSize').value,color:document.getElementById('annColor').value};anCurArr().push(el);anSel=el;anShowTextEdit(el,true);return;}
   const {x,y}=anXY(e);
   if(anS.tool==='select'){
+    // grab a resize handle on the currently-selected element first
+    const hz=anHandleHit(x,y);
+    if(anSel&&hz){
+      const c=anCorners(anSel),fixed={nw:c.se,ne:c.sw,sw:c.ne,se:c.nw}[hz];
+      anResize={el:anSel,handle:hz,fx:fixed.x,fy:fixed.y,w0:c.box.w,h0:c.box.h,size0:anSel.size,pts0:anSel.pts?anSel.pts.map(p=>({x:p.x,y:p.y})):null};
+      annOverlay.setPointerCapture(e.pointerId);return;
+    }
     const hit=anHit(x,y);anSel=hit;
-    if(hit)anDrag={sx:x,sy:y};
+    if(hit){anDrag={sx:x,sy:y};annOverlay.setPointerCapture(e.pointerId);}
     anRedraw();
     if(hit&&hit.type==='text'&&e.detail>=2)anShowTextEdit(hit,false);
     return;
@@ -3066,11 +3121,13 @@ annOverlay.addEventListener('pointerdown',e=>{
 });
 annOverlay.addEventListener('pointermove',e=>{
   const {x,y}=anXY(e);
+  if(anResize){anApplyResize(anResize,x,y);anRedraw();return;}
   if(anDrag&&anSel){const dx=x-anDrag.sx,dy=y-anDrag.sy;anMoveEl(anSel,dx,dy);anDrag.sx=x;anDrag.sy=y;anRedraw();return;}
   if(anDraft&&anS.tool==='draw'){anDraft.pts.push({x,y});anRedraw();return;}
   if(anDraft&&anS.tool==='rect'){anDraft.x=Math.min(x,anDraft._ox);anDraft.y=Math.min(y,anDraft._oy);anDraft.w=Math.abs(x-anDraft._ox);anDraft.h=Math.abs(y-anDraft._oy);anRedraw();return;}
 });
 function anEndPointer(e){
+  if(anResize){anResize=null;anStats();return;}
   if(anDrag){anDrag=null;return;}
   if(anDraft){
     if(anS.tool==='rect'&&(anDraft.w<0.005||anDraft.h<0.005)){anDraft=null;anRedraw();return;}
@@ -3088,7 +3145,7 @@ function anMoveEl(el,dx,dy){
 }
 
 // ── Inline text editor ──
-let annTextEl=null,annTextIsNew=false;
+let annTextEl=null,annTextIsNew=false,annCommitToSelect=false;
 function anShowTextEdit(el,isNew){
   anHideTextEdit();annTextEl=el;annTextIsNew=isNew;
   const ta=document.createElement('textarea');ta.className='ann-textedit';ta.id='annTextEdit';
@@ -3098,14 +3155,26 @@ function anShowTextEdit(el,isNew){
   ta.value=el.text||'';ta.rows=1;
   ta.oninput=()=>{el.text=ta.value;};
   ta.onblur=()=>anCommitText();
-  ta.onkeydown=ev=>{if(ev.key==='Escape'){ev.preventDefault();ta.blur();}else if(ev.key==='Enter'&&(ev.ctrlKey||ev.metaKey)){ev.preventDefault();ta.blur();}};
+  ta.onkeydown=ev=>{if(ev.key==='Escape'){ev.preventDefault();annCommitToSelect=true;ta.blur();}else if(ev.key==='Enter'&&(ev.ctrlKey||ev.metaKey)){ev.preventDefault();annCommitToSelect=true;ta.blur();}};
   annHost.appendChild(ta);setTimeout(()=>{ta.focus();ta.select();},0);
 }
 function anCommitText(){
   if(!annTextEl)return;const el=annTextEl;annTextEl=null;
   const ta=document.getElementById('annTextEdit');if(ta){el.text=ta.value;ta.remove();}
-  if(!el.text||!el.text.trim()){const arr=anCurArr();const k=arr.indexOf(el);if(k>=0)arr.splice(k,1);}
-  anSel=null;anRedraw();anStats();
+  const arr=anCurArr();
+  const toSelect=annCommitToSelect;annCommitToSelect=false;
+  if(!el.text||!el.text.trim()){const k=arr.indexOf(el);if(k>=0)arr.splice(k,1);anSel=null;anRedraw();anStats();return;}
+  // On explicit finish (Esc / Ctrl+Enter): switch to Select tool and select it so it can be
+  // dragged / resized right away. On plain click-away, stay in Text tool (place more).
+  if(toSelect){
+    setTimeout(()=>{
+      anS.tool='select';
+      document.querySelectorAll('#panel-pdfann .ann-tool[data-tool]').forEach(b=>b.classList.toggle('active',b.dataset.tool==='select'));
+      annOverlay.className='tool-select';
+      anSel=el;anRedraw();
+    },0);
+  }else{anSel=null;anRedraw();}
+  anStats();
 }
 function anHideTextEdit(){const ta=document.getElementById('annTextEdit');if(ta){annTextEl=null;ta.remove();}}
 
