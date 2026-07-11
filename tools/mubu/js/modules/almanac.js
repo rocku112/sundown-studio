@@ -34,6 +34,73 @@
   // 煞方：申子辰煞南、寅午戌煞北、巳酉丑煞東、亥卯未煞西
   const SHA_FANG = ['南', '東', '北', '西', '南', '東', '北', '西', '南', '東', '北', '西'];
 
+  // 廿八宿（錨點：2026-07-11＝胃宿，已對照通書驗證；週曜對齊：房虛昴星值日曜）
+  const XIU = ['角木蛟', '亢金龍', '氐土貉', '房日兔', '心月狐', '尾火虎', '箕水豹',
+    '斗木獬', '牛金牛', '女土蝠', '虛日鼠', '危月燕', '室火豬', '壁水貐',
+    '奎木狼', '婁金狗', '胃土雉', '昴日雞', '畢月烏', '觜火猴', '參水猿',
+    '井木犴', '鬼金羊', '柳土獐', '星日馬', '張月鹿', '翼火蛇', '軫水蚓'];
+  const XIU_GOOD = new Set(['角', '房', '尾', '箕', '斗', '室', '壁', '婁', '胃', '畢', '參', '井', '張', '軫']);
+  const XIU_ANCHOR_JDN = 2461233; // 2026-07-11
+  function xiuOf(jdn) { return XIU[(((jdn - XIU_ANCHOR_JDN + 16) % 28) + 28) % 28]; }
+
+  // 逐日胎神占方（六十甲子；已對照通書抽驗兩筆）
+  const TAISHEN = [
+    '占門碓 外東南', '碓磨廁 外東南', '廚灶爐 外正南', '倉庫門 外正南', '房床栖 外正南',
+    '占門床 外正南', '占碓磨 外正南', '廚灶廁 外西南', '倉庫爐 外西南', '房床門 外西南',
+    '門雞栖 外西南', '碓磨床 外西南', '廚灶碓 外西南', '倉庫廁 外正西', '房床爐 外正西',
+    '占大門 外正西', '碓磨栖 外正西', '廚灶床 外正西', '倉庫碓 外正西', '房床廁 外西北',
+    '占門爐 外西北', '碓磨門 外西北', '廚灶栖 外西北', '倉庫床 外西北', '房床碓 外正北',
+    '占門廁 外正北', '碓磨爐 外正北', '廚灶門 外正北', '倉庫栖 外正北', '占房床 房內北',
+    '占門碓 房內北', '碓磨廁 房內北', '廚灶爐 房內北', '倉庫門 房內北', '房床栖 房內南',
+    '占門床 房內南', '占碓磨 房內南', '廚灶廁 房內南', '倉庫爐 房內南', '房床門 房內西',
+    '門雞栖 房內東', '碓磨床 房內東', '廚灶碓 房內東', '倉庫廁 房內東', '房床爐 房內東',
+    '占大門 外東北', '碓磨栖 外東北', '廚灶床 外東北', '倉庫碓 外東北', '房床廁 外東北',
+    '占門爐 外東北', '碓磨門 外正東', '廚灶栖 外正東', '倉庫床 外正東', '房床碓 外正東',
+    '占門廁 外正東', '碓磨爐 外東南', '廚灶門 外東南', '倉庫栖 外東南', '占房床 外東南'
+  ];
+
+  // 節日（回傳陣列）
+  function festivalsOf(y, m, d, lunar) {
+    const out = [];
+    const solar = { '1-1': '元旦', '2-14': '西洋情人節', '2-28': '和平紀念日', '3-8': '婦女節', '4-4': '兒童節', '5-1': '勞動節', '8-8': '父親節', '9-28': '教師節', '10-10': '國慶日', '10-25': '光復節', '12-25': '行憲紀念日' };
+    if (solar[`${m}-${d}`]) out.push(solar[`${m}-${d}`]);
+    // 母親節：五月第二個星期日
+    if (m === 5) {
+      const first = new Date(y, 4, 1).getDay();
+      const secondSunday = 1 + ((7 - first) % 7) + 7;
+      if (d === secondSunday) out.push('母親節');
+    }
+    if (!lunar.isLeap) {
+      const lu = { '1-1': '春節', '1-2': '春節（初二回娘家）', '1-3': '春節（初三）', '1-15': '元宵節', '5-5': '端午節', '7-7': '七夕', '7-15': '中元節', '8-15': '中秋節', '9-9': '重陽節', '12-8': '臘八節' };
+      if (lu[`${lunar.month}-${lunar.day}`]) out.push(lu[`${lunar.month}-${lunar.day}`]);
+      // 除夕：明日為正月初一
+      const t = Astro.fromJD(Astro.toJD(y, m, d, 12) + 1);
+      const tl = Astro.toLunar(t.y, t.m, t.d);
+      if (tl && tl.month === 1 && tl.day === 1 && !tl.isLeap) out.push('除夕');
+    }
+    return out;
+  }
+
+  // 供首頁每日運勢卡與其他模組使用
+  window.AlmanacEngine = {
+    info(y, m, d) {
+      const lunar = Astro.toLunar(y, m, d);
+      const yp = Ganzhi.yearPillar(y, m, d);
+      const mp = Ganzhi.monthPillar(y, m, d);
+      const dp = Ganzhi.dayPillar(y, m, d);
+      const phase = Astro.moonPhase(y, m, d);
+      const jc = JIANCHU[((dp.zhiIdx - mp.zhiIdx) % 12 + 12) % 12];
+      const jdn = Math.floor(Astro.toJD(y, m, d, 12));
+      const xiu = xiuOf(jdn);
+      return {
+        lunar, yp, mp, dp, phase, jc, jdn, xiu,
+        xiuGood: XIU_GOOD.has(xiu[0]),
+        chongZhi: (dp.zhiIdx + 6) % 12,
+        fests: festivalsOf(y, m, d, lunar)
+      };
+    }
+  };
+
   function render(el) {
     const now = new Date();
     el.innerHTML = `
@@ -84,11 +151,18 @@
         hours.push({ zhi: Ganzhi.ZHI[i], shen, good: SHEN_GOOD.has(shen), range: `${String((23 + i * 2) % 24).padStart(2, '0')}-${String((1 + i * 2) % 24).padStart(2, '0')}` });
       }
 
+      const jdn = Math.floor(Astro.toJD(y, m, d, 12));
+      const xiu = xiuOf(jdn);
+      const xiuGood = XIU_GOOD.has(xiu[0]);
+      const taishen = TAISHEN[dp.n];
+      const fests = festivalsOf(y, m, d, lunar);
+
       resEl.innerHTML = `<div class="panel result">
         <div style="text-align:center">
           <div style="font-size:15px;color:var(--ink-dim)">${y} 年 ${m} 月 · 星期${week}</div>
           <div style="font-size:56px;color:var(--gold-bright);line-height:1.3">${d}</div>
           <div style="font-size:17px">農曆 ${lunar.monthName}${lunar.dayName} ${phase.emoji}</div>
+          ${fests.length ? `<div style="margin-top:4px">${fests.map(f => `<span class="tag" style="color:var(--cinnabar);border-color:rgba(176,48,32,.4);background:rgba(176,48,32,.06)">🎉 ${f}</span>`).join('')}</div>` : ''}
           <div class="muted" style="margin-top:4px">${yp.name}${yp.shengxiao}年 · ${mp.name}月 · ${dp.name}日（${dp.nayin}）</div>
           <div class="muted">${termNote}</div>
         </div>
@@ -98,10 +172,13 @@
           <span class="tag">${jc.luck}</span>
           <span class="tag">沖${Ganzhi.SHENGXIAO[chongZhi]}（${Ganzhi.ZHI[chongZhi]}）</span>
           <span class="tag">煞${SHA_FANG[dp.zhiIdx]}</span>
+          <span class="tag ${xiuGood ? 'gold' : ''}">${xiu}宿（${xiuGood ? '吉' : '凶'}）</span>
         </div>
         ${App.aspectGrid([['宜', jc.yi], ['忌', jc.ji]])}
         <h4>彭祖百忌</h4>
         <p class="muted">${PENGZU_GAN[dp.gan]}；${PENGZU_ZHI[dp.zhi]}。</p>
+        <h4>今日胎神占方</h4>
+        <p class="muted">${taishen}——孕家此方位忌動土、釘鑿、搬移，以安胎氣。</p>
         <h4>時辰吉凶（黃道吉時）</h4>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px">
           ${hours.map(h => `<div class="aspect" style="text-align:center;padding:8px 4px;${h.good ? 'border-color:rgba(240,194,104,.45)' : 'opacity:.65'}">

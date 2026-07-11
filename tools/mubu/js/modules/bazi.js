@@ -74,6 +74,11 @@
       const like = str.label === '偏強'
         ? Ganzhi.WX_SHENG[p.day.ganWx]
         : (str.label === '偏弱' ? str.shengMe : p.day.ganWx);
+      const relations = Ganzhi.branchRelations(p);
+      const th = Ganzhi.tiaohou(p.day.ganIdx, p.month.zhiIdx);
+      const nowYear = new Date().getFullYear();
+      const flowYears = Ganzhi.yearlyFortune(nowYear, 10, p);
+      const flowMonths = Ganzhi.monthlyFortune(nowYear, p);
 
       const cols = ['year', 'month', 'day', 'hour'];
       const colName = { year: '年柱', month: '月柱', day: '日柱', hour: '時柱' };
@@ -110,7 +115,29 @@
             <b>${d.age}-${d.age + 9}歲</b><span style="font-size:18px;letter-spacing:.15em">${d.name}</span>
             <div class="muted" style="font-size:12px">${d.nayin}</div></div>`).join('')}
         </div>
-        <p class="muted" style="margin-top:10px">※ 內建解讀為簡化規則判斷（未考慮合沖刑害與調候），詳細論命建議使用 AI 深度解讀。</p>
+        <hr class="divider">
+        <h4>合沖刑害</h4>
+        ${relations.length
+          ? `<p>${relations.map(r => `<span class="tag ${r.level === 'good' ? 'gold' : ''}" ${r.level === 'bad' ? 'style="color:var(--cinnabar);border-color:rgba(176,48,32,.4)"' : ''}>${r.type}｜${r.text}</span>`).join('')}</p>`
+          : '<p class="muted">四柱干支間無明顯合沖刑害，命局平穩。</p>'}
+        ${th ? `<h4>調候用神（窮通寶鑑）</h4>
+        <p>${p.day.gan}${p.day.ganWx}日主生於${Ganzhi.ZHI[p.month.zhiIdx]}月，調候先取 <b style="color:var(--gold-bright)">${th.split('').join('、')}</b>。<span class="muted">調候重寒暖燥濕：得此數干（或大運流年補上）者，命局氣候中和、事半功倍。</span></p>` : ''}
+        <hr class="divider">
+        <h4>流年運勢（${nowYear}－${nowYear + 9}）</h4>
+        <table class="chart">
+          <tr><th>年份</th><th>干支</th><th>十神</th><th>備註</th></tr>
+          ${flowYears.map(f => `<tr>
+            <td>${f.year}</td><td>${f.name}<span class="muted">（${f.shengxiao}）</span></td>
+            <td>${f.tenGod}</td>
+            <td class="muted" ${f.tags.length ? 'style="color:var(--cinnabar)"' : ''}>${f.tags.join('、') || '—'}</td></tr>`).join('')}
+        </table>
+        <h4>${nowYear} 流月（節氣月）</h4>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:6px">
+          ${flowMonths.map(f => `<div class="aspect" style="text-align:center;padding:8px 4px">
+            <b style="display:inline">${f.name}月</b><br><span class="muted" style="font-size:11.5px">${f.jie}起（約${f.approx}）</span><br>
+            <span style="color:var(--gold-bright)">${f.tenGod}</span></div>`).join('')}
+        </div>
+        <p class="muted" style="margin-top:10px">※ 流年十神以日主對流年天干論；「沖太歲／值太歲」以出生年支對流年支論。內建解讀為簡化規則判斷，詳細論命建議使用 AI 深度解讀。</p>
       </div>`;
       const div = document.createElement('div');
       div.innerHTML = html;
@@ -122,8 +149,11 @@
 四柱：年柱${p.year.name}、月柱${p.month.name}、日柱${p.day.name}、時柱${p.hour.name}
 藏干：年支藏${p.year.cang.join('')}、月支藏${p.month.cang.join('')}、日支藏${p.day.cang.join('')}、時支藏${p.hour.cang.join('')}
 五行分布：${Object.entries(wx).map(([k, v]) => k + v).join(' ')}，日主${p.day.gan}${p.day.ganWx}身${str.label}
+合沖刑害：${relations.map(r => r.text).join('；') || '無明顯'}
+調候用神（參考）：${th ? th.split('').join('、') : '無'}
 大運：${luck.startAge}歲起${luck.forward ? '順' : '逆'}行，${luck.list.map(d => `${d.age}歲${d.name}`).join('、')}
-請分析：1) 日主強弱與格局 2) 喜用神與忌神（請自行精確判斷，可修正上述粗判）3) 性格特質 4) 事業財運方向 5) 感情婚姻 6) 目前與未來十年大運走勢。`);
+未來十年流年：${flowYears.map(f => `${f.year}${f.name}(${f.tenGod}${f.tags.length ? '，' + f.tags.join('/') : ''})`).join('、')}
+請分析：1) 日主強弱與格局 2) 喜用神與忌神（請結合調候與合沖刑害精確判斷，可修正上述粗判）3) 性格特質 4) 事業財運方向 5) 感情婚姻 6) 大運與未來十年流年走勢重點（特別標出吉凶轉折年份）。`);
     });
   }
 

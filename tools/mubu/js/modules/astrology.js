@@ -1,4 +1,4 @@
-/* 暮卜先知 · 西洋占星 */
+/* 暮卜先知 · 西洋占星（Placidus 宮位制＋SVG 星盤） */
 (() => {
   const RAD = Math.PI / 180;
   const SIGNS = [
@@ -34,26 +34,153 @@
     { angle: 120, orb: 6, name: '三分相', sym: '△', good: true },
     { angle: 180, orb: 7, name: '對分相', sym: '☍', good: false }
   ];
+  const HOUSE_MEAN = ['自我形象', '金錢價值', '溝通學習', '家庭根基', '創造戀愛', '工作健康', '伴侶關係', '共享轉化', '遠行信念', '事業成就', '朋友願景', '潛意識靈性'];
+  // 城市（名稱、緯度、經度、時區）
+  const CITIES = [
+    ['台北', 25.04, 121.51, 8], ['新北', 25.01, 121.46, 8], ['桃園', 24.99, 121.30, 8],
+    ['新竹', 24.80, 120.97, 8], ['台中', 24.15, 120.67, 8], ['嘉義', 23.48, 120.45, 8],
+    ['台南', 22.99, 120.21, 8], ['高雄', 22.63, 120.30, 8], ['基隆', 25.13, 121.74, 8],
+    ['宜蘭', 24.76, 121.75, 8], ['花蓮', 23.98, 121.60, 8], ['台東', 22.76, 121.14, 8],
+    ['澎湖馬公', 23.57, 119.58, 8], ['金門', 24.44, 118.32, 8],
+    ['香港', 22.32, 114.17, 8], ['澳門', 22.20, 113.55, 8],
+    ['北京', 39.90, 116.41, 8], ['上海', 31.23, 121.47, 8], ['廣州', 23.13, 113.26, 8],
+    ['成都', 30.57, 104.07, 8], ['新加坡', 1.35, 103.82, 8], ['吉隆坡', 3.14, 101.69, 8],
+    ['東京', 35.68, 139.69, 9], ['首爾', 37.57, 126.98, 9], ['曼谷', 13.76, 100.50, 7],
+    ['雪梨', -33.87, 151.21, 10], ['倫敦', 51.51, -0.13, 0], ['巴黎', 48.86, 2.35, 1],
+    ['紐約', 40.71, -74.01, -5], ['洛杉磯', 34.05, -118.24, -8], ['溫哥華', 49.28, -123.12, -8]
+  ];
 
-  function signOf(lon) { return SIGNS[Math.floor(Astro.norm360(lon) / 30)]; }
+  const signOf = (lon) => SIGNS[Math.floor(Astro.norm360(lon) / 30)];
   function degInSign(lon) { const x = Astro.norm360(lon) % 30; return `${Math.floor(x)}°${String(Math.floor((x % 1) * 60)).padStart(2, '0')}'`; }
 
-  // 上升星座（需經緯度）
-  function ascendant(jdUT, latDeg, lonDeg) {
+  // 黃道點：赤經 → 黃經
+  function raToLon(ra, eps) { return Astro.norm360(Math.atan2(Math.sin(ra * RAD), Math.cos(ra * RAD) * Math.cos(eps)) / RAD); }
+  function lonToDec(lon, eps) { return Math.asin(Math.sin(eps) * Math.sin(lon * RAD)); }
+
+  // 上升、天頂、恆星時
+  function angles(jdUT, latDeg, lonDeg) {
     const T = (jdUT - 2451545.0) / 36525;
-    let gmst = 280.46061837 + 360.98564736629 * (jdUT - 2451545.0) + 0.000387933 * T * T;
-    const lst = Astro.norm360(gmst + lonDeg); // 當地恆星時（度）
-    const eps = (23.4392911 - 0.0130042 * T) * RAD; // 黃赤交角
-    const ramc = lst * RAD;
+    const gmst = 280.46061837 + 360.98564736629 * (jdUT - 2451545.0) + 0.000387933 * T * T;
+    const ramc = Astro.norm360(gmst + lonDeg);
+    const eps = (23.4392911 - 0.0130042 * T) * RAD;
     const phi = latDeg * RAD;
-    const y = -Math.cos(ramc);
-    const x = Math.sin(ramc) * Math.cos(eps) + Math.tan(phi) * Math.sin(eps);
-    let asc = Math.atan2(y, x) / RAD;
-    asc = Astro.norm360(asc);
-    // MC：黃道與子午圈交點
-    let mc = Math.atan2(Math.sin(ramc), Math.cos(ramc) * Math.cos(eps)) / RAD;
-    mc = Astro.norm360(mc);
-    return { asc, mc };
+    const y = -Math.cos(ramc * RAD);
+    const x = Math.sin(ramc * RAD) * Math.cos(eps) + Math.tan(phi) * Math.sin(eps);
+    let asc = Astro.norm360(Math.atan2(y, x) / RAD);
+    const mc = raToLon(ramc, eps);
+    // 象限修正：上升點必在天頂後 0°~180° 的黃道半圈（否則得到的是下降點）
+    if (Astro.norm360(asc - mc) >= 180) asc = Astro.norm360(asc + 180);
+    return { asc, mc, ramc, eps, phi };
+  }
+
+  // Placidus 宮首（半弧迭代法；高緯 |φ|>66° 回退等宮制）
+  function placidusCusps(jdUT, latDeg, lonDeg) {
+    const { asc, mc, ramc, eps, phi } = angles(jdUT, latDeg, lonDeg);
+    const cusps = new Array(13).fill(0); // 1-12
+    cusps[1] = asc; cusps[10] = mc;
+    if (Math.abs(latDeg) > 66) {
+      for (let i = 0; i < 12; i++) cusps[i + 1] = Astro.norm360(asc + i * 30);
+      cusps[10] = Astro.norm360(asc + 270); // 等宮制的 MC 不再對齊子午圈
+      return { cusps, asc, mc, ramc, eps, system: '等宮制（高緯回退）' };
+    }
+    // [宮, 初始偏移, 弧比例, 是否晝弧]
+    const defs = [[11, 30, 1 / 3, true], [12, 60, 2 / 3, true], [2, 120, 2 / 3, false], [3, 150, 1 / 3, false]];
+    for (const [house, off, f, day] of defs) {
+      let ra = ramc + off;
+      for (let i = 0; i < 30; i++) {
+        const lam = raToLon(ra, eps);
+        const dec = lonToDec(lam, eps);
+        let x = Math.tan(dec) * Math.tan(phi);
+        x = Math.max(-1, Math.min(1, x));
+        const ad = Math.asin(x) / RAD; // 上升差
+        const raNew = day
+          ? ramc + (90 + ad) * f            // 晝半弧（11、12宮）
+          : ramc + 180 - (90 - ad) * f;     // 夜半弧（2、3宮）
+        if (Math.abs(Astro.norm360(raNew - ra + 180) - 180) < 1e-7) { ra = raNew; break; }
+        ra = raNew;
+      }
+      cusps[house] = raToLon(ra, eps);
+    }
+    for (const [a, b] of [[4, 10], [5, 11], [6, 12], [7, 1], [8, 2], [9, 3]]) {
+      cusps[a] = Astro.norm360(cusps[b] + 180);
+    }
+    return { cusps, asc, mc, ramc, eps, system: 'Placidus' };
+  }
+
+  // 行星落宮
+  function houseOf(lon, cusps) {
+    for (let h = 1; h <= 12; h++) {
+      const a = cusps[h], b = cusps[h % 12 + 1];
+      const span = Astro.norm360(b - a);
+      if (Astro.norm360(lon - a) < span) return h;
+    }
+    return 12;
+  }
+
+  // 均時差（分鐘）與真太陽時
+  function equationOfTime(jde) {
+    const T = (jde - 2451545.0) / 36525;
+    const L0 = Astro.norm360(280.46646 + 36000.76983 * T);
+    const eps = (23.4392911 - 0.0130042 * T) * RAD;
+    const lam = Astro.sunLongitude(jde);
+    const ra = Astro.norm360(Math.atan2(Math.sin(lam * RAD) * Math.cos(eps), Math.cos(lam * RAD)) / RAD);
+    let e = L0 - 0.0057183 - ra;
+    e = ((e % 360) + 360) % 360; if (e > 180) e -= 360;
+    return e * 4; // 分鐘
+  }
+
+  // ---------- SVG 星盤 ----------
+  function wheelSVG(positions, cusps, asc, mc) {
+    const CX = 210, CY = 210, R_SIGN = 200, R_SIGN_IN = 170, R_PLANET = 140, R_HOUSE = 108, R_INNER = 78;
+    const A = (lon) => (180 - (lon - asc)) * RAD; // 上升點固定在左側
+    const pt = (lon, r) => [CX + r * Math.cos(A(lon)), CY + r * Math.sin(A(lon))];
+    let s = `<svg viewBox="0 0 420 420" style="max-width:460px;width:100%;display:block;margin:0 auto" xmlns="http://www.w3.org/2000/svg">`;
+    s += `<circle cx="${CX}" cy="${CY}" r="${R_SIGN}" fill="#FFFDF6" stroke="#C9960A" stroke-width="1.5"/>`;
+    s += `<circle cx="${CX}" cy="${CY}" r="${R_SIGN_IN}" fill="none" stroke="#DDD6C8"/>`;
+    s += `<circle cx="${CX}" cy="${CY}" r="${R_HOUSE}" fill="none" stroke="#DDD6C8"/>`;
+    s += `<circle cx="${CX}" cy="${CY}" r="${R_INNER}" fill="#F5F0E8" stroke="#DDD6C8"/>`;
+    // 星座區隔與符號
+    const ELEM_COLOR = { 火: '#C0622A', 土: '#8a5e00', 風: '#2D4A6E', 水: '#4A76B8' };
+    for (let i = 0; i < 12; i++) {
+      const [x1, y1] = pt(i * 30, R_SIGN_IN), [x2, y2] = pt(i * 30, R_SIGN);
+      s += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#DDD6C8"/>`;
+      const [tx, ty] = pt(i * 30 + 15, (R_SIGN + R_SIGN_IN) / 2);
+      s += `<text x="${tx}" y="${ty}" font-size="17" text-anchor="middle" dominant-baseline="central" fill="${ELEM_COLOR[SIGNS[i].elem]}">${SIGNS[i].sym}</text>`;
+    }
+    // 每 10° 刻度
+    for (let d = 0; d < 360; d += 10) {
+      const [x1, y1] = pt(d, R_SIGN_IN), [x2, y2] = pt(d, R_SIGN_IN - 5);
+      s += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#C9B98A" stroke-width=".7"/>`;
+    }
+    // 宮首線與宮號
+    for (let h = 1; h <= 12; h++) {
+      const bold = h === 1 || h === 10 || h === 4 || h === 7;
+      const [x1, y1] = pt(cusps[h], R_INNER), [x2, y2] = pt(cusps[h], R_SIGN_IN);
+      s += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${bold ? '#B03020' : '#B8AE9C'}" stroke-width="${bold ? 1.6 : .8}"/>`;
+      const mid = cusps[h] + Astro.norm360(cusps[h % 12 + 1] - cusps[h]) / 2;
+      const [nx, ny] = pt(mid, (R_HOUSE + R_INNER) / 2);
+      s += `<text x="${nx}" y="${ny}" font-size="10" text-anchor="middle" dominant-baseline="central" fill="#8A96A8">${h}</text>`;
+    }
+    // ASC / MC 標籤
+    const [ax, ay] = pt(asc, R_SIGN + 1); // 左緣
+    s += `<text x="${ax + 4}" y="${ay - 6}" font-size="11" fill="#B03020" font-weight="bold">ASC</text>`;
+    const [mx, my] = pt(mc, R_SIGN_IN - 12);
+    s += `<text x="${mx}" y="${my}" font-size="11" text-anchor="middle" fill="#B03020" font-weight="bold">MC</text>`;
+    // 行星（重疊時分層）
+    const sorted = [...positions].sort((a, b) => a.lon - b.lon);
+    let lastLon = -99, layer = 0;
+    for (const p of sorted) {
+      if (Astro.norm360(p.lon - lastLon) < 9 && lastLon > -90) layer = (layer + 1) % 3; else layer = 0;
+      lastLon = p.lon;
+      const r = R_PLANET + [14, -2, -18][layer];
+      const [x, y] = pt(p.lon, r);
+      const [tx1, ty1] = pt(p.lon, R_SIGN_IN), [tx2, ty2] = pt(p.lon, R_SIGN_IN - 8);
+      s += `<line x1="${tx1}" y1="${ty1}" x2="${tx2}" y2="${ty2}" stroke="#C9960A" stroke-width="1.2"/>`;
+      s += `<text x="${x}" y="${y}" font-size="15" text-anchor="middle" dominant-baseline="central" fill="#1E3554" font-weight="bold">${p.sym}</text>`;
+      s += `<text x="${x}" y="${y + 13}" font-size="8" text-anchor="middle" fill="#8A96A8">${Math.floor(Astro.norm360(p.lon) % 30)}°${p.retro ? '℞' : ''}</text>`;
+    }
+    s += `</svg>`;
+    return s;
   }
 
   function render(el) {
@@ -63,33 +190,51 @@
         <h3>輸入出生資料</h3>
         ${bf.html}
         <div class="form-grid" style="margin-top:10px">
-          <div class="field"><label>出生地緯度</label><input class="as-lat" type="number" step="0.01" value="25.04" style="width:100px"></div>
-          <div class="field"><label>經度</label><input class="as-lon" type="number" step="0.01" value="121.51" style="width:100px"></div>
-          <span class="muted">（預設台北；出生時間與地點影響上升星座）</span>
+          <div class="field"><label>出生地</label>
+            <select class="as-city">${CITIES.map((c, i) => `<option value="${i}">${c[0]}</option>`).join('')}
+              <option value="-1">自訂經緯度…</option></select></div>
+          <div class="field as-custom" style="display:none"><label>緯度</label><input class="as-lat" type="number" step="0.01" value="25.04" style="width:90px"></div>
+          <div class="field as-custom" style="display:none"><label>經度</label><input class="as-lon" type="number" step="0.01" value="121.51" style="width:90px"></div>
+          <div class="field as-custom" style="display:none"><label>時區(UTC+)</label><input class="as-tz" type="number" step="0.5" value="8" style="width:80px"></div>
         </div>
         <button class="btn" id="as-go" style="margin-top:14px">🪐 排星盤</button>
+        <p class="muted" style="margin-top:8px">宮位採 Placidus 制；海外城市請留意：時間請填出生地當地時間（未含日光節約時間，若出生於夏令期間請自行減 1 小時）。</p>
       </div>
       <div id="as-result"></div>`;
 
+    el.querySelector('.as-city').addEventListener('change', (e) => {
+      el.querySelectorAll('.as-custom').forEach(n => n.style.display = e.target.value === '-1' ? '' : 'none');
+    });
+
     el.querySelector('#as-go').addEventListener('click', () => {
       const b = bf.read(el);
-      const lat = +el.querySelector('.as-lat').value, lon = +el.querySelector('.as-lon').value;
+      const ci = +el.querySelector('.as-city').value;
+      const [cityName, lat, lon, tz] = ci >= 0 ? CITIES[ci]
+        : ['自訂', +el.querySelector('.as-lat').value, +el.querySelector('.as-lon').value, +el.querySelector('.as-tz').value];
       const resEl = el.querySelector('#as-result');
       resEl.innerHTML = '';
-      // 台灣時間 → UT → TT
-      const jdUT = Astro.toJD(b.y, b.m, b.d, b.hh, b.mi) - 8 / 24;
+      const jdUT = Astro.toJD(b.y, b.m, b.d, b.hh, b.mi) - tz / 24;
       const jde = jdUT + Astro.deltaT(b.y) / 86400;
 
+      // 行星位置＋逆行
       const positions = [];
       for (const p of PLANETS) {
-        let lonDeg;
-        if (p.id === 'sun') lonDeg = Astro.sunLongitude(jde);
-        else if (p.id === 'moon') lonDeg = Astro.moonLongitude(jde);
-        else lonDeg = Astro.planetLongitude(p.id, jde);
-        positions.push({ ...p, lon: lonDeg, sign: signOf(lonDeg) });
+        const calc = (t) => p.id === 'sun' ? Astro.sunLongitude(t) : p.id === 'moon' ? Astro.moonLongitude(t) : Astro.planetLongitude(p.id, t);
+        const lonNow = calc(jde);
+        const lonPrev = calc(jde - 0.5);
+        const retro = p.id !== 'sun' && p.id !== 'moon' && Astro.norm360(lonNow - lonPrev) > 180;
+        positions.push({ ...p, lon: lonNow, sign: signOf(lonNow), retro });
       }
-      const { asc, mc } = ascendant(jdUT, lat, lon);
-      const ascSign = signOf(asc), mcSign = signOf(mc);
+      // 宮位
+      const pc = placidusCusps(jdUT, lat, lon);
+      const ascSign = signOf(pc.asc), mcSign = signOf(pc.mc);
+      positions.forEach(p => { p.house = houseOf(p.lon, pc.cusps); });
+
+      // 真太陽時
+      const eot = equationOfTime(jde);
+      const meanOffsetMin = (lon - tz * 15) * 4; // 地方平時 − 標準時（分）
+      const trueSolarMin = b.hh * 60 + b.mi + meanOffsetMin + eot;
+      const tsH = Math.floor(((trueSolarMin / 60) % 24 + 24) % 24), tsM = Math.round(((trueSolarMin % 60) + 60) % 60) % 60;
 
       // 相位
       const aspList = [];
@@ -105,47 +250,49 @@
           }
         }
       }
-      // 元素統計
       const elemCount = { 火: 0, 土: 0, 風: 0, 水: 0 };
       positions.forEach(p => elemCount[p.sign.elem]++);
       const domElem = Object.entries(elemCount).sort((x, y2) => y2[1] - x[1])[0][0];
 
-      const big3 = [positions[0], positions[1]];
       const div = document.createElement('div');
       div.innerHTML = `<div class="panel result">
         <h3>本命星盤</h3>
-        <div class="muted" style="text-align:center">${b.y}/${b.m}/${b.d} ${String(b.hh).padStart(2, '0')}:${String(b.mi).padStart(2, '0')}（UTC+8）· 北緯 ${lat}° 東經 ${lon}°</div>
+        <div class="muted" style="text-align:center">${b.y}/${b.m}/${b.d} ${String(b.hh).padStart(2, '0')}:${String(b.mi).padStart(2, '0')}（UTC${tz >= 0 ? '+' : ''}${tz}）· ${cityName}（${lat.toFixed(2)}°, ${lon.toFixed(2)}°）<br>
+        真太陽時 ${String(tsH).padStart(2, '0')}:${String(tsM).padStart(2, '0')}（均時差 ${eot >= 0 ? '+' : ''}${eot.toFixed(1)} 分）· 宮位制：${pc.system}</div>
+        ${wheelSVG(positions, pc.cusps, pc.asc, pc.mc)}
         <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin:12px 0">
           <div class="aspect" style="text-align:center;min-width:130px"><b>☉ 太陽星座</b><span style="font-size:22px">${positions[0].sign.sym} ${positions[0].sign.name}</span></div>
           <div class="aspect" style="text-align:center;min-width:130px"><b>☽ 月亮星座</b><span style="font-size:22px">${positions[1].sign.sym} ${positions[1].sign.name}</span></div>
           <div class="aspect" style="text-align:center;min-width:130px"><b>↑ 上升星座</b><span style="font-size:22px">${ascSign.sym} ${ascSign.name}</span></div>
         </div>
         <table class="chart astro-table">
-          <tr><th>行星</th><th>星座</th><th>度數</th><th>意涵</th></tr>
-          ${positions.map(p => `<tr><td>${p.sym} ${p.name}</td><td>${p.sign.sym} ${p.sign.name}</td><td>${degInSign(p.lon)}</td><td class="muted">${p.mean}</td></tr>`).join('')}
-          <tr><td>↑ 上升</td><td>${ascSign.sym} ${ascSign.name}</td><td>${degInSign(asc)}</td><td class="muted">外在形象與人生舞台入口</td></tr>
-          <tr><td>MC 天頂</td><td>${mcSign.sym} ${mcSign.name}</td><td>${degInSign(mc)}</td><td class="muted">事業志向與社會成就</td></tr>
+          <tr><th>行星</th><th>星座</th><th>度數</th><th>宮位</th><th>意涵</th></tr>
+          ${positions.map(p => `<tr><td>${p.sym} ${p.name}${p.retro ? ' <b style="color:var(--cinnabar)">℞</b>' : ''}</td><td>${p.sign.sym} ${p.sign.name}</td><td>${degInSign(p.lon)}</td><td>第${p.house}宮<span class="muted">（${HOUSE_MEAN[p.house - 1]}）</span></td><td class="muted">${p.mean}</td></tr>`).join('')}
+          <tr><td>↑ 上升</td><td>${ascSign.sym} ${ascSign.name}</td><td>${degInSign(pc.asc)}</td><td>第1宮首</td><td class="muted">外在形象與人生舞台入口</td></tr>
+          <tr><td>MC 天頂</td><td>${mcSign.sym} ${mcSign.name}</td><td>${degInSign(pc.mc)}</td><td>第10宮首</td><td class="muted">事業志向與社會成就</td></tr>
         </table>
+        <h4>宮首一覽（${pc.system}）</h4>
+        <p>${[1,2,3,4,5,6,7,8,9,10,11,12].map(h => `<span class="tag">${h}宮 ${signOf(pc.cusps[h]).sym}${degInSign(pc.cusps[h])}</span>`).join('')}</p>
         <h4>主要相位</h4>
         <p>${aspList.length ? aspList.map(x => `<span class="tag ${x.asp.good === true ? 'gold' : ''}" ${x.asp.good === false ? 'style="color:var(--cinnabar)"' : ''}>${x.a.sym}${x.a.name} ${x.asp.sym} ${x.b.sym}${x.b.name}（差${x.orb}°）</span>`).join('') : '無明顯主要相位'}</p>
         <hr class="divider">
-        <h4>☉ 太陽${positions[0].sign.name} —— 核心自我</h4><p>${positions[0].sign.trait}</p>
-        <h4>☽ 月亮${positions[1].sign.name} —— 內在情感</h4><p>內心層面帶有${positions[1].sign.name}特質：${positions[1].sign.trait}</p>
+        <h4>☉ 太陽${positions[0].sign.name}（第${positions[0].house}宮）—— 核心自我</h4><p>${positions[0].sign.trait}生命重心落在${HOUSE_MEAN[positions[0].house - 1]}的領域。</p>
+        <h4>☽ 月亮${positions[1].sign.name}（第${positions[1].house}宮）—— 內在情感</h4><p>內心層面帶有${positions[1].sign.name}特質：${positions[1].sign.trait}</p>
         <h4>↑ 上升${ascSign.name} —— 外在形象</h4><p>他人眼中的你帶有${ascSign.name}色彩：${ascSign.trait}</p>
-        <p style="margin-top:8px">星盤元素以<b style="color:var(--gold-bright)">${domElem}象</b>為主（火${elemCount.火}・土${elemCount.土}・風${elemCount.風}・水${elemCount.水}）。</p>
-        <p class="muted">※ 行星位置為即時天文計算（精度足以判座）；宮位制與更細緻的合盤請用 AI 深度解讀。</p>
+        <p style="margin-top:8px">星盤元素以<b style="color:var(--gold-bright)">${domElem}象</b>為主（火${elemCount.火}・土${elemCount.土}・風${elemCount.風}・水${elemCount.水}）。${positions.filter(p => p.retro).length ? `逆行行星：${positions.filter(p => p.retro).map(p => p.name).join('、')}——逆行處課題向內收斂，宜回顧再出發。` : ''}</p>
       </div>`;
       resEl.appendChild(div);
 
       AI.attach(div.querySelector('.panel'), () =>
         `請為以下西洋占星本命盤做深度解讀。
-出生：${b.y}/${b.m}/${b.d} ${b.hh}:${String(b.mi).padStart(2, '0')}（UTC+8），北緯${lat}° 東經${lon}°
-行星位置：
-${positions.map(p => `${p.name}：${p.sign.name} ${degInSign(p.lon)}`).join('\n')}
-上升：${ascSign.name} ${degInSign(asc)}，天頂MC：${mcSign.name} ${degInSign(mc)}
-主要相位：${aspList.map(x => `${x.a.name}${x.asp.name}${x.b.name}`).join('、') || '無'}
+出生：${b.y}/${b.m}/${b.d} ${b.hh}:${String(b.mi).padStart(2, '0')}（UTC${tz >= 0 ? '+' : ''}${tz}），${cityName}（${lat}°, ${lon}°），宮位制：${pc.system}
+行星位置（含宮位與逆行）：
+${positions.map(p => `${p.name}：${p.sign.name} ${degInSign(p.lon)}，第${p.house}宮${p.retro ? '，逆行' : ''}`).join('\n')}
+上升：${ascSign.name} ${degInSign(pc.asc)}，天頂MC：${mcSign.name} ${degInSign(pc.mc)}
+宮首：${[1,2,3,4,5,6,7,8,9,10,11,12].map(h => `${h}宮${signOf(pc.cusps[h]).name}`).join('、')}
+主要相位：${aspList.map(x => `${x.a.name}${x.asp.name}${x.b.name}（容許度${x.orb}°）`).join('、') || '無'}
 元素分布：火${elemCount.火} 土${elemCount.土} 風${elemCount.風} 水${elemCount.水}
-請分析：1) 太陽月亮上升的三位一體人格 2) 水金火的溝通/感情/行動風格 3) 木土的機會與課題 4) 重要相位的影響 5) 適合的發展方向。`);
+請分析：1) 太陽月亮上升三位一體人格 2) 行星落宮的生命領域重點 3) 水金火的溝通/感情/行動風格 4) 木土的機會與課題（含逆行課題）5) 重要相位影響 6) 適合的發展方向。`);
     });
   }
 
@@ -153,7 +300,7 @@ ${positions.map(p => `${p.name}：${p.sign.name} ${degInSign(p.lon)}`).join('\n'
     id: 'astrology',
     icon: '🪐',
     title: '西洋占星',
-    desc: '十大行星即時天文計算，太陽月亮上升三位一體，相位分析。',
+    desc: 'Placidus 宮位制、SVG 星盤、十大行星逆行標示、真太陽時。',
     render
   });
 })();

@@ -165,10 +165,116 @@ const Ganzhi = (() => {
     return { startAge, forward, list };
   }
 
+  // ---------- 地支/天干 合沖刑害 ----------
+  const LIUHE = { 0: 1, 1: 0, 2: 11, 11: 2, 3: 10, 10: 3, 4: 9, 9: 4, 5: 8, 8: 5, 6: 7, 7: 6 }; // 六合
+  const LIUHAI = { 0: 7, 7: 0, 1: 6, 6: 1, 2: 5, 5: 2, 3: 4, 4: 3, 8: 11, 11: 8, 9: 10, 10: 9 }; // 六害
+  const SANHE = [[8, 0, 4, '水'], [2, 6, 10, '火'], [5, 9, 1, '金'], [11, 3, 7, '木']]; // 三合局
+  const SANHUI = [[2, 3, 4, '木'], [5, 6, 7, '火'], [8, 9, 10, '金'], [11, 0, 1, '水']]; // 三會方
+  const XING_PAIRS = [[0, 3]]; // 子卯無禮之刑
+  const XING_TRIOS = [[2, 5, 8, '寅巳申無恩之刑'], [1, 10, 7, '丑戌未恃勢之刑']];
+  const ZIXING = [4, 6, 9, 11]; // 辰午酉亥自刑
+
+  // pillars: {year, month, day, hour}；回傳 [{type, level, text}]
+  function branchRelations(pillars) {
+    const posName = ['年', '月', '日', '時'];
+    const zhis = ['year', 'month', 'day', 'hour'].map(k => pillars[k].zhiIdx);
+    const gans = ['year', 'month', 'day', 'hour'].map(k => pillars[k].ganIdx);
+    const out = [];
+    const zName = (i) => `${posName[i]}支${ZHI[zhis[i]]}`;
+    // 地支兩兩關係
+    for (let i = 0; i < 4; i++) {
+      for (let j = i + 1; j < 4; j++) {
+        const a = zhis[i], b = zhis[j];
+        if ((a + 6) % 12 === b) out.push({ type: '六沖', level: 'bad', text: `${zName(i)}沖${zName(j)}（${ZHI[a]}${ZHI[b]}沖）` });
+        if (LIUHE[a] === b) out.push({ type: '六合', level: 'good', text: `${zName(i)}合${zName(j)}（${ZHI[a]}${ZHI[b]}合）` });
+        if (LIUHAI[a] === b) out.push({ type: '六害', level: 'bad', text: `${zName(i)}害${zName(j)}（${ZHI[a]}${ZHI[b]}害）` });
+        if (XING_PAIRS.some(([x, y]) => (a === x && b === y) || (a === y && b === x)))
+          out.push({ type: '相刑', level: 'bad', text: `${zName(i)}刑${zName(j)}（子卯無禮之刑）` });
+        if (a === b && ZIXING.includes(a)) out.push({ type: '自刑', level: 'bad', text: `${zName(i)}${zName(j)}自刑（${ZHI[a]}${ZHI[a]}）` });
+      }
+    }
+    // 三合三會三刑（取任兩支為半合/半會亦註記全者）
+    const has = (x) => zhis.includes(x);
+    for (const [a, b, c, wx] of SANHE) {
+      if (has(a) && has(b) && has(c)) out.push({ type: '三合', level: 'good', text: `${ZHI[a]}${ZHI[b]}${ZHI[c]}三合${wx}局` });
+    }
+    for (const [a, b, c, wx] of SANHUI) {
+      if (has(a) && has(b) && has(c)) out.push({ type: '三會', level: 'good', text: `${ZHI[a]}${ZHI[b]}${ZHI[c]}三會${wx}方` });
+    }
+    for (const [a, b, c, name] of XING_TRIOS) {
+      const hit = [a, b, c].filter(has);
+      if (hit.length === 3) out.push({ type: '三刑', level: 'bad', text: name });
+      else if (hit.length === 2) out.push({ type: '相刑', level: 'bad', text: `${hit.map(x => ZHI[x]).join('')}相刑（${name.slice(0, 3)}刑之半）` });
+    }
+    // 天干五合、四沖
+    const WUHE = { 0: [5, '土'], 5: [0, '土'], 1: [6, '金'], 6: [1, '金'], 2: [7, '水'], 7: [2, '水'], 3: [8, '木'], 8: [3, '木'], 4: [9, '火'], 9: [4, '火'] };
+    for (let i = 0; i < 4; i++) {
+      for (let j = i + 1; j < 4; j++) {
+        const a = gans[i], b = gans[j];
+        if (WUHE[a] && WUHE[a][0] === b) out.push({ type: '干合', level: 'good', text: `${posName[i]}干${GAN[a]}合${posName[j]}干${GAN[b]}（${GAN[a]}${GAN[b]}合化${WUHE[a][1]}）` });
+        if ([[0, 6], [1, 7], [2, 8], [3, 9]].some(([x, y]) => (a === x && b === y) || (a === y && b === x)))
+          out.push({ type: '干沖', level: 'bad', text: `${posName[i]}干${GAN[a]}沖${posName[j]}干${GAN[b]}` });
+      }
+    }
+    return out;
+  }
+
+  // ---------- 調候用神（窮通寶鑑簡表，僅供參考） ----------
+  const TIAOHOU = {
+    甲: { 寅: '丙癸', 卯: '庚丙丁', 辰: '庚丁壬', 巳: '癸丁庚', 午: '癸丁庚', 未: '癸丁庚', 申: '庚丁壬', 酉: '庚丙丁', 戌: '庚甲丁壬癸', 亥: '庚丁戊丙', 子: '丁庚丙', 丑: '丁庚丙' },
+    乙: { 寅: '丙癸', 卯: '丙癸', 辰: '癸丙戊', 巳: '癸', 午: '癸丙', 未: '癸丙', 申: '丙癸己', 酉: '癸丙丁', 戌: '癸辛', 亥: '丙戊', 子: '丙', 丑: '丙' },
+    丙: { 寅: '壬庚', 卯: '壬己', 辰: '壬甲', 巳: '壬庚癸', 午: '壬庚', 未: '壬庚', 申: '壬戊', 酉: '壬癸', 戌: '甲壬', 亥: '甲戊庚壬', 子: '壬戊己', 丑: '壬甲' },
+    丁: { 寅: '甲庚', 卯: '庚甲', 辰: '甲庚', 巳: '甲庚', 午: '壬庚癸', 未: '甲壬庚', 申: '甲庚丙戊', 酉: '甲庚丙戊', 戌: '甲庚戊', 亥: '甲庚', 子: '甲庚', 丑: '甲庚' },
+    戊: { 寅: '丙甲癸', 卯: '丙甲癸', 辰: '甲丙癸', 巳: '甲丙癸', 午: '壬甲丙', 未: '癸丙甲', 申: '丙癸甲', 酉: '丙癸', 戌: '甲丙癸', 亥: '甲丙', 子: '丙甲', 丑: '丙甲' },
+    己: { 寅: '丙庚甲', 卯: '甲癸丙', 辰: '丙癸甲', 巳: '癸丙', 午: '癸丙', 未: '癸丙', 申: '丙癸', 酉: '丙癸', 戌: '甲丙癸', 亥: '丙甲戊', 子: '丙甲戊', 丑: '丙甲戊' },
+    庚: { 寅: '戊甲壬丙丁', 卯: '丁甲庚丙', 辰: '甲丁壬癸', 巳: '壬戊丙丁', 午: '壬癸', 未: '丁甲', 申: '丁甲', 酉: '丁甲丙', 戌: '甲壬', 亥: '丁丙', 子: '丁甲丙', 丑: '丙丁甲' },
+    辛: { 寅: '己壬庚', 卯: '壬甲', 辰: '壬甲', 巳: '壬甲癸', 午: '壬己癸', 未: '壬庚甲', 申: '壬甲戊', 酉: '壬甲', 戌: '壬甲', 亥: '壬丙', 子: '丙戊壬甲', 丑: '丙壬戊己' },
+    壬: { 寅: '庚丙戊', 卯: '戊辛庚', 辰: '甲庚', 巳: '壬辛庚癸', 午: '癸庚辛', 未: '辛甲', 申: '戊丁', 酉: '甲庚', 戌: '甲丙', 亥: '戊丙庚', 子: '戊丙', 丑: '丙丁甲' },
+    癸: { 寅: '辛丙', 卯: '庚辛', 辰: '丙辛甲', 巳: '辛', 午: '庚辛壬癸', 未: '庚辛壬癸', 申: '丁', 酉: '辛丙', 戌: '辛甲壬癸', 亥: '庚辛戊丁', 子: '丙辛', 丑: '丙丁' }
+  };
+  function tiaohou(dayGan, monthZhiIdx) {
+    return (TIAOHOU[GAN[dayGan]] || {})[ZHI[monthZhiIdx]] || '';
+  }
+
+  // ---------- 流年 / 流月 ----------
+  // 從 startYear 起 count 年的流年，附十神與太歲關係（相對出生年支/日支）
+  function yearlyFortune(startYear, count, pillars) {
+    const dayGan = pillars.day.ganIdx;
+    const birthYearZhi = pillars.year.zhiIdx;
+    const list = [];
+    for (let i = 0; i < count; i++) {
+      const y = startYear + i;
+      const p = pillar(idx60(((y - 4) % 10 + 10) % 10, ((y - 4) % 12 + 12) % 12));
+      const tags = [];
+      if (p.zhiIdx === birthYearZhi) tags.push('值太歲（本命年）');
+      if ((p.zhiIdx + 6) % 12 === birthYearZhi) tags.push('沖太歲');
+      if (LIUHE[p.zhiIdx] === birthYearZhi) tags.push('合太歲');
+      if (LIUHAI[p.zhiIdx] === birthYearZhi) tags.push('害太歲');
+      if ((p.zhiIdx + 6) % 12 === pillars.day.zhiIdx) tags.push('沖日支');
+      list.push({ year: y, ...p, tenGod: tenGod(dayGan, p.ganIdx), shengxiao: SHENGXIAO[p.zhiIdx], tags });
+    }
+    return list;
+  }
+  // 某流年的十二流月（節氣月，寅月起；附十神）
+  function monthlyFortune(flowYear, pillars) {
+    const dayGan = pillars.day.ganIdx;
+    const yGan = ((flowYear - 4) % 10 + 10) % 10;
+    const approx = ['2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月', '隔年1月'];
+    const jie = ['立春', '驚蟄', '清明', '立夏', '芒種', '小暑', '立秋', '白露', '寒露', '立冬', '大雪', '小寒'];
+    const list = [];
+    for (let m = 0; m < 12; m++) {
+      const stem = ((yGan % 5) * 2 + 2 + m) % 10;
+      const p = pillar(idx60(stem, (m + 2) % 12));
+      list.push({ ...p, jie: jie[m], approx: approx[m], tenGod: tenGod(dayGan, p.ganIdx) });
+    }
+    return list;
+  }
+
   return {
     GAN, ZHI, SHENGXIAO, GAN_WUXING, ZHI_WUXING, GAN_YINYANG, ZHI_CANGGAN, NAYIN,
     WX_SHENG, WX_KE,
-    pillar, idx60, dayPillar, yearPillar, monthPillar, hourPillar, fourPillars, tenGod, luck
+    pillar, idx60, dayPillar, yearPillar, monthPillar, hourPillar, fourPillars, tenGod, luck,
+    branchRelations, tiaohou, yearlyFortune, monthlyFortune
   };
 })();
 if (typeof module !== 'undefined') module.exports = Ganzhi;

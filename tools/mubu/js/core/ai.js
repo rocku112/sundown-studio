@@ -18,7 +18,24 @@ const AI = (() => {
     '直接給出解讀內容，不要重複排盤資料本身。條理分明、具體實用，避免空泛套話；' +
     '結尾提醒：占卜結果僅供參考，人生方向仍由自己掌握。全文 400-600 字。';
 
-  async function callClaude(cfg, prompt) {
+  // 讀取 SSE 串流，逐行呼叫 onLine
+  async function readSSE(res, onLine) {
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (line.startsWith('data:')) onLine(line.slice(5).trim());
+      }
+    }
+  }
+
+  async function callClaude(cfg, messages, onDelta) {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -29,41 +46,80 @@ const AI = (() => {
       },
       body: JSON.stringify({
         model: cfg.model || 'claude-sonnet-5',
-        max_tokens: 1500,
+        max_tokens: 1800,
+        stream: true,
         system: SYSTEM,
-        messages: [{ role: 'user', content: prompt }]
+        messages
       })
     });
     if (!res.ok) throw new Error(`API 錯誤 ${res.status}：${(await res.text()).slice(0, 200)}`);
-    const data = await res.json();
-    return data.content.map(b => b.text || '').join('');
+    let full = '';
+    await readSSE(res, (data) => {
+      if (data === '[DONE]') return;
+      try {
+        const j = JSON.parse(data);
+        if (j.type === 'content_block_delta' && j.delta && j.delta.text) { full += j.delta.text; onDelta(full); }
+        if (j.type === 'error') throw new Error(j.error && j.error.message || 'stream error');
+      } catch (e) { /* 忽略非 JSON 行 */ }
+    });
+    return full;
   }
 
-  async function callOpenAI(cfg, prompt) {
+  async function callOpenAI(cfg, messages, onDelta) {
     const base = cfg.baseUrl || 'https://api.openai.com/v1';
     const res = await fetch(`${base}/chat/completions`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'authorization': `Bearer ${cfg.apiKey}` },
       body: JSON.stringify({
         model: cfg.model || 'gpt-4o-mini',
-        max_tokens: 1500,
-        messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: prompt }]
+        max_tokens: 1800,
+        stream: true,
+        messages: [{ role: 'system', content: SYSTEM }, ...messages]
       })
     });
     if (!res.ok) throw new Error(`API 錯誤 ${res.status}：${(await res.text()).slice(0, 200)}`);
-    const data = await res.json();
-    return data.choices[0].message.content;
+    let full = '';
+    await readSSE(res, (data) => {
+      if (data === '[DONE]') return;
+      try {
+        const j = JSON.parse(data);
+        const t = j.choices && j.choices[0] && j.choices[0].delta && j.choices[0].delta.content;
+        if (t) { full += t; onDelta(full); }
+      } catch (e) { /* 忽略 */ }
+    });
+    return full;
   }
 
-  async function interpret(prompt) {
+  // 多輪串流對話：messages 為 [{role:'user'|'assistant', content}]
+  async function interpretStream(messages, onDelta) {
     const cfg = getConfig();
     if (!hasKey()) throw new Error('尚未設定 API Key');
-    return cfg.provider === 'claude' ? callClaude(cfg, prompt) : callOpenAI(cfg, prompt);
+    return cfg.provider === 'claude' ? callClaude(cfg, messages, onDelta) : callOpenAI(cfg, messages, onDelta);
   }
+  // 相容單輪介面
+  async function interpret(prompt) { return interpretStream([{ role: 'user', content: prompt }], () => {}); }
 
-  // ---------- UI：AI 解讀區塊 ----------
+  // ---------- UI：AI 解讀區塊（串流＋追問） ----------
   // 在結果底部附掛「AI 深度解讀」。buildPrompt() 由各模組提供，回傳排盤摘要文字。
   function attach(container, buildPrompt) {
+    // 結果工具列：分享圖＋存入紀錄（每個占卜結果通用）
+    {
+      const tools = document.createElement('div');
+      tools.className = 'result-tools';
+      tools.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap';
+      tools.innerHTML = `<button class="btn small ghost t-share">📸 存成分享圖</button>
+        <button class="btn small ghost t-save">💾 存入紀錄</button>`;
+      tools.querySelector('.t-share').addEventListener('click', () => {
+        Extras.shareImage(container, (window.App && App.currentTitle && App.currentTitle()) || '占卜結果');
+      });
+      tools.querySelector('.t-save').addEventListener('click', (e) => {
+        Extras.saveHistory(location.hash.replace(/^#\//, ''), (window.App && App.currentTitle && App.currentTitle()) || '占卜結果', container);
+        e.target.textContent = '✅ 已存入紀錄';
+        setTimeout(() => { e.target.textContent = '💾 存入紀錄'; }, 1600);
+      });
+      container.appendChild(tools);
+    }
+
     const box = document.createElement('div');
     box.className = 'ai-box';
     box.innerHTML = `
@@ -72,40 +128,70 @@ const AI = (() => {
         <button class="btn small ai-go">開始解讀</button>
         <span class="muted ai-hint"></span>
       </div>
-      <div class="ai-output" style="display:none"></div>`;
+      <div class="ai-thread"></div>
+      <div class="ai-followup" style="display:none;margin-top:12px;gap:8px;align-items:center">
+        <input class="ai-q" placeholder="追問：例如「那我下個月適合換工作嗎？」" style="flex:1;background:#fff;border:1px solid var(--panel-border);border-radius:8px;padding:8px 12px;font-family:inherit;font-size:14px">
+        <button class="btn small ai-ask">追問</button>
+      </div>`;
     container.appendChild(box);
     const btn = box.querySelector('.ai-go');
     const hint = box.querySelector('.ai-hint');
-    const out = box.querySelector('.ai-output');
+    const thread = box.querySelector('.ai-thread');
+    const followRow = box.querySelector('.ai-followup');
+    const followInput = box.querySelector('.ai-q');
+    const askBtn = box.querySelector('.ai-ask');
+    const messages = []; // 對話脈絡
 
     function refreshHint() {
       hint.textContent = hasKey()
-        ? `使用 ${getConfig().provider === 'claude' ? 'Claude' : 'OpenAI'} · Key 僅存於你的瀏覽器`
+        ? `使用 ${getConfig().provider === 'claude' ? 'Claude' : 'OpenAI'} · 串流輸出 · Key 僅存於你的瀏覽器`
         : '免費功能已含基本解讀；AI 深度解讀需在右下角「設定」填入自己的 API Key';
     }
     refreshHint();
     document.addEventListener('mubu:ai-config-changed', refreshHint);
 
-    btn.addEventListener('click', async () => {
-      if (!hasKey()) {
-        document.dispatchEvent(new CustomEvent('mubu:open-settings'));
-        return;
+    async function run(userText, label) {
+      if (!hasKey()) { document.dispatchEvent(new CustomEvent('mubu:open-settings')); return; }
+      btn.disabled = true; askBtn.disabled = true;
+      followRow.style.display = 'none';
+      if (label) {
+        const q = document.createElement('div');
+        q.className = 'muted';
+        q.style.cssText = 'margin-top:12px;padding:8px 12px;border-left:3px solid var(--gold-mid);background:var(--cream);border-radius:0 8px 8px 0';
+        q.textContent = `追問：${label}`;
+        thread.appendChild(q);
       }
-      btn.disabled = true;
-      out.style.display = '';
+      const out = document.createElement('div');
       out.className = 'ai-output loading';
-      out.innerHTML = '<span class="spinner"></span>正在觀星測象，請稍候……';
+      out.innerHTML = '<span class="spinner"></span>正在觀星測象……';
+      thread.appendChild(out);
+      messages.push({ role: 'user', content: userText });
       try {
-        const text = await interpret(buildPrompt());
-        out.className = 'ai-output';
-        out.textContent = text;
+        const full = await interpretStream(messages, (txt) => {
+          out.className = 'ai-output';
+          out.textContent = txt;
+        });
+        messages.push({ role: 'assistant', content: full });
+        followRow.style.display = 'flex';
+        followInput.value = '';
       } catch (e) {
+        messages.pop(); // 失敗回退
         out.className = 'ai-output';
         out.innerHTML = `<span style="color:var(--cinnabar)">解讀失敗：${e.message}</span>`;
       }
-      btn.disabled = false;
+      btn.disabled = false; askBtn.disabled = false;
       btn.textContent = '重新解讀';
+    }
+
+    btn.addEventListener('click', () => {
+      if (btn.textContent === '重新解讀') { messages.length = 0; thread.innerHTML = ''; }
+      run(buildPrompt(), null);
     });
+    askBtn.addEventListener('click', () => {
+      const q = followInput.value.trim();
+      if (q) run(q, q);
+    });
+    followInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') askBtn.click(); });
   }
 
   // ---------- 設定彈窗 ----------

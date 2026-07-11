@@ -1,0 +1,14 @@
+{
+  "name": "暮卜先知 · 免費線上占卜",
+  "short_name": "暮卜先知",
+  "description": "免費線上占卜排盤：八字、紫微斗數、梅花易數、塔羅、西洋占星、奇門遁甲、求籤、農民曆。全部本機運算，無需註冊。",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F5F0E8",
+  "theme_color": "#F5F0E8",
+  "lang": "zh-Hant-TW",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

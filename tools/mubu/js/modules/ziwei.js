@@ -20,6 +20,22 @@
     破軍: '耗星先鋒，敢破敢立、不破不立，適合開創變革；人生多變動，防先破後成的陣痛。'
   };
 
+  // 十四主星廟旺利陷表（子丑寅卯辰巳午未申酉戌亥；廟>旺>得>利>平>不>陷）
+  const BRIGHT = {
+    紫微: '平廟旺旺得旺廟廟旺旺得旺', 天機: '廟陷得旺利平廟陷得旺利平',
+    太陽: '陷不旺廟旺旺旺得得陷不陷', 武曲: '旺廟得利廟平旺廟得利廟平',
+    天同: '旺不利平平廟陷不旺平平廟', 廉貞: '平利廟平利陷平利廟平利陷',
+    天府: '廟廟廟得廟得旺廟得旺廟得', 太陰: '廟廟旺陷陷陷不不利不旺廟',
+    貪狼: '旺廟平利廟陷旺廟平利廟陷', 巨門: '旺不廟廟陷旺旺不廟廟陷旺',
+    天相: '廟廟廟陷得得廟得廟陷得得', 天梁: '廟旺廟廟廟陷廟旺陷得廟陷',
+    七殺: '旺廟廟旺廟平旺廟廟廟廟平', 破軍: '廟旺得陷旺平廟旺得陷旺平'
+  };
+  const brightOf = (star, zhi) => BRIGHT[star] ? BRIGHT[star][zhi] : '';
+
+  // 命主（命宮支）／身主（生年支）
+  const MINGZHU = ['貪狼', '巨門', '祿存', '文曲', '廉貞', '武曲', '破軍', '武曲', '廉貞', '文曲', '祿存', '巨門'];
+  const SHENZHU = ['火星', '天相', '天梁', '天同', '文昌', '天機', '火星', '天相', '天梁', '天同', '文昌', '天機'];
+
   // 四化（年干 → [祿, 權, 科, 忌]）
   const SIHUA = {
     甲: ['廉貞', '破軍', '武曲', '太陽'], 乙: ['天機', '天梁', '紫微', '太陰'],
@@ -115,7 +131,26 @@
       const zhi = ((mingIdx - i) % 12 + 12) % 12;
       palaces.push({ zhi, name: PALACE_NAMES[i], gan: palaceGan(zhi), ...stars[zhi] });
     }
-    return { mingIdx, shenIdx, ziweiIdx, ju, juName, palaces, hua, stars };
+
+    // 大限：起限歲＝局數；陽男陰女順行（地支順），陰男陽女逆行
+    const yangYear = Ganzhi.GAN_YINYANG[ys] === '陽';
+    const daxianForward = (gender === 'M') === yangYear;
+    for (const p of palaces) {
+      const k = daxianForward
+        ? ((p.zhi - mingIdx) % 12 + 12) % 12
+        : ((mingIdx - p.zhi) % 12 + 12) % 12;
+      p.daxian = [ju + k * 10, ju + k * 10 + 9];
+    }
+
+    // 流年：今年太歲所在宮
+    const nowYear = new Date().getFullYear();
+    const liunianZhi = ((nowYear - 4) % 12 + 12) % 12;
+
+    return {
+      mingIdx, shenIdx, ziweiIdx, ju, juName, palaces, hua, stars,
+      daxianForward, liunianZhi, nowYear,
+      mingzhu: MINGZHU[mingIdx], shenzhu: SHENZHU[yz]
+    };
   }
 
   // 4x4 命盤版位：宮支 → grid 位置
@@ -146,12 +181,16 @@
       for (const p of c.palaces) {
         const isMing = p.zhi === c.mingIdx;
         const isShen = p.zhi === c.shenIdx;
-        const mains = p.main.map(s => `${s}${c.hua[s] ? `<span class="hua">化${c.hua[s]}</span>` : ''}`).join(' ') || '<span class="muted">（借對宮）</span>';
+        const isLiunian = p.zhi === c.liunianZhi;
+        const mains = p.main.map(s => `${s}<small style="color:var(--ink-faint)">${brightOf(s, p.zhi)}</small>${c.hua[s] ? `<span class="hua">化${c.hua[s]}</span>` : ''}`).join(' ') || '<span class="muted">（借對宮）</span>';
         const minors = p.minor.map(s => `${s}${c.hua[s] ? `<span class="hua">化${c.hua[s]}</span>` : ''}`).join(' ');
         cells[GRID_POS[p.zhi]] = `<div class="zw-palace${isMing ? ' ming' : ''}">
           <div><span class="pname">${p.name}${isShen ? '·身' : ''}</span><span class="pgz">${p.gan}${Ganzhi.ZHI[p.zhi]}</span></div>
           <div class="stars-main">${mains}</div>
           <div class="stars-min">${minors}</div>
+          <div style="margin-top:auto;padding-top:3px;font-size:11px;color:var(--ink-faint)">
+            大限 ${p.daxian[0]}-${p.daxian[1]}${isLiunian ? `　<b style="color:var(--cinnabar)">◉${c.nowYear}流年</b>` : ''}
+          </div>
         </div>`;
       }
       let grid = '';
@@ -161,6 +200,8 @@
             <div style="font-size:22px;color:var(--gold-bright);letter-spacing:.2em">紫微命盤</div>
             <div class="muted" style="margin-top:6px">農曆${lunar.lunarYear}年${lunar.monthName}${lunar.dayName}<br>${yp.name}年 ${Ganzhi.ZHI[hourIdx]}時 ${b.gender === 'M' ? '男' : '女'}命</div>
             <div style="margin-top:6px"><span class="tag gold">${c.juName}</span><span class="tag">紫微在${Ganzhi.ZHI[c.ziweiIdx]}</span></div>
+            <div style="margin-top:4px"><span class="tag">命主：${c.mingzhu}</span><span class="tag">身主：${c.shenzhu}</span></div>
+            <div class="muted" style="margin-top:4px;font-size:12px">大限${c.daxianForward ? '順' : '逆'}行 · ${c.ju}歲起</div>
           </div>`;
           continue;
         }
@@ -198,10 +239,12 @@
         `請為以下紫微斗數命盤做深度解讀。
 ${b.gender === 'M' ? '男' : '女'}命，農曆${lunar.lunarYear}年${lunar.monthName}${lunar.dayName}${Ganzhi.ZHI[hourIdx]}時生，${yp.name}年，${c.juName}。
 命宮在${Ganzhi.ZHI[c.mingIdx]}，身宮在${Ganzhi.ZHI[c.shenIdx]}。
-十二宮佈星：
-${c.palaces.map(p => `${p.name}（${p.gan}${Ganzhi.ZHI[p.zhi]}）：主星[${p.main.join('、') || '無，借對宮'}] 輔星[${p.minor.join('、') || '無'}]`).join('\n')}
+命主：${c.mingzhu}，身主：${c.shenzhu}。大限${c.daxianForward ? '順' : '逆'}行，${c.ju}歲起限。
+十二宮佈星（含廟旺與大限歲數）：
+${c.palaces.map(p => `${p.name}（${p.gan}${Ganzhi.ZHI[p.zhi]}，大限${p.daxian[0]}-${p.daxian[1]}歲）：主星[${p.main.map(s => s + (brightOf(s, p.zhi) || '')).join('、') || '無，借對宮'}] 輔星[${p.minor.join('、') || '無'}]`).join('\n')}
 生年四化：${huaList}
-請分析：1) 命身宮與整體格局 2) 性格特質 3) 事業官祿 4) 財帛 5) 感情婚姻（夫妻宮）6) 需注意的宮位與化忌影響，並給出人生建議。`);
+${c.nowYear}年流年命宮在${Ganzhi.ZHI[c.liunianZhi]}。
+請分析：1) 命身宮與整體格局（注意主星廟旺利陷的強弱） 2) 性格特質 3) 事業官祿 4) 財帛 5) 感情婚姻（夫妻宮）6) 目前所行大限與${c.nowYear}流年運勢 7) 需注意的宮位與化忌影響，並給出人生建議。`);
     });
   }
 

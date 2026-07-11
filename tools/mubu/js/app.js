@@ -2,10 +2,41 @@
 const App = (() => {
   const modules = {};
   const order = [];
+  let currentId = '';
 
   function register(mod) { modules[mod.id] = mod; order.push(mod.id); }
+  function currentTitle() { return modules[currentId] ? modules[currentId].title : '占卜結果'; }
 
   const $main = () => document.getElementById('main');
+
+  // ---------- 每日運勢卡 ----------
+  function dailyCardHTML() {
+    if (typeof AlmanacEngine === 'undefined' || typeof QIAN_DATA === 'undefined') return '';
+    const n = new Date();
+    const info = AlmanacEngine.info(n.getFullYear(), n.getMonth() + 1, n.getDate());
+    if (!info.lunar) return '';
+    const q = QIAN_DATA[info.jdn % QIAN_DATA.length]; // 每日一籤（依日期固定）
+    const week = ['日', '一', '二', '三', '四', '五', '六'][n.getDay()];
+    return `<div class="panel" style="margin-bottom:6px">
+      <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center">
+        <div style="text-align:center;min-width:120px">
+          <div class="muted">${n.getFullYear()}/${n.getMonth() + 1}/${n.getDate()} 週${week}</div>
+          <div style="font-size:26px;color:var(--navy);font-weight:700">${info.lunar.monthName}${info.lunar.dayName} ${info.phase.emoji}</div>
+          <div class="muted">${info.yp.name}年 ${info.dp.name}日</div>
+          ${info.fests.length ? `<div style="color:var(--cinnabar);font-size:13px">🎉 ${info.fests.join('、')}</div>` : ''}
+        </div>
+        <div style="flex:1;min-width:220px">
+          <div><span class="tag gold">${info.jc.name}日</span><span class="tag">沖${Ganzhi.SHENGXIAO[info.chongZhi]}</span><span class="tag ${info.xiuGood ? 'gold' : ''}">${info.xiu}宿</span></div>
+          <div style="font-size:13.5px;margin-top:6px"><b style="color:var(--gold-deep)">宜</b> ${info.jc.yi}<br><b style="color:var(--cinnabar)">忌</b> ${info.jc.ji}</div>
+        </div>
+        <div style="flex:1;min-width:220px;border-left:1px dashed var(--panel-border);padding-left:18px">
+          <div class="muted" style="font-size:12.5px">每日一籤 · 第${q.id}籤（${q.level}）</div>
+          <div style="font-size:14.5px;letter-spacing:.08em;line-height:1.9">${q.poem[0]}，${q.poem[1]}。</div>
+          <a href="#/qian" style="color:var(--gold-deep);font-size:13px">想問事？誠心求一籤 →</a>
+        </div>
+      </div>
+    </div>`;
+  }
 
   // ---------- 首頁 ----------
   function renderHome() {
@@ -17,6 +48,7 @@ const App = (() => {
         <div class="sub">日暮觀星 · 未卜先知</div>
         <div class="free-badge">完全免費 · 無需註冊 · 排盤全在你的瀏覽器運算</div>
       </header>
+      ${dailyCardHTML()}
       <div class="menu-grid" id="menu"></div>
       <footer class="site">
         暮卜先知 © 日落工作室 SunDown Studio<br>
@@ -53,6 +85,7 @@ const App = (() => {
 
   function route() {
     const h = location.hash.replace(/^#\/?/, '');
+    currentId = modules[h] ? h : '';
     if (h && modules[h]) renderModule(h); else renderHome();
   }
 
@@ -107,9 +140,15 @@ const App = (() => {
 
     window.addEventListener('hashchange', route);
     route();
+
+    // PWA：註冊 Service Worker（離線可用）
+    if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+      navigator.serviceWorker.register('sw.js').catch(() => { /* 靜默失敗 */ });
+    }
   }
 
-  return { register, init, birthForm, aspectGrid, fortuneClass };
+  return { register, init, birthForm, aspectGrid, fortuneClass, currentTitle };
 })();
+window.App = App;
 
 document.addEventListener('DOMContentLoaded', App.init);

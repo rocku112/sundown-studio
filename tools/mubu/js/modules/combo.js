@@ -12,7 +12,11 @@
     const phi = latDeg * RAD;
     const y = -Math.cos(ramc);
     const x = Math.sin(ramc) * Math.cos(eps) + Math.tan(phi) * Math.sin(eps);
-    return Astro.norm360(Math.atan2(y, x) / RAD);
+    let asc = Astro.norm360(Math.atan2(y, x) / RAD);
+    // 象限修正：上升點必在天頂後 0°~180° 半圈內
+    const mc = Astro.norm360(Math.atan2(Math.sin(ramc), Math.cos(ramc) * Math.cos(eps)) / RAD);
+    if (Astro.norm360(asc - mc) >= 180) asc = Astro.norm360(asc + 180);
+    return asc;
   }
 
   function render(el) {
