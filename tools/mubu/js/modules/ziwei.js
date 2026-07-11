@@ -142,13 +142,16 @@
       p.daxian = [ju + k * 10, ju + k * 10 + 9];
     }
 
-    // 流年：今年太歲所在宮
+    // 流年：今年太歲所在宮＋流年四化（依流年天干飛入本命盤）
     const nowYear = new Date().getFullYear();
     const liunianZhi = ((nowYear - 4) % 12 + 12) % 12;
+    const liunianGan = Ganzhi.GAN[((nowYear - 4) % 10 + 10) % 10];
+    const liuHua = {};
+    SIHUA[liunianGan].forEach((star, i) => { liuHua[star] = HUA_NAME[i]; });
 
     return {
       mingIdx, shenIdx, ziweiIdx, ju, juName, palaces, hua, stars,
-      daxianForward, liunianZhi, nowYear,
+      daxianForward, liunianZhi, nowYear, liunianGan, liuHua,
       mingzhu: MINGZHU[mingIdx], shenzhu: SHENZHU[yz]
     };
   }
@@ -182,8 +185,9 @@
         const isMing = p.zhi === c.mingIdx;
         const isShen = p.zhi === c.shenIdx;
         const isLiunian = p.zhi === c.liunianZhi;
-        const mains = p.main.map(s => `${s}<small style="color:var(--ink-faint)">${brightOf(s, p.zhi)}</small>${c.hua[s] ? `<span class="hua">化${c.hua[s]}</span>` : ''}`).join(' ') || '<span class="muted">（借對宮）</span>';
-        const minors = p.minor.map(s => `${s}${c.hua[s] ? `<span class="hua">化${c.hua[s]}</span>` : ''}`).join(' ');
+        const liuMark = (s) => c.liuHua[s] ? `<span style="color:#4A76B8;font-size:11px">年${c.liuHua[s]}</span>` : '';
+        const mains = p.main.map(s => `${s}<small style="color:var(--ink-faint)">${brightOf(s, p.zhi)}</small>${c.hua[s] ? `<span class="hua">化${c.hua[s]}</span>` : ''}${liuMark(s)}`).join(' ') || '<span class="muted">（借對宮）</span>';
+        const minors = p.minor.map(s => `${s}${c.hua[s] ? `<span class="hua">化${c.hua[s]}</span>` : ''}${liuMark(s)}`).join(' ');
         cells[GRID_POS[p.zhi]] = `<div class="zw-palace${isMing ? ' ming' : ''}">
           <div><span class="pname">${p.name}${isShen ? '·身' : ''}</span><span class="pgz">${p.gan}${Ganzhi.ZHI[p.zhi]}</span></div>
           <div class="stars-main">${mains}</div>
@@ -202,6 +206,7 @@
             <div style="margin-top:6px"><span class="tag gold">${c.juName}</span><span class="tag">紫微在${Ganzhi.ZHI[c.ziweiIdx]}</span></div>
             <div style="margin-top:4px"><span class="tag">命主：${c.mingzhu}</span><span class="tag">身主：${c.shenzhu}</span></div>
             <div class="muted" style="margin-top:4px;font-size:12px">大限${c.daxianForward ? '順' : '逆'}行 · ${c.ju}歲起</div>
+            <div style="margin-top:4px;font-size:12px;color:#4A76B8">${c.nowYear}${c.liunianGan}年四化：${Object.entries(c.liuHua).map(([s, h]) => `${s}${h}`).join('、')}</div>
           </div>`;
           continue;
         }
@@ -243,8 +248,8 @@ ${b.gender === 'M' ? '男' : '女'}命，農曆${lunar.lunarYear}年${lunar.mont
 十二宮佈星（含廟旺與大限歲數）：
 ${c.palaces.map(p => `${p.name}（${p.gan}${Ganzhi.ZHI[p.zhi]}，大限${p.daxian[0]}-${p.daxian[1]}歲）：主星[${p.main.map(s => s + (brightOf(s, p.zhi) || '')).join('、') || '無，借對宮'}] 輔星[${p.minor.join('、') || '無'}]`).join('\n')}
 生年四化：${huaList}
-${c.nowYear}年流年命宮在${Ganzhi.ZHI[c.liunianZhi]}。
-請分析：1) 命身宮與整體格局（注意主星廟旺利陷的強弱） 2) 性格特質 3) 事業官祿 4) 財帛 5) 感情婚姻（夫妻宮）6) 目前所行大限與${c.nowYear}流年運勢 7) 需注意的宮位與化忌影響，並給出人生建議。`);
+${c.nowYear}年流年命宮在${Ganzhi.ZHI[c.liunianZhi]}；流年（${c.liunianGan}年）四化飛星：${Object.entries(c.liuHua).map(([s, h]) => `${s}化${h}（落${(c.palaces.find(p => p.main.includes(s) || p.minor.includes(s)) || {}).name || '－'}宮）`).join('、')}。
+請分析：1) 命身宮與整體格局（注意主星廟旺利陷的強弱） 2) 性格特質 3) 事業官祿 4) 財帛 5) 感情婚姻（夫妻宮）6) 目前所行大限與${c.nowYear}流年運勢——特別解讀流年四化飛入各宮的意義（年忌所落宮位是今年課題） 7) 需注意的宮位與化忌影響，並給出人生建議。`);
     });
   }
 

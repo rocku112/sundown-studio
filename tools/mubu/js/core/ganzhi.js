@@ -219,6 +219,32 @@ const Ganzhi = (() => {
     return out;
   }
 
+  // 兩地支的關係（供合婚等使用）：回傳 {type, good}
+  function zhiRelation(a, b) {
+    if ((a + 6) % 12 === b) return { type: '六沖', good: false };
+    if (LIUHE[a] === b) return { type: '六合', good: true };
+    if (LIUHAI[a] === b) return { type: '六害', good: false };
+    if ((a === 0 && b === 3) || (a === 3 && b === 0)) return { type: '相刑', good: false };
+    if (a === b && ZIXING.includes(a)) return { type: '自刑', good: false };
+    for (const [x, y, z] of SANHE) {
+      if ([x, y, z].includes(a) && [x, y, z].includes(b) && a !== b) return { type: '三合', good: true };
+    }
+    for (const [x, y, z] of XING_TRIOS) {
+      if ([x, y, z].includes(a) && [x, y, z].includes(b) && a !== b) return { type: '相刑', good: false };
+    }
+    if (a === b) return { type: '同支', good: true };
+    return { type: '平', good: null };
+  }
+
+  // 兩天干的關係：五合／相生／比和／相剋
+  function ganRelation(a, b) {
+    if ((a + 5) % 10 === b || (b + 5) % 10 === a) return { type: '五合', good: true };
+    const wa = GAN_WUXING[a], wb = GAN_WUXING[b];
+    if (wa === wb) return { type: '比和', good: true };
+    if (WX_SHENG[wa] === wb || WX_SHENG[wb] === wa) return { type: '相生', good: true };
+    return { type: '相剋', good: false };
+  }
+
   // ---------- 調候用神（窮通寶鑑簡表，僅供參考） ----------
   const TIAOHOU = {
     甲: { 寅: '丙癸', 卯: '庚丙丁', 辰: '庚丁壬', 巳: '癸丁庚', 午: '癸丁庚', 未: '癸丁庚', 申: '庚丁壬', 酉: '庚丙丁', 戌: '庚甲丁壬癸', 亥: '庚丁戊丙', 子: '丁庚丙', 丑: '丁庚丙' },
@@ -274,7 +300,7 @@ const Ganzhi = (() => {
     GAN, ZHI, SHENGXIAO, GAN_WUXING, ZHI_WUXING, GAN_YINYANG, ZHI_CANGGAN, NAYIN,
     WX_SHENG, WX_KE,
     pillar, idx60, dayPillar, yearPillar, monthPillar, hourPillar, fourPillars, tenGod, luck,
-    branchRelations, tiaohou, yearlyFortune, monthlyFortune
+    branchRelations, tiaohou, yearlyFortune, monthlyFortune, zhiRelation, ganRelation
   };
 })();
 if (typeof module !== 'undefined') module.exports = Ganzhi;

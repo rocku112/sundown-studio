@@ -312,9 +312,57 @@ footer.site {
 }
 footer.site a { color: var(--ink-dim); }
 
+/* ---------- 行動版 ---------- */
 @media (max-width: 720px) {
+  .wrap { padding: 14px 12px 76px; }
+  header.site { padding: 26px 0 18px; }
   header.site h1 { font-size: 30px; }
-  .ziwei-grid { font-size: 11px; grid-template-rows: repeat(4, minmax(96px, auto)); }
-  .zw-palace { padding: 5px; font-size: 11px; }
-  .tarot-card { width: 104px; min-height: 168px; }
+  header.site .taiji { font-size: 34px; }
+  header.site .free-badge { font-size: 11.5px; padding: 2px 12px; }
+
+  .menu-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 18px; }
+  .menu-card { padding: 14px 12px 12px; }
+  .menu-card .icon { font-size: 24px; }
+  .menu-card h3 { font-size: 15.5px; letter-spacing: .06em; margin: 5px 0 3px; }
+  .menu-card p { font-size: 11.8px; line-height: 1.5; }
+  .menu-card .free-tag { display: none; }
+  .menu-card.wide { padding: 16px; }
+
+  .topbar { padding: 12px 0 4px; }
+  .topbar h2 { font-size: 19px; letter-spacing: .1em; }
+  .btn-back { padding: 4px 12px; font-size: 13px; }
+
+  .panel { padding: 16px 13px; border-radius: 12px; }
+  .panel h3 { font-size: 16.5px; }
+  .form-grid { gap: 10px; }
+  .field input, .field select, .field textarea { font-size: 16px; padding: 10px 12px; } /* 16px 避免 iOS 自動縮放 */
+  .btn:not(.small) { width: 100%; }
+
+  table.chart { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; font-size: 13.5px; }
+  table.chart th, table.chart td { padding: 6px 7px; white-space: nowrap; }
+  table.chart .big { font-size: 18px; }
+
+  .aspect-grid { grid-template-columns: 1fr; }
+  .big-glyph { font-size: 48px; }
+  .fortune-level { font-size: 18px; padding: 3px 16px; }
+  .poem { font-size: 16px; line-height: 2; letter-spacing: .1em; }
+
+  .ziwei-grid { font-size: 10.5px; gap: 3px; grid-template-rows: repeat(4, minmax(92px, auto)); }
+  .zw-palace { padding: 4px; font-size: 10.5px; }
+  .zw-palace .stars-main { font-size: 12px; }
+  .zw-center { font-size: 11.5px; padding: 6px; }
+  .qimen-grid { max-width: 100%; }
+  .qm-cell { padding: 5px; font-size: 11.5px; }
+  .tarot-card { width: 86px; min-height: 146px; }
+  .tarot-card .face .emoji { font-size: 30px; }
+  .tarot-card .face .cname { font-size: 13px; }
+
+  .ai-box { padding: 13px; }
+  .ai-followup { flex-direction: column; align-items: stretch !important; }
+  .ai-followup .ai-ask { width: 100%; }
+  .result-tools { justify-content: stretch !important; }
+  .result-tools .btn { flex: 1; }
+
+  .settings-fab { right: 12px; bottom: 12px; padding: 8px 14px; font-size: 13px; }
+  .modal { padding: 18px; }
 }

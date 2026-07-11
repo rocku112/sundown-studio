@@ -1,0 +1,148 @@
+/* 暮卜先知 · 占星合盤（Synastry 雙人契合） */
+(() => {
+  const SIGNS = ['牡羊座', '金牛座', '雙子座', '巨蟹座', '獅子座', '處女座', '天秤座', '天蠍座', '射手座', '摩羯座', '水瓶座', '雙魚座'];
+  const ELEM = ['火', '土', '風', '水', '火', '土', '風', '水', '火', '土', '風', '水'];
+  const PLANETS = [
+    { id: 'sun', name: '太陽', sym: '☉', w: 3 },
+    { id: 'moon', name: '月亮', sym: '☽', w: 3 },
+    { id: 'mercury', name: '水星', sym: '☿', w: 1.5 },
+    { id: 'venus', name: '金星', sym: '♀', w: 2.5 },
+    { id: 'mars', name: '火星', sym: '♂', w: 2 },
+    { id: 'jupiter', name: '木星', sym: '♃', w: 1.2 },
+    { id: 'saturn', name: '土星', sym: '♄', w: 1.2 }
+  ];
+  const ASPECTS = [
+    { angle: 0, orb: 6, name: '合相', sym: '☌', q: 'mix' },
+    { angle: 60, orb: 4, name: '六分相', sym: '⚹', q: 'good' },
+    { angle: 90, orb: 5, name: '四分相', sym: '□', q: 'hard' },
+    { angle: 120, orb: 5, name: '三分相', sym: '△', q: 'good' },
+    { angle: 180, orb: 6, name: '對分相', sym: '☍', q: 'hard' }
+  ];
+  const signOf = (lon) => SIGNS[Math.floor(Astro.norm360(lon) / 30)];
+  const elemOf = (lon) => ELEM[Math.floor(Astro.norm360(lon) / 30)];
+
+  function chartOf(b) {
+    const jde = Astro.toJD(b.y, b.m, b.d, b.hh) - 8 / 24 + Astro.deltaT(b.y) / 86400;
+    return PLANETS.map(p => ({
+      ...p,
+      lon: p.id === 'sun' ? Astro.sunLongitude(jde) : p.id === 'moon' ? Astro.moonLongitude(jde) : Astro.planetLongitude(p.id, jde)
+    }));
+  }
+
+  function personForm() {
+    return `<div class="form-grid">
+      <div class="field"><label>年</label><input type="number" class="sy-y" value="1990" min="1900" max="2100" style="width:90px"></div>
+      <div class="field"><label>月</label><input type="number" class="sy-m" value="1" min="1" max="12" style="width:64px"></div>
+      <div class="field"><label>日</label><input type="number" class="sy-d" value="1" min="1" max="31" style="width:64px"></div>
+      <div class="field"><label>時</label><input type="number" class="sy-h" value="12" min="0" max="23" style="width:64px"></div>
+    </div>`;
+  }
+  const readP = (root) => ({ y: +root.querySelector('.sy-y').value, m: +root.querySelector('.sy-m').value, d: +root.querySelector('.sy-d').value, hh: +root.querySelector('.sy-h').value });
+
+  function synastry(A, B) {
+    const ca = chartOf(A), cb = chartOf(B);
+    const inter = [];
+    let score = 50;
+    for (const pa of ca) {
+      for (const pb of cb) {
+        let diff = Math.abs(Astro.norm360(pa.lon - pb.lon));
+        if (diff > 180) diff = 360 - diff;
+        for (const a of ASPECTS) {
+          if (Math.abs(diff - a.angle) <= a.orb) {
+            const w = (pa.w + pb.w) / 2;
+            const isLuminaryPair = (pa.id === 'sun' && pb.id === 'moon') || (pa.id === 'moon' && pb.id === 'sun');
+            const isVenusMars = (pa.id === 'venus' && pb.id === 'mars') || (pa.id === 'mars' && pb.id === 'venus');
+            let pts;
+            if (a.q === 'good') pts = Math.round(w * 2.2);
+            else if (a.q === 'hard') {
+              if (isLuminaryPair && a.angle === 180) pts = Math.round(w * 1.5); // 日月對分＝滿月軸，強烈互補吸引
+              else if (isVenusMars) pts = Math.round(w * 0.8); // 金火相位再硬也是吸引力
+              else pts = -Math.round(w * 1.6);
+            }
+            else pts = ['saturn'].includes(pa.id) || ['saturn'].includes(pb.id) ? Math.round(w * 0.6) : Math.round(w * 1.8); // 合相：土星合較沉重
+            if (isLuminaryPair && pts > 0) pts = Math.round(pts * 1.6);
+            else if (isLuminaryPair) pts = Math.round(pts * 1.3);
+            if (isVenusMars && a.q !== 'hard') pts = Math.round(pts * 1.4);
+            score += pts;
+            inter.push({ pa, pb, asp: a, orb: (diff - a.angle).toFixed(1).replace('-', ''), pts, isLuminaryPair, isVenusMars });
+            break;
+          }
+        }
+      }
+    }
+    // 元素互補
+    const ea = {}, eb = {};
+    ca.slice(0, 5).forEach(p => { ea[elemOf(p.lon)] = (ea[elemOf(p.lon)] || 0) + 1; });
+    cb.slice(0, 5).forEach(p => { eb[elemOf(p.lon)] = (eb[elemOf(p.lon)] || 0) + 1; });
+    const domA = Object.entries(ea).sort((x, y) => y[1] - x[1])[0][0];
+    const domB = Object.entries(eb).sort((x, y) => y[1] - x[1])[0][0];
+    const elemPair = [domA, domB].sort().join('');
+    const elemGood = domA === domB || ['火風', '風火', '土水', '水土'].includes(domA + domB);
+    score += elemGood ? 6 : -3;
+
+    score = Math.max(10, Math.min(98, Math.round(score)));
+    const grade = score >= 85 ? '靈魂共振' : score >= 72 ? '天生合拍' : score >= 58 ? '互有吸引' : score >= 45 ? '需要磨合' : '挑戰型關係';
+    return { ca, cb, inter, score, grade, domA, domB, elemGood };
+  }
+
+  App.register({
+    id: 'synastry',
+    icon: '💞',
+    title: '占星合盤',
+    desc: '雙人星盤互相位分析，日月金火加權，測你們的天體化學反應。',
+    render(el) {
+      el.innerHTML = `
+        <div class="panel">
+          <h3>輸入兩人國曆生日</h3>
+          <div style="display:flex;gap:20px;flex-wrap:wrap">
+            <div class="sy-a" style="flex:1;min-width:280px"><h4 style="margin-top:0">你</h4>${personForm()}</div>
+            <div class="sy-b" style="flex:1;min-width:280px"><h4 style="margin-top:0">對方</h4>${personForm()}</div>
+          </div>
+          <button class="btn" id="sy-go" style="margin-top:14px">💞 合 盤</button>
+          <p class="muted" style="margin-top:8px">分析七大行星的交互相位（Synastry）；時間不確定填 12 時即可（月亮誤差最大約 ±7°）。</p>
+        </div>
+        <div id="sy-result"></div>`;
+
+      el.querySelector('#sy-go').addEventListener('click', () => {
+        const A = readP(el.querySelector('.sy-a'));
+        const B = readP(el.querySelector('.sy-b'));
+        const resEl = el.querySelector('#sy-result');
+        resEl.innerHTML = '';
+        const r = synastry(A, B);
+        const goods = r.inter.filter(x => x.pts > 0).sort((a, b) => b.pts - a.pts);
+        const hards = r.inter.filter(x => x.pts <= 0).sort((a, b) => a.pts - b.pts);
+        const color = r.score >= 72 ? 'var(--gold-deep)' : r.score >= 45 ? 'var(--ink-dim)' : 'var(--cinnabar)';
+
+        const row = (x) => `<div class="aspect" style="margin-top:8px;display:flex;justify-content:space-between;gap:10px;border-left:3px solid ${x.pts > 0 ? 'var(--gold-mid)' : 'var(--cinnabar)'}">
+          <span><b style="display:inline">你的${x.pa.sym}${x.pa.name} ${x.asp.sym} 對方的${x.pb.sym}${x.pb.name}</b>
+          <span class="muted">（${x.asp.name}，差${x.orb}°）</span>
+          ${x.isLuminaryPair ? '<span class="tag gold">日月相位・靈魂級</span>' : ''}${x.isVenusMars ? '<span class="tag gold">金火相位・來電</span>' : ''}</span>
+          <b style="color:${x.pts > 0 ? 'var(--gold-deep)' : 'var(--cinnabar)'}">${x.pts > 0 ? '+' : ''}${x.pts}</b></div>`;
+
+        const div = document.createElement('div');
+        div.innerHTML = `<div class="panel result">
+          <div style="text-align:center">
+            <div class="muted">你 ${A.y}/${A.m}/${A.d}（☉${signOf(r.ca[0].lon)} ☽${signOf(r.ca[1].lon)}）× 對方 ${B.y}/${B.m}/${B.d}（☉${signOf(r.cb[0].lon)} ☽${signOf(r.cb[1].lon)}）</div>
+            <div style="font-size:56px;font-weight:700;color:${color};line-height:1.4">${r.score}<span style="font-size:20px">分</span></div>
+            <span class="fortune-level ${r.score >= 72 ? 'good' : r.score >= 45 ? 'mid' : 'bad'}">${r.grade}</span>
+            <div style="margin-top:6px"><span class="tag">你主${r.domA}象 × 對方主${r.domB}象（${r.elemGood ? '相容' : '互異'}）</span><span class="tag">${r.inter.length} 組交互相位</span></div>
+          </div>
+          <hr class="divider">
+          ${goods.length ? `<h4>✨ 和諧相位（${goods.length}）</h4>${goods.map(row).join('')}` : ''}
+          ${hards.length ? `<h4 style="margin-top:16px">⚡ 張力相位（${hards.length}）</h4>${hards.map(row).join('')}` : ''}
+          ${!r.inter.length ? '<p class="muted">兩人主要行星無明顯交互相位——像平行線，需要刻意創造交集。</p>' : ''}
+          <p class="muted" style="margin-top:12px">※ 張力相位不等於不合——沒有張力的關係往往也沒有火花；四分相是最容易「來電」的相位之一。</p>
+        </div>`;
+        resEl.appendChild(div);
+
+        AI.attach(div.querySelector('.panel'), () =>
+          `請做占星合盤（Synastry）深度分析。
+你：${A.y}/${A.m}/${A.d} ${A.hh}時（UTC+8），行星：${r.ca.map(p => `${p.name}${signOf(p.lon)}${Math.floor(Astro.norm360(p.lon) % 30)}°`).join('、')}
+對方：${B.y}/${B.m}/${B.d} ${B.hh}時（UTC+8），行星：${r.cb.map(p => `${p.name}${signOf(p.lon)}${Math.floor(Astro.norm360(p.lon) % 30)}°`).join('、')}
+交互相位：${r.inter.map(x => `你的${x.pa.name}${x.asp.name}對方的${x.pb.name}（差${x.orb}°）`).join('；') || '無主要相位'}
+綜合評分：${r.score}（${r.grade}），元素：你主${r.domA}象、對方主${r.domB}象
+請分析：1) 兩人吸引力的來源（哪些相位在放電）2) 情感需求是否互相滿足（月亮與金星互動）3) 溝通與價值觀（水星、太陽）4) 長期關係的挑戰點（土星與硬相位的課題）5) 相處建議與最佳互動模式。`);
+      });
+    }
+  });
+})();
