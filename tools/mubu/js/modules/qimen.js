@@ -1,0 +1,201 @@
+/* 暮卜先知 · 奇門遁甲（時家 · 轉盤 · 拆補法） */
+(() => {
+  // 節氣局數表（陽遁：冬至→芒種；陰遁：夏至→大雪），[上元, 中元, 下元]
+  const JU_TABLE = {
+    冬至: [1, 7, 4], 小寒: [2, 8, 5], 大寒: [3, 9, 6],
+    立春: [8, 5, 2], 雨水: [9, 6, 3], 驚蟄: [1, 7, 4],
+    春分: [3, 9, 6], 清明: [4, 1, 7], 穀雨: [5, 2, 8],
+    立夏: [4, 1, 7], 小滿: [5, 2, 8], 芒種: [6, 3, 9],
+    夏至: [9, 3, 6], 小暑: [8, 2, 5], 大暑: [7, 1, 4],
+    立秋: [2, 5, 8], 處暑: [1, 4, 7], 白露: [9, 3, 6],
+    秋分: [7, 1, 4], 寒露: [6, 9, 3], 霜降: [5, 8, 2],
+    立冬: [6, 9, 3], 小雪: [5, 8, 2], 大雪: [4, 7, 1]
+  };
+  const YANG_TERMS = new Set(['冬至', '小寒', '大寒', '立春', '雨水', '驚蟄', '春分', '清明', '穀雨', '立夏', '小滿', '芒種']);
+
+  // 洛書九宮：1坎北 2坤西南 3震東 4巽東南 5中 6乾西北 7兌西 8艮東北 9離南
+  const GONG_INFO = {
+    1: { name: '坎一宮', dir: '北' }, 2: { name: '坤二宮', dir: '西南' }, 3: { name: '震三宮', dir: '東' },
+    4: { name: '巽四宮', dir: '東南' }, 5: { name: '中五宮', dir: '中' }, 6: { name: '乾六宮', dir: '西北' },
+    7: { name: '兌七宮', dir: '西' }, 8: { name: '艮八宮', dir: '東北' }, 9: { name: '離九宮', dir: '南' }
+  };
+  const RING = [1, 8, 3, 4, 9, 2, 7, 6]; // 轉盤環序（順時針：坎艮震巽離坤兌乾）
+  const YIQI = ['戊', '己', '庚', '辛', '壬', '癸', '丁', '丙', '乙']; // 六儀三奇佈盤序
+  const STARS_ORIG = { 1: '天蓬', 8: '天任', 3: '天沖', 4: '天輔', 9: '天英', 2: '天芮', 7: '天柱', 6: '天心', 5: '天禽' };
+  const DOORS_ORIG = { 1: '休門', 8: '生門', 3: '傷門', 4: '杜門', 9: '景門', 2: '死門', 7: '驚門', 6: '開門' };
+  const GODS = ['值符', '螣蛇', '太陰', '六合', '白虎', '玄武', '九地', '九天'];
+  const DOOR_LUCK = { 開門: '大吉', 休門: '吉', 生門: '大吉', 傷門: '凶', 杜門: '中平', 景門: '中吉', 死門: '大凶', 驚門: '凶' };
+  const DOOR_USE = {
+    開門: '利開業、求職、見貴人、拓展事業', 休門: '利休息、和解、求財、婚姻嫁娶',
+    生門: '利求財、投資、置產、養生治病', 傷門: '利捕獵、討債、競賽，餘事不宜',
+    杜門: '利隱匿、避災、技術研究，不利張揚', 景門: '利文書、考試、宣傳、面試',
+    死門: '諸事不宜，僅利弔喪、狩獵', 驚門: '利訴訟、驚敵，防口舌官非'
+  };
+  // 旬首 → 遁干
+  const XUNSHOU_YI = { 0: '戊', 50: '己', 40: '庚', 30: '辛', 20: '壬', 10: '癸' };
+
+  function build(y, m, d, hh, mi) {
+    const jd = Astro.toJD(y, m, d, hh, mi);
+    // 找目前節氣
+    const terms = [];
+    for (const yy of [y - 1, y, y + 1]) {
+      Astro.solarTermsOfYear(yy).forEach(t => terms.push(t));
+    }
+    terms.sort((a, b) => a.jd - b.jd);
+    let cur = terms[0];
+    for (const t of terms) { if (t.jd <= jd) cur = t; else break; }
+    const yang = YANG_TERMS.has(cur.name);
+
+    // 三元（拆補：日干支 甲子起上元，每五日一元）
+    const dp = Ganzhi.dayPillar(y, m, d);
+    const yuan = Math.floor((dp.n % 15) / 5); // 0上 1中 2下
+    const ju = JU_TABLE[cur.name][yuan];
+
+    // 時柱與旬首
+    const hp = Ganzhi.hourPillar(y, m, d, hh, mi);
+    const xunshouN = hp.n - (hp.n % 10);
+    const xunYi = XUNSHOU_YI[xunshouN];
+    const hourOffset = hp.n % 10; // 距旬首時辰數
+
+    // 地盤佈儀（陽順陰逆飛九宮）
+    const earth = {}; // gong -> 儀
+    for (let i = 0; i < 9; i++) {
+      const g = yang ? ((ju - 1 + i) % 9) + 1 : ((ju - 1 - i) % 9 + 9) % 9 + 1;
+      earth[g] = YIQI[i];
+    }
+    const gongOfYi = {};
+    for (const [g, yi] of Object.entries(earth)) gongOfYi[yi] = +g;
+
+    // 值符星、值使門（旬首儀所在地盤宮）
+    let fuGong = gongOfYi[xunYi];
+    const fuStar = STARS_ORIG[fuGong];       // 值符星（中宮為天禽）
+    const shiDoor = DOORS_ORIG[fuGong === 5 ? 2 : fuGong]; // 值使門（中宮寄坤取死門）
+
+    // 時干之儀（甲時用旬首儀）
+    const shiGanYi = hp.gan === '甲' ? xunYi : hp.gan;
+    let targetGong = gongOfYi[shiGanYi];
+    if (targetGong === 5) targetGong = 2; // 中宮寄坤
+
+    // 天盤星（轉盤）：值符星轉到時干宮，其餘星依環序跟隨
+    const fuRingGong = fuGong === 5 ? 2 : fuGong;
+    const fuRingIdx = RING.indexOf(fuRingGong);
+    const targetRingIdx = RING.indexOf(targetGong);
+    const sky = {}; // gong -> {star, yi}
+    for (let i = 0; i < 8; i++) {
+      const srcGong = RING[(fuRingIdx + i) % 8];
+      const dstGong = RING[(targetRingIdx + i) % 8];
+      let star = STARS_ORIG[srcGong];
+      if (srcGong === 2) star = '天芮禽'; // 天禽寄芮（若值符非中宮起）
+      sky[dstGong] = { star: fuGong === 5 && i === 0 ? '天禽' : star, yi: earth[srcGong] };
+    }
+
+    // 值使門落宮：從旬首宮起，隨時辰飛宮（陽順陰逆，洛書數）
+    let doorGong = fuGong;
+    for (let i = 0; i < hourOffset; i++) {
+      doorGong = yang ? (doorGong % 9) + 1 : ((doorGong - 2 + 9) % 9) + 1;
+    }
+    if (doorGong === 5) doorGong = 2;
+    // 八門轉盤：值使門置於落宮，餘門依環序
+    const shiDoorOrigGong = Object.entries(DOORS_ORIG).find(([g, dr]) => dr === shiDoor)[0];
+    const doorRingIdx = RING.indexOf(+shiDoorOrigGong);
+    const doorTargetIdx = RING.indexOf(doorGong);
+    const doors = {};
+    for (let i = 0; i < 8; i++) {
+      const srcGong = RING[(doorRingIdx + i) % 8];
+      const dstGong = RING[(doorTargetIdx + i) % 8];
+      doors[dstGong] = DOORS_ORIG[srcGong];
+    }
+
+    // 八神：值符神在值符星落宮（＝時干宮），陽順陰逆佈環
+    const gods = {};
+    for (let i = 0; i < 8; i++) {
+      const dstGong = yang ? RING[(targetRingIdx + i) % 8] : RING[((targetRingIdx - i) % 8 + 8) % 8];
+      gods[dstGong] = GODS[i];
+    }
+
+    return { cur, yang, ju, yuan, dp, hp, xunYi, fuStar, shiDoor, fuGong, targetGong, earth, sky, doors, gods };
+  }
+
+  // 3x3 顯示（巽4離9坤2 / 震3中5兌7 / 艮8坎1乾6）
+  const GRID = [4, 9, 2, 3, 5, 7, 8, 1, 6];
+
+  function render(el) {
+    const now = new Date();
+    el.innerHTML = `
+      <div class="panel">
+        <h3>起局</h3>
+        <div class="field" style="margin-bottom:12px">
+          <label>所問之事（可留空）</label>
+          <input class="qm-q" placeholder="例：這筆生意往哪個方向談有利？" style="width:100%">
+        </div>
+        <button class="btn" id="qm-now">🌀 以此刻起局</button>
+        <p class="muted" style="margin-top:10px">時家奇門，轉盤法，拆補三元。冬至後陽遁、夏至後陰遁，依節氣定局。</p>
+      </div>
+      <div id="qm-result"></div>`;
+
+    el.querySelector('#qm-now').addEventListener('click', () => {
+      const resEl = el.querySelector('#qm-result');
+      resEl.innerHTML = '';
+      const n = new Date();
+      const q = build(n.getFullYear(), n.getMonth() + 1, n.getDate(), n.getHours(), n.getMinutes());
+      const question = el.querySelector('.qm-q').value.trim();
+
+      const cellsHTML = GRID.map(g => {
+        if (g === 5) return `<div class="qm-cell"><div class="gong">中五宮</div><div class="gz">${q.earth[5] || ''}</div><div class="muted" style="font-size:11px">寄坤二宮</div><div></div></div>`;
+        const isFu = g === q.targetGong;
+        return `<div class="qm-cell${isFu ? ' zhifu' : ''}">
+          <div class="god">${q.gods[g] || ''}</div>
+          <div class="star">${q.sky[g] ? q.sky[g].star : ''} <span class="gz">${q.sky[g] ? q.sky[g].yi : ''}</span></div>
+          <div class="door">${q.doors[g] || ''} <span class="gz">${q.earth[g] || ''}</span></div>
+          <div class="gong">${GONG_INFO[g].name} · ${GONG_INFO[g].dir}</div>
+        </div>`;
+      }).join('');
+
+      // 吉方建議
+      const goodDirs = Object.entries(q.doors)
+        .filter(([g, d]) => ['開門', '休門', '生門'].includes(d))
+        .map(([g, d]) => `${GONG_INFO[g].dir}方（${d}，${DOOR_USE[d]}）`);
+
+      const div = document.createElement('div');
+      div.innerHTML = `<div class="panel result">
+        <div style="text-align:center" class="muted">
+          ${n.getFullYear()}/${n.getMonth() + 1}/${n.getDate()} ${String(n.getHours()).padStart(2, '0')}:${String(n.getMinutes()).padStart(2, '0')}
+          · ${q.cur.name}${['上', '中', '下'][q.yuan]}元 · <b style="color:var(--gold-bright)">${q.yang ? '陽' : '陰'}遁${q.ju}局</b>
+          · ${q.dp.name}日 ${q.hp.name}時（旬首遁${q.xunYi}）
+        </div>
+        <div style="text-align:center;margin-top:6px">
+          <span class="tag gold">值符：${q.fuStar}</span>
+          <span class="tag gold">值使：${q.shiDoor}（${DOOR_LUCK[q.shiDoor]}）</span>
+        </div>
+        <div class="qimen-grid" style="margin-left:auto;margin-right:auto">${cellsHTML}</div>
+        <p class="muted" style="text-align:center">上為南（離九宮）、下為北（坎一宮）；金框為值符所在宮。</p>
+        <hr class="divider">
+        <h4>此時吉方</h4>
+        ${goodDirs.length ? `<p>${goodDirs.join('<br>')}</p>` : '<p>此時三吉門不顯，宜靜不宜動。</p>'}
+        <h4>值使門主事</h4>
+        <p>${q.shiDoor}值使：${DOOR_USE[q.shiDoor]}。（${DOOR_LUCK[q.shiDoor]}）</p>
+        <p class="muted">※ 奇門格局繁複（十干剋應、星門伏反吟等），內建解讀僅列盤面與吉門方位，深入斷局請用 AI 解讀。</p>
+      </div>`;
+      resEl.appendChild(div);
+
+      AI.attach(div.querySelector('.panel'), () =>
+        `請為以下奇門遁甲時盤做深度斷局。
+所問之事：${question || '（未說明，請就此時空整體氣機解讀）'}
+起局時間：${n.getFullYear()}/${n.getMonth() + 1}/${n.getDate()} ${n.getHours()}時，${q.cur.name}${['上', '中', '下'][q.yuan]}元，${q.yang ? '陽' : '陰'}遁${q.ju}局（轉盤拆補）
+四柱：${Ganzhi.yearPillar(n.getFullYear(), n.getMonth() + 1, n.getDate()).name}年 ${Ganzhi.monthPillar(n.getFullYear(), n.getMonth() + 1, n.getDate()).name}月 ${q.dp.name}日 ${q.hp.name}時，旬首遁${q.xunYi}
+值符${q.fuStar}落${GONG_INFO[q.targetGong].name}，值使${q.shiDoor}
+九宮盤面（宮：八神/天盤星+天盤干/八門+地盤干）：
+${GRID.filter(g => g !== 5).map(g => `${GONG_INFO[g].name}（${GONG_INFO[g].dir}）：${q.gods[g] || ''}／${q.sky[g] ? q.sky[g].star + q.sky[g].yi : ''}／${q.doors[g] || ''}＋${q.earth[g] || ''}`).join('\n')}
+中五宮地盤：${q.earth[5] || ''}（寄坤二）
+請分析：1) 值符值使所示的事體與趨勢 2) 用神落宮吉凶（依所問之事取用神）3) 天地盤干支組合的十干剋應 4) 具體行動建議與有利方位、時機。`);
+    });
+  }
+
+  App.register({
+    id: 'qimen',
+    icon: '🌀',
+    title: '奇門遁甲',
+    desc: '時家轉盤奇門，九星八門八神，值符值使，趨吉避凶問方位。',
+    render
+  });
+})();

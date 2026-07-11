@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>暮卜先知 · 日暮觀星，未卜先知 | 日落工作室</title>
+  <meta name="description" content="免費線上占卜排盤：梅花易數、八字命理、塔羅牌、西洋占星、小六壬、紫微斗數、奇門遁甲、求籤、農民曆、三合一綜合命盤。全部在瀏覽器本機運算，無需註冊。">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☯</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="stars"></div>
+  <div class="wrap" id="main"></div>
+
+  <!-- 核心引擎 -->
+  <script src="js/core/astro.js"></script>
+  <script src="js/core/ganzhi.js"></script>
+  <script src="js/core/ai.js"></script>
+  <!-- 資料庫 -->
+  <script src="js/data/hexagram-data.js"></script>
+  <script src="js/data/tarot-data.js"></script>
+  <script src="js/data/qian-data.js"></script>
+  <!-- 主程式 -->
+  <script src="js/app.js"></script>
+  <!-- 占卜模組（註冊順序＝首頁排列順序） -->
+  <script src="js/modules/meihua.js"></script>
+  <script src="js/modules/bazi.js"></script>
+  <script src="js/modules/tarot.js"></script>
+  <script src="js/modules/astrology.js"></script>
+  <script src="js/modules/xiaoliuren.js"></script>
+  <script src="js/modules/ziwei.js"></script>
+  <script src="js/modules/qimen.js"></script>
+  <script src="js/modules/qian.js"></script>
+  <script src="js/modules/almanac.js"></script>
+  <script src="js/modules/combo.js"></script>
+</body>
+</html>

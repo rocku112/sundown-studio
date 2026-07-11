@@ -1,0 +1,112 @@
+/* 暮卜先知 · 三合一綜合命盤（八字＋紫微斗數＋西洋占星） */
+(() => {
+  const SIGNS = ['牡羊座', '金牛座', '雙子座', '巨蟹座', '獅子座', '處女座', '天秤座', '天蠍座', '射手座', '摩羯座', '水瓶座', '雙魚座'];
+  const signOf = (lon) => SIGNS[Math.floor(Astro.norm360(lon) / 30)];
+
+  function ascendant(jdUT, latDeg, lonDeg) {
+    const RAD = Math.PI / 180;
+    const T = (jdUT - 2451545.0) / 36525;
+    const gmst = 280.46061837 + 360.98564736629 * (jdUT - 2451545.0) + 0.000387933 * T * T;
+    const ramc = Astro.norm360(gmst + lonDeg) * RAD;
+    const eps = (23.4392911 - 0.0130042 * T) * RAD;
+    const phi = latDeg * RAD;
+    const y = -Math.cos(ramc);
+    const x = Math.sin(ramc) * Math.cos(eps) + Math.tan(phi) * Math.sin(eps);
+    return Astro.norm360(Math.atan2(y, x) / RAD);
+  }
+
+  function render(el) {
+    const bf = App.birthForm({ gender: true, time: true });
+    el.innerHTML = `
+      <div class="panel">
+        <h3>輸入出生資料</h3>
+        ${bf.html}
+        <button class="btn" id="cb-go" style="margin-top:14px">🔮 三盤合參</button>
+        <p class="muted" style="margin-top:8px">同時排出八字、紫微斗數、西洋占星三套命盤，交叉比對三個體系對同一個「你」的描繪。這是 AI 深度解讀最有價值的地方——三盤互相印證。</p>
+      </div>
+      <div id="cb-result"></div>`;
+
+    el.querySelector('#cb-go').addEventListener('click', () => {
+      const b = bf.read(el);
+      const resEl = el.querySelector('#cb-result');
+      resEl.innerHTML = '';
+
+      // 八字
+      const p = Ganzhi.fourPillars(b.y, b.m, b.d, b.hh, b.mi);
+      const wx = { 木: 0, 火: 0, 土: 0, 金: 0, 水: 0 };
+      for (const k of ['year', 'month', 'day', 'hour']) { wx[p[k].ganWx]++; wx[p[k].zhiWx]++; }
+      const missing = Object.entries(wx).filter(([k, v]) => v === 0).map(([k]) => k);
+
+      // 紫微
+      const lunar = Astro.toLunar(b.y, b.m, b.d);
+      const hourIdx = Math.floor(((b.hh + 1) % 24) / 2) % 12;
+      const zw = ZiweiEngine.buildChart(lunar, hourIdx, p.year, b.gender);
+      let mingStars = zw.palaces[0].main;
+      let borrowed = false;
+      if (!mingStars.length) { mingStars = zw.stars[(zw.mingIdx + 6) % 12].main; borrowed = true; }
+
+      // 占星
+      const jdUT = Astro.toJD(b.y, b.m, b.d, b.hh, b.mi) - 8 / 24;
+      const jde = jdUT + Astro.deltaT(b.y) / 86400;
+      const sunSign = signOf(Astro.sunLongitude(jde));
+      const moonSign = signOf(Astro.moonLongitude(jde));
+      const ascSign = signOf(ascendant(jdUT, 25.04, 121.51));
+      const venusSign = signOf(Astro.planetLongitude('venus', jde));
+      const marsSign = signOf(Astro.planetLongitude('mars', jde));
+
+      const div = document.createElement('div');
+      div.innerHTML = `<div class="panel result">
+        <h3>三盤總覽</h3>
+        <div class="muted" style="text-align:center">國曆 ${b.y}/${b.m}/${b.d} ${String(b.hh).padStart(2, '0')}:${String(b.mi).padStart(2, '0')} · 農曆${lunar.lunarYear}年${lunar.monthName}${lunar.dayName} · ${b.gender === 'M' ? '男' : '女'}命</div>
+        <div class="aspect-grid" style="margin-top:14px">
+          <div class="aspect"><b>🀄 八字</b>
+            四柱：${p.year.name}・${p.month.name}・${p.day.name}・${p.hour.name}<br>
+            日主 <b>${p.day.gan}${p.day.ganWx}</b> · 屬${p.year.shengxiao}<br>
+            五行：${Object.entries(wx).map(([k, v]) => `${k}${v}`).join(' ')}${missing.length ? `（缺${missing.join('、')}）` : ''}</div>
+          <div class="aspect"><b>🌟 紫微斗數</b>
+            ${zw.juName}，命宮在${Ganzhi.ZHI[zw.mingIdx]}<br>
+            命宮主星：<b>${mingStars.join('、') || '無'}</b>${borrowed ? '（借對宮）' : ''}<br>
+            身宮在${Ganzhi.ZHI[zw.shenIdx]}</div>
+          <div class="aspect"><b>🪐 西洋占星</b>
+            太陽 <b>${sunSign}</b> · 月亮 <b>${moonSign}</b><br>
+            上升 ${ascSign}（依台北）<br>
+            金星${venusSign} · 火星${marsSign}</div>
+        </div>
+        <hr class="divider">
+        <h4>三盤合參怎麼看</h4>
+        <p>八字看的是<b>五行氣機與人生節奏</b>（日主 ${p.day.gan}${p.day.ganWx}），紫微看的是<b>人生劇本與舞台配置</b>（${mingStars.join('、')}坐命），占星看的是<b>心理原型與天賦傾向</b>（太陽${sunSign}／月亮${moonSign}）。三套體系從不同角度描繪同一個你——重疊之處就是你最核心的特質，分歧之處往往是內外反差或成長課題。</p>
+        <p class="muted" style="margin-top:8px">👇 建議使用 AI 深度解讀進行真正的三盤交叉分析（這是本功能的精華）。沒有 API Key 也可分別到各模組查看完整單盤解讀。</p>
+      </div>`;
+      resEl.appendChild(div);
+
+      AI.attach(div.querySelector('.panel'), () =>
+        `請做「三合一綜合命盤」深度解讀：以下是同一人的八字、紫微斗數、西洋占星三套命盤，請交叉比對、互相印證。
+出生：國曆 ${b.y}/${b.m}/${b.d} ${b.hh}:${String(b.mi).padStart(2, '0')}（UTC+8），${b.gender === 'M' ? '男' : '女'}性
+
+【八字】四柱：${p.year.name}年 ${p.month.name}月 ${p.day.name}日 ${p.hour.name}時
+五行分布：${Object.entries(wx).map(([k, v]) => k + v).join(' ')}，日主${p.day.gan}${p.day.ganWx}
+
+【紫微斗數】${zw.juName}，命宮在${Ganzhi.ZHI[zw.mingIdx]}（主星：${mingStars.join('、') || '借對宮'}），身宮在${Ganzhi.ZHI[zw.shenIdx]}
+十二宮：${zw.palaces.map(pl => `${pl.name}[${pl.main.join('') || '空'}]`).join(' ')}
+生年四化：${Object.entries(zw.hua).map(([s, h]) => s + '化' + h).join('、')}
+
+【西洋占星】太陽${sunSign}、月亮${moonSign}、上升${ascSign}、金星${venusSign}、火星${marsSign}
+
+請分析：
+1) 三盤共同指向的核心人格特質（重疊印證處）
+2) 三盤分歧處代表的內外反差或潛在課題
+3) 事業財運方向（綜合三盤）
+4) 感情婚姻模式（綜合三盤）
+5) 給這個人的整體人生策略建議。`);
+    });
+  }
+
+  App.register({
+    id: 'combo',
+    icon: '🔮',
+    title: '三合一綜合命盤',
+    desc: '八字＋紫微斗數＋西洋占星同時排盤，三個體系交叉印證，AI 整合解讀。',
+    wide: true,
+    render
+  });
+})();

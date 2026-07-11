@@ -1,0 +1,320 @@
+/* 暮卜先知 · 樣式 —— 暖陽明亮風（對齊 SunDown Studio 品牌色系） */
+:root {
+  --cream: #F5F0E8;
+  --cream2: #EDE7D9;
+  --warm-white: #FEFCF8;
+  --panel: #FEFCF8;
+  --panel-border: #DDD6C8;
+  --gold: #C9960A;
+  --gold-mid: #E8B84B;
+  --gold-deep: #8a5e00;
+  --gold-bright: #a87a10;      /* 亮色底上的主強調字 */
+  --cinnabar: #B03020;
+  --sunset: #C0622A;
+  --navy: #1E3554;
+  --navy-mid: #2D4A6E;
+  --ink: #1A2535;
+  --ink-dim: #4A5568;
+  --ink-faint: #8A96A8;
+  --ok: #2E7D4F;
+  --bg1: #FEFCF8;              /* 模組內元件底（塔羅槽標籤等） */
+  --bg2: #F5F0E8;
+  --shadow: 0 10px 32px rgba(45, 74, 110, 0.08);
+  --radius: 14px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: "Noto Serif TC", "Songti TC", "LiSong Pro", PMingLiU, serif;
+  background:
+    radial-gradient(900px 480px at 85% -6%, rgba(232, 184, 75, 0.22), transparent 62%),
+    radial-gradient(720px 420px at 8% 108%, rgba(192, 98, 42, 0.10), transparent 60%),
+    linear-gradient(175deg, var(--cream), var(--cream2));
+  background-attachment: fixed;
+  color: var(--ink);
+  min-height: 100vh;
+  line-height: 1.75;
+}
+
+/* ---------- 點狀紋理（呼應門戶 hero-dots） ---------- */
+.stars {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image: radial-gradient(circle, rgba(45, 74, 110, .07) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mask-image: radial-gradient(ellipse 70% 80% at 70% 20%, black 10%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 80% at 70% 20%, black 10%, transparent 75%);
+}
+
+.wrap { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 24px 20px 80px; }
+
+/* ---------- 頁首 ---------- */
+header.site {
+  text-align: center;
+  padding: 44px 0 30px;
+}
+header.site .taiji {
+  font-size: 44px; display: inline-block;
+  filter: drop-shadow(0 4px 14px rgba(201, 150, 10, .45));
+  animation: spin 40s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+header.site h1 {
+  font-size: 40px; letter-spacing: .35em; text-indent: .35em;
+  font-weight: 700; margin: 10px 0 6px;
+  background: linear-gradient(120deg, var(--gold-deep), var(--sunset), var(--gold));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+header.site .sub { color: var(--ink-dim); letter-spacing: .5em; text-indent: .5em; font-size: 15px; }
+header.site .free-badge {
+  display: inline-block; margin-top: 14px; font-size: 13px;
+  border: 1px solid rgba(201, 150, 10, .45); border-radius: 999px;
+  padding: 3px 16px; color: var(--gold-deep); letter-spacing: .2em;
+  background: rgba(232, 184, 75, .12);
+}
+
+/* ---------- 首頁選單 ---------- */
+.menu-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 16px; margin-top: 26px;
+}
+.menu-card {
+  background: var(--warm-white);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  padding: 22px 20px 18px;
+  cursor: pointer; text-align: left;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+  position: relative; overflow: hidden;
+  color: var(--ink); font-family: inherit;
+}
+.menu-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--gold-mid);
+  box-shadow: 0 12px 36px rgba(201, 150, 10, 0.16);
+}
+.menu-card .icon { font-size: 30px; }
+.menu-card h3 { font-size: 19px; margin: 8px 0 4px; letter-spacing: .12em; color: var(--navy); }
+.menu-card p { font-size: 13px; color: var(--ink-dim); line-height: 1.6; }
+.menu-card.wide { grid-column: 1 / -1; text-align: center; padding: 26px; }
+.menu-card.wide h3 { font-size: 22px; }
+.menu-card .free-tag {
+  position: absolute; top: 12px; right: 12px; font-size: 11px;
+  color: var(--ok); border: 1px solid rgba(46, 125, 79, .35);
+  background: rgba(46, 125, 79, .07);
+  border-radius: 999px; padding: 1px 9px; letter-spacing: .15em;
+}
+
+/* ---------- 模組頁 ---------- */
+.module-view { animation: fadein .3s ease; }
+@keyframes fadein { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; } }
+
+.topbar { display: flex; align-items: center; gap: 12px; padding: 18px 0 8px; }
+.btn-back {
+  background: none; border: 1px solid var(--panel-border); color: var(--ink-dim);
+  border-radius: 999px; padding: 5px 18px; cursor: pointer; font-family: inherit; font-size: 14px;
+  transition: all .15s;
+}
+.btn-back:hover { color: var(--navy); border-color: var(--navy); }
+.topbar h2 { font-size: 24px; letter-spacing: .2em; color: var(--navy); flex: 1; }
+
+.panel {
+  background: var(--panel); border: 1px solid var(--panel-border);
+  border-radius: var(--radius); padding: 24px; margin-top: 16px;
+  box-shadow: var(--shadow);
+}
+.panel h3 { color: var(--gold-deep); letter-spacing: .15em; margin-bottom: 12px; font-size: 18px; }
+.panel h4 { color: var(--gold-deep); margin: 14px 0 6px; font-size: 15.5px; letter-spacing: .08em; }
+
+/* ---------- 表單 ---------- */
+.form-grid { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label { font-size: 13px; color: var(--ink-dim); letter-spacing: .1em; }
+.field input, .field select, .field textarea {
+  background: #fff; border: 1px solid var(--panel-border);
+  color: var(--ink); border-radius: 8px; padding: 9px 12px;
+  font-family: inherit; font-size: 15px; min-width: 90px;
+}
+.field input:focus, .field select:focus, .field textarea:focus {
+  outline: none; border-color: var(--gold);
+}
+.field textarea { width: 100%; resize: vertical; }
+
+.btn {
+  background: var(--navy);
+  color: #fff; border: none; border-radius: 999px;
+  padding: 10px 30px; font-family: inherit; font-size: 16px; font-weight: 700;
+  letter-spacing: .2em; cursor: pointer; transition: all .15s;
+}
+.btn:hover { background: var(--navy-mid); transform: translateY(-1px); }
+.btn:disabled { opacity: .5; cursor: wait; transform: none; }
+.btn.ghost {
+  background: none; border: 1.5px solid var(--navy); color: var(--navy);
+  font-weight: 400;
+}
+.btn.ghost:hover { background: var(--navy); color: #fff; }
+.btn.small { padding: 6px 18px; font-size: 14px; }
+
+/* ---------- 結果呈現 ---------- */
+.result { margin-top: 18px; }
+.tag {
+  display: inline-block; border: 1px solid var(--panel-border); border-radius: 6px;
+  padding: 1px 10px; margin: 2px 4px 2px 0; font-size: 13.5px; color: var(--ink-dim);
+  background: var(--cream);
+}
+.tag.gold { color: var(--gold-deep); border-color: rgba(201, 150, 10, .45); background: rgba(232, 184, 75, .14); }
+.big-glyph { font-size: 64px; text-align: center; line-height: 1.2; color: var(--navy); }
+.fortune-level {
+  display: inline-block; font-size: 22px; font-weight: 700; letter-spacing: .3em;
+  padding: 4px 22px; border-radius: 10px; margin: 6px 0;
+}
+.fortune-level.good { color: var(--gold-deep); border: 1px solid rgba(201, 150, 10, .5); background: rgba(232, 184, 75, .14); }
+.fortune-level.mid { color: var(--ink-dim); border: 1px solid var(--panel-border); background: var(--cream); }
+.fortune-level.bad { color: var(--cinnabar); border: 1px solid rgba(176, 48, 32, .4); background: rgba(176, 48, 32, .06); }
+
+.aspect-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 12px; }
+.aspect {
+  background: var(--cream); border: 1px solid var(--panel-border);
+  border-radius: 10px; padding: 13px 15px; font-size: 14.5px;
+}
+.aspect b { color: var(--gold-deep); display: block; margin-bottom: 4px; letter-spacing: .1em; }
+
+table.chart { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 15px; }
+table.chart th, table.chart td {
+  border: 1px solid var(--panel-border); padding: 8px 10px; text-align: center;
+}
+table.chart th { color: var(--gold-deep); font-weight: 400; letter-spacing: .12em; background: var(--cream); }
+table.chart .big { font-size: 22px; letter-spacing: .1em; color: var(--navy); }
+
+.poem { text-align: center; font-size: 19px; line-height: 2.2; letter-spacing: .15em; color: var(--ink); }
+.muted { color: var(--ink-dim); font-size: 13.5px; }
+.divider { border: none; border-top: 1px dashed rgba(201, 150, 10, .4); margin: 18px 0; }
+
+/* 五行條 */
+.wx-bar { display: flex; align-items: center; gap: 8px; margin: 4px 0; font-size: 14px; }
+.wx-bar .bar { height: 12px; border-radius: 6px; min-width: 4px; transition: width .6s ease; }
+.wx-木 { background: #5C8F4A; } .wx-火 { background: #C0453F; } .wx-土 { background: #B08A3E; }
+.wx-金 { background: #A9A296; } .wx-水 { background: #4A76B8; }
+
+/* ---------- 塔羅牌 ---------- */
+.tarot-spread { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; margin: 18px 0; }
+.tarot-card {
+  width: 130px; min-height: 200px; border-radius: 12px; cursor: pointer;
+  border: 1px solid var(--navy-mid);
+  background: repeating-linear-gradient(45deg, #2D4A6E, #2D4A6E 8px, #35547C 8px, #35547C 16px);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  transition: transform .5s, box-shadow .3s; position: relative;
+  font-family: inherit; color: #F2CC74;
+}
+.tarot-card.revealed {
+  background: linear-gradient(160deg, #FFFDF6, #F7F0E2);
+  border-color: var(--gold);
+  box-shadow: 0 8px 26px rgba(201, 150, 10, .18);
+  cursor: default;
+  color: var(--ink);
+}
+.tarot-card .back-mark { font-size: 42px; opacity: .85; }
+.tarot-card .face { padding: 12px 8px; text-align: center; }
+.tarot-card .face .emoji { font-size: 40px; display: block; }
+.tarot-card .face .cname { font-size: 15.5px; color: var(--navy); font-weight: 700; margin-top: 6px; letter-spacing: .08em; }
+.tarot-card .face .pos-label { font-size: 12px; color: var(--ink-dim); }
+.tarot-card .face .rev { color: var(--cinnabar); }
+.tarot-card.reversed-card .face .emoji { transform: rotate(180deg); }
+.tarot-card .slot-label {
+  position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+  background: var(--gold); color: #fff; font-size: 11.5px;
+  padding: 0 10px; border-radius: 6px; white-space: nowrap;
+}
+
+/* ---------- 紫微命盤 ---------- */
+.ziwei-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, minmax(120px, auto));
+  gap: 4px; margin: 14px 0;
+}
+.zw-palace {
+  border: 1px solid var(--panel-border); border-radius: 8px;
+  padding: 8px; font-size: 12.5px; background: #fff;
+  display: flex; flex-direction: column;
+}
+.zw-palace .pname { color: var(--gold-deep); font-size: 13px; letter-spacing: .1em; font-weight: 700; }
+.zw-palace .pgz { color: var(--ink-faint); font-size: 11.5px; float: right; }
+.zw-palace .stars-main { color: var(--navy); font-weight: 700; font-size: 14px; margin-top: 3px; }
+.zw-palace .stars-min { color: var(--ink-dim); margin-top: 2px; }
+.zw-palace .hua { color: var(--cinnabar); }
+.zw-palace.ming { border-color: var(--gold); border-width: 2px; background: rgba(232, 184, 75, .1); }
+.zw-center {
+  grid-column: 2 / 4; grid-row: 2 / 4;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  border: 1px solid var(--panel-border); border-radius: 8px;
+  background: var(--cream); text-align: center; font-size: 13.5px; padding: 10px;
+}
+.zw-center > div:first-child { color: var(--navy) !important; }
+
+/* ---------- 奇門遁甲 ---------- */
+.qimen-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin: 14px 0; max-width: 560px; }
+.qm-cell {
+  border: 1px solid var(--panel-border); border-radius: 8px; aspect-ratio: 1.15;
+  padding: 8px; font-size: 13px; background: #fff;
+  display: flex; flex-direction: column; justify-content: space-between; text-align: center;
+}
+.qm-cell .god { color: var(--cinnabar); font-size: 12.5px; }
+.qm-cell .star { color: var(--gold-deep); font-weight: 700; }
+.qm-cell .door { color: var(--navy-mid); font-weight: 700; }
+.qm-cell .gz { color: var(--ink-dim); font-size: 14.5px; letter-spacing: .15em; font-weight: 400; }
+.qm-cell .gong { color: var(--ink-faint); font-size: 11px; }
+.qm-cell.zhifu { border-color: var(--gold); border-width: 2px; background: rgba(232, 184, 75, .1); }
+
+/* ---------- 占星 ---------- */
+.astro-table td:first-child { text-align: left; }
+
+/* ---------- AI 解讀區 ---------- */
+.ai-box {
+  margin-top: 20px; border: 1.5px dashed rgba(201, 150, 10, .5);
+  border-radius: var(--radius); padding: 18px; background: rgba(232, 184, 75, .06);
+}
+.ai-box .ai-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ai-box .ai-head b { color: var(--gold-deep); letter-spacing: .1em; }
+.ai-output { margin-top: 14px; font-size: 15px; white-space: pre-wrap; }
+.ai-output.loading { color: var(--ink-dim); }
+.spinner {
+  display: inline-block; width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid rgba(201, 150, 10, .3); border-top-color: var(--gold);
+  animation: spin .8s linear infinite; vertical-align: -2px; margin-right: 6px;
+}
+
+/* ---------- 設定彈窗 ---------- */
+.modal-mask {
+  position: fixed; inset: 0; background: rgba(26, 37, 53, .4); z-index: 50;
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.modal {
+  background: var(--warm-white); border: 1px solid var(--panel-border); border-radius: var(--radius);
+  max-width: 520px; width: 100%; padding: 26px; box-shadow: 0 20px 60px rgba(26, 37, 53, .25);
+  max-height: 90vh; overflow-y: auto;
+}
+.modal h3 { color: var(--navy); letter-spacing: .15em; margin-bottom: 10px; }
+.modal .field { margin: 12px 0; }
+.modal .field input, .modal .field select { width: 100%; }
+
+.settings-fab {
+  position: fixed; right: 18px; bottom: 18px; z-index: 40;
+  background: var(--warm-white); border: 1px solid var(--panel-border); color: var(--navy);
+  border-radius: 999px; padding: 9px 18px; cursor: pointer; font-family: inherit;
+  font-size: 14px; box-shadow: var(--shadow);
+}
+.settings-fab:hover { border-color: var(--gold); color: var(--gold-deep); }
+
+footer.site {
+  text-align: center; margin-top: 60px; color: var(--ink-faint); font-size: 12.5px;
+  letter-spacing: .1em; line-height: 2;
+}
+footer.site a { color: var(--ink-dim); }
+
+@media (max-width: 720px) {
+  header.site h1 { font-size: 30px; }
+  .ziwei-grid { font-size: 11px; grid-template-rows: repeat(4, minmax(96px, auto)); }
+  .zw-palace { padding: 5px; font-size: 11px; }
+  .tarot-card { width: 104px; min-height: 168px; }
+}
