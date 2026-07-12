@@ -218,11 +218,14 @@
     if (cps[0] && all[0].body === all[1].body) { penalty += 4; notes.push('姓與名首字同音'); }
     // 名兩字同音
     if (cps.length === 2 && cps[0].body === cps[1].body) { penalty += 4; notes.push('名字兩字同音'); }
+    // 音律平仄：聲調1、2為平，3、4為仄；全平或全仄唸起來單調無起伏
+    const ze = all.map(a => a.tone >= 3 && a.tone <= 4 ? '仄' : '平');
+    if (new Set(ze).size === 1 && ze.length >= 2) { penalty += 2; notes.push(`全${ze[0]}聲、缺乏抑揚頓挫`); }
     // 不雅諧音
     const joined = all.map(a => a.body).join('');
     const bad = BAD_HOMO.find(b => joined.includes(b));
     if (bad) { penalty += 20; notes.push('疑似不雅諧音'); }
-    return { ok: penalty < 6, penalty, notes, syllables: all };
+    return { ok: penalty < 6, penalty, notes, syllables: all, pingze: ze };
   }
   // 音靈五行流動生剋
   function yinlingHTML(syll) {
@@ -274,6 +277,86 @@
       </div>`;
   }
 
+  // 重名率（依語料字頻分層；tier 1 最常見～5 罕見）
+  function commonness(cs) {
+    if (typeof NameFreq === 'undefined') return null;
+    const t = cs.filter(Boolean).map(c => NameFreq.tier(c.c));
+    if (!t.length) return null;
+    const avg = t.reduce((a, b) => a + b, 0) / t.length;
+    if (avg <= 2) return { t: '菜市場名', c: 'var(--cinnabar)' };
+    if (avg <= 3.2) return { t: '常見', c: 'var(--ink-dim)' };
+    if (avg <= 4.2) return { t: '較獨特', c: 'var(--gold-deep)' };
+    return { t: '很獨特', c: 'var(--gold-deep)' };
+  }
+
+  // ---------- 三才組合詳解（依生剋型態） ----------
+  function sancaiComboHTML(g) {
+    const t = numWx(g.tian), r = numWx(g.ren), d = numWx(g.di);
+    const rel = (a, b) => a === b ? 'same' : (wxSheng[a] === b ? 'sheng' : (wxSheng[b] === a ? 'beSheng' : (wxKe[a] === b ? 'ke' : 'beKe')));
+    const th = rel(t, r), hd = rel(r, d); // 天對人、人對地
+    const desc = {
+      sheng: '生', beSheng: '受生', ke: '剋', beKe: '受剋', same: '比和'
+    };
+    // 上（天→人）：長輩祖蔭、成長環境；下（人→地）：子女部屬、根基
+    const up = { sheng: '得長輩祖上蔭助、成長順遂', beSheng: '需付出照顧長輩、少得庇蔭', ke: '早年受環境壓抑、須自立', beKe: '不服環境、力爭上游有成', same: '與長輩同心、承襲家風' }[th];
+    const down = { sheng: '有付出、旺子女部屬但略洩己力', beSheng: '得子女部屬與根基之助', ke: '對下較強勢、掌控力足', beKe: '基礎受制、須穩固根本', same: '根基同氣、上下一體' }[th === 'x' ? 'same' : hd];
+    const overall = (th === 'ke' || th === 'beKe' || hd === 'ke' || hd === 'beKe')
+      ? (th === 'beKe' && hd === 'sheng' ? '先抑後揚，中年後開展。' : '三才有剋，一生較多波折起伏，宜修心養氣、以柔化剛。')
+      : '三才相生流通，運勢平順、貴人多助，屬吉配。';
+    return `<h4>三才配置詳解 · ${t}${r}${d}</h4>
+      <div class="aspect-grid">
+        <div class="aspect"><b>天格${desc[th]}人格</b>${up}。</div>
+        <div class="aspect"><b>人格${desc[hd]}地格</b>${down}。</div>
+      </div>
+      <p><b style="color:${g.sancaiGood ? 'var(--gold-deep)' : 'var(--cinnabar)'}">${overall}</b></p>`;
+  }
+
+  // ---------- 姓名總評分 ----------
+  function nameScore(g, chars, birth) {
+    let s = 0, max = 0;
+    const w = { ren: 3, zong: 3, di: 2, wai: 1, tian: 0.5 };
+    for (const k in w) {
+      max += w[k] * 10;
+      const l = luckOf(g[k]);
+      s += w[k] * (l === '吉' ? 10 : l === '半吉' ? 6 : 2);
+    }
+    // 三才
+    max += 15; s += g.sancaiGood ? 15 : (g.tr.good || g.rd.good ? 8 : 2);
+    // 八字喜用配合
+    if (birth && chars.length) { max += 10; s += chars.some(c => c.wx === birth.like) ? 10 : (chars.some(c => birth.missing.includes(c.wx)) ? 6 : 3); }
+    const score = Math.round(s / max * 100);
+    const grade = score >= 88 ? '上上・大吉' : score >= 76 ? '上吉' : score >= 62 ? '中上' : score >= 48 ? '中平' : '偏弱・宜斟酌';
+    return { score, grade };
+  }
+
+  // ---------- 五格陰陽配置 ----------
+  function yinyangHTML(g) {
+    const arr = [['天', g.tian], ['人', g.ren], ['地', g.di], ['外', g.wai], ['總', g.zong]];
+    const yy = arr.map(([n, v]) => `${n}${v % 2 ? '⚊' : '⚋'}`); // 奇陽偶陰
+    const yang = arr.filter(([, v]) => v % 2).length;
+    let note;
+    if (yang === 5) note = '純陽之數，個性剛強主動、衝勁十足，但稍嫌孤剛，宜柔和以濟。';
+    else if (yang === 0) note = '純陰之數，性情內斂柔順、細膩敏感，宜增自信與行動力。';
+    else if (yang === 3 || yang === 2) note = '陰陽調和，剛柔並濟、進退有據，配置佳。';
+    else note = `陰陽${yang > 2 ? '偏陽（剛多）' : '偏陰（柔多）'}，${yang > 2 ? '行動力強但宜納柔' : '溫和細膩但宜增剛'}。`;
+    return `<h4>陰陽配置</h4><p>${yy.join('　')}（奇為陽、偶為陰，共 ${yang} 陽 ${5 - yang} 陰）<br>${note}</p>`;
+  }
+
+  // ---------- 改名補救建議 ----------
+  function remedyHTML(g, birth) {
+    const bad = [];
+    if (luckOf(g.ren) === '凶') bad.push('人格（主運）');
+    if (luckOf(g.zong) === '凶') bad.push('總格（後運）');
+    if (luckOf(g.di) === '凶') bad.push('地格（前運）');
+    if (!bad.length && g.sancaiGood) return '';
+    let tips = [];
+    if (bad.length) tips.push(`${bad.join('、')}落凶數，建議改名時調整名字筆畫，使人格、總格落於吉數（如 11、13、15、16、21、23、24、25、31、33 等）。`);
+    if (!g.sancaiGood) tips.push('三才有相剋，可挑選五行相生的用字調和（讓天—人—地五行順接）。');
+    if (birth) tips.push(`八字喜用為 ${birth.like}，補強此五行的字有助平衡。`);
+    tips.push('※ 姓名影響為後天輔助，非改運萬靈丹；若無明顯困擾，不必為求全吉而改名。');
+    return `<h4 style="color:var(--cinnabar)">補救建議</h4><div class="aspect" style="border-left:3px solid var(--cinnabar)">${tips.join('<br>')}</div>`;
+  }
+
   // ---------- 易卦姓名學（筆畫起卦） ----------
   const TRI_NUM = { 1: [1, 1, 1], 2: [1, 1, 0], 3: [1, 0, 1], 4: [1, 0, 0], 5: [0, 1, 1], 6: [0, 1, 0], 7: [0, 0, 1], 8: [0, 0, 0] };
   const TRI_NAME = { '111': '乾', '110': '兌', '101': '離', '100': '震', '011': '巽', '010': '坎', '001': '艮', '000': '坤' };
@@ -303,10 +386,16 @@
               <select id="nm-mode"><option value="gen">幫寶寶／自己取名</option><option value="ana">分析現有姓名</option></select></div>
             <div class="field"><label>姓氏</label><input id="nm-sur" placeholder="陳" maxlength="2" style="width:80px"></div>
             <div class="field nm-ana" style="display:none"><label>名字</label><input id="nm-name" placeholder="美玲" maxlength="2" style="width:100px"></div>
+            <div class="field nm-ana" style="display:none"><label>性別</label><select id="nm-ag" style="width:80px"><option value="N">不限</option><option value="M">男</option><option value="F">女</option></select></div>
             <div class="field nm-gen"><label>性別</label><select id="nm-g" style="width:80px"><option value="M">男</option><option value="F">女</option><option value="N">不限</option></select></div>
             <div class="field nm-gen"><label>取名風格</label><select id="nm-style" style="width:110px">
               <option value="tw">台灣常見</option><option value="cn">中國風</option><option value="kr">韓風</option><option value="all">不限（全庫）</option></select></div>
             <div class="field nm-gen"><label>字數</label><select id="nm-count" style="width:80px"><option value="2">雙名</option><option value="1">單名</option></select></div>
+            <div class="field nm-gen"><label>氣質主題</label><select id="nm-theme" style="width:100px"><option value="">不限</option><option value="文雅">文雅</option><option value="陽光">陽光</option><option value="大氣">大氣</option><option value="清新">清新</option><option value="古典">古典</option><option value="現代">現代</option></select></div>
+          </div>
+          <div class="form-grid nm-gen" style="margin-bottom:12px">
+            <div class="field"><label>指定輩分字（生成含此字的名，可留空）</label><input id="nm-share" placeholder="如 宇" maxlength="1" style="width:120px"></div>
+            <div class="field"><label>排除用字（長輩名諱等，可多字）</label><input id="nm-exclude" placeholder="如 志明" maxlength="10" style="width:150px"></div>
           </div>
           <div class="form-grid">
             <div class="field"><label>出生年（算喜用五行與生肖，可留空）</label><input id="nm-y" type="number" min="1900" max="2100" placeholder="2026" style="width:110px"></div>
@@ -353,8 +442,10 @@
           const nameStrokes = [...name].map(strokeOf);
           if (nameStrokes.some(s => !s)) { warn(`名字中有字查無康熙筆劃（${[...name].filter(c => !strokeOf(c)).join('、')}），暫無法分析——可能為罕用字或異體字。`); return; }
           const g = fiveGrids(surStrokes, nameStrokes);
+          const anaGender = (el.querySelector('#nm-ag') || {}).value || 'N';
           const chars = [...name].map(c => charMap[c]).filter(Boolean);
           const fullMeta = chars.length === [...name].length; // 全部字都在精選庫（有五行/寓意/拼音）
+          const sc = nameScore(g, chars, birth);
           const wxList = chars.length ? chars.map(c => `${c.c}（${c.wx}）`).join('、') : '（此名部分字取自擴充筆劃表，僅有筆畫、無五行寓意資料）';
           let zodiacNote = '';
           if (zt) {
@@ -367,12 +458,16 @@
           div.innerHTML = `<div class="panel result">
             <div style="text-align:center;font-size:34px;letter-spacing:.2em;color:var(--navy);font-weight:700">${surname}${name}</div>
             <div class="muted" style="text-align:center">${[...surname + name].map(c => `${c} ${strokeOf(c)}劃`).join('　')}（康熙筆畫）</div>
+            <div style="text-align:center;margin-top:8px"><span style="font-size:42px;font-weight:700;color:${sc.score >= 76 ? 'var(--gold-deep)' : sc.score >= 48 ? 'var(--ink-dim)' : 'var(--cinnabar)'}">${sc.score}</span><span class="muted">分</span>　<span class="fortune-level ${sc.score >= 76 ? 'good' : sc.score >= 48 ? 'mid' : 'bad'}">${sc.grade}</span></div>
             <hr class="divider">
             ${gridsHTML(g, surname, name)}
             <h4>五格詳批</h4>
             ${detailHTML(g)}
-            ${specialHTML(g, 'N')}
+            ${sancaiComboHTML(g)}
+            ${specialHTML(g, anaGender)}
+            ${yinyangHTML(g)}
             ${relationHTML(g)}
+            ${remedyHTML(g, birth)}
             ${(() => { const nh = nameHexagram(g); return nh && nh.hex ? `<h4>易卦姓名學（筆畫起卦）</h4>
               <p>以天格起上卦、地格起下卦、動爻取第 ${nh.dong} 爻，得 <b style="color:var(--navy)">${nh.hex.symbol} ${nh.hex.name}</b>（${nh.upper}上${nh.lower}下）。</p>
               <p class="muted">${nh.hex.duan} 此卦象徵姓名所帶的先天氣場趨勢。</p>` : ''; })()}
@@ -406,6 +501,13 @@ ${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k]
         };
         // 慎用字：技術上合格但當名字太平庸／結構性／冷僻／不雅
         const AVOID = new Set('丁乙丙子丑寅卯巳午未申酉戌亥木火水金土好孜孳孝仔囝乃之乎兮且卜也巴匕勾尢尸屎冬廿卅兇歹殀夭亡病痞囚奴婢妾丐乞屍冢柚柑橘蒜葱韭薑瓜稻萸蒨靄灣纓灩榆蒜地太中稗稈禾黍稷薯芋薯芽秕稊菀泫墅玎兌釗訓址繩蓀昫蓄鑑宮桑旦桔劭鑣鑠桔樟'.split(''));
+        // 排除用字（長輩名諱等）＋輩分共用字＋氣質主題
+        const excludeSet = new Set([...((el.querySelector('#nm-exclude') || {}).value || '').trim()].filter(c => /[一-鿿]/.test(c)));
+        const shareChar = (((el.querySelector('#nm-share') || {}).value || '').trim().match(/[一-鿿]/) || [''])[0];
+        const themeVal = (el.querySelector('#nm-theme') || {}).value || '';
+        const themeSet = (themeVal && typeof NAME_THEMES !== 'undefined' && NAME_THEMES[themeVal]) ? new Set([...NAME_THEMES[themeVal]]) : null;
+        // 主題字庫聯集＝curated 雅字，用於雙名品質加權（偏文字不在其中者自然降權）
+        const themeUnion = (typeof NAME_THEMES !== 'undefined') ? new Set(Object.values(NAME_THEMES).join('')) : null;
         // 取名風格：台灣常見／中國風／韓風／不限（全庫）——各自一套優先字庫
         const styleVal = (el.querySelector('#nm-style') || {}).value || 'tw';
         const nameCount = +((el.querySelector('#nm-count') || {}).value || 2); // 1單名 2雙名
@@ -424,12 +526,14 @@ ${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k]
           const map = {};
           for (const c of NAME_CHARS) {
             if (AVOID.has(c.c)) continue;
+            if (excludeSet.has(c.c)) continue; // 排除用字
             if (useSingles && singlesSet) {
               if (!singlesSet.has(c.c)) continue; // 單名字庫已含性別，不再套 DB 性別標籤
             } else {
               if (!(c.g === 'N' || gender === 'N' || c.g === gender)) continue;
             }
             if (useStyle && premiumSet && !premiumSet.has(c.c)) continue;
+            if (useStyle && themeSet && !themeSet.has(c.c)) continue; // 氣質主題（fallback 時放寬）
             (map[c.k] = map[c.k] || []).push(c);
           }
           return map;
@@ -438,11 +542,17 @@ ${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k]
         rebuild(true, true);
         const strokeGood = (k) => (goodByStroke[k] || []).length >= 2; // 該筆畫格至少 2 個好字才用
 
+        // 輩分共用字（指定一字必出現於名中；雙名有效）
+        const shareData = (shareChar && nameCount === 2)
+          ? (charMap[shareChar] || { c: shareChar, k: strokeOf(shareChar), wx: '土', m: '（指定輩分字）', py: '', g: 'N' })
+          : null;
+        if (shareChar && nameCount === 2 && (!shareData || !shareData.k)) { warn(`輩分字「${shareChar}」查無康熙筆劃`); return; }
+
         // 1) 只取「名字筆畫格都有足夠好字」的三才五格全吉組合——從源頭杜絕怪字（單名/雙名）
         const buildCombos = () => {
           const ss = Object.keys(goodByStroke).map(Number).filter(strokeGood).sort((a, b) => a - b);
           const cs = [];
-          const check = (g, k1, k2) => {
+          const check = (g, k1, k2, sharePos) => {
             // 單名數理較難全吉（人格＝總格被迫相等），放寬為「吉或半吉」；雙名須全吉
             if (nameCount === 1) { if (luckOf(g.ren) === '凶' || luckOf(g.zong) === '凶') return; }
             else { if (luckOf(g.ren) !== '吉' || luckOf(g.zong) !== '吉') return; }
@@ -454,9 +564,16 @@ ${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k]
             if (!sancaiOk) return;
             // 品質分層：2=全吉（人格地格皆吉＋三才雙生）1=人格吉 0=半吉
             const q = (luckOf(g.ren) === '吉' && luckOf(g.di) === '吉' && g.tr.good && g.rd.good) ? 2 : (luckOf(g.ren) === '吉' ? 1 : 0);
-            cs.push({ k1, k2, g, s: gridScore(g), q });
+            cs.push({ k1, k2, g, s: gridScore(g), q, sharePos });
           };
           if (nameCount === 1) { for (const k1 of ss) check(fiveGrids(surStrokes, [k1]), k1, null); }
+          else if (shareData) {
+            // 一個位置固定為輩分字，另一位置從好字池取
+            for (const k of ss) {
+              check(fiveGrids(surStrokes, [shareData.k, k]), shareData.k, k, 1); // 輩分字在前
+              check(fiveGrids(surStrokes, [k, shareData.k]), k, shareData.k, 2); // 輩分字在後
+            }
+          }
           else { for (const k1 of ss) for (const k2 of ss) check(fiveGrids(surStrokes, [k1, k2]), k1, k2); }
           return cs;
         };
@@ -493,6 +610,7 @@ ${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k]
             if (zt && c.tags.some(t => zt.dislike.includes(t))) s -= 8;
             if (prefer && c.wx === prefer) s += 2;
             if ((c.g === 'M' || c.g === 'F') && gender !== 'N') s += 1.5;
+            if (themeUnion && themeUnion.has(c.c)) s += 2.5; // 主題雅字加分（提升雙名品質）
             return { c, w: Math.max(0.2, s) };
           });
           return wPick(scored, x => x.w * x.w).c;
@@ -508,14 +626,15 @@ ${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k]
             guard++;
             let best = null;
             for (let attempt = 0; attempt < 4; attempt++) {
-              const c1 = pickChar(cb.k1, null, null);
-              if (!c1) break;
-              let c2 = null, nm = c1.c;
-              if (nameCount === 2) {
-                c2 = pickChar(cb.k2, birth && c1.wx !== birth.like ? birth.like : null, c1.c);
-                if (!c2) break;
-                nm = c1.c + c2.c;
+              let c1, c2 = null;
+              if (cb.sharePos === 1) { c1 = shareData; c2 = pickChar(cb.k2, birth && shareData.wx !== birth.like ? birth.like : null, shareData.c); }
+              else if (cb.sharePos === 2) { c1 = pickChar(cb.k1, null, shareData.c); c2 = shareData; }
+              else {
+                c1 = pickChar(cb.k1, null, null);
+                if (c1 && nameCount === 2) c2 = pickChar(cb.k2, birth && c1.wx !== birth.like ? birth.like : null, c1.c);
               }
+              if (!c1 || (nameCount === 2 && !c2)) break;
+              const nm = c2 ? c1.c + c2.c : c1.c;
               if (usedNames.has(nm)) continue;
               const ph = phonetics(surname, c2 ? [c1, c2] : [c1]);
               if (!best || ph.penalty < best.ph.penalty) best = { c1, c2, ph, nm };
@@ -538,7 +657,7 @@ ${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k]
               <div style="font-size:26px;letter-spacing:.15em;color:var(--navy);font-weight:700;text-align:center">${surname}${r.c1.c}${r.c2 ? r.c2.c : ''}</div>
               <div class="muted" style="text-align:center;font-size:12px">${r.c1.c}${r.c1.k}劃(${r.c1.wx})${r.c2 ? `・${r.c2.c}${r.c2.k}劃(${r.c2.wx})` : ''}</div>
               <div style="text-align:center;margin:4px 0"><span class="tag gold" style="font-size:12px">三才${r.g.sancai.join('')}</span>
-                <span class="tag" style="font-size:12px">人格${r.g.ren}${luckOf(r.g.ren)}</span><span class="tag" style="font-size:12px">總格${r.g.zong}${luckOf(r.g.zong)}</span>${r.ph && !r.ph.unknown && r.ph.penalty === 0 ? '<span class="tag" style="font-size:12px;color:var(--gold-deep)">讀音順</span>' : ''}</div>
+                <span class="tag" style="font-size:12px">人格${r.g.ren}${luckOf(r.g.ren)}</span><span class="tag" style="font-size:12px">總格${r.g.zong}${luckOf(r.g.zong)}</span>${r.ph && !r.ph.unknown && r.ph.penalty === 0 ? '<span class="tag" style="font-size:12px;color:var(--gold-deep)">讀音順</span>' : ''}${(() => { const cm = commonness([r.c1, r.c2]); return cm ? `<span class="tag" style="font-size:12px;color:${cm.c}">${cm.t}</span>` : ''; })()}</div>
               ${r.c1.py ? `<div style="text-align:center;font-size:13px;color:var(--gold-deep);letter-spacing:.05em">${surPy(surname[0]) ? pyToZhuyin(surPy(surname[0])) + ' ' : ''}${pyToZhuyin(r.c1.py)}${r.c2 ? ' ' + pyToZhuyin(r.c2.py) : ''}</div>
               <div class="muted" style="text-align:center;font-size:11px">${surPy(surname[0]) ? parsePy(surPy(surname[0])).body + ' ' : ''}${parsePy(r.c1.py).body}${r.c2 ? ' ' + parsePy(r.c2.py).body : ''}</div>` : ''}
               <div style="font-size:13px">${r.c1.c}：${r.c1.m}${r.c2 ? `<br>${r.c2.c}：${r.c2.m}` : ''}</div>
