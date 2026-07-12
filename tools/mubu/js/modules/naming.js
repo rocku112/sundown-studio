@@ -459,6 +459,7 @@
             <div style="text-align:center;font-size:34px;letter-spacing:.2em;color:var(--navy);font-weight:700">${surname}${name}</div>
             <div class="muted" style="text-align:center">${[...surname + name].map(c => `${c} ${strokeOf(c)}劃`).join('　')}（康熙筆畫）</div>
             <div style="text-align:center;margin-top:8px"><span style="font-size:42px;font-weight:700;color:${sc.score >= 76 ? 'var(--gold-deep)' : sc.score >= 48 ? 'var(--ink-dim)' : 'var(--cinnabar)'}">${sc.score}</span><span class="muted">分</span>　<span class="fortune-level ${sc.score >= 76 ? 'good' : sc.score >= 48 ? 'mid' : 'bad'}">${sc.grade}</span></div>
+            ${(typeof TW_COMMON_NAMES !== 'undefined' && TW_COMMON_NAMES.includes(name)) ? '<p style="text-align:center;color:var(--cinnabar);margin-top:4px">⚠ 此名列入內政部統計「台灣最常見名字（菜市場名）」之一</p>' : ''}
             <hr class="divider">
             ${gridsHTML(g, surname, name)}
             <h4>五格詳批</h4>
@@ -508,11 +509,14 @@ ${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k]
         const themeSet = (themeVal && typeof NAME_THEMES !== 'undefined' && NAME_THEMES[themeVal]) ? new Set([...NAME_THEMES[themeVal]]) : null;
         // 主題字庫聯集＝curated 雅字，用於雙名品質加權（偏文字不在其中者自然降權）
         const themeUnion = (typeof NAME_THEMES !== 'undefined') ? new Set(Object.values(NAME_THEMES).join('')) : null;
+        const commonNames = (typeof TW_COMMON_NAMES !== 'undefined') ? new Set(TW_COMMON_NAMES) : null;
         // 取名風格：台灣常見／中國風／韓風／不限（全庫）——各自一套優先字庫
         const styleVal = (el.querySelector('#nm-style') || {}).value || 'tw';
         const nameCount = +((el.querySelector('#nm-count') || {}).value || 2); // 1單名 2雙名
         const STYLE_STR = { tw: typeof NAME_PREMIUM !== 'undefined' ? NAME_PREMIUM : '', cn: typeof NAME_MAINLAND !== 'undefined' ? NAME_MAINLAND : '', kr: typeof NAME_KOREAN !== 'undefined' ? NAME_KOREAN : '' }[styleVal];
         const premiumSet = (styleVal !== 'all' && STYLE_STR) ? new Set([...STYLE_STR]) : null;
+        // 台灣官方近年熱門字：台灣風格時加成
+        const twHotSet = (styleVal === 'tw' && typeof TW_HOT !== 'undefined') ? new Set([...TW_HOT]) : null;
         // 單名：只用「能單獨成名」的字，並依性別選男/女/中性分庫（語料真實用字，性別已內含）
         const singlesStr = nameCount === 1
           ? (gender === 'M' && typeof NAME_SINGLES_M !== 'undefined' ? NAME_SINGLES_M
@@ -611,6 +615,7 @@ ${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k]
             if (prefer && c.wx === prefer) s += 2;
             if ((c.g === 'M' || c.g === 'F') && gender !== 'N') s += 1.5;
             if (themeUnion && themeUnion.has(c.c)) s += 2.5; // 主題雅字加分（提升雙名品質）
+            if (twHotSet && twHotSet.has(c.c)) s += 3; // 台灣近年官方熱門字加成
             return { c, w: Math.max(0.2, s) };
           });
           return wPick(scored, x => x.w * x.w).c;
@@ -657,7 +662,7 @@ ${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k]
               <div style="font-size:26px;letter-spacing:.15em;color:var(--navy);font-weight:700;text-align:center">${surname}${r.c1.c}${r.c2 ? r.c2.c : ''}</div>
               <div class="muted" style="text-align:center;font-size:12px">${r.c1.c}${r.c1.k}劃(${r.c1.wx})${r.c2 ? `・${r.c2.c}${r.c2.k}劃(${r.c2.wx})` : ''}</div>
               <div style="text-align:center;margin:4px 0"><span class="tag gold" style="font-size:12px">三才${r.g.sancai.join('')}</span>
-                <span class="tag" style="font-size:12px">人格${r.g.ren}${luckOf(r.g.ren)}</span><span class="tag" style="font-size:12px">總格${r.g.zong}${luckOf(r.g.zong)}</span>${r.ph && !r.ph.unknown && r.ph.penalty === 0 ? '<span class="tag" style="font-size:12px;color:var(--gold-deep)">讀音順</span>' : ''}${(() => { const cm = commonness([r.c1, r.c2]); return cm ? `<span class="tag" style="font-size:12px;color:${cm.c}">${cm.t}</span>` : ''; })()}</div>
+                <span class="tag" style="font-size:12px">人格${r.g.ren}${luckOf(r.g.ren)}</span><span class="tag" style="font-size:12px">總格${r.g.zong}${luckOf(r.g.zong)}</span>${r.ph && !r.ph.unknown && r.ph.penalty === 0 ? '<span class="tag" style="font-size:12px;color:var(--gold-deep)">讀音順</span>' : ''}${commonNames && commonNames.has(r.c1.c + (r.c2 ? r.c2.c : '')) ? '<span class="tag" style="font-size:12px;color:var(--cinnabar)">⚠菜市場名</span>' : (() => { const cm = commonness([r.c1, r.c2]); return cm ? `<span class="tag" style="font-size:12px;color:${cm.c}">${cm.t}</span>` : ''; })()}</div>
               ${r.c1.py ? `<div style="text-align:center;font-size:13px;color:var(--gold-deep);letter-spacing:.05em">${surPy(surname[0]) ? pyToZhuyin(surPy(surname[0])) + ' ' : ''}${pyToZhuyin(r.c1.py)}${r.c2 ? ' ' + pyToZhuyin(r.c2.py) : ''}</div>
               <div class="muted" style="text-align:center;font-size:11px">${surPy(surname[0]) ? parsePy(surPy(surname[0])).body + ' ' : ''}${parsePy(r.c1.py).body}${r.c2 ? ' ' + parsePy(r.c2.py).body : ''}</div>` : ''}
               <div style="font-size:13px">${r.c1.c}：${r.c1.m}${r.c2 ? `<br>${r.c2.c}：${r.c2.m}` : ''}</div>
