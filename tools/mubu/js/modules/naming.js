@@ -411,17 +411,25 @@ ${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k]
         const nameCount = +((el.querySelector('#nm-count') || {}).value || 2); // 1單名 2雙名
         const STYLE_STR = { tw: typeof NAME_PREMIUM !== 'undefined' ? NAME_PREMIUM : '', cn: typeof NAME_MAINLAND !== 'undefined' ? NAME_MAINLAND : '', kr: typeof NAME_KOREAN !== 'undefined' ? NAME_KOREAN : '' }[styleVal];
         const premiumSet = (styleVal !== 'all' && STYLE_STR) ? new Set([...STYLE_STR]) : null;
-        // 單名：只用「能單獨成名」的字（120萬人名語料中真的被拿來當單字名的字）
-        const singlesSet = (nameCount === 1 && typeof NAME_SINGLES !== 'undefined') ? new Set([...NAME_SINGLES]) : null;
+        // 單名：只用「能單獨成名」的字，並依性別選男/女/中性分庫（語料真實用字，性別已內含）
+        const singlesStr = nameCount === 1
+          ? (gender === 'M' && typeof NAME_SINGLES_M !== 'undefined' ? NAME_SINGLES_M
+            : gender === 'F' && typeof NAME_SINGLES_F !== 'undefined' ? NAME_SINGLES_F
+              : typeof NAME_SINGLES !== 'undefined' ? NAME_SINGLES : '')
+          : '';
+        const singlesSet = singlesStr ? new Set([...singlesStr]) : null;
         // 每個筆畫格的「好字」池（排除慎用字＋不符性別；可套風格與單名字過濾）；只在此池挑字
         const goodByStroke = {};
         const buildPools = (useStyle, useSingles) => {
           const map = {};
           for (const c of NAME_CHARS) {
             if (AVOID.has(c.c)) continue;
-            if (useSingles && singlesSet && !singlesSet.has(c.c)) continue;
+            if (useSingles && singlesSet) {
+              if (!singlesSet.has(c.c)) continue; // 單名字庫已含性別，不再套 DB 性別標籤
+            } else {
+              if (!(c.g === 'N' || gender === 'N' || c.g === gender)) continue;
+            }
             if (useStyle && premiumSet && !premiumSet.has(c.c)) continue;
-            if (!(c.g === 'N' || gender === 'N' || c.g === gender)) continue;
             (map[c.k] = map[c.k] || []).push(c);
           }
           return map;
