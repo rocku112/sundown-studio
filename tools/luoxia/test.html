@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>落霞千頁 · 測試</title>
+<style>
+  body{font-family:'Consolas',monospace;background:#1a2535;color:#e8e8e8;margin:0;padding:20px;}
+  h1{font-size:18px;color:#E8B84B;}
+  #summary{font-size:15px;margin:10px 0 16px;padding:10px 14px;border-radius:6px;background:#0f1622;}
+  .ok{color:#4ade80;} .fail{color:#f87171;} .run{color:#facc15;}
+  table{border-collapse:collapse;width:100%;font-size:13px;}
+  td{padding:5px 10px;border-bottom:1px solid #2d3d54;vertical-align:top;}
+  td.st{width:52px;font-weight:bold;} td.nm{width:320px;color:#9fb3c8;} td.dt{color:#f87171;white-space:pre-wrap;}
+  iframe{display:none;}
+</style>
+</head>
+<body>
+<h1>落霞千頁 — 自動化測試</h1>
+<p style="font-size:12px;color:#6b7d94;">在瀏覽器開此頁即自動跑測試；載入真實 App（index.html）於隱藏 iframe，把 test-suite.js 注入其作用域執行。</p>
+<div id="summary" class="run">載入 App 中…</div>
+<table id="results"></table>
+<iframe id="app" src="index.html"></iframe>
+<script>
+const frame=document.getElementById('app');
+frame.addEventListener('load',()=>{
+  // wait until the app's own scripts have run, then inject the suite into the iframe's scope
+  const W=frame.contentWindow, D=frame.contentDocument;
+  (function waitApp(n){
+    if(typeof W.switchTab==='function'){ const s=D.createElement('script'); s.src='test-suite.js?v='+Date.now(); D.body.appendChild(s); poll(); }
+    else if(n>0) setTimeout(()=>waitApp(n-1),100);
+    else { document.getElementById('summary').className='fail'; document.getElementById('summary').textContent='App 未載入（switchTab 未定義）'; }
+  })(50);
+  function poll(n=100){
+    const R=W.__testResults;
+    if(R){ render(R); }
+    else if(n>0) setTimeout(()=>poll(n-1),150);
+    else { document.getElementById('summary').className='fail'; document.getElementById('summary').textContent='測試逾時未回傳結果'; }
+  }
+  function render(R){
+    const tb=document.getElementById('results');tb.innerHTML='';
+    R.results.forEach(r=>{const tr=document.createElement('tr');tr.innerHTML=`<td class="st ${r.pass?'ok':'fail'}">${r.pass?'PASS':'FAIL'}</td><td class="nm">${r.name}</td><td class="dt">${r.err||''}</td>`;tb.appendChild(tr);});
+    const s=document.getElementById('summary');s.className=R.all?'ok':'fail';s.textContent=`${R.pass} / ${R.total} 通過`+(R.all?' ✓ 全數通過':' ✗ 有失敗');
+    window.__testResults=R; // mirror for CDP reads on the top page
+  }
+});
+</script>
+</body>
+</html>
