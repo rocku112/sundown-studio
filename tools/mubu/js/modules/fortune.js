@@ -157,7 +157,7 @@
       const div = document.createElement('div');
       div.innerHTML = `<div class="panel result">
         <div style="text-align:center">
-          <div style="font-size:22px;color:var(--navy);font-weight:700">屬${SHENGXIAO[zhiIdx]} · ${sign.sym}${sign.name}</div>
+          <div style="font-size:22px;color:var(--navy);font-weight:700">屬${SHENGXIAO[zhiIdx]} · ${zodiacIcon(sign, { size: 20 })}${sign.name}</div>
           <div class="muted">${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()} ${dp.name}日</div>
         </div>
         <hr class="divider">
@@ -169,14 +169,14 @@
           ${aspectBlock('感情', zd.love, ADVICE.love[zd.love])}
           ${aspectBlock('健康', zd.health, ADVICE.health[zd.health])}
         </div>
-        <h4 style="margin-top:16px">🌙 星座今日（${sign.name}）</h4>
+        <h4 style="margin-top:16px">${Icons.svg('astrology')} 星座今日（${sign.name}）</h4>
         <p>${starBar(ad.star)} ${lucky[ad.star]}　<span class="muted">今日月亮在${zodiacIcon(ad.moonSign)}${ad.moonSign.name}</span></p>
         <p>${ad.note}</p>
         <hr class="divider">
-        <h4>📅 ${now.getFullYear()} 生肖流年（屬${SHENGXIAO[zhiIdx]}）</h4>
+        <h4>${Icons.svg('almanac')} ${now.getFullYear()} 生肖流年（屬${SHENGXIAO[zhiIdx]}）</h4>
         <p><span class="tag ${zy.good === false ? '' : 'gold'}" ${zy.good === false ? 'style="color:var(--cinnabar)"' : ''}>${zy.title}</span></p>
         <p>${zy.text}</p>
-        <h4>🪐 ${now.getFullYear()} 星座流年（${sign.name}）</h4>
+        <h4>${Icons.svg('astrology')} ${now.getFullYear()} 星座流年（${sign.name}）</h4>
         <p>${starBar(ay.star)}　<span class="muted">流年木星在${zodiacIcon(ay.jupSign)}${ay.jupSign.name}</span></p>
         <p>${ay.note}</p>
         <p class="muted" style="margin-top:10px">※ 每日運勢每天更新（依當日天象計算）；此為概略指引，個人詳批請看八字或紫微命盤。</p>

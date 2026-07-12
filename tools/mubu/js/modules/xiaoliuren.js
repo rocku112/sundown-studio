@@ -86,7 +86,7 @@
     const html = `<div class="panel result">
       <div class="muted" style="text-align:center">農曆${lunar.monthName}${lunar.dayName} ${hourName}時${question ? ` · 所問：${question}` : ''}</div>
       <div style="text-align:center;margin:10px 0">
-        <div class="big-glyph">🤞</div>
+        <div class="big-glyph">${Icons.svg('xiaoliuren', { size: 48 })}</div>
         <div style="font-size:15px;color:var(--ink-dim)">月上起課：${path}</div>
         <div style="font-size:34px;letter-spacing:.3em;color:var(--gold-bright);margin:8px 0">${g.name}</div>
         <span class="fortune-level ${App.fortuneClass(g.level)}">${g.level}</span>
@@ -121,7 +121,7 @@
             <label>所問之事（可留空）</label>
             <input class="xl-q" placeholder="例：明天的會議順利嗎？" style="width:100%">
           </div>
-          <button class="btn" id="xl-now">🤞 以此刻起課</button>
+          <button class="btn" id="xl-now">${Icons.svg('xiaoliuren')} 以此刻起課</button>
           <p class="muted" style="margin-top:10px">正月起大安順數至月，月上起初一數至日，日上起子時數至時，落宮即為所占之課。</p>
         </div>
         <div id="xl-result"></div>`;

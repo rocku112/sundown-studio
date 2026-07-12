@@ -79,7 +79,7 @@
         <hr class="divider">
         <h4>三盤合參怎麼看</h4>
         <p>八字看的是<b>五行氣機與人生節奏</b>（日主 ${p.day.gan}${p.day.ganWx}），紫微看的是<b>人生劇本與舞台配置</b>（${mingStars.join('、')}坐命），占星看的是<b>心理原型與天賦傾向</b>（太陽${sunSign}／月亮${moonSign}）。三套體系從不同角度描繪同一個你——重疊之處就是你最核心的特質，分歧之處往往是內外反差或成長課題。</p>
-        <p class="muted" style="margin-top:8px">👇 建議使用 AI 深度解讀進行真正的三盤交叉分析（這是本功能的精華）。沒有 API Key 也可分別到各模組查看完整單盤解讀。</p>
+        <p class="muted" style="margin-top:8px">${Icons.svg('pointer')} 建議使用 AI 深度解讀進行真正的三盤交叉分析（這是本功能的精華）。沒有 API Key 也可分別到各模組查看完整單盤解讀。</p>
       </div>`;
       resEl.appendChild(div);
 

@@ -403,7 +403,7 @@
             <div class="field"><label>日</label><input id="nm-d" type="number" min="1" max="31" placeholder="1" style="width:64px"></div>
             <div class="field"><label>時</label><input id="nm-h" type="number" min="0" max="23" placeholder="12" style="width:64px"></div>
           </div>
-          <button class="btn" id="nm-go" style="margin-top:14px">✍️ 開始</button>
+          <button class="btn" id="nm-go" style="margin-top:14px">${Icons.svg('naming')} 開始</button>
           <p class="muted" style="margin-top:8px">五派合參：三才五格＋81 數理＋生肖字根＋八字喜用＋易卦＋音靈讀音（筆畫依康熙字典，氵=4、艹=6、阝左=8…）。取名模式自動避開拗口與不雅諧音、可選台灣/中國/韓風風格與單雙名、支援複姓（如歐陽）。${dbOk ? `取名精選庫 ${NAME_CHARS.length} 字；分析可查兩萬餘字康熙筆劃。` : '<b style="color:var(--cinnabar)">字庫載入失敗</b>'}</p>
         </div>
         <div id="nm-result"></div>`;
@@ -668,7 +668,7 @@ ${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k]
               <div style="font-size:13px">${r.c1.c}：${r.c1.m}${r.c2 ? `<br>${r.c2.c}：${r.c2.m}` : ''}</div>
             </div>`).join('')}
           </div>
-          <div style="text-align:center;margin-top:14px"><button class="btn small ghost" id="nm-again">🎲 換一批</button></div>
+          <div style="text-align:center;margin-top:14px"><button class="btn small ghost" id="nm-again">${Icons.svg('dice')} 換一批</button></div>
           <p class="muted" style="margin-top:10px">※ ${nameCount === 1 ? '單名數理較難全吉（人格＝總格被迫相等、外格固定為2），本工具已優先排全吉、放寬收半吉，並只用「能單獨成名」的字。' : '每個提案皆三才相生、人格總格全吉。'}已依喜用五行與生肖字根加權。實際取名請同時考慮讀音、諧音與家族輩分。</p>
         </div>`;
         resEl.appendChild(div);

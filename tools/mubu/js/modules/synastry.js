@@ -174,8 +174,8 @@
           <p>${r.relType.text}</p>
           <p class="muted">步調模式：${r.modeInfo.text}</p>
           <hr class="divider">
-          ${goods.length ? `<h4>✨ 和諧相位（${goods.length}）</h4>${goods.map(row).join('')}` : ''}
-          ${hards.length ? `<h4 style="margin-top:16px">⚡ 張力相位（${hards.length}）</h4>${hards.map(row).join('')}` : ''}
+          ${goods.length ? `<h4>${Icons.svg('star-filled', { color: 'var(--gold-mid)' })} 和諧相位（${goods.length}）</h4>${goods.map(row).join('')}` : ''}
+          ${hards.length ? `<h4 style="margin-top:16px">${Icons.svg('bolt')} 張力相位（${hards.length}）</h4>${hards.map(row).join('')}` : ''}
           ${!r.inter.length ? '<p class="muted">兩人主要行星無明顯交互相位——像平行線，需要刻意創造交集。</p>' : ''}
           <p class="muted" style="margin-top:12px">※ 張力相位不等於不合——沒有張力的關係往往也沒有火花；四分相是最容易「來電」的相位之一。</p>
         </div>`;

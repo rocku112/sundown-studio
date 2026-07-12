@@ -2,13 +2,44 @@
 const Icons = (() => {
   const SW = 1.6;
 
-  function wrap(inner, opts = {}) {
+  function wrap(inner, opts = {}, autoColor) {
     const cls = opts.class ? ` class="${opts.class}"` : '';
     // 預設用 em 相對縮放，跟隨所在文字的 font-size（首頁卡片/標題/按鈕各自大小不同）
     const sizeAttr = opts.size ? ` width="${opts.size}" height="${opts.size}"` : '';
-    const style = opts.style || (opts.size ? 'vertical-align:-4px;flex-shrink:0' : 'width:1em;height:1em;vertical-align:-0.14em;flex-shrink:0');
+    const baseStyle = opts.style || (opts.size ? 'vertical-align:-4px;flex-shrink:0' : 'width:1em;height:1em;vertical-align:-0.14em;flex-shrink:0');
+    const color = opts.color !== undefined ? opts.color : (opts.mono ? null : autoColor);
+    const style = color ? `${baseStyle};color:${color}` : baseStyle;
     return `<svg${cls} viewBox="0 0 24 24"${sizeAttr} style="${style}" fill="none" stroke="currentColor" stroke-width="${SW}" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
   }
+
+  // ---------- 色彩點綴（沿用站內水墨配色，非UI按鈕類圖示預設套用主題色，避免整站單色） ----------
+  const C = {
+    gold: '#C9960A', goldDeep: '#8a5e00', cinnabar: '#B03020', sunset: '#C0622A',
+    navy: '#1E3554', navyMid: '#2D4A6E', water: '#4A76B8', green: '#2E7D4F', inkDim: '#4A5568', ink: '#1A2535'
+  };
+  const TOOL_COLOR = {
+    bazi: C.goldDeep, ziwei: C.navy, astrology: C.navyMid, tarot: C.cinnabar, xiaoliuren: C.sunset,
+    qimen: C.ink, qian: C.gold, almanac: C.green, liuyao: C.water, daliuren: C.navyMid,
+    fortune: C.gold, numerology: C.inkDim, naming: C.cinnabar, hehun: C.sunset, synastry: C.water,
+    combo: C.goldDeep, history: C.inkDim, meihua: C.navy
+  };
+  // 五行配色（元素/五行共用）：木青綠、火硃紅、土赭黃、金冷灰、水靛藍
+  const WX_COLOR = { 木: C.green, 火: C.sunset, 土: C.goldDeep, 金: C.inkDim, 水: C.water };
+  const ZODIAC_ELEM = { aries: '火', taurus: '土', gemini: '風', cancer: '水', leo: '火', virgo: '土', libra: '風', scorpio: '水', sagittarius: '火', capricorn: '土', aquarius: '風', pisces: '水' };
+  const ELEM_COLOR = { 火: C.sunset, 土: C.goldDeep, 風: C.navyMid, 水: C.water };
+  const ZODIAC_COLOR = {};
+  Object.entries(ZODIAC_ELEM).forEach(([k, v]) => { ZODIAC_COLOR[k] = ELEM_COLOR[v]; });
+  const PLANET_COLOR = {
+    sun: C.gold, moon: C.water, mercury: C.navyMid, venus: C.sunset, mars: C.cinnabar,
+    jupiter: C.goldDeep, saturn: C.inkDim, uranus: C.green, neptune: C.navy, pluto: C.ink
+  };
+  const ASPECT_COLOR = { conjunction: C.navyMid, sextile: C.green, square: C.cinnabar, trine: C.gold, opposition: C.cinnabar };
+  const TAROT_SUIT_COLOR = { wands: C.sunset, cups: C.water, swords: C.navyMid, pentacles: C.goldDeep };
+  const AUTO_COLOR = Object.assign({}, TOOL_COLOR, { bolt: C.cinnabar },
+    ...Object.entries(ZODIAC_COLOR).map(([k, v]) => ({ [k]: v })),
+    ...Object.entries(PLANET_COLOR).map(([k, v]) => ({ [k]: v })),
+    ...Object.entries(ASPECT_COLOR).map(([k, v]) => ({ [k]: v })));
+  Object.entries(TAROT_SUIT_COLOR).forEach(([k, v]) => { AUTO_COLOR['tarot-suit-' + k] = v; });
 
   // ---------- 18 工具圖示 ----------
   const TOOL = {
@@ -43,7 +74,10 @@ const Icons = (() => {
     festival: '<path d="M4 20l3-9 6 6z"/><path d="M11 9l6-4M15 3l1.5 2M19 6.5L21 8M13.5 13.5l1.8 1.8" stroke-linecap="round"/><circle cx="9.5" cy="14.5" r=".6" fill="currentColor" stroke="none"/>',
     paw: '<circle cx="7" cy="7.5" r="2"/><circle cx="12" cy="5.5" r="2"/><circle cx="17" cy="7.5" r="2"/><circle cx="19" cy="12.5" r="2"/><path d="M6 20c-1.5 0-2.5-1.4-2-3 .6-2.3 3-4 8-4s7.4 1.7 8 4c.5 1.6-.5 3-2 3-2 0-2.7-1.5-6-1.5S8 20 6 20z"/>',
     ascendant: '<path d="M12 20.5V4"/><path d="M6.5 9.5L12 4l5.5 5.5"/>',
-    midheaven: '<path d="M12 21V3"/><path d="M12 3.5l7 3.8-7 3.8z" fill="currentColor" stroke="none"/>'
+    midheaven: '<path d="M12 21V3"/><path d="M12 3.5l7 3.8-7 3.8z" fill="currentColor" stroke="none"/>',
+    bolt: '<path d="M13 2.5L5 14h6l-1 7.5L19 10h-6z" fill="currentColor" stroke="none"/>',
+    dice: '<rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="8.3" cy="8.3" r="1.1" fill="currentColor" stroke="none"/><circle cx="15.7" cy="8.3" r="1.1" fill="currentColor" stroke="none"/><circle cx="8.3" cy="15.7" r="1.1" fill="currentColor" stroke="none"/><circle cx="15.7" cy="15.7" r="1.1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.1" fill="currentColor" stroke="none"/>',
+    pointer: '<path d="M12 4v13"/><path d="M7 13l5 5 5-5"/>'
   };
 
   // ---------- 星等（塔羅/籤詩/每日運勢） ----------
@@ -159,16 +193,15 @@ const Icons = (() => {
   let uidSeq = 0;
 
   function svg(name, opts) {
-    if (name === 'star-filled' || name === 'star-outline') return wrap(FLAT[name], opts);
     const inner = FLAT[name];
     if (!inner) return '';
-    return wrap(inner, opts);
+    return wrap(inner, opts || {}, AUTO_COLOR[name]);
   }
   // raw：不含外層 <svg>，供嵌入其他手繪 SVG 使用
   function raw(name) { return FLAT[name] || ''; }
 
-  function trigramSVG(lines, opts) { return wrap(trigramInner(lines), opts); }
-  function moonPhaseSVG(phase, opts) { uidSeq++; return wrap(moonPhaseInner(phase, uidSeq), opts); }
+  function trigramSVG(lines, opts) { return wrap(trigramInner(lines), opts || {}); }
+  function moonPhaseSVG(phase, opts) { uidSeq++; return wrap(moonPhaseInner(phase, uidSeq), opts || {}, C.water); }
   function starBarHTML(n, opts) {
     let s = '';
     for (let i = 0; i < 5; i++) s += svg(i < n ? 'star-filled' : 'star-outline', Object.assign({}, opts, { style: (opts && opts.style || 'vertical-align:-3px') + ';color:' + (i < n ? 'var(--gold-mid)' : 'var(--panel-border)') }));
@@ -179,6 +212,6 @@ const Icons = (() => {
     return svg('tarot-suit-' + card.suit, opts);
   }
 
-  return { svg, raw, trigramSVG, moonPhaseSVG, starBarHTML, tarotCardIcon, has: (n) => !!FLAT[n] };
+  return { svg, raw, trigramSVG, moonPhaseSVG, starBarHTML, tarotCardIcon, WX_COLOR, has: (n) => !!FLAT[n] };
 })();
 if (typeof module !== 'undefined') module.exports = Icons;
