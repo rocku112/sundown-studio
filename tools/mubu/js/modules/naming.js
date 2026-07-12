@@ -56,6 +56,7 @@
     ensureMap();
     if (typeof SURNAME_STROKES !== 'undefined' && SURNAME_STROKES[ch]) return SURNAME_STROKES[ch];
     if (charMap[ch]) return charMap[ch].k;
+    if (typeof KangxiStrokes !== 'undefined') return KangxiStrokes.of(ch); // 康熙筆劃大表 fallback（分析用）
     return null;
   }
 
@@ -247,7 +248,7 @@
             <div class="field"><label>時</label><input id="nm-h" type="number" min="0" max="23" placeholder="12" style="width:64px"></div>
           </div>
           <button class="btn" id="nm-go" style="margin-top:14px">✍️ 開始</button>
-          <p class="muted" style="margin-top:8px">五派合參：三才五格＋81 數理＋生肖字根＋八字喜用＋易卦＋音靈讀音（筆畫依康熙字典，氵=4、艹=6、阝左=8…）。取名模式自動避開拗口與不雅諧音。${dbOk ? `字庫 ${NAME_CHARS.length} 字。` : '<b style="color:var(--cinnabar)">字庫載入失敗</b>'}</p>
+          <p class="muted" style="margin-top:8px">五派合參：三才五格＋81 數理＋生肖字根＋八字喜用＋易卦＋音靈讀音（筆畫依康熙字典，氵=4、艹=6、阝左=8…）。取名模式自動避開拗口與不雅諧音。${dbOk ? `取名精選庫 ${NAME_CHARS.length} 字；分析可查兩萬餘字康熙筆劃。` : '<b style="color:var(--cinnabar)">字庫載入失敗</b>'}</p>
         </div>
         <div id="nm-result"></div>`;
 
@@ -283,10 +284,11 @@
           const name = el.querySelector('#nm-name').value.trim();
           if (!name) { warn('請輸入名字'); return; }
           const nameStrokes = [...name].map(strokeOf);
-          if (nameStrokes.some(s => !s)) { warn(`名字中有字不在字庫（${[...name].filter(c => !strokeOf(c)).join('、')}），暫無法分析——本工具字庫以取名常用字為主。`); return; }
+          if (nameStrokes.some(s => !s)) { warn(`名字中有字查無康熙筆劃（${[...name].filter(c => !strokeOf(c)).join('、')}），暫無法分析——可能為罕用字或異體字。`); return; }
           const g = fiveGrids(surStrokes, nameStrokes);
           const chars = [...name].map(c => charMap[c]).filter(Boolean);
-          const wxList = chars.map(c => `${c.c}（${c.wx}）`).join('、');
+          const fullMeta = chars.length === [...name].length; // 全部字都在精選庫（有五行/寓意/拼音）
+          const wxList = chars.length ? chars.map(c => `${c.c}（${c.wx}）`).join('、') : '（此名部分字取自擴充筆劃表，僅有筆畫、無五行寓意資料）';
           let zodiacNote = '';
           if (zt) {
             const likes = chars.filter(c => c.tags.some(t => zt.like.includes(t))).map(c => c.c);
@@ -308,8 +310,9 @@
             ${birthNote}
             <p>名字五行：${wxList}${wxMatch !== null ? wxMatch ? '——<b style="color:var(--gold-deep)">符合喜用五行 ✓</b>' : `——<span style="color:var(--cinnabar)">未含喜用五行「${birth.like}」</span>` : ''}</p>
             ${zodiacNote}
-            ${(() => { const ph = phonetics(surname, chars); return ph.unknown ? '' : `<h4>音韻（音靈五行＋讀音）</h4>${yinlingHTML(ph.syllables)}${ph.notes.length ? `<p class="muted">讀音提醒：${ph.notes.join('、')}。</p>` : '<p class="muted">讀音順口，無明顯拗口或諧音問題。</p>'}`; })()}
-            <p>寓意：${chars.map(c => `${c.c}＝${c.m}`).join('；')}。</p>
+            ${(() => { if (!fullMeta) return ''; const ph = phonetics(surname, chars); return ph.unknown ? '' : `<h4>音韻（音靈五行＋讀音）</h4>${yinlingHTML(ph.syllables)}${ph.notes.length ? `<p class="muted">讀音提醒：${ph.notes.join('、')}。</p>` : '<p class="muted">讀音順口，無明顯拗口或諧音問題。</p>'}`; })()}
+            ${chars.length ? `<p>寓意：${chars.map(c => `${c.c}＝${c.m}`).join('；')}。</p>` : ''}
+            <p class="muted" style="font-size:11.5px">筆劃依康熙字典（分析涵蓋兩萬餘字，資料源 kangxi-strokecount MIT）。五格數理、三才、易卦皆以筆劃推算；五行、寓意、音韻僅精選庫用字提供。</p>
           </div>`;
           resEl.appendChild(div);
           AI.attach(div.querySelector('.panel'), () =>
