@@ -45,6 +45,20 @@
     壬: ['天梁', '紫微', '左輔', '武曲'], 癸: ['破軍', '巨門', '太陰', '貪狼']
   };
   const HUA_NAME = ['祿', '權', '科', '忌'];
+  // 四化總論：這股能量落在哪一宮，該宮就帶有這種傾向
+  const HUA_MEANING = {
+    祿: '主財氣與順遂，是本命最容易得到助力、心想事成的一股能量——福分與資源會自然往這裡流動，好好經營該宮位所代表的領域，往往事半功倍。',
+    權: '主權力與掌控欲，是你天生渴望主導、也最能展現能力的一股能量——該宮位所代表的領域是你發揮領導力與企圖心的舞台，但也容易因太想掌控而生摩擦，宜留意分寸。',
+    科: '主名聲與文墨貴人，是你容易受到肯定、發揮專業與才華的一股能量——該宮位所代表的領域利於進修、考試、建立口碑，貴人也常在此處出現。',
+    忌: '主糾結與課題，是本命最需要修煉、容易卡關反覆的一股能量——該宮位所代表的領域常是心中放不下、反覆掛心之處，卻也往往是這一生真正要突破的功課所在。'
+  };
+  // 十二宮所主人生領域（簡述，用於逐宮簡析）
+  const PALACE_DOMAIN = {
+    命宮: '先天性格與人生格局', 兄弟: '手足情誼與合夥關係', 夫妻: '婚姻感情與另一半特質',
+    子女: '子女緣分與創作能量', 財帛: '賺錢方式與理財態度', 疾厄: '體質健康與情緒底色',
+    遷移: '外出運與人際際遇', 交友: '朋友部屬與人脈助力', 官祿: '事業成就與工作型態',
+    田宅: '不動產與居家運勢', 福德: '精神享受與內在福分', 父母: '父母緣分與長輩貴人'
+  };
 
   // 祿存位置（年干）
   const LUCUN = { 甲: 2, 乙: 3, 丙: 5, 丁: 6, 戊: 5, 己: 6, 庚: 8, 辛: 9, 壬: 11, 癸: 0 };
@@ -226,6 +240,27 @@
       const desc = mingStars.map(s => `<h4>${s}${c.hua[s] ? `（化${c.hua[s]}）` : ''}坐命${borrowed ? '（借對宮）' : ''}</h4><p>${STAR_DESC[s] || ''}</p>`).join('');
       const huaList = Object.entries(c.hua).map(([s, h]) => `${s}化${h}`).join('、');
 
+      // 十二宮簡析（命宮以外的11宮，逐宮列出主星與簡述）
+      const otherPalacesHTML = c.palaces.filter(p => p.zhi !== c.mingIdx).map(p => {
+        let mains = p.main, borrow = false;
+        if (!mains.length) { mains = c.stars[(p.zhi + 6) % 12].main; borrow = true; }
+        const body = mains.length
+          ? mains.map(s => `${s}${c.hua[s] ? `<span class="hua">化${c.hua[s]}</span>` : ''}：${STAR_DESC[s] || ''}`).join('<br>')
+          : '本宮無主星安坐，個性與運勢受對宮及三方四正影響較大，宜綜合全局判斷。';
+        return `<div class="aspect" style="margin-top:8px">
+          <b>${p.name}宮${borrow ? '（借對宮星曜）' : ''} · ${PALACE_DOMAIN[p.name]}</b>
+          <p style="margin-top:4px">${body}</p>
+        </div>`;
+      }).join('');
+
+      // 生年四化意涵：找出每個化星實際落在哪一宮
+      const huaHTML = Object.entries(c.hua).map(([star, h]) => {
+        const palace = c.palaces.find(p => p.main.includes(star) || p.minor.includes(star));
+        const palaceName = palace ? palace.name : null;
+        const palaceLabel = palaceName ? (palaceName.endsWith('宮') ? palaceName : palaceName + '宮') : null;
+        return `<p style="margin-top:6px"><b style="color:var(--gold-bright)">${star}化${h}</b>${palaceLabel ? `，坐${palaceLabel}（${PALACE_DOMAIN[palaceName]}）` : ''}——${HUA_MEANING[h]}</p>`;
+      }).join('');
+
       const div = document.createElement('div');
       div.innerHTML = `<div class="panel result">
         <div class="ziwei-grid">${grid}</div>
@@ -236,7 +271,15 @@
         </div>
         <hr class="divider">
         ${desc}
-        <p class="muted">※ 內建解讀僅就命宮主星簡述；完整十二宮互涉、格局與大限流年，請使用 AI 深度解讀。</p>
+        <hr class="divider">
+        <h4>生年四化意涵</h4>
+        <p class="muted" style="margin-top:-2px">四化是本命盤最關鍵的動態訊息，代表你這一生「錢財、權力、名聲、課題」四股能量各自流向哪個宮位。</p>
+        ${huaHTML}
+        <hr class="divider">
+        <h4>十二宮簡析</h4>
+        <p class="muted" style="margin-top:-2px">命宮以外的十一宮逐一簡述，完整交叉解讀（如夫妻宮看流年、事業與財帛互涉）建議用 AI 深度解讀。</p>
+        ${otherPalacesHTML}
+        <p class="muted" style="margin-top:12px">※ 內建解讀為各宮主星簡述；完整十二宮互涉、格局與大限流年，請使用 AI 深度解讀。</p>
       </div>`;
       resEl.appendChild(div);
 

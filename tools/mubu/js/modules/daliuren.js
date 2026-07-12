@@ -24,6 +24,39 @@
 
   const wxKe = (a, b) => KE[a] === b; // a 剋 b
 
+  // 課體釋義（傳統斷課口訣簡述）
+  const METHOD_INFO = {
+    重審課: '下賊上，即地盤下神剋天盤上神，主事由下而起、下位者主動，事出有因、來龍去脈清楚，宜循線追查、以下驗上。',
+    元首課: '上剋下，即天盤上神剋地盤下神，主事由上而下、尊長或外力主導，宜順勢配合、以上御下，逆勢而為反受其累。',
+    比用法: '四課上神陰陽與日干相同者為用，主課象平和無爭、無明顯剋制，事情發展較為和緩，多是「順其自然」之局。',
+    涉害法: '上下多相牽涉、剋制關係複雜，主事態盤根錯節、牽扯多方，斷事需要通盤考量，不能只看單一線索。',
+    昴星課: '日與四課皆無克，取酉神為用，主謀為之事一時難有著力點、進展遲滯，宜靜觀其變，不宜躁進強求。',
+    遙剋・蒿矢: '四課無克，改取上神剋日干（遠取為用），主外來的壓力或機會如箭矢般突然而至，事情的主動權在對方或外境，宜先觀望應變。',
+    遙剋・彈射: '四課無克，改取日干剋上神（遠取為用），主由我方主動出擊方能奏效，如彈丸射出需自己蓄力，被動等待難有結果。',
+    伏吟課: '天盤地盤相同、月將與時辰疊合不動，主事情停滯不前、內心反覆躊躇，宜守成待時，強行推動容易徒勞無功。',
+    反吟課: '天地盤對沖，主事態翻覆動盪、容易出現意料之外的轉折，變化雖大但也可能因禍得福，宜以動制動、順勢應變。'
+  };
+  const METHOD_ALIAS = { 驛馬: '遙剋・蒿矢', 昴星: '昴星課' };
+  const methodInfo = (m) => {
+    if (METHOD_INFO[m]) return METHOD_INFO[m];
+    const base = m.replace(/^反吟・/, '');
+    const baseInfo = METHOD_INFO[base] || METHOD_INFO[METHOD_ALIAS[base]] || METHOD_INFO.昴星課;
+    return m.startsWith('反吟') ? METHOD_INFO.反吟課 + '　本課又逢反吟：' + baseInfo : baseInfo;
+  };
+
+  // 三傳生剋速斷（初傳→中傳→末傳的五行流通）
+  function chuanFlow(chuWx, zhongWx, mid2Wx) {
+    const rel = (a, b) => a === b ? '比和' : SHENG[a] === b ? '相生' : KE[a] === b ? '相剋(前剋後)' : KE[b] === a ? '相剋(後剋前)' : '無直接關係';
+    const r1 = rel(chuWx, zhongWx), r2 = rel(zhongWx, mid2Wx);
+    const goodFlow = (r1 === '相生' || r1 === '比和') && (r2 === '相生' || r2 === '比和');
+    const badFlow = r1.includes('相剋') && r2.includes('相剋');
+    let verdict;
+    if (goodFlow) verdict = '三傳一氣流通，主事情發展順暢、善始善終，過程雖有波折但整體是往好的方向推進。';
+    else if (badFlow) verdict = '三傳層層剋制，主過程阻礙重重、一波未平一波又起，需要突破多重關卡才能見到結果，宜有心理準備、步步為營。';
+    else verdict = '三傳生剋參半，主事情有起有伏、好壞交織，關鍵在中傳（過程）的應對是否得當，能否化解阻力、順勢借力。';
+    return { r1, r2, verdict };
+  }
+
   function findYuejiang(y, m, d, hh, mi) {
     const jd = Astro.toJD(y, m, d, hh, mi);
     // 找最近的「中氣」（奇數 k）之前
@@ -207,6 +240,8 @@
       }
       plate += '</div>';
 
+      const flow = chuanFlow(ZHI_WX[q.chu], ZHI_WX[q.zhong], ZHI_WX[q.mo]);
+
       const div = document.createElement('div');
       div.innerHTML = `<div class="panel result">
         <div style="text-align:center">
@@ -218,11 +253,14 @@
         <h4>四課</h4>
         <div style="display:flex;justify-content:center;gap:4px;flex-wrap:wrap;border:1px solid var(--panel-border);border-radius:10px;padding:6px">${courseCells}</div>
         <p class="muted" style="text-align:center;font-size:12px">課式由右至左：一課(干)、二課、三課(支)、四課</p>
+        <h4>課體釋義 · ${q.method}</h4>
+        <p>${methodInfo(q.method)}</p>
         <h4>三傳</h4>
         <div style="display:flex;gap:8px">${chuan}</div>
+        <p style="margin-top:8px">初傳${ZHI[q.chu]}（${ZHI_WX[q.chu]}）與中傳${ZHI[q.zhong]}（${ZHI_WX[q.zhong]}）：${flow.r1}；中傳與末傳${ZHI[q.mo]}（${ZHI_WX[q.mo]}）：${flow.r2}。${flow.verdict}</p>
         <h4>天地盤（地盤十二支上之天盤神與天將）</h4>
         ${plate}
-        <p class="muted" style="margin-top:8px">※ 內建完成布盤、四課、三傳（賊剋/比用/涉害/遙剋/昴星、伏吟反吟）與十二天將；斷課取用神、年命入傳、神將吉凶等，建議用 AI 深度解讀。</p>
+        <p class="muted" style="margin-top:8px">※ 內建完成布盤、四課、三傳（賊剋/比用/涉害/遙剋/昴星、伏吟反吟）與十二天將，並附課體釋義與三傳生剋速斷；斷課取用神、年命入傳、神將吉凶等更精細層次，建議用 AI 深度解讀。</p>
       </div>`;
       resEl.appendChild(div);
 
@@ -230,7 +268,8 @@
         `請以大六壬為以下課例斷課。
 所問之事：${question || '（未明說）'}（問類：${cat}）
 時間：${q.dp.name}日 ${ZHI[q.hourIdx]}時，月將${ZHI[q.yj.zhi]}（${JIANG[q.yj.zhi]}）
-課體：${q.method}${q.isFuyin ? '（伏吟）' : ''}${q.isFanyin ? '（反吟）' : ''}
+課體：${q.method}${q.isFuyin ? '（伏吟）' : ''}${q.isFanyin ? '（反吟）' : ''}——${methodInfo(q.method)}
+三傳生剋：初傳${ZHI[q.chu]}與中傳${flow.r1}、中傳與末傳${flow.r2}——${flow.verdict}
 四課（上神/下神，附天將）：
 ${q.courses.map((c, i) => `${c.label}：上${ZHI[c.u]}(${JIANG[c.u]}/${q.tjOf[c.u]}) 下${c.isGan ? q.dayGan : ZHI[c.d]}`).join('\n')}
 三傳：初${ZHI[q.chu]}(${JIANG[q.chu]}/${q.tjOf[q.chu]})、中${ZHI[q.zhong]}(${JIANG[q.zhong]}/${q.tjOf[q.zhong]})、末${ZHI[q.mo]}(${JIANG[q.mo]}/${q.tjOf[q.mo]})

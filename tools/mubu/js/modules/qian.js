@@ -25,6 +25,7 @@
       </div>
       <hr class="divider">
       <h4>總解</h4><p>${q.aspects.overall}</p>
+      ${q.timing ? `<p class="muted" style="margin-top:6px">⏳ 應期：${q.timing}</p>` : ''}
       ${App.aspectGrid([['功名事業', q.aspects.career], ['姻緣感情', q.aspects.love], ['求財', q.aspects.wealth], ['健康', q.aspects.health]])}
     </div>`;
     const div = document.createElement('div');
@@ -37,6 +38,7 @@
 籤詩：${q.poem.join('，')}
 解曰：${q.jieyue.join('、')}
 籤意典故：${q.story}
+應期：${q.timing || '未特別標註'}
 請逐句解析籤詩意象，結合所問之事給出具體指引；若為下籤請同時給出趨吉避凶的化解方向。`);
   }
 

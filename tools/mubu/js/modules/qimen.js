@@ -24,6 +24,29 @@
   const STARS_ORIG = { 1: '天蓬', 8: '天任', 3: '天沖', 4: '天輔', 9: '天英', 2: '天芮', 7: '天柱', 6: '天心', 5: '天禽' };
   const DOORS_ORIG = { 1: '休門', 8: '生門', 3: '傷門', 4: '杜門', 9: '景門', 2: '死門', 7: '驚門', 6: '開門' };
   const GODS = ['值符', '螣蛇', '太陰', '六合', '白虎', '玄武', '九地', '九天'];
+  // 九星意涵（天盤星）
+  const STAR_INFO = {
+    天蓬: '主智謀、盜賊、暗昧，五行屬水，利計謀策劃、暗中佈局，不利公開張揚之事。',
+    天任: '主厚重、包容、醫藥，五行屬土，利養生治病、穩固根基，是九星中性情最忠厚老實的一顆。',
+    天沖: '主衝動、突擊、驚動，五行屬木，利先發制人、快速行動，但也容易因躁進而壞事，宜謀定後動。',
+    天輔: '主文教、輔助、學問，五行屬木，利讀書考試、輔佐他人、文書往來，是九星中利文職的吉星。',
+    天英: '主文明、光彩、急躁，五行屬火，利名聲宣傳、才華展現，惟性急躁，須防虛華不實、後繼無力。',
+    天芮: '主疾病、汙穢、陰晦，五行屬土，九星中的凶星之一，宜靜養防病、低調行事，不利開創新局。',
+    天柱: '主破壞、口舌、刑傷，五行屬金，九星中的凶星之一，宜防爭訟是非，不利簽約合作等需要和氣之事。',
+    天心: '主醫藥、貴人、清靜，五行屬金，利求醫問藥、精密技術、尋求貴人相助，是九星中的吉星。',
+    天禽: '主中央、統御、調和，五行屬土，居中宮統領八方，利統籌調度、居中協調各方勢力。'
+  };
+  // 八神意涵
+  const GOD_INFO = {
+    值符: '主貴人、吉慶、統領，居於值符星所落之宮，代表整局的核心氣運與主導力量所在，此宮之事最受本局氣機眷顧。',
+    螣蛇: '主虛驚、怪異、纏繞，性主變化多端、疑慮不安，遇事宜防虛驚一場、疑心生暗鬼，實際情況常不如想像中嚴重。',
+    太陰: '主陰私、隱蔽、女性，利於暗中謀劃、低調行事，此方位或此事宜秘密進行，不宜公開張揚。',
+    六合: '主和合、婚姻、中介，利於合作、談判、婚嫁牽線，是八神中最溫和吉祥的一位，宜藉此推動人際協商。',
+    白虎: '主刑傷、道路、突發，性剛烈易有意外衝突，此方位出行宜留意交通安全，行事宜防肢體傷害與衝動誤事。',
+    玄武: '主盜賊、失竊、欺詐，宜防財物遺失、小人暗算，此方位或此事的簽約合作宜多加防範、留意條款細節。',
+    九地: '主藏匿、穩固、退守，利守成防禦、深藏不露，此方位宜靜不宜動，適合韜光養晦而非主動出擊。',
+    九天: '主高遠、發展、開創，利於遠行、擴張、公開宣傳，是八神中最利開創進取者，此方位宜大膽發展。'
+  };
   const DOOR_LUCK = { 開門: '大吉', 休門: '吉', 生門: '大吉', 傷門: '凶', 杜門: '中平', 景門: '中吉', 死門: '大凶', 驚門: '凶' };
   const DOOR_USE = {
     開門: '利開業、求職、見貴人、拓展事業', 休門: '利休息、和解、求財、婚姻嫁娶',
@@ -172,9 +195,17 @@
         <hr class="divider">
         <h4>此時吉方</h4>
         ${goodDirs.length ? `<p>${goodDirs.join('<br>')}</p>` : '<p>此時三吉門不顯，宜靜不宜動。</p>'}
-        <h4>值使門主事</h4>
-        <p>${q.shiDoor}值使：${DOOR_USE[q.shiDoor]}。（${DOOR_LUCK[q.shiDoor]}）</p>
-        <p class="muted">※ 奇門格局繁複（十干剋應、星門伏反吟等），內建解讀僅列盤面與吉門方位，深入斷局請用 AI 解讀。</p>
+        <h4>值符星・值使門主事</h4>
+        <p>${q.fuStar}值符：${STAR_INFO[q.fuStar] || ''}</p>
+        <p style="margin-top:6px">${q.shiDoor}值使：${DOOR_USE[q.shiDoor]}。（${DOOR_LUCK[q.shiDoor]}）</p>
+        <h4>八神論斷</h4>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px">
+          ${GRID.filter(g => g !== 5).map(g => `<div class="aspect">
+            <b>${GONG_INFO[g].dir}方（${q.gods[g] || ''}）</b>
+            <p class="muted" style="margin-top:2px;font-size:12.5px">${GOD_INFO[q.gods[g]] || ''}</p>
+          </div>`).join('')}
+        </div>
+        <p class="muted" style="margin-top:10px">※ 奇門格局繁複（十干剋應、星門伏反吟等），內建解讀已列盤面、吉門方位、值符值使與八神意涵，更深入的十干剋應與應期斷局請用 AI 解讀。</p>
       </div>`;
       resEl.appendChild(div);
 
@@ -183,7 +214,7 @@
 所問之事：${question || '（未說明，請就此時空整體氣機解讀）'}
 起局時間：${n.getFullYear()}/${n.getMonth() + 1}/${n.getDate()} ${n.getHours()}時，${q.cur.name}${['上', '中', '下'][q.yuan]}元，${q.yang ? '陽' : '陰'}遁${q.ju}局（轉盤拆補）
 四柱：${Ganzhi.yearPillar(n.getFullYear(), n.getMonth() + 1, n.getDate()).name}年 ${Ganzhi.monthPillar(n.getFullYear(), n.getMonth() + 1, n.getDate()).name}月 ${q.dp.name}日 ${q.hp.name}時，旬首遁${q.xunYi}
-值符${q.fuStar}落${GONG_INFO[q.targetGong].name}，值使${q.shiDoor}
+值符${q.fuStar}落${GONG_INFO[q.targetGong].name}（${STAR_INFO[q.fuStar] || ''}），值使${q.shiDoor}（${DOOR_USE[q.shiDoor]}）
 九宮盤面（宮：八神/天盤星+天盤干/八門+地盤干）：
 ${GRID.filter(g => g !== 5).map(g => `${GONG_INFO[g].name}（${GONG_INFO[g].dir}）：${q.gods[g] || ''}／${q.sky[g] ? q.sky[g].star + q.sky[g].yi : ''}／${q.doors[g] || ''}＋${q.earth[g] || ''}`).join('\n')}
 中五宮地盤：${q.earth[5] || ''}（寄坤二）
