@@ -411,20 +411,24 @@ ${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k]
         const nameCount = +((el.querySelector('#nm-count') || {}).value || 2); // 1單名 2雙名
         const STYLE_STR = { tw: typeof NAME_PREMIUM !== 'undefined' ? NAME_PREMIUM : '', cn: typeof NAME_MAINLAND !== 'undefined' ? NAME_MAINLAND : '', kr: typeof NAME_KOREAN !== 'undefined' ? NAME_KOREAN : '' }[styleVal];
         const premiumSet = (styleVal !== 'all' && STYLE_STR) ? new Set([...STYLE_STR]) : null;
-        // 每個筆畫格的「好字」池（排除慎用字＋不符性別；優先只收常用字）；只在此池挑字
+        // 單名：只用「能單獨成名」的字（120萬人名語料中真的被拿來當單字名的字）
+        const singlesSet = (nameCount === 1 && typeof NAME_SINGLES !== 'undefined') ? new Set([...NAME_SINGLES]) : null;
+        // 每個筆畫格的「好字」池（排除慎用字＋不符性別；可套風格與單名字過濾）；只在此池挑字
         const goodByStroke = {};
-        const buildPools = (usePremium) => {
+        const buildPools = (useStyle, useSingles) => {
           const map = {};
           for (const c of NAME_CHARS) {
             if (AVOID.has(c.c)) continue;
-            if (usePremium && premiumSet && !premiumSet.has(c.c)) continue;
+            if (useSingles && singlesSet && !singlesSet.has(c.c)) continue;
+            if (useStyle && premiumSet && !premiumSet.has(c.c)) continue;
             if (!(c.g === 'N' || gender === 'N' || c.g === gender)) continue;
             (map[c.k] = map[c.k] || []).push(c);
           }
           return map;
         };
-        Object.assign(goodByStroke, buildPools(true));
-        const strokeGood = (k) => (goodByStroke[k] || []).length >= 2; // 該筆畫格至少 2 個常用字才用
+        const rebuild = (a, b) => { for (const k in goodByStroke) delete goodByStroke[k]; Object.assign(goodByStroke, buildPools(a, b)); };
+        rebuild(true, true);
+        const strokeGood = (k) => (goodByStroke[k] || []).length >= 2; // 該筆畫格至少 2 個好字才用
 
         // 1) 只取「名字筆畫格都有足夠好字」的三才五格全吉組合——從源頭杜絕怪字（單名/雙名）
         const buildCombos = () => {
@@ -440,26 +444,34 @@ ${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k]
             // 三才：雙名須兩組皆相生；單名放寬為至少一組相生
             const sancaiOk = nameCount === 1 ? (g.tr.good || g.rd.good) : g.sancaiGood;
             if (!sancaiOk) return;
-            cs.push({ k1, k2, g, s: gridScore(g) });
+            // 品質分層：2=全吉（人格地格皆吉＋三才雙生）1=人格吉 0=半吉
+            const q = (luckOf(g.ren) === '吉' && luckOf(g.di) === '吉' && g.tr.good && g.rd.good) ? 2 : (luckOf(g.ren) === '吉' ? 1 : 0);
+            cs.push({ k1, k2, g, s: gridScore(g), q });
           };
           if (nameCount === 1) { for (const k1 of ss) check(fiveGrids(surStrokes, [k1]), k1, null); }
           else { for (const k1 of ss) for (const k2 of ss) check(fiveGrids(surStrokes, [k1, k2]), k1, k2); }
           return cs;
         };
         let combos = buildCombos();
-        // 常用字池組合過少才放寬回全庫；單名選項本就少，只在完全零組合時才放寬（守住品質）
-        if (combos.length < (nameCount === 1 ? 1 : 3) && premiumSet) {
-          for (const k in goodByStroke) delete goodByStroke[k];
-          Object.assign(goodByStroke, buildPools(false));
-          combos = buildCombos();
+        // 漸進放寬：單名（風格∩單名字→單名字→全庫）；雙名（風格→全庫）——守住品質
+        if (nameCount === 1) {
+          if (combos.length < 4 && (premiumSet || singlesSet)) { rebuild(false, true); combos = buildCombos(); }
+          if (combos.length < 1) { rebuild(false, false); combos = buildCombos(); }
+        } else if (combos.length < 3 && premiumSet) {
+          rebuild(false, false); combos = buildCombos();
         }
         if (!combos.length) {
-          resEl.innerHTML = '<div class="panel result"><p>此姓氏找不到三才五格全吉的雙名筆畫組合（罕見），請改用 AI 解讀諮詢。</p></div>';
+          resEl.innerHTML = '<div class="panel result"><p>此姓氏找不到三才五格全吉的筆畫組合（罕見），請改用 AI 解讀諮詢。</p></div>';
           return;
         }
-        // 均勻洗牌：全部已通過三才五格全吉，不分高下，每批隨機探索不同筆畫格
-        const orderedCombos = combos.slice();
-        for (let i = orderedCombos.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [orderedCombos[i], orderedCombos[j]] = [orderedCombos[j], orderedCombos[i]]; }
+        // 洗牌：雙名不分高下均勻洗牌；單名依品質分層（全吉優先），層內隨機
+        const shuffle = (arr) => { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; };
+        let orderedCombos;
+        if (nameCount === 1) {
+          orderedCombos = [shuffle(combos.filter(c => c.q === 2)), shuffle(combos.filter(c => c.q === 1)), shuffle(combos.filter(c => c.q === 0))].flat();
+        } else {
+          orderedCombos = shuffle(combos.slice());
+        }
 
         // 2) 為每個組合挑字：從該筆畫格的好字池「加權隨機」抽（依喜用/生肖加權）
         const pickChar = (k, prefer, excludeChar) => {
@@ -518,14 +530,14 @@ ${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k]
               <div style="font-size:26px;letter-spacing:.15em;color:var(--navy);font-weight:700;text-align:center">${surname}${r.c1.c}${r.c2 ? r.c2.c : ''}</div>
               <div class="muted" style="text-align:center;font-size:12px">${r.c1.c}${r.c1.k}劃(${r.c1.wx})${r.c2 ? `・${r.c2.c}${r.c2.k}劃(${r.c2.wx})` : ''}</div>
               <div style="text-align:center;margin:4px 0"><span class="tag gold" style="font-size:12px">三才${r.g.sancai.join('')}</span>
-                <span class="tag" style="font-size:12px">人格${r.g.ren}吉</span><span class="tag" style="font-size:12px">總格${r.g.zong}吉</span>${r.ph && !r.ph.unknown && r.ph.penalty === 0 ? '<span class="tag" style="font-size:12px;color:var(--gold-deep)">讀音順</span>' : ''}</div>
+                <span class="tag" style="font-size:12px">人格${r.g.ren}${luckOf(r.g.ren)}</span><span class="tag" style="font-size:12px">總格${r.g.zong}${luckOf(r.g.zong)}</span>${r.ph && !r.ph.unknown && r.ph.penalty === 0 ? '<span class="tag" style="font-size:12px;color:var(--gold-deep)">讀音順</span>' : ''}</div>
               ${r.c1.py ? `<div style="text-align:center;font-size:13px;color:var(--gold-deep);letter-spacing:.05em">${surPy(surname[0]) ? pyToZhuyin(surPy(surname[0])) + ' ' : ''}${pyToZhuyin(r.c1.py)}${r.c2 ? ' ' + pyToZhuyin(r.c2.py) : ''}</div>
               <div class="muted" style="text-align:center;font-size:11px">${surPy(surname[0]) ? parsePy(surPy(surname[0])).body + ' ' : ''}${parsePy(r.c1.py).body}${r.c2 ? ' ' + parsePy(r.c2.py).body : ''}</div>` : ''}
               <div style="font-size:13px">${r.c1.c}：${r.c1.m}${r.c2 ? `<br>${r.c2.c}：${r.c2.m}` : ''}</div>
             </div>`).join('')}
           </div>
           <div style="text-align:center;margin-top:14px"><button class="btn small ghost" id="nm-again">🎲 換一批</button></div>
-          <p class="muted" style="margin-top:10px">※ 每個提案皆為三才相生、人格總格數理全吉；已依喜用五行與生肖字根加權。實際取名請同時考慮讀音、諧音與家族輩分。</p>
+          <p class="muted" style="margin-top:10px">※ ${nameCount === 1 ? '單名數理較難全吉（人格＝總格被迫相等、外格固定為2），本工具已優先排全吉、放寬收半吉，並只用「能單獨成名」的字。' : '每個提案皆三才相生、人格總格全吉。'}已依喜用五行與生肖字根加權。實際取名請同時考慮讀音、諧音與家族輩分。</p>
         </div>`;
         resEl.appendChild(div);
         div.querySelector('#nm-again').addEventListener('click', () => el.querySelector('#nm-go').click());
