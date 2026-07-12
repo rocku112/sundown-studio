@@ -365,7 +365,7 @@ ${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k]
           return items[items.length - 1];
         };
         // 慎用字：技術上合格但當名字太平庸／結構性／冷僻／不雅
-        const AVOID = new Set('丁乙丙子丑寅卯巳午未申酉戌亥木火水金土好孜孳孝仔囝乃之乎兮且卜也巴匕勾尢尸屎冬廿卅兇歹殀夭亡病痞囚奴婢妾丐乞屍冢柚柑橘蒜葱韭薑瓜稻萸蒨靄灣纓灩榆蒜地太中稗稈禾黍稷薯芋薯芽秕稊'.split(''));
+        const AVOID = new Set('丁乙丙子丑寅卯巳午未申酉戌亥木火水金土好孜孳孝仔囝乃之乎兮且卜也巴匕勾尢尸屎冬廿卅兇歹殀夭亡病痞囚奴婢妾丐乞屍冢柚柑橘蒜葱韭薑瓜稻萸蒨靄灣纓灩榆蒜地太中稗稈禾黍稷薯芋薯芽秕稊菀泫墅玎兌釗訓址繩蓀昫蓄'.split(''));
         // 常用取名字精選優先層：有此清單時，生成只從「常用名字字」抽，冷僻字自動退場
         const premiumSet = (typeof NAME_PREMIUM !== 'undefined') ? new Set([...NAME_PREMIUM]) : null;
         // 每個筆畫格的「好字」池（排除慎用字＋不符性別；優先只收常用字）；只在此池挑字
@@ -381,7 +381,7 @@ ${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k]
           return map;
         };
         Object.assign(goodByStroke, buildPools(true));
-        const strokeGood = (k) => (goodByStroke[k] || []).length >= 3; // 該筆畫格至少 3 個好字才用
+        const strokeGood = (k) => (goodByStroke[k] || []).length >= 2; // 該筆畫格至少 2 個常用字才用
 
         // 1) 只取「兩個名字筆畫格都有足夠好字」的三才五格全吉組合——從源頭杜絕怪字
         const buildCombos = () => {
@@ -397,8 +397,8 @@ ${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k]
           return cs;
         };
         let combos = buildCombos();
-        // 常用字池組合太少（此姓氏＋喜用在常用字裡選項不足）→ 放寬回全庫
-        if (combos.length < 12 && premiumSet) {
+        // 常用字池組合過少（極少數姓氏）才放寬回全庫；18 名可由單字變化湊出，門檻放低守住品質
+        if (combos.length < 3 && premiumSet) {
           for (const k in goodByStroke) delete goodByStroke[k];
           Object.assign(goodByStroke, buildPools(false));
           combos = buildCombos();
