@@ -94,7 +94,12 @@ const AI = (() => {
   async function interpretStream(messages, onDelta) {
     const cfg = getConfig();
     if (!hasKey()) throw new Error('尚未設定 API Key');
-    return cfg.provider === 'claude' ? callClaude(cfg, messages, onDelta) : callOpenAI(cfg, messages, onDelta);
+    if (cfg.provider === 'claude') return callClaude(cfg, messages, onDelta);
+    if (cfg.provider === 'gemini') {
+      // Google Gemini 的 OpenAI 相容端點；瀏覽器直呼、串流
+      return callOpenAI({ apiKey: cfg.apiKey, model: cfg.model || 'gemini-2.0-flash', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai' }, messages, onDelta);
+    }
+    return callOpenAI(cfg, messages, onDelta);
   }
   // 相容單輪介面
   async function interpret(prompt) { return interpretStream([{ role: 'user', content: prompt }], () => {}); }
@@ -144,7 +149,7 @@ const AI = (() => {
 
     function refreshHint() {
       hint.textContent = hasKey()
-        ? `使用 ${getConfig().provider === 'claude' ? 'Claude' : 'OpenAI'} · 串流輸出 · Key 僅存於你的瀏覽器`
+        ? `使用 ${({ claude: 'Claude', gemini: 'Google Gemini', openai: 'OpenAI' })[getConfig().provider] || 'AI'} · 串流輸出 · Key 僅存於你的瀏覽器`
         : '免費功能已含基本解讀；AI 深度解讀需在右下角「設定」填入自己的 API Key';
     }
     refreshHint();
@@ -207,14 +212,17 @@ const AI = (() => {
           <label>AI 服務</label>
           <select id="ai-provider">
             <option value="none" ${!cfg.provider || cfg.provider === 'none' ? 'selected' : ''}>不使用（僅內建解讀）</option>
+            <option value="gemini" ${cfg.provider === 'gemini' ? 'selected' : ''}>Google Gemini（有免費額度）</option>
             <option value="claude" ${cfg.provider === 'claude' ? 'selected' : ''}>Claude（Anthropic）</option>
             <option value="openai" ${cfg.provider === 'openai' ? 'selected' : ''}>OpenAI / 相容端點</option>
           </select>
         </div>
+        <div class="field" id="ai-gemini-hint" style="display:${cfg.provider === 'gemini' ? '' : 'none'}">
+          <p class="muted" style="margin:0">Gemini 免費 Key 申請：到 <b>aistudio.google.com/apikey</b> 登入 Google 帳號 → 建立 API 金鑰 → 複製貼到下方。模型留空預設用 <b>gemini-2.0-flash</b>（免費、繁中佳）。</p></div>
         <div class="field"><label>API Key</label>
-          <input id="ai-key" type="password" placeholder="sk-..." value="${cfg.apiKey || ''}"></div>
+          <input id="ai-key" type="password" placeholder="${cfg.provider === 'gemini' ? 'AIza...' : 'sk-...'}" value="${cfg.apiKey || ''}"></div>
         <div class="field"><label>模型（可留空用預設）</label>
-          <input id="ai-model" placeholder="claude-sonnet-5 / gpt-4o-mini" value="${cfg.model || ''}"></div>
+          <input id="ai-model" placeholder="${cfg.provider === 'gemini' ? 'gemini-2.0-flash / gemini-2.5-flash' : 'claude-sonnet-5 / gpt-4o-mini'}" value="${cfg.model || ''}"></div>
         <div class="field" id="ai-base-row" style="display:${cfg.provider === 'openai' ? '' : 'none'}">
           <label>API 端點（OpenAI 相容服務可改，留空用官方）</label>
           <input id="ai-base" placeholder="https://api.openai.com/v1" value="${cfg.baseUrl || ''}"></div>
@@ -226,6 +234,9 @@ const AI = (() => {
     document.body.appendChild(mask);
     mask.querySelector('#ai-provider').addEventListener('change', (e) => {
       mask.querySelector('#ai-base-row').style.display = e.target.value === 'openai' ? '' : 'none';
+      mask.querySelector('#ai-gemini-hint').style.display = e.target.value === 'gemini' ? '' : 'none';
+      mask.querySelector('#ai-key').placeholder = e.target.value === 'gemini' ? 'AIza...' : 'sk-...';
+      mask.querySelector('#ai-model').placeholder = e.target.value === 'gemini' ? 'gemini-2.0-flash / gemini-2.5-flash' : 'claude-sonnet-5 / gpt-4o-mini';
     });
     mask.addEventListener('click', (e) => { if (e.target === mask) mask.remove(); });
     mask.querySelector('#ai-cancel').addEventListener('click', () => mask.remove());
