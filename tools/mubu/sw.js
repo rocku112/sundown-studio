@@ -1,5 +1,5 @@
 /* 暮卜先知 · Service Worker（stale-while-revalidate：先回快取秒開，背景更新） */
-const CACHE = 'mubu-v4';
+const CACHE = 'mubu-v5';
 const PRECACHE = [
   './', 'index.html', 'css/style.css', 'icon.svg', 'manifest.webmanifest',
   'js/core/astro.js', 'js/core/ganzhi.js', 'js/core/ai.js', 'js/core/extras.js',
@@ -8,6 +8,7 @@ const PRECACHE = [
   'js/modules/meihua.js', 'js/modules/bazi.js', 'js/modules/tarot.js',
   'js/modules/astrology.js', 'js/modules/xiaoliuren.js', 'js/modules/ziwei.js',
   'js/modules/qimen.js', 'js/modules/qian.js', 'js/modules/almanac.js',
+  'js/modules/liuyao.js', 'js/modules/daliuren.js', 'js/modules/fortune.js', 'js/modules/numerology.js',
   'js/modules/naming.js', 'js/modules/hehun.js', 'js/modules/synastry.js',
   'js/modules/combo.js'
 ];
