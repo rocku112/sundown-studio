@@ -8,6 +8,39 @@
   // 納音五行字
   const nayinWx = (nayin) => ['金', '木', '水', '火', '土'].find(w => nayin.includes(w));
 
+  // 日主強弱（同 bazi.js 簡化判法：月令權重加倍，同我/生我為助）
+  function strengthOf(p) {
+    const me = p.day.ganWx;
+    const shengMe = Object.entries(Ganzhi.WX_SHENG).find(([, v]) => v === me)[0];
+    let score = 0, total = 0;
+    const items = [
+      [p.year.ganWx, 1], [p.month.ganWx, 1], [p.hour.ganWx, 1],
+      [p.year.zhiWx, 1], [p.month.zhiWx, 2.5], [p.day.zhiWx, 1], [p.hour.zhiWx, 1]
+    ];
+    for (const [wx, w] of items) { total += w; if (wx === me || wx === shengMe) score += w; }
+    const ratio = score / total;
+    return { ratio, label: ratio >= 0.5 ? '偏強' : ratio >= 0.35 ? '中和' : '偏弱', shengMe };
+  }
+  // 喜用神粗判：身強洩剋、身弱生扶
+  function likeOf(p) {
+    const str = strengthOf(p);
+    return str.label === '偏強' ? Ganzhi.WX_SHENG[p.day.ganWx] : (str.label === '偏弱' ? str.shengMe : p.day.ganWx);
+  }
+
+  // 十神正緣意涵：對方日主在我命中扮演的角色
+  const GOD_TEXT = {
+    正官: { pts: 8, text: '你代表著責任與依靠——正官是傳統最推崇的夫妻星，主穩定與名分。' },
+    七殺: { pts: 2, text: '你對對方充滿強烈吸引力與挑戰性，悸動猛烈但也需要學會收放，避免變成壓迫。' },
+    正財: { pts: 8, text: '你是對方想珍惜、想守護的對象——正財主實質的疼惜與經營，是務實而長久的緣分。' },
+    偏財: { pts: 3, text: '你對對方充滿魅力與新鮮感，帶來浪漫悸動，但也提醒雙方要有意識地經營忠誠感。' },
+    食神: { pts: 6, text: '相處起來輕鬆愉快，你能給對方帶來滋養與樂趣，主溫和知足的陪伴。' },
+    傷官: { pts: -2, text: '你的個性鮮明、有主見，對方會被你的才華吸引，但也主直言易起摩擦，需多包容彼此的稜角。' },
+    比肩: { pts: 3, text: '像朋友、像戰友，彼此平等對待，情誼細水長流但少了點被照顧的浪漫感。' },
+    劫財: { pts: -3, text: '個性同樣強勢，容易在主導權或金錢觀上較勁，需刻意練習退讓。' },
+    正印: { pts: 6, text: '你會讓對方感覺被理解、被照顧，主精神上的滋養與安定感。' },
+    偏印: { pts: -1, text: '彼此之間帶著若即若離的距離感，是特殊而深刻的緣分，但需要更多耐心培養親密感。' }
+  };
+
   function personForm(label) {
     return `<div style="flex:1;min-width:280px">
       <h4 style="margin-top:0">${label}</h4>
@@ -76,6 +109,24 @@
     add(nrPts, `年命納音：${pa.year.nayin} × ${pb.year.nayin}（${nr}）`,
       nr === '相生' ? '年命納音相生，古法謂之「福祿相承」。' : nr === '比和' ? '納音同氣，家庭氛圍相似易理解彼此。' : '納音相剋，原生家庭背景差異較大，婚前多認識彼此家庭為宜。', nrPts > 0);
 
+    // 6. 十神正緣（雙向：甲方日主在乙方眼中是什麼角色，反之亦然）
+    const godAB = Ganzhi.tenGod(pb.day.ganIdx, pa.day.ganIdx); // 甲方於乙方為
+    const godBA = Ganzhi.tenGod(pa.day.ganIdx, pb.day.ganIdx); // 乙方於甲方為
+    const gAB = GOD_TEXT[godAB], gBA = GOD_TEXT[godBA];
+    add(gAB.pts + gBA.pts, `十神正緣：甲方於乙方為「${godAB}」・乙方於甲方為「${godBA}」`,
+      `甲方於乙方：${gAB.text}<br>乙方於甲方：${gBA.text}`, (gAB.pts + gBA.pts) >= 0);
+
+    // 7. 喜用神互補（對方旺的五行是否正好補了我所喜用）
+    const likeA = likeOf(pa), likeB = likeOf(pb);
+    let xyPts = 0; const xyNotes = [];
+    if (wb[likeA] >= 2) { xyPts += 6; xyNotes.push(`乙方八字中的${likeA}旺，剛好是甲方的喜用神，能有效補益甲方`); }
+    if (wa[likeB] >= 2) { xyPts += 6; xyNotes.push(`甲方八字中的${likeB}旺，剛好是乙方的喜用神，能有效補益乙方`); }
+    if (wb[likeA] === 0) { xyPts -= 3; xyNotes.push(`乙方命中缺甲方所喜用的${likeA}，助益較弱`); }
+    if (wa[likeB] === 0) { xyPts -= 3; xyNotes.push(`甲方命中缺乙方所喜用的${likeB}，助益較弱`); }
+    xyPts = Math.max(-6, Math.min(10, xyPts));
+    add(xyPts, `喜用神互補（甲喜${likeA}・乙喜${likeB}）`,
+      xyNotes.length ? xyNotes.join('；') + '。' : '雙方喜用神在彼此命中皆無顯著助益或損傷，中性之配。', xyPts >= 0);
+
     score = Math.max(5, Math.min(98, score));
     const grade = score >= 85 ? '天作之合' : score >= 72 ? '上等婚配' : score >= 58 ? '中上之配' : score >= 45 ? '中等・需磨合' : '多有考驗・重在經營';
     return { pa, pb, items, score, grade, wa, wb };
@@ -127,7 +178,7 @@
 甲方（${A.gender === 'M' ? '男' : '女'}）：${A.y}/${A.m}/${A.d} ${A.hh}時生，四柱：${r.pa.year.name} ${r.pa.month.name} ${r.pa.day.name} ${r.pa.hour.name}，五行：${Object.entries(r.wa).map(([k, v]) => k + v).join(' ')}
 乙方（${B.gender === 'M' ? '男' : '女'}）：${B.y}/${B.m}/${B.d} ${B.hh}時生，四柱：${r.pb.year.name} ${r.pb.month.name} ${r.pb.day.name} ${r.pb.hour.name}，五行：${Object.entries(r.wb).map(([k, v]) => k + v).join(' ')}
 初步比對：${r.items.map(it => `${it.title}${it.pts >= 0 ? '+' : ''}${it.pts}`).join('；')}，總分 ${r.score}（${r.grade}）
-請深入分析：1) 雙方日主強弱與喜用神是否互補 2) 彼此在對方命中扮演的十神角色（正緣程度）3) 性格與相處模式 4) 婚後家庭與財務互動 5) 需要注意的年份（沖夫妻宮之流年）6) 給這對組合的相處建議。`);
+請深入分析：1) 雙方日主強弱與喜用神是否互補（已知甲喜${likeOf(r.pa)}、乙喜${likeOf(r.pb)}，請結合合沖刑害精確判斷，可修正粗判）2) 彼此在對方命中扮演的十神角色（正緣程度，已知甲於乙為「${Ganzhi.tenGod(r.pb.day.ganIdx, r.pa.day.ganIdx)}」、乙於甲為「${Ganzhi.tenGod(r.pa.day.ganIdx, r.pb.day.ganIdx)}」）3) 性格與相處模式 4) 婚後家庭與財務互動 5) 需要注意的年份（沖夫妻宮之流年）6) 給這對組合的相處建議。`);
       });
     }
   });
