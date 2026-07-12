@@ -64,8 +64,11 @@ function gen(tool,lang){
     h=h.replace('class="tab-btn active" data-tab="pdf"','class="tab-btn" data-tab="pdf"');
     h=h.replace(`class="tab-btn" data-tab="${tool.t}"`,`class="tab-btn active" data-tab="${tool.t}"`);
   }
-  // 5. inject SEO header at top of app-wrap
-  h=h.replace('<div id="app-wrap">',`<div id="app-wrap">\n<header class="sd-seo"><h1>${esc(c.h1)}</h1><p>${esc(c.intro)}</p></header>`);
+  // 5. inject SEO header (+ language switch) at top of app-wrap
+  const langLink = lang==='en'
+    ? `<a class="sd-lang" href="../${tool.slug}.html" hreflang="zh-Hant">中文</a>`
+    : `<a class="sd-lang" href="en/${tool.slug}.html" hreflang="en">EN</a>`;
+  h=h.replace('<div id="app-wrap">',`<div id="app-wrap">\n<header class="sd-seo">${langLink}<h1>${esc(c.h1)}</h1><p>${esc(c.intro)}</p></header>`);
   // 6. en path rewrites (one level deeper)
   if(lang==='en'){
     h=h.replace(/href="favicon\.svg"/g,'href="../favicon.svg"');

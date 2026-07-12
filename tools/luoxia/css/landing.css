@@ -201,3 +201,6 @@
   }
 
   .tc { text-decoration:none; color:inherit; }
+
+  .lp-lang { border:1px solid var(--lp-border); border-radius:20px; padding:5px 12px !important; font-weight:700 !important; }
+  .lp-lang:hover { background:var(--navy,#1E3554); color:#fff; }

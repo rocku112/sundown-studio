@@ -12,6 +12,7 @@ const D=[
  ['#lp-tools">工具</a>','#lp-tools">Tools</a>'],
  ['#lp-preview">預覽</a>','#lp-preview">Preview</a>'],
  ['#lp-trust">關於</a>','#lp-trust">About</a>'],
+ ['<a class="lp-nav-link lp-lang" href="en/" hreflang="en">EN</a>','<a class="lp-nav-link lp-lang" href="../" hreflang="zh-Hant">中文</a>'],
  ['    開始使用\n','    Get started\n'],
  ['所有檔案本機處理，絕不上傳伺服器','All files processed locally — never uploaded'],
  ['文件處理，<br>','Your files,<br>'],

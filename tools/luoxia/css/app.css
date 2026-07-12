@@ -603,7 +603,9 @@ select, input[type=number], input[type=text] { font-family:inherit; }
 }
 
 /* ── Per-tool SEO header (only present on generated tool landing pages) ── */
-.sd-seo{max-width:840px;margin:0 auto;padding:20px 20px 4px;text-align:center;}
+.sd-seo{max-width:840px;margin:0 auto;padding:20px 20px 4px;text-align:center;position:relative;}
+.sd-lang{position:absolute;top:14px;right:16px;font-size:12px;font-weight:700;color:var(--navy-mid);background:var(--navy-bg);padding:5px 12px;border-radius:20px;text-decoration:none;border:1px solid var(--border);transition:all .15s;}
+.sd-lang:hover{background:var(--navy);color:#fff;border-color:var(--navy);}
 .sd-seo h1{font-size:22px;font-weight:800;color:var(--navy);letter-spacing:-.01em;margin-bottom:8px;line-height:1.3;}
 .sd-seo p{font-size:13.5px;color:var(--text2);line-height:1.75;font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;max-width:640px;margin:0 auto;}
 @media(max-width:640px){.sd-seo h1{font-size:19px;}.sd-seo{padding:16px 16px 2px;}}
