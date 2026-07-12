@@ -328,8 +328,26 @@ ${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k]
         // ---------- 取名模式 ----------
         if (!dbOk) { warn('字庫載入失敗，無法取名'); return; }
         const gender = el.querySelector('#nm-g').value;
-        // 1) 找出數理全吉的筆畫組合
-        const strokeSet = [...new Set(NAME_CHARS.map(c => c.k))].sort((a, b) => a - b);
+        // 加權隨機抽一個
+        const wPick = (items, wFn) => {
+          let total = 0; const ws = items.map(x => { const w = Math.max(0.01, wFn(x)); total += w; return w; });
+          let r = Math.random() * total;
+          for (let i = 0; i < items.length; i++) { r -= ws[i]; if (r <= 0) return items[i]; }
+          return items[items.length - 1];
+        };
+        // 慎用字：技術上合格但當名字太平庸／結構性／冷僻／不雅
+        const AVOID = new Set('丁乙丙子丑寅卯巳午未申酉戌亥木火水金土好孜孳孝仔囝乃之乎兮且卜也巴匕勾尢尸屎冬廿卅兇歹殀夭亡病痞囚奴婢妾丐乞屍冢柚柑橘蒜葱韭薑瓜稻萸蒨靄灣纓灩榆蒜地太中稗稈禾黍稷薯芋薯芽秕稊'.split(''));
+        // 每個筆畫格的「好字」池（排除慎用字＋不符性別）；只在此池挑字
+        const goodByStroke = {};
+        for (const c of NAME_CHARS) {
+          if (AVOID.has(c.c)) continue;
+          if (!(c.g === 'N' || gender === 'N' || c.g === gender)) continue;
+          (goodByStroke[c.k] = goodByStroke[c.k] || []).push(c);
+        }
+        const strokeGood = (k) => (goodByStroke[k] || []).length >= 3; // 該筆畫格至少 3 個好字才用
+
+        // 1) 只取「兩個名字筆畫格都有足夠好字」的三才五格全吉組合——從源頭杜絕怪字
+        const strokeSet = Object.keys(goodByStroke).map(Number).filter(strokeGood).sort((a, b) => a - b);
         const combos = [];
         for (const k1 of strokeSet) {
           for (const k2 of strokeSet) {
@@ -340,32 +358,36 @@ ${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k]
             combos.push({ k1, k2, g, s: gridScore(g) });
           }
         }
-        combos.sort((a, b) => b.s - a.s);
         if (!combos.length) {
           resEl.innerHTML = '<div class="panel result"><p>此姓氏找不到三才五格全吉的雙名筆畫組合（罕見），請改用 AI 解讀諮詢。</p></div>';
           return;
         }
-        // 2) 為每個組合挑字
+        // 均勻洗牌：全部已通過三才五格全吉，不分高下，每批隨機探索不同筆畫格
+        const orderedCombos = combos.slice();
+        for (let i = orderedCombos.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [orderedCombos[i], orderedCombos[j]] = [orderedCombos[j], orderedCombos[i]]; }
+
+        // 2) 為每個組合挑字：只從該筆畫格的好字池「加權隨機」抽（依喜用/生肖加權）
         const pickChar = (k, prefer, used) => {
-          let pool = NAME_CHARS.filter(c => c.k === k && (c.g === 'N' || gender === 'N' || c.g === gender) && !used.has(c.c));
+          const pool = (goodByStroke[k] || []).filter(c => !used.has(c.c));
           if (!pool.length) return null;
           const scored = pool.map(c => {
-            let s = Math.random() * 2;
-            if (birth && c.wx === birth.like) s += 5;
-            if (birth && birth.missing.includes(c.wx)) s += 2;
-            if (zt && c.tags.some(t => zt.like.includes(t))) s += 2.5;
-            if (zt && c.tags.some(t => zt.dislike.includes(t))) s -= 6;
-            if (prefer && c.wx === prefer) s += 1.5;
-            return { c, s };
-          }).sort((a, b) => b.s - a.s);
-          return scored[0].c;
+            let s = 4; // 基礎分，讓非喜用好字也有機會浮出
+            if (birth && c.wx === birth.like) s += 4;
+            if (birth && birth.missing.includes(c.wx)) s += 1.5;
+            if (zt && c.tags.some(t => zt.like.includes(t))) s += 2;
+            if (zt && c.tags.some(t => zt.dislike.includes(t))) s -= 8;
+            if (prefer && c.wx === prefer) s += 2;
+            if ((c.g === 'M' || c.g === 'F') && gender !== 'N') s += 1.5;
+            return { c, w: Math.max(0.2, s) };
+          });
+          return wPick(scored, x => x.w * x.w).c;
         };
         const used = new Set();
         const results = [];
-        for (const cb of combos.slice(0, 60)) {
+        for (const cb of orderedCombos) {
           // 每組嘗試數次，挑讀音最順的一組（讀音防呆）
           let best = null;
-          for (let attempt = 0; attempt < 4; attempt++) {
+          for (let attempt = 0; attempt < 5; attempt++) {
             const c1 = pickChar(cb.k1, null, used);
             if (!c1) break;
             const c2 = pickChar(cb.k2, birth && c1.wx !== birth.like ? birth.like : null, new Set([...used, c1.c]));
