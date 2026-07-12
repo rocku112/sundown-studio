@@ -30,6 +30,35 @@
     return { s: '剋', good: false };
   }
 
+  // ---------- 拼音 → 注音 ----------
+  const ZH_INIT = { b: 'ㄅ', p: 'ㄆ', m: 'ㄇ', f: 'ㄈ', d: 'ㄉ', t: 'ㄊ', n: 'ㄋ', l: 'ㄌ', g: 'ㄍ', k: 'ㄎ', h: 'ㄏ', j: 'ㄐ', q: 'ㄑ', x: 'ㄒ', zh: 'ㄓ', ch: 'ㄔ', sh: 'ㄕ', r: 'ㄖ', z: 'ㄗ', c: 'ㄘ', s: 'ㄙ' };
+  const ZH_FIN = {
+    a: 'ㄚ', o: 'ㄛ', e: 'ㄜ', 'ê': 'ㄝ', ai: 'ㄞ', ei: 'ㄟ', ao: 'ㄠ', ou: 'ㄡ', an: 'ㄢ', en: 'ㄣ', ang: 'ㄤ', eng: 'ㄥ', ong: 'ㄨㄥ', er: 'ㄦ',
+    i: 'ㄧ', ia: 'ㄧㄚ', ie: 'ㄧㄝ', iao: 'ㄧㄠ', iu: 'ㄧㄡ', iou: 'ㄧㄡ', ian: 'ㄧㄢ', in: 'ㄧㄣ', iang: 'ㄧㄤ', ing: 'ㄧㄥ', iong: 'ㄩㄥ',
+    u: 'ㄨ', ua: 'ㄨㄚ', uo: 'ㄨㄛ', uai: 'ㄨㄞ', ui: 'ㄨㄟ', uei: 'ㄨㄟ', uan: 'ㄨㄢ', un: 'ㄨㄣ', uen: 'ㄨㄣ', uang: 'ㄨㄤ', ueng: 'ㄨㄥ',
+    'ü': 'ㄩ', 'üe': 'ㄩㄝ', 'üan': 'ㄩㄢ', 'ün': 'ㄩㄣ', v: 'ㄩ', ve: 'ㄩㄝ', van: 'ㄩㄢ', vn: 'ㄩㄣ'
+  };
+  const ZH_TONE = { '1': '', '2': 'ˊ', '3': 'ˇ', '4': 'ˋ', '5': '˙' };
+  const YW = { yi: 'i', ya: 'ia', ye: 'ie', yao: 'iao', you: 'iou', yan: 'ian', yin: 'in', yang: 'iang', ying: 'ing', yong: 'iong', yu: 'ü', yue: 'üe', yuan: 'üan', yun: 'ün', wu: 'u', wa: 'ua', wo: 'uo', wai: 'uai', wei: 'uei', wan: 'uan', wen: 'uen', wang: 'uang', weng: 'ueng' };
+  const WHOLE = { zhi: 'ㄓ', chi: 'ㄔ', shi: 'ㄕ', ri: 'ㄖ', zi: 'ㄗ', ci: 'ㄘ', si: 'ㄙ' };
+  function pyToZhuyin(py) {
+    if (!py) return '';
+    const m = py.toLowerCase().match(/^([a-zü]+?)([1-5])?$/);
+    if (!m) return '';
+    let body = m[1]; const tone = m[2] || '1';
+    if (WHOLE[body]) return WHOLE[body] + ZH_TONE[tone];
+    let init = '', fin;
+    if (YW[body]) { fin = YW[body]; }
+    else {
+      const two = body.slice(0, 2);
+      if (['zh', 'ch', 'sh'].includes(two)) { init = two; body = body.slice(2); }
+      else if (ZH_INIT[body[0]] && !'aeiouü'.includes(body[0])) { init = body[0]; body = body.slice(1); }
+      fin = body;
+      if (['j', 'q', 'x'].includes(init) && fin[0] === 'u') fin = 'ü' + fin.slice(1);
+    }
+    return (init ? ZH_INIT[init] : '') + (ZH_FIN[fin] || '') + ZH_TONE[tone];
+  }
+
   // 生肖宜忌字根（民俗簡表，供加減分參考）
   const ZODIAC_TAGS = {
     0: { like: ['宀', '米', '豆', '金', '王', '月'], dislike: ['日', '火', '馬', '山'] },
@@ -337,26 +366,42 @@ ${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k]
         };
         // 慎用字：技術上合格但當名字太平庸／結構性／冷僻／不雅
         const AVOID = new Set('丁乙丙子丑寅卯巳午未申酉戌亥木火水金土好孜孳孝仔囝乃之乎兮且卜也巴匕勾尢尸屎冬廿卅兇歹殀夭亡病痞囚奴婢妾丐乞屍冢柚柑橘蒜葱韭薑瓜稻萸蒨靄灣纓灩榆蒜地太中稗稈禾黍稷薯芋薯芽秕稊'.split(''));
-        // 每個筆畫格的「好字」池（排除慎用字＋不符性別）；只在此池挑字
+        // 常用取名字精選優先層：有此清單時，生成只從「常用名字字」抽，冷僻字自動退場
+        const premiumSet = (typeof NAME_PREMIUM !== 'undefined') ? new Set([...NAME_PREMIUM]) : null;
+        // 每個筆畫格的「好字」池（排除慎用字＋不符性別；優先只收常用字）；只在此池挑字
         const goodByStroke = {};
-        for (const c of NAME_CHARS) {
-          if (AVOID.has(c.c)) continue;
-          if (!(c.g === 'N' || gender === 'N' || c.g === gender)) continue;
-          (goodByStroke[c.k] = goodByStroke[c.k] || []).push(c);
-        }
+        const buildPools = (usePremium) => {
+          const map = {};
+          for (const c of NAME_CHARS) {
+            if (AVOID.has(c.c)) continue;
+            if (usePremium && premiumSet && !premiumSet.has(c.c)) continue;
+            if (!(c.g === 'N' || gender === 'N' || c.g === gender)) continue;
+            (map[c.k] = map[c.k] || []).push(c);
+          }
+          return map;
+        };
+        Object.assign(goodByStroke, buildPools(true));
         const strokeGood = (k) => (goodByStroke[k] || []).length >= 3; // 該筆畫格至少 3 個好字才用
 
         // 1) 只取「兩個名字筆畫格都有足夠好字」的三才五格全吉組合——從源頭杜絕怪字
-        const strokeSet = Object.keys(goodByStroke).map(Number).filter(strokeGood).sort((a, b) => a - b);
-        const combos = [];
-        for (const k1 of strokeSet) {
-          for (const k2 of strokeSet) {
+        const buildCombos = () => {
+          const ss = Object.keys(goodByStroke).map(Number).filter(strokeGood).sort((a, b) => a - b);
+          const cs = [];
+          for (const k1 of ss) for (const k2 of ss) {
             const g = fiveGrids(surStrokes, [k1, k2]);
             if (luckOf(g.ren) !== '吉' || luckOf(g.zong) !== '吉') continue;
             if (luckOf(g.di) === '凶' || luckOf(g.wai) === '凶') continue;
             if (!g.sancaiGood) continue;
-            combos.push({ k1, k2, g, s: gridScore(g) });
+            cs.push({ k1, k2, g, s: gridScore(g) });
           }
+          return cs;
+        };
+        let combos = buildCombos();
+        // 常用字池組合太少（此姓氏＋喜用在常用字裡選項不足）→ 放寬回全庫
+        if (combos.length < 12 && premiumSet) {
+          for (const k in goodByStroke) delete goodByStroke[k];
+          Object.assign(goodByStroke, buildPools(false));
+          combos = buildCombos();
         }
         if (!combos.length) {
           resEl.innerHTML = '<div class="panel result"><p>此姓氏找不到三才五格全吉的雙名筆畫組合（罕見），請改用 AI 解讀諮詢。</p></div>';
@@ -366,9 +411,9 @@ ${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k]
         const orderedCombos = combos.slice();
         for (let i = orderedCombos.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [orderedCombos[i], orderedCombos[j]] = [orderedCombos[j], orderedCombos[i]]; }
 
-        // 2) 為每個組合挑字：只從該筆畫格的好字池「加權隨機」抽（依喜用/生肖加權）
-        const pickChar = (k, prefer, used) => {
-          const pool = (goodByStroke[k] || []).filter(c => !used.has(c.c));
+        // 2) 為每個組合挑字：從該筆畫格的好字池「加權隨機」抽（依喜用/生肖加權）
+        const pickChar = (k, prefer, excludeChar) => {
+          const pool = (goodByStroke[k] || []).filter(c => c.c !== excludeChar);
           if (!pool.length) return null;
           const scored = pool.map(c => {
             let s = 4; // 基礎分，讓非喜用好字也有機會浮出
@@ -382,25 +427,33 @@ ${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k]
           });
           return wPick(scored, x => x.w * x.w).c;
         };
-        const used = new Set();
+        // 允許單字跨提案共用（如 陳雅婷／陳雅涵），只避免整個名字重複
+        const TARGET = 18;
+        const usedNames = new Set();
         const results = [];
-        for (const cb of orderedCombos) {
-          // 每組嘗試數次，挑讀音最順的一組（讀音防呆）
-          let best = null;
-          for (let attempt = 0; attempt < 5; attempt++) {
-            const c1 = pickChar(cb.k1, null, used);
-            if (!c1) break;
-            const c2 = pickChar(cb.k2, birth && c1.wx !== birth.like ? birth.like : null, new Set([...used, c1.c]));
-            if (!c2) break;
-            const ph = phonetics(surname, [c1, c2]);
-            if (!best || ph.penalty < best.ph.penalty) best = { c1, c2, ph };
-            if (ph.penalty === 0) break; // 完美讀音即採用
+        let guard = 0;
+        while (results.length < TARGET && guard < 600) {
+          for (const cb of orderedCombos) {
+            if (results.length >= TARGET) break;
+            guard++;
+            let best = null;
+            for (let attempt = 0; attempt < 4; attempt++) {
+              const c1 = pickChar(cb.k1, null, null);
+              if (!c1) break;
+              const c2 = pickChar(cb.k2, birth && c1.wx !== birth.like ? birth.like : null, c1.c);
+              if (!c2) break;
+              if (usedNames.has(c1.c + c2.c)) continue;
+              const ph = phonetics(surname, [c1, c2]);
+              if (!best || ph.penalty < best.ph.penalty) best = { c1, c2, ph };
+              if (ph.penalty === 0) break; // 完美讀音即採用
+            }
+            if (!best || best.ph.penalty >= 20) continue;
+            const nm = best.c1.c + best.c2.c;
+            if (usedNames.has(nm)) continue;
+            usedNames.add(nm);
+            results.push({ c1: best.c1, c2: best.c2, ph: best.ph, ...cb });
           }
-          if (!best) continue;
-          if (best.ph.penalty >= 20) continue; // 諧音疑慮直接淘汰
-          used.add(best.c1.c); used.add(best.c2.c);
-          results.push({ c1: best.c1, c2: best.c2, ph: best.ph, ...cb });
-          if (results.length >= 8) break;
+          guard += 30; // 名字空間小於 18 時避免無限迴圈
         }
 
         const div = document.createElement('div');
@@ -413,7 +466,8 @@ ${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k]
               <div class="muted" style="text-align:center;font-size:12px">${r.c1.c}${r.c1.k}劃(${r.c1.wx})・${r.c2.c}${r.c2.k}劃(${r.c2.wx})</div>
               <div style="text-align:center;margin:4px 0"><span class="tag gold" style="font-size:12px">三才${r.g.sancai.join('')}</span>
                 <span class="tag" style="font-size:12px">人格${r.g.ren}吉</span><span class="tag" style="font-size:12px">總格${r.g.zong}吉</span>${r.ph && !r.ph.unknown && r.ph.penalty === 0 ? '<span class="tag" style="font-size:12px;color:var(--gold-deep)">讀音順</span>' : ''}</div>
-              ${r.c1.py ? `<div class="muted" style="text-align:center;font-size:11.5px">${surPy(surname[0]) ? parsePy(surPy(surname[0])).body : surname} · ${parsePy(r.c1.py).body} · ${parsePy(r.c2.py).body}</div>` : ''}
+              ${r.c1.py ? `<div style="text-align:center;font-size:13px;color:var(--gold-deep);letter-spacing:.05em">${surPy(surname[0]) ? pyToZhuyin(surPy(surname[0])) + ' ' : ''}${pyToZhuyin(r.c1.py)} ${pyToZhuyin(r.c2.py)}</div>
+              <div class="muted" style="text-align:center;font-size:11px">${surPy(surname[0]) ? parsePy(surPy(surname[0])).body + ' ' : ''}${parsePy(r.c1.py).body} ${parsePy(r.c2.py).body}</div>` : ''}
               <div style="font-size:13px">${r.c1.c}：${r.c1.m}<br>${r.c2.c}：${r.c2.m}</div>
             </div>`).join('')}
           </div>
