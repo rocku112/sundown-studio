@@ -21,6 +21,54 @@
     水: '五行喜水者宜北方、黑藍色、流動變化的環境；行業利貿易、物流、傳播、旅遊。'
   };
 
+  // ---------- 神煞 ----------
+  // 地支索引：子0 丑1 寅2 卯3 辰4 巳5 午6 未7 申8 酉9 戌10 亥11；天干：甲0…癸9
+  const TIANYI = { 0: [1, 7], 4: [1, 7], 6: [1, 7], 1: [0, 8], 5: [0, 8], 2: [11, 9], 3: [11, 9], 8: [3, 5], 9: [3, 5], 7: [6, 2] };
+  const WENCHANG = { 0: 5, 1: 6, 2: 8, 4: 8, 3: 9, 5: 9, 6: 11, 7: 0, 8: 2, 9: 3 };
+  const YANGREN = { 0: 3, 2: 6, 4: 6, 6: 9, 8: 0 };
+  const TRINES = [[8, 0, 4], [2, 6, 10], [5, 9, 1], [11, 3, 7]]; // 申子辰／寅午戌／巳酉丑／亥卯未
+  const PEACH = [9, 3, 6, 0], YIMA = [2, 8, 11, 5], HUAGAI = [4, 10, 1, 7], JIANGXING = [0, 6, 9, 3];
+  const VOID_TABLE = [[10, 11], [8, 9], [6, 7], [4, 5], [2, 3], [0, 1]]; // 六旬空亡
+  const trineIdx = (z) => TRINES.findIndex(g => g.includes(z));
+
+  const SHENSHA_INFO = {
+    天乙貴人: { good: true, text: '八字第一貴人，主逢凶化吉、遇難呈祥，多得長輩貴人提攜相助。' },
+    文昌貴人: { good: true, text: '主聰穎好學、文思敏捷，利考試、進修與文書創作。' },
+    將星: { good: true, text: '主有領導才能與掌控局面的氣勢，利掌權任事、擔當要職。' },
+    桃花: { good: null, text: '主異性緣佳、外表有魅力，感情機會多但也需慎防爛桃花、招惹是非。' },
+    驛馬: { good: null, text: '主變動奔波，利出外發展、遷徙旅行、業務外勤，但也主不穩定、難久居一處。' },
+    華蓋: { good: null, text: '主聰明孤高、有藝術宗教慧根，利玄學、宗教、藝術創作，但也主孤僻、緣分較淡。' },
+    羊刃: { good: false, text: '主性剛果決、行事極端，利武職、競爭型行業，但也主易衝動躁進、需防意外血光。' },
+    空亡: { good: false, text: '主此柱所代表的人事物力量減弱、易落空或有名無實，宜看淡得失、修心為要。' }
+  };
+
+  // p: fourPillars；回傳 [{name, positions:['年','月','日','時'], info}]
+  function shensha(p) {
+    const cols = ['year', 'month', 'day', 'hour'];
+    const posName = { year: '年', month: '月', day: '日', hour: '時' };
+    const dayGan = p.day.ganIdx;
+    const zhis = cols.map(c => p[c].zhiIdx);
+    const found = [];
+    const add = (name, positions) => { if (positions.length) found.push({ name, positions: positions.map(c => posName[c]), info: SHENSHA_INFO[name] }); };
+
+    add('天乙貴人', cols.filter((c, i) => (TIANYI[dayGan] || []).includes(zhis[i])));
+    add('文昌貴人', cols.filter((c, i) => WENCHANG[dayGan] === zhis[i]));
+    if (YANGREN[dayGan] !== undefined) add('羊刃', cols.filter((c, i) => YANGREN[dayGan] === zhis[i]));
+
+    const baseIdx = trineIdx(p.year.zhiIdx);
+    if (baseIdx >= 0) {
+      add('桃花', cols.filter((c, i) => PEACH[baseIdx] === zhis[i]));
+      add('驛馬', cols.filter((c, i) => YIMA[baseIdx] === zhis[i]));
+      add('華蓋', cols.filter((c, i) => HUAGAI[baseIdx] === zhis[i]));
+      add('將星', cols.filter((c, i) => JIANGXING[baseIdx] === zhis[i]));
+    }
+
+    const voidZ = VOID_TABLE[Math.floor(p.day.n / 10)];
+    add('空亡', cols.filter((c, i) => voidZ.includes(zhis[i])));
+
+    return found;
+  }
+
   function wuxingCount(p) {
     const count = { 木: 0, 火: 0, 土: 0, 金: 0, 水: 0 };
     for (const key of ['year', 'month', 'day', 'hour']) {
@@ -74,6 +122,7 @@
       const like = str.label === '偏強'
         ? Ganzhi.WX_SHENG[p.day.ganWx]
         : (str.label === '偏弱' ? str.shengMe : p.day.ganWx);
+      const ss = shensha(p);
       const relations = Ganzhi.branchRelations(p);
       const th = Ganzhi.tiaohou(p.day.ganIdx, p.month.zhiIdx);
       const nowYear = new Date().getFullYear();
@@ -116,6 +165,12 @@
             <div class="muted" style="font-size:12px">${d.nayin}</div></div>`).join('')}
         </div>
         <hr class="divider">
+        <h4>神煞</h4>
+        ${ss.length
+          ? `<p>${ss.map(s => `<span class="tag ${s.info.good === true ? 'gold' : ''}" ${s.info.good === false ? 'style="color:var(--cinnabar);border-color:rgba(176,48,32,.4)"' : ''}>${s.name}（${s.positions.join('、')}柱）</span>`).join('')}</p>
+             <div style="margin-top:6px">${ss.map(s => `<p class="muted" style="margin-top:4px"><b style="color:${s.info.good === true ? 'var(--gold-bright)' : s.info.good === false ? 'var(--cinnabar)' : 'var(--ink)'}">${s.name}</b>：${s.info.text}</p>`).join('')}</div>`
+          : '<p class="muted">四柱未見常見神煞組合。</p>'}
+        <hr class="divider">
         <h4>合沖刑害</h4>
         ${relations.length
           ? `<p>${relations.map(r => `<span class="tag ${r.level === 'good' ? 'gold' : ''}" ${r.level === 'bad' ? 'style="color:var(--cinnabar);border-color:rgba(176,48,32,.4)"' : ''}>${r.type}｜${r.text}</span>`).join('')}</p>`
@@ -149,11 +204,12 @@
 四柱：年柱${p.year.name}、月柱${p.month.name}、日柱${p.day.name}、時柱${p.hour.name}
 藏干：年支藏${p.year.cang.join('')}、月支藏${p.month.cang.join('')}、日支藏${p.day.cang.join('')}、時支藏${p.hour.cang.join('')}
 五行分布：${Object.entries(wx).map(([k, v]) => k + v).join(' ')}，日主${p.day.gan}${p.day.ganWx}身${str.label}
+神煞：${ss.map(s => `${s.name}（${s.positions.join('、')}柱）`).join('、') || '無明顯神煞'}
 合沖刑害：${relations.map(r => r.text).join('；') || '無明顯'}
 調候用神（參考）：${th ? th.split('').join('、') : '無'}
 大運：${luck.startAge}歲起${luck.forward ? '順' : '逆'}行，${luck.list.map(d => `${d.age}歲${d.name}`).join('、')}
 未來十年流年：${flowYears.map(f => `${f.year}${f.name}(${f.tenGod}${f.tags.length ? '，' + f.tags.join('/') : ''})`).join('、')}
-請分析：1) 日主強弱與格局 2) 喜用神與忌神（請結合調候與合沖刑害精確判斷，可修正上述粗判）3) 性格特質 4) 事業財運方向 5) 感情婚姻 6) 大運與未來十年流年走勢重點（特別標出吉凶轉折年份）。`);
+請分析：1) 日主強弱與格局 2) 喜用神與忌神（請結合調候與合沖刑害精確判斷，可修正上述粗判）3) 性格特質 4) 事業財運方向 5) 感情婚姻 6) 大運與未來十年流年走勢重點（特別標出吉凶轉折年份）7) 命中神煞對格局的加分或提醒（例如天乙貴人所在柱位對應的人生領域、桃花驛馬華蓋等對感情事業的影響）。`);
     });
   }
 
