@@ -133,7 +133,7 @@
       // 手機
       const raw = el.querySelector('#nu-phone').value;
       const r = analyzePhone(raw);
-      if (!r) { alert('請輸入至少 4 位數字的號碼'); return; }
+      if (!r) { resEl.innerHTML = '<div class="panel result"><p style="color:var(--cinnabar)">⚠ 請輸入至少 4 位數字的號碼</p></div>'; return; }
       const color = r.score >= 70 ? 'var(--gold-deep)' : r.score >= 45 ? 'var(--ink-dim)' : 'var(--cinnabar)';
       const div = document.createElement('div');
       div.innerHTML = `<div class="panel result">

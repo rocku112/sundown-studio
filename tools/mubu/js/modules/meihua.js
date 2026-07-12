@@ -168,7 +168,7 @@
 
       el.querySelector('#mh-num').addEventListener('click', () => {
         const n1 = +el.querySelector('.mh-n1').value, n2 = +el.querySelector('.mh-n2').value;
-        if (!n1 || !n2 || n1 < 1 || n2 < 1) { alert('請輸入兩個正整數'); return; }
+        if (!n1 || !n2 || n1 < 1 || n2 < 1) { resEl.innerHTML = '<div class="panel result"><p style="color:var(--cinnabar)">⚠ 請輸入兩個正整數</p></div>'; return; }
         resEl.innerHTML = '';
         divine(((n1 - 1) % 8) + 1, ((n2 - 1) % 8) + 1, n1 + n2, `數字起卦（${n1}、${n2}）`, q(), resEl);
       });
