@@ -2467,6 +2467,7 @@ function pmUI(){
 }
 
 function pmClearAll(){
+  if(pmS.doc&&pmS.doc.destroy)try{pmS.doc.destroy();}catch(e){}
   pmS.file=null;pmS.doc=null;pmS.pc=0;pmPages=[];pmBaseThumb=[];pmDragIdx=null;
   pmGrid.innerHTML='';
   document.getElementById('pmInfo').style.display='none';
@@ -2748,6 +2749,7 @@ function wmPreview(){
 }
 
 function wmClearAll(){
+  if(wmS.doc&&wmS.doc.destroy)try{wmS.doc.destroy();}catch(e){}
   wmS.file=null;wmS.doc=null;wmS.pc=0;wmS.page1=null;
   document.getElementById('wmInfo').style.display='none';
   wmDZ.style.display='block';
@@ -3054,24 +3056,32 @@ async function anLoad(file){
   }catch(e){toast('無法讀取 PDF：'+(e.message||e),true);anClearAll();}
 }
 
+let anPageBusy=false;
 async function anGoPage(idx){
-  if(!anS.doc||idx<0||idx>=anS.pc)return;
-  anHideTextEdit();anSel=null;anDraft=null;anS.cur=idx;
-  const pg=await anS.doc.getPage(idx+1);
-  const v1=pg.getViewport({scale:1});
-  const S=Math.min(2,820/v1.width);
-  const vp=pg.getViewport({scale:S});
-  const W=Math.round(vp.width),H=Math.round(vp.height);
-  annPageCanvas.width=W;annPageCanvas.height=H;annOverlay.width=W;annOverlay.height=H;
-  annHost.style.width=W+'px';annHost.style.height=H+'px';
-  anS.pageWpt=v1.width;anS.pageHpt=v1.height;
-  await anExtractText(pg,v1);   // detect existing text runs for 改字 (before render so ready early)
-  await pg.render({canvasContext:annPageCanvas.getContext('2d'),viewport:vp}).promise;
-  anS.scale=S;anS.pageWpt=v1.width;anS.pageHpt=v1.height;
-  document.getElementById('annPgLabel').textContent=`${idx+1} / ${anS.pc}`;
-  document.getElementById('annPrev').disabled=idx===0;
-  document.getElementById('annNext').disabled=idx===anS.pc-1;
-  anRedraw();anStats();
+  if(!anS.doc||idx<0||idx>=anS.pc||anPageBusy)return;   // guard: ignore nav while a page load is in flight
+  anPageBusy=true;
+  document.getElementById('annPrev').disabled=true;document.getElementById('annNext').disabled=true;
+  try{
+    anHideTextEdit();anSel=null;anDraft=null;anS.cur=idx;
+    const pg=await anS.doc.getPage(idx+1);
+    const v1=pg.getViewport({scale:1});
+    const S=Math.min(2,820/v1.width);
+    const vp=pg.getViewport({scale:S});
+    const W=Math.round(vp.width),H=Math.round(vp.height);
+    annPageCanvas.width=W;annPageCanvas.height=H;annOverlay.width=W;annOverlay.height=H;
+    annHost.style.width=W+'px';annHost.style.height=H+'px';
+    anS.pageWpt=v1.width;anS.pageHpt=v1.height;
+    await anExtractText(pg,v1);   // detect existing text runs for 改字 (before render so ready early)
+    await pg.render({canvasContext:annPageCanvas.getContext('2d'),viewport:vp}).promise;
+    anS.scale=S;anS.pageWpt=v1.width;anS.pageHpt=v1.height;
+    document.getElementById('annPgLabel').textContent=`${idx+1} / ${anS.pc}`;
+    anRedraw();anStats();
+  }catch(e){toast('頁面載入失敗：'+(e.message||e),true);}
+  finally{
+    anPageBusy=false;
+    document.getElementById('annPrev').disabled=anS.cur===0;
+    document.getElementById('annNext').disabled=anS.cur===anS.pc-1;
+  }
 }
 
 // ── Render annotation layer (normalized coords) onto ctx of size cw×ch ──
@@ -3313,17 +3323,29 @@ function anShowTextEdit(el,isNew){
   ta.onkeydown=ev=>{if(ev.key==='Escape'){ev.preventDefault();annCommitToSelect=true;ta.blur();}else if(ev.key==='Enter'&&(ev.ctrlKey||ev.metaKey)){ev.preventDefault();annCommitToSelect=true;ta.blur();}};
   annHost.appendChild(ta);anSyncControls(el);setTimeout(()=>{ta.focus();ta.select();},0);
 }
+// Remove an element; if it's a 改字 replacement text, remove its white-out cover too
+function anRemoveEl(el){
+  if(!el)return;const arr=anCurArr();
+  const k=arr.indexOf(el);if(k>=0)arr.splice(k,1);
+  if(el.coverId){const ci=arr.findIndex(x=>x.id===el.coverId);if(ci>=0)arr.splice(ci,1);}
+}
+// Finalise the open text editor: save typed content, drop empty / unchanged-改字 (reverting cover).
+// Returns the surviving element, or null. Used by both commit and any code that closes the editor.
+function anFinalizeText(){
+  const ta=document.getElementById('annTextEdit');
+  if(!annTextEl){if(ta)ta.remove();return null;}
+  const el=annTextEl;annTextEl=null;
+  if(ta){el.text=ta.value;ta.remove();}
+  // 改字 with no actual change → revert (drop new text + its white-out, keep original)
+  if(el.orig!=null && el.text.trim()===el.orig.trim()){anRemoveEl(el);return null;}
+  // Empty text → drop it (a 改字 cover stays behind = pure white-out / erase)
+  if(!el.text||!el.text.trim()){const arr=anCurArr();const k=arr.indexOf(el);if(k>=0)arr.splice(k,1);return null;}
+  return el;
+}
 function anCommitText(){
-  if(!annTextEl)return;const el=annTextEl;annTextEl=null;
-  const ta=document.getElementById('annTextEdit');if(ta){el.text=ta.value;ta.remove();}
-  const arr=anCurArr();
   const toSelect=annCommitToSelect;annCommitToSelect=false;
-  const removeEl=()=>{const k=arr.indexOf(el);if(k>=0)arr.splice(k,1);};
-  const removeCover=()=>{if(el.coverId){const ci=arr.findIndex(x=>x.id===el.coverId);if(ci>=0)arr.splice(ci,1);}};
-  // 改字 with no actual change → revert: drop the new text AND its white-out, keep the original intact
-  if(el.orig!=null && el.text.trim()===el.orig.trim()){removeEl();removeCover();anSel=null;anRedraw();anStats();return;}
-  // Empty text → remove the text (a 改字 cover stays = pure white-out / erase)
-  if(!el.text||!el.text.trim()){removeEl();anSel=null;anRedraw();anStats();return;}
+  const el=anFinalizeText();
+  if(!el){anSel=null;anRedraw();anStats();return;}
   // Keep it selected so the sidebar (colour/font/size) edits it live.
   // 改字 edits and explicit finish (Esc/Ctrl+Enter) also switch to the Select tool.
   anSel=el;anSyncControls(el);
@@ -3337,10 +3359,11 @@ function anCommitText(){
   }
   anRedraw();anStats();
 }
-function anHideTextEdit(){const ta=document.getElementById('annTextEdit');if(ta){annTextEl=null;ta.remove();}}
+// Closing the editor without an explicit commit (switching tool / page / clearing) still finalises cleanly
+function anHideTextEdit(){if(annTextEl||document.getElementById('annTextEdit')){anFinalizeText();anRedraw();anStats();}}
 
-function anUndo(){const arr=anCurArr();if(arr.length){arr.pop();anSel=null;anRedraw();anStats();}}
-function anDeleteSel(){if(!anSel)return;const arr=anCurArr();const k=arr.indexOf(anSel);if(k>=0)arr.splice(k,1);anSel=null;anRedraw();anStats();}
+function anUndo(){const arr=anCurArr();if(arr.length){anRemoveEl(arr[arr.length-1]);anSel=null;anRedraw();anStats();}}
+function anDeleteSel(){if(!anSel)return;anRemoveEl(anSel);anSel=null;anRedraw();anStats();}
 
 document.addEventListener('keydown',e=>{
   if(document.getElementById('panel-pdfann')&&document.getElementById('panel-pdfann').classList.contains('active')&&!document.getElementById('app-wrap').classList.contains('hidden')){
@@ -3358,6 +3381,7 @@ function anStats(){
 
 function anClearAll(){
   anHideTextEdit();
+  if(anS.doc&&anS.doc.destroy)try{anS.doc.destroy();}catch(e){}
   anS.file=null;anS.doc=null;anS.pc=0;anS.cur=0;anPages=[];anImgs={};anSel=null;anDraft=null;anDrag=null;anResize=null;anTextItems=[];
   document.getElementById('annInfo').style.display='none';
   document.getElementById('annStage').style.display='none';
@@ -3878,7 +3902,7 @@ document.addEventListener('keydown', function(e) {
 
   // Escape: clear current tool
   if (e.key === 'Escape') {
-    const clrMap = {pdf:'pdfClr',heic:'hClr',compress:'cpClr',resize:'rzClr',pdfcmp:'pcClr',pageman:'pmClr',pdfwm:'wmClr',pdfann:'annClr'};
+    const clrMap = {pdf:'pdfClr',heic:'hClr',compress:'cpClr',resize:'rzClr',pdfcmp:'pcClr',pdfmix:'mxClr',pageman:'pmClr',pdfwm:'wmClr',pdfann:'annClr'};
     const btn = document.getElementById(clrMap[tab]);
     if (btn && !btn.disabled) btn.click();
   }
