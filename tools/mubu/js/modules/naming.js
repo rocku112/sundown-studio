@@ -108,11 +108,126 @@
       <p style="text-align:center">三才：<b style="color:${g.sancaiGood ? 'var(--gold-deep)' : 'var(--cinnabar)'}">${g.sancai.join(' ')}（天${g.tr.s}人、人${g.rd.s}地${g.sancaiGood ? '，相生大吉' : g.tr.good || g.rd.good ? '，半吉' : '，相剋不吉'}）</b></p>`;
   }
 
+  // ---------- 三才五格詳批 ----------
+  const REN_TRAIT = {
+    木: '仁厚正直、有上進心與同情心，做事積極、講原則；個性略帶固執，認定的方向不易轉彎。',
+    火: '熱情外向、行動力強、光明磊落，有禮而重面子；性子偏急，宜修煉耐性與沉澱。',
+    土: '敦厚穩重、誠信踏實、重承諾與信用，是可靠的中流砥柱；稍嫌保守，變通與冒險是課題。',
+    金: '果決剛毅、重義氣有決斷、執行力強，講是非分明；個性稜角較硬，言語宜柔軟圓融。',
+    水: '聰明機智、善謀略、應變靈活、交際手腕佳；心思流動、情緒較敏感，需要定性與專注。'
+  };
+  const WAI_NOTE = {
+    木: '外緣正派、朋友多為君子之交，社交講義氣。', 火: '外緣熱絡、人脈廣、易成焦點，宜防交淺言深。',
+    土: '外緣穩定、貴人多為長輩實力派，重誠信。', 金: '外緣講原則、易得專業圈認同，稍顯距離感。',
+    水: '外緣活絡、八面玲瓏、桃花與人脈皆旺，宜辨真心。'
+  };
+  function detailHTML(g) {
+    const renWx = numWx(g.ren), waiWx = numWx(g.wai);
+    const rows = [
+      ['人格 · 主運（性格核心・中年運）', `${g.ren} ${luckOf(g.ren)}（${renWx}）`, `${REN_TRAIT[renWx]}人格是姓名的靈魂，主 25-45 歲的中年運與一生性格基調。`],
+      ['地格 · 前運（基礎運・少年至中年前）', `${g.di} ${luckOf(g.di)}（${numWx(g.di)}）`, `主 36 歲前的基礎運、學業、與部屬子女的緣分。${luckOf(g.di) === '吉' ? '基礎穩固，早年運勢有力。' : luckOf(g.di) === '凶' ? '早年較辛勞，宜穩紮穩打、勿躁進。' : '早年運勢平順中帶波折。'}`],
+      ['總格 · 後運（晚年運・事業成就）', `${g.zong} ${luckOf(g.zong)}（${numWx(g.zong)}）`, `主 36 歲後的後半生總體成就與晚年境遇。${luckOf(g.zong) === '吉' ? '後運亨通，越老越有福。' : luckOf(g.zong) === '凶' ? '晚運需留意健康與財務，宜及早規劃。' : '後運平穩，守成可安。'}`],
+      ['外格 · 副運（社交・外在助力）', `${g.wai} ${luckOf(g.wai)}（${waiWx}）`, `主人際、社交與外在機運。${WAI_NOTE[waiWx]}`],
+      ['天格 · 祖運（先天・影響較弱）', `${g.tian} ${luckOf(g.tian)}（${numWx(g.tian)}）`, '承自姓氏，代表先天與祖上，本身吉凶對個人影響較小，主要看它與人格的三才生剋。']
+    ];
+    return `<div class="aspect-grid" style="grid-template-columns:1fr">
+      ${rows.map(([t, n, d]) => `<div class="aspect"><b>${t}　<span style="color:var(--gold-deep)">${n}</span></b>${d}</div>`).join('')}
+    </div>`;
+  }
+
+  // ---------- 音靈五行 & 讀音防呆 ----------
+  // 聲母五行（五音）：牙木、舌火、喉土、齒金、唇水
+  const SM_WX = {
+    g: '木', k: '木',
+    d: '火', t: '火', n: '火', l: '火',
+    h: '土', y: '土', w: '土', '': '土', // 零聲母（元音開頭）歸土
+    j: '金', q: '金', x: '金', zh: '金', ch: '金', sh: '金', r: '金', z: '金', c: '金', s: '金',
+    b: '水', p: '水', m: '水', f: '水'
+  };
+  function parsePy(py) {
+    if (!py) return null;
+    const tone = (py.match(/(\d)$/) || [])[1] || '5';
+    const body = py.replace(/\d+$/, '').toLowerCase();
+    let sm = '';
+    for (const two of ['zh', 'ch', 'sh']) if (body.startsWith(two)) { sm = two; break; }
+    if (!sm) { const c = body[0]; if ('bpmfdtnlgkhjqxrzcsyw'.includes(c) && !'aeiou'.includes(c)) sm = c; }
+    const ym = body.slice(sm.length);
+    return { sm, ym, tone: +tone, wx: SM_WX[sm] !== undefined ? SM_WX[sm] : '土', body };
+  }
+  // 常見姓氏拼音（音靈用）
+  const SURNAME_PY = {
+    陳: 'chen2', 林: 'lin2', 黃: 'huang2', 張: 'zhang1', 李: 'li3', 王: 'wang2', 吳: 'wu2', 劉: 'liu2', 蔡: 'cai4', 楊: 'yang2',
+    許: 'xu3', 鄭: 'zheng4', 謝: 'xie4', 郭: 'guo1', 洪: 'hong2', 邱: 'qiu1', 曾: 'zeng1', 廖: 'liao4', 賴: 'lai4', 徐: 'xu2',
+    周: 'zhou1', 葉: 'ye4', 蘇: 'su1', 莊: 'zhuang1', 呂: 'lu3', 江: 'jiang1', 何: 'he2', 蕭: 'xiao1', 羅: 'luo2', 高: 'gao1',
+    潘: 'pan1', 簡: 'jian3', 朱: 'zhu1', 鍾: 'zhong1', 游: 'you2', 彭: 'peng2', 詹: 'zhan1', 胡: 'hu2', 施: 'shi1', 沈: 'shen3',
+    余: 'yu2', 盧: 'lu2', 梁: 'liang2', 趙: 'zhao4', 顏: 'yan2', 柯: 'ke1', 孫: 'sun1', 翁: 'weng1', 魏: 'wei4', 戴: 'dai4',
+    范: 'fan4', 方: 'fang1', 宋: 'song4', 鄧: 'deng4', 杜: 'du4', 傅: 'fu4', 侯: 'hou2', 曹: 'cao2', 温: 'wen1', 薛: 'xue1',
+    丁: 'ding1', 卓: 'zhuo2', 馬: 'ma3', 董: 'dong3', 唐: 'tang2', 藍: 'lan2', 石: 'shi2', 紀: 'ji3', 姚: 'yao2', 連: 'lian2',
+    馮: 'feng2', 歐: 'ou1', 程: 'cheng2', 湯: 'tang1', 黎: 'li2', 童: 'tong2', 蔣: 'jiang3', 金: 'jin1', 嚴: 'yan2', 白: 'bai2',
+    韓: 'han2', 袁: 'yuan2', 章: 'zhang1', 錢: 'qian2', 崔: 'cui1', 龍: 'long2', 秦: 'qin2', 田: 'tian2', 于: 'yu2', 任: 'ren2'
+  };
+  const surPy = (ch) => SURNAME_PY[ch] || null;
+
+  // 不雅諧音黑名單（去聲調的全名音串片段）
+  const BAD_HOMO = ['zhuliu', 'shiti', 'shibai', 'wanzhong', 'yanggui', 'zhutou', 'goudan', 'huaidan', 'fanpian', 'siwang', 'kuqi', 'egan', 'yinjing', 'jipo', 'longgou'];
+
+  // 讀音評估：回傳 {ok, penalty, notes, syllables}
+  function phonetics(surname, chars) {
+    const sp = surPy(surname[0]);
+    const cps = chars.map(c => c && c.py ? parsePy(c.py) : null);
+    if (!sp || cps.some(x => !x)) return { ok: true, penalty: 0, notes: [], syllables: null, unknown: true };
+    const all = [parsePy(sp), ...cps];
+    const notes = []; let penalty = 0;
+    // 聲調全同
+    if (new Set(all.map(a => a.tone)).size === 1) { penalty += 3; notes.push('聲調全同，唸起來平板拗口'); }
+    // 聲母全同
+    if (new Set(all.map(a => a.sm)).size === 1) { penalty += 3; notes.push('聲母相同，繞口'); }
+    // 韻母全同
+    if (new Set(all.map(a => a.ym)).size === 1) { penalty += 2; notes.push('韻母相同，音韻單調'); }
+    // 姓與名首同音
+    if (cps[0] && all[0].body === all[1].body) { penalty += 4; notes.push('姓與名首字同音'); }
+    // 名兩字同音
+    if (cps.length === 2 && cps[0].body === cps[1].body) { penalty += 4; notes.push('名字兩字同音'); }
+    // 不雅諧音
+    const joined = all.map(a => a.body).join('');
+    const bad = BAD_HOMO.find(b => joined.includes(b));
+    if (bad) { penalty += 20; notes.push('疑似不雅諧音'); }
+    return { ok: penalty < 6, penalty, notes, syllables: all };
+  }
+  // 音靈五行流動生剋
+  function yinlingHTML(syll) {
+    if (!syll) return '';
+    const wxs = syll.map(s => s.wx);
+    const flow = [];
+    for (let i = 0; i < wxs.length - 1; i++) {
+      const a = wxs[i], b = wxs[i + 1];
+      const rel = a === b ? '比和' : (wxSheng[a] === b ? '相生→' : (wxKe[a] === b ? '相剋✗' : (wxSheng[b] === a ? '被生' : (wxKe[b] === a ? '被剋' : '無'))));
+      flow.push(rel);
+    }
+    const good = flow.every(f => f.includes('生') || f === '比和');
+    return `<p>音靈五行（聲母）：${syll.map((s, i) => `${s.body}<b style="color:var(--gold-deep)">${s.wx}</b>${i < flow.length ? ` <span class="muted">${flow[i]}</span> ` : ''}`).join('')}
+      ${good ? '<span style="color:var(--gold-deep)">音氣相生流暢 ✓</span>' : '<span class="muted">音氣有剋，唸誦間五行不全然順接</span>'}</p>`;
+  }
+
+  // ---------- 易卦姓名學（筆畫起卦） ----------
+  const TRI_NUM = { 1: [1, 1, 1], 2: [1, 1, 0], 3: [1, 0, 1], 4: [1, 0, 0], 5: [0, 1, 1], 6: [0, 1, 0], 7: [0, 0, 1], 8: [0, 0, 0] };
+  const TRI_NAME = { '111': '乾', '110': '兌', '101': '離', '100': '震', '011': '巽', '010': '坎', '001': '艮', '000': '坤' };
+  const triNameByNum = (n) => TRI_NAME[TRI_NUM[((n - 1) % 8) + 1].join('')];
+  let HEXBYTRI = null;
+  function nameHexagram(g) {
+    if (!HEXBYTRI && typeof HEXAGRAM_DATA !== 'undefined') { HEXBYTRI = {}; HEXAGRAM_DATA.forEach(h => { HEXBYTRI[h.upper + h.lower] = h; }); }
+    if (!HEXBYTRI) return null;
+    const upper = triNameByNum(g.tian);      // 天格起上卦
+    const lower = triNameByNum(g.di);         // 地格起下卦
+    const dong = ((g.tian + g.ren + g.di - 1) % 6) + 1; // 動爻
+    return { hex: HEXBYTRI[upper + lower], upper, lower, dong };
+  }
+
   App.register({
     id: 'naming',
     icon: '✍️',
     title: '姓名學取名',
-    desc: '三才五格＋81數理＋生肖字根＋八字喜用五行，分析姓名或自動取名。',
+    desc: '三才五格＋81數理＋生肖＋八字喜用＋易卦＋音靈讀音，五派合參取名／詳批。',
     render(el) {
       ensureMap();
       const dbOk = typeof NAME_CHARS !== 'undefined' && typeof SURNAME_STROKES !== 'undefined';
@@ -132,7 +247,7 @@
             <div class="field"><label>時</label><input id="nm-h" type="number" min="0" max="23" placeholder="12" style="width:64px"></div>
           </div>
           <button class="btn" id="nm-go" style="margin-top:14px">✍️ 開始</button>
-          <p class="muted" style="margin-top:8px">筆畫依康熙字典（氵=4、艹=6、阝左=8…）；綜合三才五格、81 數理、生肖字根與八字喜用五行。${dbOk ? '' : '<b style="color:var(--cinnabar)">字庫載入失敗</b>'}</p>
+          <p class="muted" style="margin-top:8px">五派合參：三才五格＋81 數理＋生肖字根＋八字喜用＋易卦＋音靈讀音（筆畫依康熙字典，氵=4、艹=6、阝左=8…）。取名模式自動避開拗口與不雅諧音。${dbOk ? `字庫 ${NAME_CHARS.length} 字。` : '<b style="color:var(--cinnabar)">字庫載入失敗</b>'}</p>
         </div>
         <div id="nm-result"></div>`;
 
@@ -142,13 +257,14 @@
         el.querySelectorAll('.nm-gen').forEach(n => n.style.display = modeSel.value === 'gen' ? '' : 'none');
       });
 
+      const warn = (msg) => { el.querySelector('#nm-result').innerHTML = `<div class="panel result"><p style="color:var(--cinnabar)">⚠ ${msg}</p></div>`; };
       el.querySelector('#nm-go').addEventListener('click', () => {
         const resEl = el.querySelector('#nm-result');
         resEl.innerHTML = '';
         const surname = el.querySelector('#nm-sur').value.trim();
-        if (!surname) { alert('請輸入姓氏'); return; }
+        if (!surname) { warn('請輸入姓氏'); return; }
         const surStrokes = [...surname].map(strokeOf);
-        if (surStrokes.some(s => !s)) { alert(`姓氏「${surname}」不在字庫中，暫不支援`); return; }
+        if (surStrokes.some(s => !s)) { warn(`姓氏「${surname}」不在字庫中，暫不支援（目前收錄常見 128 姓）`); return; }
         const y = +el.querySelector('#nm-y').value || 0;
         const m = +el.querySelector('#nm-m').value || 1;
         const d = +el.querySelector('#nm-d').value || 1;
@@ -165,9 +281,9 @@
         if (modeSel.value === 'ana') {
           // ---------- 分析模式 ----------
           const name = el.querySelector('#nm-name').value.trim();
-          if (!name) { alert('請輸入名字'); return; }
+          if (!name) { warn('請輸入名字'); return; }
           const nameStrokes = [...name].map(strokeOf);
-          if (nameStrokes.some(s => !s)) { alert(`名字中有字不在字庫（${[...name].filter(c => !strokeOf(c)).join('、')}），暫無法分析`); return; }
+          if (nameStrokes.some(s => !s)) { warn(`名字中有字不在字庫（${[...name].filter(c => !strokeOf(c)).join('、')}），暫無法分析——本工具字庫以取名常用字為主。`); return; }
           const g = fiveGrids(surStrokes, nameStrokes);
           const chars = [...name].map(c => charMap[c]).filter(Boolean);
           const wxList = chars.map(c => `${c.c}（${c.wx}）`).join('、');
@@ -184,9 +300,15 @@
             <div class="muted" style="text-align:center">${[...surname + name].map(c => `${c} ${strokeOf(c)}劃`).join('　')}（康熙筆畫）</div>
             <hr class="divider">
             ${gridsHTML(g, surname, name)}
+            <h4>五格詳批</h4>
+            ${detailHTML(g)}
+            ${(() => { const nh = nameHexagram(g); return nh && nh.hex ? `<h4>易卦姓名學（筆畫起卦）</h4>
+              <p>以天格起上卦、地格起下卦、動爻取第 ${nh.dong} 爻，得 <b style="color:var(--navy)">${nh.hex.symbol} ${nh.hex.name}</b>（${nh.upper}上${nh.lower}下）。</p>
+              <p class="muted">${nh.hex.duan} 此卦象徵姓名所帶的先天氣場趨勢。</p>` : ''; })()}
             ${birthNote}
             <p>名字五行：${wxList}${wxMatch !== null ? wxMatch ? '——<b style="color:var(--gold-deep)">符合喜用五行 ✓</b>' : `——<span style="color:var(--cinnabar)">未含喜用五行「${birth.like}」</span>` : ''}</p>
             ${zodiacNote}
+            ${(() => { const ph = phonetics(surname, chars); return ph.unknown ? '' : `<h4>音韻（音靈五行＋讀音）</h4>${yinlingHTML(ph.syllables)}${ph.notes.length ? `<p class="muted">讀音提醒：${ph.notes.join('、')}。</p>` : '<p class="muted">讀音順口，無明顯拗口或諧音問題。</p>'}`; })()}
             <p>寓意：${chars.map(c => `${c.c}＝${c.m}`).join('；')}。</p>
           </div>`;
           resEl.appendChild(div);
@@ -201,7 +323,7 @@ ${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k]
         }
 
         // ---------- 取名模式 ----------
-        if (!dbOk) { alert('字庫載入失敗，無法取名'); return; }
+        if (!dbOk) { warn('字庫載入失敗，無法取名'); return; }
         const gender = el.querySelector('#nm-g').value;
         // 1) 找出數理全吉的筆畫組合
         const strokeSet = [...new Set(NAME_CHARS.map(c => c.k))].sort((a, b) => a - b);
@@ -237,13 +359,22 @@ ${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k]
         };
         const used = new Set();
         const results = [];
-        for (const cb of combos.slice(0, 40)) {
-          const c1 = pickChar(cb.k1, null, used);
-          if (!c1) continue;
-          const c2 = pickChar(cb.k2, birth && c1.wx !== birth.like ? birth.like : null, used);
-          if (!c2) continue;
-          used.add(c1.c); used.add(c2.c);
-          results.push({ c1, c2, ...cb });
+        for (const cb of combos.slice(0, 60)) {
+          // 每組嘗試數次，挑讀音最順的一組（讀音防呆）
+          let best = null;
+          for (let attempt = 0; attempt < 4; attempt++) {
+            const c1 = pickChar(cb.k1, null, used);
+            if (!c1) break;
+            const c2 = pickChar(cb.k2, birth && c1.wx !== birth.like ? birth.like : null, new Set([...used, c1.c]));
+            if (!c2) break;
+            const ph = phonetics(surname, [c1, c2]);
+            if (!best || ph.penalty < best.ph.penalty) best = { c1, c2, ph };
+            if (ph.penalty === 0) break; // 完美讀音即採用
+          }
+          if (!best) continue;
+          if (best.ph.penalty >= 20) continue; // 諧音疑慮直接淘汰
+          used.add(best.c1.c); used.add(best.c2.c);
+          results.push({ c1: best.c1, c2: best.c2, ph: best.ph, ...cb });
           if (results.length >= 8) break;
         }
 
@@ -256,7 +387,8 @@ ${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k]
               <div style="font-size:26px;letter-spacing:.15em;color:var(--navy);font-weight:700;text-align:center">${surname}${r.c1.c}${r.c2.c}</div>
               <div class="muted" style="text-align:center;font-size:12px">${r.c1.c}${r.c1.k}劃(${r.c1.wx})・${r.c2.c}${r.c2.k}劃(${r.c2.wx})</div>
               <div style="text-align:center;margin:4px 0"><span class="tag gold" style="font-size:12px">三才${r.g.sancai.join('')}</span>
-                <span class="tag" style="font-size:12px">人格${r.g.ren}吉</span><span class="tag" style="font-size:12px">總格${r.g.zong}吉</span></div>
+                <span class="tag" style="font-size:12px">人格${r.g.ren}吉</span><span class="tag" style="font-size:12px">總格${r.g.zong}吉</span>${r.ph && !r.ph.unknown && r.ph.penalty === 0 ? '<span class="tag" style="font-size:12px;color:var(--gold-deep)">讀音順</span>' : ''}</div>
+              ${r.c1.py ? `<div class="muted" style="text-align:center;font-size:11.5px">${surPy(surname[0]) ? parsePy(surPy(surname[0])).body : surname} · ${parsePy(r.c1.py).body} · ${parsePy(r.c2.py).body}</div>` : ''}
               <div style="font-size:13px">${r.c1.c}：${r.c1.m}<br>${r.c2.c}：${r.c2.m}</div>
             </div>`).join('')}
           </div>
