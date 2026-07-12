@@ -1,4 +1,4 @@
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdf.worker.min.js';
 
 
 // ─── Helper: set lucide icon on a button (works after lucide replaces <i> with <svg>) ──
@@ -153,7 +153,7 @@ function pdfSt(){document.getElementById('ps1').textContent=pS.files.length;docu
 // ════════════════════════════════════════════════
 (async()=>{
   const s=document.createElement('script');
-  s.src='https://cdnjs.cloudflare.com/ajax/libs/heic2any/0.0.4/heic2any.min.js';
+  s.src='vendor/heic2any.min.js';
   s.crossOrigin='anonymous';
   document.head.appendChild(s);
   await new Promise((r,j)=>{s.onload=r;s.onerror=j;});
@@ -289,7 +289,7 @@ let poMode='merge',poMFiles=[],poSPdf=null,poConv=false,_pdfLibLoaded=false;
 async function ensurePdfLib() {
   if (_pdfLibLoaded && typeof PDFLib!=='undefined') return true;
   return new Promise(resolve=>{
-    const urls=['https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js','https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js'];
+    const urls=['vendor/pdf-lib.min.js','https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js'];
     let idx=0;
     function tryNext(){if(idx>=urls.length){resolve(false);return;}const s=document.createElement('script');s.src=urls[idx++];s.crossOrigin='anonymous';s.onload=()=>{_pdfLibLoaded=true;resolve(true);};s.onerror=()=>tryNext();document.head.appendChild(s);}
     tryNext();

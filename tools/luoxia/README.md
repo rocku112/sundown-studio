@@ -25,7 +25,7 @@ test-suite.js         測試案例
 
 **載入順序很重要**：`core.js` 先，各 `tool-*.js`，最後 `app.js`。都是 classic script，依文件順序執行、共用全域作用域（top-level `const`/`let` 跨檔可用、`function` 宣告掛在 window）。改動時保持 `<script src>` 在原位即可維持既有行為。
 
-外部相依（CDN，`<head>`）：pdf.js 3.11、jszip、FileSaver、lucide；pdf-lib 1.17 懶載入（`ensurePdfLib()`）；heic2any 懶載入。
+外部相依：**已自架於 `vendor/`**（不依賴 CDN，離線/CDN 故障也能用）——pdf.js 3.11（含 pdf.worker）、jszip、FileSaver、lucide、pdf-lib 1.17（`ensurePdfLib()` 懶載入，local 優先、cdnjs 為後備）、heic2any。更新版本＝換掉 `vendor/` 對應檔＋改引用的版本字串。唯一仍走外部的是 Google Fonts CSS（純字型，被擋時自動退回系統字型，不影響功能）。
 
 ## 測試
 
