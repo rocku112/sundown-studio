@@ -239,6 +239,41 @@
       ${good ? '<span style="color:var(--gold-deep)">音氣相生流暢 ✓</span>' : '<span class="muted">音氣有剋，唸誦間五行不全然順接</span>'}</p>`;
   }
 
+  // ---------- 81 數理特殊暗示（通說） ----------
+  const SPECIAL_NUM = {
+    首領數: { set: [3, 13, 16, 21, 23, 31, 33, 37], t: '具領導統御之力，易居人上、掌權服眾。' },
+    財富數: { set: [15, 16, 24, 29, 32, 33, 41, 52], t: '財帛豐盈之數，善聚財、多得財利機遇。' },
+    藝術數: { set: [13, 14, 18, 26, 29, 33, 35, 38, 48], t: '富才情美感，宜文藝、設計、演藝、創作。' },
+    桃花數: { set: [15, 19, 24, 25, 33 ], t: '異性緣佳、魅力出眾，人見人愛（過旺者防感情糾葛）。' },
+    孤獨數: { set: [4, 10, 12, 14, 22, 28, 34], t: '較重個人世界、六親助力淡，宜主動經營人際與親情。' },
+    剛情數: { set: [7, 17, 18, 25, 27, 37, 47], t: '意志剛強、不服輸，貫徹力佳但稍嫌固執急躁。' },
+    溫和數: { set: [5, 6, 11, 24, 31, 35], t: '性情溫厚圓融、人緣好，處世和諧得貴人。' },
+    女德數: { set: [5, 6, 11, 13, 15, 16, 24, 32, 35], t: '（女性）賢淑溫良、旺夫益子之數。' },
+    薄弱數: { set: [2, 4, 9, 10, 12, 19, 20], t: '健康或意志略偏弱，宜養生、定心、循序漸進。' }
+  };
+  function specialHTML(g, gender) {
+    const grids = [['人格', g.ren], ['總格', g.zong], ['地格', g.di], ['外格', g.wai]];
+    const hits = [];
+    for (const [name, kind] of Object.entries(SPECIAL_NUM)) {
+      if (kind === undefined) continue;
+      if (name === '女德數' && gender !== 'F') continue;
+      const where = grids.filter(([, v]) => kind.set.includes(((v - 1) % 81) + 1)).map(([n]) => n);
+      if (where.length) hits.push(`<div class="aspect"><b>${name}（${where.join('・')}）</b>${kind.t}</div>`);
+    }
+    return hits.length ? `<h4>數理特殊暗示</h4><div class="aspect-grid">${hits.join('')}</div>` : '';
+  }
+  // 格間五行關係
+  function relationHTML(g) {
+    const rel = (a, b) => a === b ? '比和（同氣相助）' : (wxSheng[a] === b ? `${a}生${b}（順生有力）` : (wxSheng[b] === a ? `${b}生${a}（受生得助）` : (wxKe[a] === b ? `${a}剋${b}（有壓力）` : `${b}剋${a}（受剋制）`)));
+    const renWx = numWx(g.ren), diWx = numWx(g.di), waiWx = numWx(g.wai), zongWx = numWx(g.zong);
+    return `<h4>格間關係（人際與家庭）</h4>
+      <div class="aspect-grid">
+        <div class="aspect"><b>人格 × 地格：${rel(renWx, diWx)}</b>主你與配偶、子女、部屬、家庭的相處。${wxSheng[renWx] === diWx || renWx === diWx || wxSheng[diWx] === renWx ? '家庭關係融洽、相互扶持。' : '家庭互動較有張力，需多體諒磨合。'}</div>
+        <div class="aspect"><b>人格 × 外格：${rel(renWx, waiWx)}</b>主你與外界、朋友、社會的緣分。${wxSheng[renWx] === waiWx || renWx === waiWx || wxSheng[waiWx] === renWx ? 'social 外緣佳、貴人多、人際順。' : '人際需主動經營，慎防小人是非。'}</div>
+        <div class="aspect"><b>人格 × 總格：${rel(renWx, zongWx)}</b>主你前半生（人格）與後半生（總格）的連貫。${wxSheng[renWx] === zongWx || renWx === zongWx || wxSheng[zongWx] === renWx ? '一生運勢連貫、漸入佳境。' : '中晚年轉折較大，宜及早布局。'}</div>
+      </div>`;
+  }
+
   // ---------- 易卦姓名學（筆畫起卦） ----------
   const TRI_NUM = { 1: [1, 1, 1], 2: [1, 1, 0], 3: [1, 0, 1], 4: [1, 0, 0], 5: [0, 1, 1], 6: [0, 1, 0], 7: [0, 0, 1], 8: [0, 0, 0] };
   const TRI_NAME = { '111': '乾', '110': '兌', '101': '離', '100': '震', '011': '巽', '010': '坎', '001': '艮', '000': '坤' };
@@ -336,6 +371,8 @@
             ${gridsHTML(g, surname, name)}
             <h4>五格詳批</h4>
             ${detailHTML(g)}
+            ${specialHTML(g, 'N')}
+            ${relationHTML(g)}
             ${(() => { const nh = nameHexagram(g); return nh && nh.hex ? `<h4>易卦姓名學（筆畫起卦）</h4>
               <p>以天格起上卦、地格起下卦、動爻取第 ${nh.dong} 爻，得 <b style="color:var(--navy)">${nh.hex.symbol} ${nh.hex.name}</b>（${nh.upper}上${nh.lower}下）。</p>
               <p class="muted">${nh.hex.duan} 此卦象徵姓名所帶的先天氣場趨勢。</p>` : ''; })()}
