@@ -45,7 +45,7 @@ test-suite.js         測試案例
 ```
 cd tools/luoxia && node gen-pages.js
 ```
-會覆寫 20 個工具頁。改 slug/新增工具時，記得同步更新 `sitemap.xml`。
+會覆寫 20 個工具頁。**英文首頁** `en/index.html` 另由 `gen-en-index.js` 產生（landing 文案的中→英對照表在腳本內；只翻 landing，App UI 仍為中文＝已知限制）。改 index.html landing 後重跑 `node gen-en-index.js`。改 slug/新增工具時，記得同步更新 `sitemap.xml`。
 
 ## 新增工具時要同步的地方
 

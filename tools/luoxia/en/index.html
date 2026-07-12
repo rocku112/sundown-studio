@@ -1,23 +1,24 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<script>window.SD_VENDOR='../vendor/';</script>
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>落霞千頁 · SunDown Studio</title>
-<meta name="description" content="免費線上文件工具套件：PDF 轉 JPG、HEIC 轉 JPG、圖片壓縮、尺寸調整、PDF 合併拆分壓縮。所有檔案在本機處理，不上傳伺服器。">
-<meta property="og:title" content="落霞千頁 · SunDown Studio">
-<meta property="og:description" content="十種文件工具，全部免費、免帳號、本機處理。PDF 轉圖、HEIC 轉換、圖片壓縮、PDF 合併拆分壓縮、頁面管理、浮水印、標註簽名。">
+<title>Free Local File Tools — PDF, Image & HEIC | SunDown Studio</title>
+<meta name="description" content="Free online file tools that run entirely in your browser — PDF to JPG, HEIC to JPG, image compression, resize, merge/split/compress PDF, watermark and annotate. No upload, no account.">
+<meta property="og:title" content="SunDown Studio — Free Local File Tools">
+<meta property="og:description" content="Ten free file tools, all processed locally in your browser — no upload, no account. PDF to JPG, HEIC, image compression, merge/split/compress PDF, and more.">
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://rocku112.github.io/sundown-studio/tools/luoxia/">
-<link rel="canonical" href="https://rocku112.github.io/sundown-studio/tools/luoxia/">
+<meta property="og:url" content="https://rocku112.github.io/sundown-studio/tools/luoxia/en/">
+<link rel="canonical" href="https://rocku112.github.io/sundown-studio/tools/luoxia/en/">
 <link rel="alternate" hreflang="zh-Hant" href="https://rocku112.github.io/sundown-studio/tools/luoxia/">
 <link rel="alternate" hreflang="en" href="https://rocku112.github.io/sundown-studio/tools/luoxia/en/">
 <link rel="alternate" hreflang="x-default" href="https://rocku112.github.io/sundown-studio/tools/luoxia/">
 <meta property="og:site_name" content="SunDown Studio">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="落霞千頁 · 免費文件工具套件">
-<meta name="twitter:description" content="PDF 轉 JPG、HEIC 轉換、圖片壓縮、PDF 合併拆分壓縮。本機處理，不上傳伺服器。">
+<meta name="twitter:title" content="SunDown Studio · Free Local File Tools">
+<meta name="twitter:description" content="PDF to JPG, HEIC, image compression, merge/split/compress PDF. Processed locally in your browser — no upload.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,200;0,300;0,400;0,600;0,700;0,800;0,900;1,300;1,400&family=Noto+Sans+TC:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script>
@@ -34,15 +35,15 @@ window.addEventListener('error', function(e) {
   }
 });
 </script>
-<script src="vendor/pdf.min.js"></script>
-<script src="vendor/jszip.min.js"></script>
-<script src="vendor/FileSaver.min.js"></script>
-<script src="vendor/lucide.min.js"></script>
-<link rel="stylesheet" href="css/app.css">
+<script src="../vendor/pdf.min.js"></script>
+<script src="../vendor/jszip.min.js"></script>
+<script src="../vendor/FileSaver.min.js"></script>
+<script src="../vendor/lucide.min.js"></script>
+<link rel="stylesheet" href="../css/app.css">
 </head>
 <body>
 
-<link rel="stylesheet" href="css/landing.css">
+<link rel="stylesheet" href="../css/landing.css">
 
 <div id="lp-wrap">
 
@@ -67,18 +68,18 @@ window.addEventListener('error', function(e) {
       </g>
     </svg>
     <div>
-      <div class="lp-brand-name">落霞<b>千頁</b></div>
-      <span class="lp-brand-sub">文件工具套件 · SunDown Studio</span>
+      <div class="lp-brand-name">SunDown<b> Studio</b></div>
+      <span class="lp-brand-sub">Local file tools · SunDown Studio</span>
     </div>
   </a>
   <div class="lp-nav-links">
-    <a class="lp-nav-link" href="#lp-tools">工具</a>
-    <a class="lp-nav-link" href="#lp-preview">預覽</a>
-    <a class="lp-nav-link" href="#lp-trust">關於</a>
+    <a class="lp-nav-link" href="#lp-tools">Tools</a>
+    <a class="lp-nav-link" href="#lp-preview">Preview</a>
+    <a class="lp-nav-link" href="#lp-trust">About</a>
   </div>
   <button class="lp-nav-btn" onclick="launchTool('pdf')">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg>
-    開始使用
+    Get started
   </button>
 </nav>
 
@@ -94,34 +95,34 @@ window.addEventListener('error', function(e) {
       <div class="lp-pill-dot">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
       </div>
-      所有檔案本機處理，絕不上傳伺服器
+      All files processed locally — never uploaded
     </div>
 
     <h1 class="lp-h1 lp-fu2">
-      文件處理，<br><span class="hl-gold">一頁搞定</span>
+      Your files,<br><span class="hl-gold">done in the browser</span>
     </h1>
 
     <p class="lp-sub lp-fu3">
-      PDF 轉圖、照片轉換、圖片壓縮、PDF 合併壓縮。<br>
-      十種工具，完全在你的裝置上執行。<br>
-      免費、免帳號、免安裝。
+      PDF to image, photo conversion, image compression, merge & compress PDF.<br>
+      Ten tools, all running on your own device.<br>
+      Free, no account, no install.
     </p>
 
     <div class="lp-actions lp-fu4">
       <button class="lp-btn-p" onclick="launchTool('pdf')">
-        立即免費使用
+        Start free now
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg>
       </button>
       <button class="lp-btn-s" onclick="document.getElementById('lp-tools').scrollIntoView({behavior:'smooth'})">
-        查看所有工具
+        See all tools
       </button>
     </div>
 
     <div class="lp-stats lp-fu5">
-      <div class="lp-stat"><div class="lp-stat-n">10</div><div class="lp-stat-l">文件工具</div></div>
-      <div class="lp-stat"><div class="lp-stat-n">100%</div><div class="lp-stat-l">本機處理</div></div>
-      <div class="lp-stat"><div class="lp-stat-n">0</div><div class="lp-stat-l">帳號需求</div></div>
-      <div class="lp-stat"><div class="lp-stat-n">$0</div><div class="lp-stat-l">完全免費</div></div>
+      <div class="lp-stat"><div class="lp-stat-n">10</div><div class="lp-stat-l">Tools</div></div>
+      <div class="lp-stat"><div class="lp-stat-n">100%</div><div class="lp-stat-l">Local</div></div>
+      <div class="lp-stat"><div class="lp-stat-n">0</div><div class="lp-stat-l">Accounts</div></div>
+      <div class="lp-stat"><div class="lp-stat-n">$0</div><div class="lp-stat-l">Free</div></div>
     </div>
   </div>
 </section>
@@ -130,8 +131,8 @@ window.addEventListener('error', function(e) {
 <section class="lp-preview" id="lp-preview">
   <div class="lp-preview-inner">
     <div style="text-align:center;margin-bottom:32px">
-      <div class="lp-section-eyebrow">工具預覽</div>
-      <h2 class="lp-section-title" style="max-width:400px;margin:0 auto 12px">直覺操作，<br>拖放即可開始</h2>
+      <div class="lp-section-eyebrow">Tool preview</div>
+      <h2 class="lp-section-title" style="max-width:400px;margin:0 auto 12px">Intuitive —<br>drag &amp; drop to start</h2>
     </div>
     <div class="lp-frame">
       <div class="lp-frame-bar">
@@ -139,29 +140,29 @@ window.addEventListener('error', function(e) {
         <div class="lp-dot" style="background:#FEBC2E"></div>
         <div class="lp-dot" style="background:#28C840"></div>
         <div style="flex:1;background:#E8E4DC;height:22px;border-radius:6px;margin-left:8px;display:flex;align-items:center;padding:0 10px">
-          <span style="font-size:10px;color:#8A8E96;font-family:'Outfit',sans-serif;">落霞千頁 · SunDown Studio</span>
+          <span style="font-size:10px;color:#8A8E96;font-family:'Outfit',sans-serif;">SunDown Studio</span>
         </div>
       </div>
       <div class="lp-frame-body" style="min-height:220px;">
         <div class="lp-frame-sidebar">
-          <div style="font-size:9px;color:rgba(255,255,255,.4);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;">壓縮設定</div>
+          <div style="font-size:9px;color:rgba(255,255,255,.4);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;">Compress settings</div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
-            <span style="font-size:11px;color:rgba(255,255,255,.65)">JPEG 品質</span>
+            <span style="font-size:11px;color:rgba(255,255,255,.65)">JPEG quality</span>
             <span style="font-size:13px;font-weight:800;color:#fff;font-family:monospace">82</span>
           </div>
           <div style="height:4px;background:rgba(255,255,255,.15);border-radius:2px;margin-bottom:10px;"><div style="width:78%;height:100%;background:#E8B84B;border-radius:2px;"></div></div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
-            <span style="font-size:11px;color:rgba(255,255,255,.65)">色彩模式</span>
-            <span style="font-size:11px;font-weight:700;color:#E8B84B">自動偵測</span>
+            <span style="font-size:11px;color:rgba(255,255,255,.65)">Color mode</span>
+            <span style="font-size:11px;font-weight:700;color:#E8B84B">Auto-detect</span>
           </div>
           <div style="height:1px;background:rgba(255,255,255,.1);margin:10px 0;"></div>
-          <div style="font-size:9px;color:rgba(255,255,255,.4);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;">統計</div>
+          <div style="font-size:9px;color:rgba(255,255,255,.4);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;">Stats</div>
           <div style="display:flex;justify-content:space-between;">
-            <span style="font-size:11px;color:rgba(255,255,255,.65)">PDF 數</span>
+            <span style="font-size:11px;color:rgba(255,255,255,.65)">PDFs</span>
             <span style="font-size:13px;font-weight:800;color:#fff;font-family:monospace">3</span>
           </div>
           <div style="display:flex;justify-content:space-between;">
-            <span style="font-size:11px;color:rgba(255,255,255,.65)">壓縮率</span>
+            <span style="font-size:11px;color:rgba(255,255,255,.65)">Ratio</span>
             <span style="font-size:13px;font-weight:800;color:#5BAD85;font-family:monospace">-68%</span>
           </div>
         </div>
@@ -169,34 +170,34 @@ window.addEventListener('error', function(e) {
           <div class="lp-frame-tab-row">
             <div class="lp-frame-tab" style="background:#E8B84B;color:#2D4A6E">PDF → JPG</div>
             <div class="lp-frame-tab" style="background:#E8E4DC;color:#8A8E96">HEIC → JPG</div>
-            <div class="lp-frame-tab" style="background:#E8E4DC;color:#8A8E96">圖片壓縮</div>
-            <div class="lp-frame-tab" style="background:#E8E4DC;color:#8A8E96">PDF 壓縮</div>
+            <div class="lp-frame-tab" style="background:#E8E4DC;color:#8A8E96">Compress</div>
+            <div class="lp-frame-tab" style="background:#E8E4DC;color:#8A8E96">Compress PDF</div>
           </div>
           <div class="lp-frame-card">
-            <div style="font-size:10px;font-weight:700;color:#8A8E96;margin-bottom:10px;letter-spacing:.5px;">拖放或點擊選取 PDF 檔案</div>
+            <div style="font-size:10px;font-weight:700;color:#8A8E96;margin-bottom:10px;letter-spacing:.5px;">Drag or click to select PDF files</div>
             <div style="display:flex;gap:8px;">
               <div style="flex:1;background:#F4F2EC;border-radius:8px;padding:10px;border:1px dashed #DDD9CE;text-align:center;">
                 <div style="font-size:20px;margin-bottom:4px;">📄</div>
                 <div style="font-size:9px;color:#8A8E96">report_2024.pdf</div>
-                <div style="font-size:9px;color:#5BAD85;font-weight:700;margin-top:2px;">✓ 完成</div>
+                <div style="font-size:9px;color:#5BAD85;font-weight:700;margin-top:2px;">✓ Done</div>
               </div>
               <div style="flex:1;background:#F4F2EC;border-radius:8px;padding:10px;border:1px dashed #DDD9CE;text-align:center;">
                 <div style="font-size:20px;margin-bottom:4px;">📄</div>
                 <div style="font-size:9px;color:#8A8E96">scan_01.pdf</div>
-                <div style="font-size:9px;color:#E8B84B;font-weight:700;margin-top:2px;">處理中...</div>
+                <div style="font-size:9px;color:#E8B84B;font-weight:700;margin-top:2px;">Processing...</div>
               </div>
               <div style="flex:1;background:rgba(232,184,75,.08);border-radius:8px;padding:10px;border:2px dashed #E8B84B;text-align:center;display:flex;align-items:center;justify-content:center;">
-                <div style="font-size:10px;color:#C9960A;font-weight:700;">+ 加入</div>
+                <div style="font-size:10px;color:#C9960A;font-weight:700;">+ Add</div>
               </div>
             </div>
           </div>
           <div style="display:flex;gap:8px;">
             <div style="flex:1;background:#FEFEFE;border-radius:10px;padding:10px 12px;border:1px solid #DDD9CE;">
-              <div style="font-size:9px;color:#8A8E96;font-weight:700;margin-bottom:4px;">輸出品質</div>
+              <div style="font-size:9px;color:#8A8E96;font-weight:700;margin-bottom:4px;">Output quality</div>
               <div style="height:4px;background:#DDD9CE;border-radius:2px;"><div style="width:82%;height:100%;background:#E8B84B;border-radius:2px;"></div></div>
             </div>
             <div style="flex:1;background:#FEFEFE;border-radius:10px;padding:10px 12px;border:1px solid #DDD9CE;">
-              <div style="font-size:9px;color:#8A8E96;font-weight:700;margin-bottom:2px;">處理進度</div>
+              <div style="font-size:9px;color:#8A8E96;font-weight:700;margin-bottom:2px;">Progress</div>
               <div style="font-size:18px;font-weight:900;color:#2D4A6E;font-family:monospace">2/3</div>
             </div>
           </div>
@@ -210,92 +211,92 @@ window.addEventListener('error', function(e) {
 <section class="lp-tools-sect" id="lp-tools">
   <div class="lp-tools-inner">
     <div style="text-align:center;margin-bottom:0;">
-      <div class="lp-section-eyebrow">選擇工具</div>
-      <h2 class="lp-section-title">十種功能，一站完成</h2>
+      <div class="lp-section-eyebrow">Choose a tool</div>
+      <h2 class="lp-section-title">Ten tools, one place</h2>
       <p style="font-size:15px;color:var(--lp-muted);max-width:420px;margin:0 auto;font-family:'Noto Sans TC',sans-serif;line-height:1.7;">
-        PDF、圖片、照片，各種文件格式問題，全部解決。
+        PDF, images, photos — every file-format problem, solved.
       </p>
     </div>
     <div class="lp-tc-grid">
       <a class="tc" style="--tca:#2D4A6E;--tcbg:rgba(45,74,110,.07)" href="pdf-to-jpg.html">
           <div class="tc-num">01</div>
           <div class="tc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#2D4A6E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><rect x="8" y="12" width="8" height="6" rx="1"/></svg></div>
-          <div class="tc-tag">PDF 轉換</div>
+          <div class="tc-tag">PDF convert</div>
           <div class="tc-name">PDF → JPG</div>
-          <p class="tc-desc">批量將 PDF 每頁輸出為 JPG，支援自訂 DPI 與品質。</p>
-          <div class="tc-enter">進入工具 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg></div>
+          <p class="tc-desc">Export every PDF page as JPG with custom DPI and quality.</p>
+          <div class="tc-enter">Open tool <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg></div>
         </a>
         <a class="tc" style="--tca:#1D7A6A;--tcbg:rgba(29,122,106,.07)" href="heic-to-jpg.html">
           <div class="tc-num">02</div>
           <div class="tc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#1D7A6A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="13" r="3"/></svg></div>
-          <div class="tc-tag">照片轉換</div>
+          <div class="tc-tag">Photo convert</div>
           <div class="tc-name">HEIC → JPG</div>
-          <p class="tc-desc">批量轉換 iPhone 拍的 HEIC 照片，ZIP 打包或逐一下載。</p>
-          <div class="tc-enter">進入工具 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg></div>
+          <p class="tc-desc">Batch-convert iPhone HEIC photos, ZIP or one by one.</p>
+          <div class="tc-enter">Open tool <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg></div>
         </a>
         <a class="tc" style="--tca:#2D7D3A;--tcbg:rgba(45,125,58,.07)" href="compress-image.html">
           <div class="tc-num">03</div>
           <div class="tc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#2D7D3A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg></div>
-          <div class="tc-tag">圖片壓縮</div>
-          <div class="tc-name">圖片壓縮</div>
-          <p class="tc-desc">JPG、PNG、WebP 批量壓縮，品質或目標大小模式。</p>
-          <div class="tc-enter">進入工具 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg></div>
+          <div class="tc-tag">Image compress</div>
+          <div class="tc-name">Compress Image</div>
+          <p class="tc-desc">Batch-compress JPG, PNG, WebP by quality or target size.</p>
+          <div class="tc-enter">Open tool <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg></div>
         </a>
         <a class="tc" style="--tca:#7B4E9E;--tcbg:rgba(123,78,158,.07)" href="resize-image.html">
           <div class="tc-num">04</div>
           <div class="tc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#7B4E9E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></div>
-          <div class="tc-tag">圖片縮放</div>
-          <div class="tc-name">尺寸調整</div>
-          <p class="tc-desc">批量縮放圖片，固定寬高、百分比或自訂尺寸。</p>
-          <div class="tc-enter">進入工具 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg></div>
+          <div class="tc-tag">Image resize</div>
+          <div class="tc-name">Resize Image</div>
+          <p class="tc-desc">Batch-resize by fixed size, percentage or custom.</p>
+          <div class="tc-enter">Open tool <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg></div>
         </a>
         <a class="tc" style="--tca:#C07830;--tcbg:rgba(192,120,48,.07)" href="merge-split-pdf.html">
           <div class="tc-num">05</div>
           <div class="tc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#C07830" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v6"/><path d="M16 19l2 2 4-4"/></svg></div>
-          <div class="tc-tag">PDF 操作 <span style="display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:#C07830;color:#fff;margin-left:6px;vertical-align:middle;opacity:.85">NEW</span></div>
-          <div class="tc-name">PDF 合併/拆分</div>
-          <p class="tc-desc">多個 PDF 合成一份，或依頁數拆開，可自由排序。</p>
-          <div class="tc-enter">進入工具 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg></div>
+          <div class="tc-tag">PDF ops <span style="display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:#C07830;color:#fff;margin-left:6px;vertical-align:middle;opacity:.85">NEW</span></div>
+          <div class="tc-name">Merge & Split PDF</div>
+          <p class="tc-desc">Combine PDFs into one or split by pages, freely reorder.</p>
+          <div class="tc-enter">Open tool <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg></div>
         </a>
         <a class="tc" style="--tca:#B03020;--tcbg:rgba(176,48,32,.07)" href="compress-pdf.html">
           <div class="tc-num">06</div>
           <div class="tc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#B03020" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8V5H3v3"/><path d="M21 16v3H3v-3"/><line x1="12" y1="8" x2="12" y2="16"/><polyline points="8 12 12 16 16 12"/></svg></div>
-          <div class="tc-tag">PDF 壓縮 <span style="display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:#B03020;color:#fff;margin-left:6px;vertical-align:middle;opacity:.85">NEW</span></div>
-          <div class="tc-name">PDF 壓縮</div>
-          <p class="tc-desc">自動偵測灰階、限制解析度，掃描 PDF 大幅縮小體積。</p>
-          <div class="tc-enter">進入工具 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg></div>
+          <div class="tc-tag">PDF compress <span style="display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:#B03020;color:#fff;margin-left:6px;vertical-align:middle;opacity:.85">NEW</span></div>
+          <div class="tc-name">Compress PDF</div>
+          <p class="tc-desc">Auto grayscale detection and resolution caps shrink scanned PDFs.</p>
+          <div class="tc-enter">Open tool <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg></div>
         </a>
         <a class="tc" style="--tca:#C9960A;--tcbg:rgba(201,150,10,.07)" href="combine-pdf-images.html">
           <div class="tc-num">07</div>
           <div class="tc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#C9960A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg></div>
-          <div class="tc-tag">PDF 合成 <span style="display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:#C9960A;color:#fff;margin-left:6px;vertical-align:middle;opacity:.85">NEW</span></div>
-          <div class="tc-name">混合合併 PDF</div>
-          <p class="tc-desc">PDF 與圖片混排合成一份，可自由排序拖放。</p>
-          <div class="tc-enter">進入工具 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg></div>
+          <div class="tc-tag">PDF combine <span style="display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:#C9960A;color:#fff;margin-left:6px;vertical-align:middle;opacity:.85">NEW</span></div>
+          <div class="tc-name">Combine PDF & Images</div>
+          <p class="tc-desc">Mix PDFs and images into one PDF, drag to reorder.</p>
+          <div class="tc-enter">Open tool <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg></div>
         </a>
         <a class="tc" style="--tca:#2D4A6E;--tcbg:rgba(45,74,110,.07)" href="organize-pdf-pages.html">
           <div class="tc-num">08</div>
           <div class="tc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#2D4A6E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l1.5-1.5"/><path d="M14.5 13.5a2.1 2.1 0 0 0-3 0L9 16v-3"/></svg></div>
-          <div class="tc-tag">PDF 編輯 <span style="display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:#2D4A6E;color:#fff;margin-left:6px;vertical-align:middle;opacity:.85">NEW</span></div>
-          <div class="tc-name">頁面管理</div>
-          <p class="tc-desc">旋轉、刪除、重新排序頁面，或插入空白頁後輸出。</p>
-          <div class="tc-enter">進入工具 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg></div>
+          <div class="tc-tag">PDF edit <span style="display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:#2D4A6E;color:#fff;margin-left:6px;vertical-align:middle;opacity:.85">NEW</span></div>
+          <div class="tc-name">Organize Pages</div>
+          <p class="tc-desc">Rotate, delete, reorder pages or insert blank pages.</p>
+          <div class="tc-enter">Open tool <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg></div>
         </a>
         <a class="tc" style="--tca:#B03020;--tcbg:rgba(176,48,32,.07)" href="watermark-pdf.html">
           <div class="tc-num">09</div>
           <div class="tc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#B03020" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 2v4.343a2 2 0 0 1-.586 1.414L12 12l-4.414-4.243A2 2 0 0 1 7 6.343V2"/><path d="M7 22v-4.343a2 2 0 0 1 .586-1.414L12 12l4.414 4.243a2 2 0 0 1 .586 1.414V22"/></svg></div>
-          <div class="tc-tag">PDF 浮水印 <span style="display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:#B03020;color:#fff;margin-left:6px;vertical-align:middle;opacity:.85">NEW</span></div>
-          <div class="tc-name">PDF 浮水印</div>
-          <p class="tc-desc">加文字或圖片浮水印，支援中文、平鋪、透明度與旋轉。</p>
-          <div class="tc-enter">進入工具 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg></div>
+          <div class="tc-tag">PDF watermark <span style="display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:#B03020;color:#fff;margin-left:6px;vertical-align:middle;opacity:.85">NEW</span></div>
+          <div class="tc-name">Watermark PDF</div>
+          <p class="tc-desc">Add text or image watermarks — tiling, opacity, rotation.</p>
+          <div class="tc-enter">Open tool <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg></div>
         </a>
         <a class="tc" style="--tca:#1D7A6A;--tcbg:rgba(29,122,106,.07)" href="annotate-pdf.html">
           <div class="tc-num">10</div>
           <div class="tc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#1D7A6A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 3.5a2.12 2.12 0 0 1 3 3L8 17l-4 1 1-4Z"/><path d="M13 5.5l3 3"/></svg></div>
-          <div class="tc-tag">PDF 編輯 <span style="display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:#1D7A6A;color:#fff;margin-left:6px;vertical-align:middle;opacity:.85">NEW</span></div>
-          <div class="tc-name">標註 / 簽名</div>
-          <p class="tc-desc">在 PDF 上打字填寫、手寫簽名、蓋圖章、畫框標註後輸出。</p>
-          <div class="tc-enter">進入工具 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg></div>
+          <div class="tc-tag">PDF edit <span style="display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:#1D7A6A;color:#fff;margin-left:6px;vertical-align:middle;opacity:.85">NEW</span></div>
+          <div class="tc-name">Annotate & Sign</div>
+          <p class="tc-desc">Type to fill, hand-sign, stamp and box-annotate PDFs.</p>
+          <div class="tc-enter">Open tool <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg></div>
         </a>
     </div>
   </div>
@@ -305,26 +306,26 @@ window.addEventListener('error', function(e) {
 <section class="lp-trust" id="lp-trust">
   <div class="lp-trust-glow"></div>
   <div class="lp-trust-inner">
-    <div class="lp-section-eyebrow" style="margin-bottom:10px;">安全 · 免費 · 本機</div>
-    <h2>你的檔案，只在你的裝置上</h2>
-    <p>落霞千頁所有處理都在瀏覽器本地執行。<br>沒有伺服器接收你的檔案，沒有帳號，沒有訂閱費用。</p>
+    <div class="lp-section-eyebrow" style="margin-bottom:10px;">Private · Free · Local</div>
+    <h2>Your files stay on your device</h2>
+    <p>All processing happens locally in your browser.<br>No server receives your files. No account, no subscription.</p>
     <button class="lp-btn-p" onclick="launchTool('pdf')">
-      立即開始，完全免費
+      Start now — completely free
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg>
     </button>
     <div class="lp-trust-badges">
-      <div class="lp-trust-badge"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> 不上傳任何伺服器</div>
-      <div class="lp-trust-badge"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> 免帳號免登入</div>
-      <div class="lp-trust-badge"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> 完全免費</div>
-      <div class="lp-trust-badge"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> 無廣告</div>
+      <div class="lp-trust-badge"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> No server upload</div>
+      <div class="lp-trust-badge"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> No account</div>
+      <div class="lp-trust-badge"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Free</div>
+      <div class="lp-trust-badge"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> No ads</div>
     </div>
   </div>
 </section>
 
 <!-- ── Footer ── -->
 <footer class="lp-footer">
-  <strong>SunDown Studio 日落工作室</strong> · 落霞千頁 &nbsp;·&nbsp;
-  所有檔案均在本機處理，不上傳至任何伺服器
+  <strong>SunDown Studio</strong> &nbsp;·&nbsp;
+  All files processed locally, never uploaded to any server
 </footer>
 
 <script>
@@ -762,7 +763,7 @@ window.addEventListener('scroll', function() {
     </div>
   </aside>
 </div></div>
-<script src="js/core.js"></script>
+<script src="../js/core.js"></script>
 
 <!-- ═══════════ PANEL: 混合合併 PDF ═══════════ -->
 <div class="tab-panel" id="panel-pdfmix"><div class="tool-layout">
@@ -936,7 +937,7 @@ window.addEventListener('scroll', function() {
   </aside>
 </div></div>
 
-<script src="js/tool-pageman.js"></script>
+<script src="../js/tool-pageman.js"></script>
 
 <style>
 /* ── PDF watermark ── */
@@ -1020,7 +1021,7 @@ window.addEventListener('scroll', function() {
   </aside>
 </div></div>
 
-<script src="js/tool-watermark.js"></script>
+<script src="../js/tool-watermark.js"></script>
 
 <style>
 /* ── PDF annotate / sign / stamp editor ── */
@@ -1125,9 +1126,9 @@ window.addEventListener('scroll', function() {
   </aside>
 </div></div>
 
-<script src="js/tool-annotate.js"></script>
+<script src="../js/tool-annotate.js"></script>
 
-<script src="js/tool-mix.js"></script>
+<script src="../js/tool-mix.js"></script>
 
 <footer style="flex-shrink:0;border-top:1px solid var(--border);background:var(--cream2);padding:12px 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;font-family:var(--sans);">
   <div style="display:flex;align-items:center;gap:8px;">
@@ -1143,18 +1144,18 @@ window.addEventListener('scroll', function() {
 </footer>
 </div>
 
-<script src="js/app.js"></script>
+<script src="../js/app.js"></script>
 
 
 <script>
 window.SD_CONFIG = {
   product: '落霞千頁',
   productColor: '#2D4A6E',
-  portalUrl: '../../index.html',
+  portalUrl: '../../../index.html',
   noNav: true,   // LP 已有自己的 nav，避免重複
 };
 </script>
-<script src="../../brand.js"></script>
+<script src="../../../brand.js"></script>
 <script>
 // 切換 app/LP 時同步顯示/隱藏 brand.js footer
 (function() {
