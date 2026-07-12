@@ -269,6 +269,9 @@
             <div class="field"><label>姓氏</label><input id="nm-sur" placeholder="陳" maxlength="2" style="width:80px"></div>
             <div class="field nm-ana" style="display:none"><label>名字</label><input id="nm-name" placeholder="美玲" maxlength="2" style="width:100px"></div>
             <div class="field nm-gen"><label>性別</label><select id="nm-g" style="width:80px"><option value="M">男</option><option value="F">女</option><option value="N">不限</option></select></div>
+            <div class="field nm-gen"><label>取名風格</label><select id="nm-style" style="width:110px">
+              <option value="tw">台灣常見</option><option value="cn">中國風</option><option value="kr">韓風</option><option value="all">不限（全庫）</option></select></div>
+            <div class="field nm-gen"><label>字數</label><select id="nm-count" style="width:80px"><option value="2">雙名</option><option value="1">單名</option></select></div>
           </div>
           <div class="form-grid">
             <div class="field"><label>出生年（算喜用五行與生肖，可留空）</label><input id="nm-y" type="number" min="1900" max="2100" placeholder="2026" style="width:110px"></div>
@@ -277,7 +280,7 @@
             <div class="field"><label>時</label><input id="nm-h" type="number" min="0" max="23" placeholder="12" style="width:64px"></div>
           </div>
           <button class="btn" id="nm-go" style="margin-top:14px">✍️ 開始</button>
-          <p class="muted" style="margin-top:8px">五派合參：三才五格＋81 數理＋生肖字根＋八字喜用＋易卦＋音靈讀音（筆畫依康熙字典，氵=4、艹=6、阝左=8…）。取名模式自動避開拗口與不雅諧音。${dbOk ? `取名精選庫 ${NAME_CHARS.length} 字；分析可查兩萬餘字康熙筆劃。` : '<b style="color:var(--cinnabar)">字庫載入失敗</b>'}</p>
+          <p class="muted" style="margin-top:8px">五派合參：三才五格＋81 數理＋生肖字根＋八字喜用＋易卦＋音靈讀音（筆畫依康熙字典，氵=4、艹=6、阝左=8…）。取名模式自動避開拗口與不雅諧音、可選台灣/中國/韓風風格與單雙名、支援複姓（如歐陽）。${dbOk ? `取名精選庫 ${NAME_CHARS.length} 字；分析可查兩萬餘字康熙筆劃。` : '<b style="color:var(--cinnabar)">字庫載入失敗</b>'}</p>
         </div>
         <div id="nm-result"></div>`;
 
@@ -365,9 +368,12 @@ ${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k]
           return items[items.length - 1];
         };
         // 慎用字：技術上合格但當名字太平庸／結構性／冷僻／不雅
-        const AVOID = new Set('丁乙丙子丑寅卯巳午未申酉戌亥木火水金土好孜孳孝仔囝乃之乎兮且卜也巴匕勾尢尸屎冬廿卅兇歹殀夭亡病痞囚奴婢妾丐乞屍冢柚柑橘蒜葱韭薑瓜稻萸蒨靄灣纓灩榆蒜地太中稗稈禾黍稷薯芋薯芽秕稊菀泫墅玎兌釗訓址繩蓀昫蓄'.split(''));
-        // 常用取名字精選優先層：有此清單時，生成只從「常用名字字」抽，冷僻字自動退場
-        const premiumSet = (typeof NAME_PREMIUM !== 'undefined') ? new Set([...NAME_PREMIUM]) : null;
+        const AVOID = new Set('丁乙丙子丑寅卯巳午未申酉戌亥木火水金土好孜孳孝仔囝乃之乎兮且卜也巴匕勾尢尸屎冬廿卅兇歹殀夭亡病痞囚奴婢妾丐乞屍冢柚柑橘蒜葱韭薑瓜稻萸蒨靄灣纓灩榆蒜地太中稗稈禾黍稷薯芋薯芽秕稊菀泫墅玎兌釗訓址繩蓀昫蓄鑑宮桑旦桔劭鑣鑠桔樟'.split(''));
+        // 取名風格：台灣常見／中國風／韓風／不限（全庫）——各自一套優先字庫
+        const styleVal = (el.querySelector('#nm-style') || {}).value || 'tw';
+        const nameCount = +((el.querySelector('#nm-count') || {}).value || 2); // 1單名 2雙名
+        const STYLE_STR = { tw: typeof NAME_PREMIUM !== 'undefined' ? NAME_PREMIUM : '', cn: typeof NAME_MAINLAND !== 'undefined' ? NAME_MAINLAND : '', kr: typeof NAME_KOREAN !== 'undefined' ? NAME_KOREAN : '' }[styleVal];
+        const premiumSet = (styleVal !== 'all' && STYLE_STR) ? new Set([...STYLE_STR]) : null;
         // 每個筆畫格的「好字」池（排除慎用字＋不符性別；優先只收常用字）；只在此池挑字
         const goodByStroke = {};
         const buildPools = (usePremium) => {
@@ -383,22 +389,29 @@ ${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k]
         Object.assign(goodByStroke, buildPools(true));
         const strokeGood = (k) => (goodByStroke[k] || []).length >= 2; // 該筆畫格至少 2 個常用字才用
 
-        // 1) 只取「兩個名字筆畫格都有足夠好字」的三才五格全吉組合——從源頭杜絕怪字
+        // 1) 只取「名字筆畫格都有足夠好字」的三才五格全吉組合——從源頭杜絕怪字（單名/雙名）
         const buildCombos = () => {
           const ss = Object.keys(goodByStroke).map(Number).filter(strokeGood).sort((a, b) => a - b);
           const cs = [];
-          for (const k1 of ss) for (const k2 of ss) {
-            const g = fiveGrids(surStrokes, [k1, k2]);
-            if (luckOf(g.ren) !== '吉' || luckOf(g.zong) !== '吉') continue;
-            if (luckOf(g.di) === '凶' || luckOf(g.wai) === '凶') continue;
-            if (!g.sancaiGood) continue;
+          const check = (g, k1, k2) => {
+            // 單名數理較難全吉（人格＝總格被迫相等），放寬為「吉或半吉」；雙名須全吉
+            if (nameCount === 1) { if (luckOf(g.ren) === '凶' || luckOf(g.zong) === '凶') return; }
+            else { if (luckOf(g.ren) !== '吉' || luckOf(g.zong) !== '吉') return; }
+            if (luckOf(g.di) === '凶') return;
+            // 單名外格固定為 2（1+1），屬結構性、不以外格淘汰；雙名才檢查外格凶
+            if (nameCount === 2 && luckOf(g.wai) === '凶') return;
+            // 三才：雙名須兩組皆相生；單名放寬為至少一組相生
+            const sancaiOk = nameCount === 1 ? (g.tr.good || g.rd.good) : g.sancaiGood;
+            if (!sancaiOk) return;
             cs.push({ k1, k2, g, s: gridScore(g) });
-          }
+          };
+          if (nameCount === 1) { for (const k1 of ss) check(fiveGrids(surStrokes, [k1]), k1, null); }
+          else { for (const k1 of ss) for (const k2 of ss) check(fiveGrids(surStrokes, [k1, k2]), k1, k2); }
           return cs;
         };
         let combos = buildCombos();
-        // 常用字池組合過少（極少數姓氏）才放寬回全庫；18 名可由單字變化湊出，門檻放低守住品質
-        if (combos.length < 3 && premiumSet) {
+        // 常用字池組合過少才放寬回全庫；單名選項本就少，只在完全零組合時才放寬（守住品質）
+        if (combos.length < (nameCount === 1 ? 1 : 3) && premiumSet) {
           for (const k in goodByStroke) delete goodByStroke[k];
           Object.assign(goodByStroke, buildPools(false));
           combos = buildCombos();
@@ -428,7 +441,7 @@ ${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k]
           return wPick(scored, x => x.w * x.w).c;
         };
         // 允許單字跨提案共用（如 陳雅婷／陳雅涵），只避免整個名字重複
-        const TARGET = 18;
+        const TARGET = nameCount === 1 ? 12 : 18; // 單名選項較少
         const usedNames = new Set();
         const results = [];
         let guard = 0;
@@ -440,17 +453,20 @@ ${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k]
             for (let attempt = 0; attempt < 4; attempt++) {
               const c1 = pickChar(cb.k1, null, null);
               if (!c1) break;
-              const c2 = pickChar(cb.k2, birth && c1.wx !== birth.like ? birth.like : null, c1.c);
-              if (!c2) break;
-              if (usedNames.has(c1.c + c2.c)) continue;
-              const ph = phonetics(surname, [c1, c2]);
-              if (!best || ph.penalty < best.ph.penalty) best = { c1, c2, ph };
+              let c2 = null, nm = c1.c;
+              if (nameCount === 2) {
+                c2 = pickChar(cb.k2, birth && c1.wx !== birth.like ? birth.like : null, c1.c);
+                if (!c2) break;
+                nm = c1.c + c2.c;
+              }
+              if (usedNames.has(nm)) continue;
+              const ph = phonetics(surname, c2 ? [c1, c2] : [c1]);
+              if (!best || ph.penalty < best.ph.penalty) best = { c1, c2, ph, nm };
               if (ph.penalty === 0) break; // 完美讀音即採用
             }
             if (!best || best.ph.penalty >= 20) continue;
-            const nm = best.c1.c + best.c2.c;
-            if (usedNames.has(nm)) continue;
-            usedNames.add(nm);
+            if (usedNames.has(best.nm)) continue;
+            usedNames.add(best.nm);
             results.push({ c1: best.c1, c2: best.c2, ph: best.ph, ...cb });
           }
           guard += 30; // 名字空間小於 18 時避免無限迴圈
@@ -462,13 +478,13 @@ ${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k]
           ${birthNote}
           <div class="aspect-grid">
             ${results.map(r => `<div class="aspect">
-              <div style="font-size:26px;letter-spacing:.15em;color:var(--navy);font-weight:700;text-align:center">${surname}${r.c1.c}${r.c2.c}</div>
-              <div class="muted" style="text-align:center;font-size:12px">${r.c1.c}${r.c1.k}劃(${r.c1.wx})・${r.c2.c}${r.c2.k}劃(${r.c2.wx})</div>
+              <div style="font-size:26px;letter-spacing:.15em;color:var(--navy);font-weight:700;text-align:center">${surname}${r.c1.c}${r.c2 ? r.c2.c : ''}</div>
+              <div class="muted" style="text-align:center;font-size:12px">${r.c1.c}${r.c1.k}劃(${r.c1.wx})${r.c2 ? `・${r.c2.c}${r.c2.k}劃(${r.c2.wx})` : ''}</div>
               <div style="text-align:center;margin:4px 0"><span class="tag gold" style="font-size:12px">三才${r.g.sancai.join('')}</span>
                 <span class="tag" style="font-size:12px">人格${r.g.ren}吉</span><span class="tag" style="font-size:12px">總格${r.g.zong}吉</span>${r.ph && !r.ph.unknown && r.ph.penalty === 0 ? '<span class="tag" style="font-size:12px;color:var(--gold-deep)">讀音順</span>' : ''}</div>
-              ${r.c1.py ? `<div style="text-align:center;font-size:13px;color:var(--gold-deep);letter-spacing:.05em">${surPy(surname[0]) ? pyToZhuyin(surPy(surname[0])) + ' ' : ''}${pyToZhuyin(r.c1.py)} ${pyToZhuyin(r.c2.py)}</div>
-              <div class="muted" style="text-align:center;font-size:11px">${surPy(surname[0]) ? parsePy(surPy(surname[0])).body + ' ' : ''}${parsePy(r.c1.py).body} ${parsePy(r.c2.py).body}</div>` : ''}
-              <div style="font-size:13px">${r.c1.c}：${r.c1.m}<br>${r.c2.c}：${r.c2.m}</div>
+              ${r.c1.py ? `<div style="text-align:center;font-size:13px;color:var(--gold-deep);letter-spacing:.05em">${surPy(surname[0]) ? pyToZhuyin(surPy(surname[0])) + ' ' : ''}${pyToZhuyin(r.c1.py)}${r.c2 ? ' ' + pyToZhuyin(r.c2.py) : ''}</div>
+              <div class="muted" style="text-align:center;font-size:11px">${surPy(surname[0]) ? parsePy(surPy(surname[0])).body + ' ' : ''}${parsePy(r.c1.py).body}${r.c2 ? ' ' + parsePy(r.c2.py).body : ''}</div>` : ''}
+              <div style="font-size:13px">${r.c1.c}：${r.c1.m}${r.c2 ? `<br>${r.c2.c}：${r.c2.m}` : ''}</div>
             </div>`).join('')}
           </div>
           <div style="text-align:center;margin-top:14px"><button class="btn small ghost" id="nm-again">🎲 換一批</button></div>
@@ -480,7 +496,7 @@ ${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k]
         AI.attach(div.querySelector('.panel'), () =>
           `請以姓名學專家角度，評比以下為「${surname}」姓${gender === 'M' ? '男' : gender === 'F' ? '女' : ''}寶寶生成的命名提案，並挑出最好的 3 個說明理由（考量：數理、三才、字義、音韻是否順口、有無不良諧音、與八字的配合）。
 ${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k].name).join(' ')}，日主${birth.pillars.day.gan}身${birth.strong ? '強' : '弱'}，喜用五行${birth.like}，生肖${Ganzhi.SHENGXIAO[zodiacIdx]}。` : ''}
-提案：${results.map(r => `${surname}${r.c1.c}${r.c2.c}（${r.c1.k}+${r.c2.k}劃，三才${r.g.sancai.join('')}，人格${r.g.ren}總格${r.g.zong}）`).join('、')}
+提案：${results.map(r => `${surname}${r.c1.c}${r.c2 ? r.c2.c : ''}（${r.c1.k}${r.c2 ? '+' + r.c2.k : ''}劃，三才${r.g.sancai.join('')}，人格${r.g.ren}總格${r.g.zong}）`).join('、')}
 也歡迎你在同樣筆畫組合下建議更好的用字。`);
       });
     }

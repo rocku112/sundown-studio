@@ -1,9 +1,9 @@
 /* 暮卜先知 · Service Worker（stale-while-revalidate：先回快取秒開，背景更新） */
-const CACHE = 'mubu-v16';
+const CACHE = 'mubu-v21';
 const PRECACHE = [
   './', 'index.html', 'css/style.css', 'icon.svg', 'manifest.webmanifest',
   'js/core/astro.js', 'js/core/ganzhi.js', 'js/core/ai.js', 'js/core/extras.js',
-  'js/data/hexagram-data.js', 'js/data/tarot-data.js', 'js/data/qian-data.js', 'js/data/name-chars.js', 'js/data/name-premium.js', 'js/data/kangxi-strokes.js',
+  'js/data/hexagram-data.js', 'js/data/tarot-data.js', 'js/data/qian-data.js', 'js/data/name-chars.js', 'js/data/name-premium.js', 'js/data/name-mainland.js', 'js/data/name-korean.js', 'js/data/kangxi-strokes.js',
   'js/app.js',
   'js/modules/meihua.js', 'js/modules/bazi.js', 'js/modules/tarot.js',
   'js/modules/astrology.js', 'js/modules/xiaoliuren.js', 'js/modules/ziwei.js',
