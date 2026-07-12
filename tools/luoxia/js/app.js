@@ -255,3 +255,6 @@ function loadSampleImg(tool) {
     toast('已載入範例圖片');
   }, 'image/jpeg', 0.92);
 }
+
+// Per-tool SEO landing pages (pdf-to-jpg.html, en/…) set window.SD_TOOL to open that tool directly.
+if (window.SD_TOOL) { try { launchTool(window.SD_TOOL); } catch(e){} }

@@ -1,4 +1,6 @@
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdf.worker.min.js';
+// SD_VENDOR lets pages in subfolders (e.g. /en/) point at the shared vendor/ dir one level up.
+window.SD_VENDOR = window.SD_VENDOR || 'vendor/';
+pdfjsLib.GlobalWorkerOptions.workerSrc = SD_VENDOR + 'pdf.worker.min.js';
 
 
 // ─── Helper: set lucide icon on a button (works after lucide replaces <i> with <svg>) ──
@@ -153,7 +155,7 @@ function pdfSt(){document.getElementById('ps1').textContent=pS.files.length;docu
 // ════════════════════════════════════════════════
 (async()=>{
   const s=document.createElement('script');
-  s.src='vendor/heic2any.min.js';
+  s.src=SD_VENDOR+'heic2any.min.js';
   s.crossOrigin='anonymous';
   document.head.appendChild(s);
   await new Promise((r,j)=>{s.onload=r;s.onerror=j;});
@@ -289,7 +291,7 @@ let poMode='merge',poMFiles=[],poSPdf=null,poConv=false,_pdfLibLoaded=false;
 async function ensurePdfLib() {
   if (_pdfLibLoaded && typeof PDFLib!=='undefined') return true;
   return new Promise(resolve=>{
-    const urls=['vendor/pdf-lib.min.js','https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js'];
+    const urls=[SD_VENDOR+'pdf-lib.min.js','https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js'];
     let idx=0;
     function tryNext(){if(idx>=urls.length){resolve(false);return;}const s=document.createElement('script');s.src=urls[idx++];s.crossOrigin='anonymous';s.onload=()=>{_pdfLibLoaded=true;resolve(true);};s.onerror=()=>tryNext();document.head.appendChild(s);}
     tryNext();

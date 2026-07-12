@@ -2,14 +2,19 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
+<script>window.SD_TOOL='pdfann';</script>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>落霞千頁 · SunDown Studio</title>
-<meta name="description" content="免費線上文件工具套件：PDF 轉 JPG、HEIC 轉 JPG、圖片壓縮、尺寸調整、PDF 合併拆分壓縮。所有檔案在本機處理，不上傳伺服器。">
-<meta property="og:title" content="落霞千頁 · SunDown Studio">
-<meta property="og:description" content="十種文件工具，全部免費、免帳號、本機處理。PDF 轉圖、HEIC 轉換、圖片壓縮、PDF 合併拆分壓縮、頁面管理、浮水印、標註簽名。">
+<title>PDF 標註簽名 · 打字/手寫簽名/圖章/改字｜落霞千頁</title>
+<meta name="description" content="免費在 PDF 上打字填寫、手寫簽名、蓋圖章、畫框標註，還能偵測原字體改字。本機處理不上傳。">
+<meta property="og:title" content="PDF 標註簽名 · 打字/手寫簽名/圖章/改字｜落霞千頁">
+<meta property="og:description" content="免費在 PDF 上打字填寫、手寫簽名、蓋圖章、畫框標註，還能偵測原字體改字。本機處理不上傳。">
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://rocku112.github.io/sundown-studio/tools/luoxia/">
+<meta property="og:url" content="https://rocku112.github.io/sundown-studio/tools/luoxia/annotate-pdf.html">
+<link rel="canonical" href="https://rocku112.github.io/sundown-studio/tools/luoxia/annotate-pdf.html">
+<link rel="alternate" hreflang="zh-Hant" href="https://rocku112.github.io/sundown-studio/tools/luoxia/annotate-pdf.html">
+<link rel="alternate" hreflang="en" href="https://rocku112.github.io/sundown-studio/tools/luoxia/en/annotate-pdf.html">
+<link rel="alternate" hreflang="x-default" href="https://rocku112.github.io/sundown-studio/tools/luoxia/annotate-pdf.html">
 <meta property="og:site_name" content="SunDown Studio">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="落霞千頁 · 免費文件工具套件">
@@ -40,7 +45,7 @@ window.addEventListener('error', function(e) {
 
 <link rel="stylesheet" href="css/landing.css">
 
-<div id="lp-wrap">
+<div id="lp-wrap" class="hidden">
 
 <!-- ── Nav ── -->
 <nav class="lp-nav" id="lp-main-nav">
@@ -332,7 +337,8 @@ window.addEventListener('scroll', function() {
 
 </div>
 
-<div id="app-wrap" class="hidden">
+<div id="app-wrap">
+<header class="sd-seo"><h1>PDF 標註與簽名 — 填寫/簽名/改字</h1><p>在 PDF 上打字填寫、手寫簽名、蓋圖章、畫框標註，甚至偵測原字體「改字」。全部在瀏覽器本機處理，不上傳。</p></header>
 
 
 <div id="toast"></div>
@@ -380,7 +386,7 @@ window.addEventListener('scroll', function() {
   </div>
   <!-- Row 2: tool tabs — flex-wrap, never hidden -->
   <nav class="tool-nav">
-    <button class="tab-btn active" data-tab="pdf"      onclick="switchTab('pdf')">
+    <button class="tab-btn" data-tab="pdf"      onclick="switchTab('pdf')">
       <i data-lucide="file-image" style="width:12px;height:12px;"></i> PDF → JPG
       <span class="tab-pill">合併</span>
     </button>
@@ -416,7 +422,7 @@ window.addEventListener('scroll', function() {
       <i data-lucide="stamp" style="width:12px;height:12px;"></i> 浮水印
       <span class="tab-pill">NEW</span>
     </button>
-    <button class="tab-btn" data-tab="pdfann"   onclick="switchTab('pdfann')">
+    <button class="tab-btn active" data-tab="pdfann"   onclick="switchTab('pdfann')">
       <i data-lucide="pen-tool" style="width:12px;height:12px;"></i> 標註簽名
       <span class="tab-pill">NEW</span>
     </button>
@@ -424,7 +430,7 @@ window.addEventListener('scroll', function() {
 </header>
 
 <!-- ═══════════ PANEL: PDF→JPG ═══════════ -->
-<div class="tab-panel active" id="panel-pdf"><div class="tool-layout">
+<div class="tab-panel" id="panel-pdf"><div class="tool-layout">
   <div class="drop-area">
     <div class="drop-zone" id="pdfDZ">
       <span class="drop-icon"><i data-lucide="file-stack" style="width:48px;height:48px;stroke-width:1.3;"></i></span>
@@ -1041,7 +1047,7 @@ window.addEventListener('scroll', function() {
 </style>
 
 <!-- ═══════════ PANEL: PDF 標註/簽名/圖章 ═══════════ -->
-<div class="tab-panel" id="panel-pdfann"><div class="tool-layout">
+<div class="tab-panel active" id="panel-pdfann"><div class="tool-layout">
   <div class="drop-area">
     <div class="drop-zone" id="annDZ">
       <span class="drop-icon"><i data-lucide="pen-tool" style="width:44px;height:44px;stroke-width:1.3;"></i></span>

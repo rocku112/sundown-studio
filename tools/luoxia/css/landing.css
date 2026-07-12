@@ -199,3 +199,5 @@
     .lp-frame-sidebar{display:none;}
     .lp-stat{min-width:80px;padding:14px 8px;} .lp-stat-n{font-size:18px;}
   }
+
+  .tc { text-decoration:none; color:inherit; }

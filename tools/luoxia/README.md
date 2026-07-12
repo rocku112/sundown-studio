@@ -33,6 +33,20 @@ test-suite.js         測試案例
 
 注意：pdf.js 的 `page.render()` 畫到 canvas 在某些無頭環境會 hang，因此測試以 stub（如 `pmThumbFor`）或直接設定狀態的方式避開實際渲染，只驗證資料邏輯與 pdf-lib 匯出。
 
+## SEO：每工具獨立頁面 + 英文版
+
+除了 SPA 進入點 `index.html`（中文首頁，工具卡為 `<a href>` 連到各工具頁），另有**每個工具的獨立可索引頁**：
+- 中文：`pdf-to-jpg.html`、`heic-to-jpg.html`…（同層）
+- 英文：`en/pdf-to-jpg.html`…（`en/` 子資料夾，相對路徑用 `../`，`window.SD_VENDOR='../vendor/'` 讓 core.js 的 vendor 路徑正確）
+
+每頁有專屬 `<title>`／meta description／`<h1>`＋介紹（`.sd-seo` 區塊，SEO 內容）／canonical／hreflang(zh-Hant↔en↔x-default)，並用 `window.SD_TOOL='<tab>'` 於載入時直接開啟該工具（app.js 末尾的 hook）。`sitemap.xml` 列出全部頁面。
+
+**這些頁由 `gen-pages.js` 從 `index.html` 產生**（工具中英文文案在腳本內的 `TOOLS` 設定）。改了 index.html 結構或文案後，重跑：
+```
+cd tools/luoxia && node gen-pages.js
+```
+會覆寫 20 個工具頁。改 slug/新增工具時，記得同步更新 `sitemap.xml`。
+
 ## 新增工具時要同步的地方
 
 `switchTab` valid 陣列、hash 路由 valid、`TAB_KEYS`、Enter `btnMap`、Escape `clrMap`、`CHAIN_MAP`、`showChain` bannerId、首頁 `.tc` 卡片、以及「N 種工具」計數（含 og:description）。

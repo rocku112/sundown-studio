@@ -2,14 +2,19 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
+<script>window.SD_TOOL='heic';</script>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>落霞千頁 · SunDown Studio</title>
-<meta name="description" content="免費線上文件工具套件：PDF 轉 JPG、HEIC 轉 JPG、圖片壓縮、尺寸調整、PDF 合併拆分壓縮。所有檔案在本機處理，不上傳伺服器。">
-<meta property="og:title" content="落霞千頁 · SunDown Studio">
-<meta property="og:description" content="十種文件工具，全部免費、免帳號、本機處理。PDF 轉圖、HEIC 轉換、圖片壓縮、PDF 合併拆分壓縮、頁面管理、浮水印、標註簽名。">
+<title>HEIC 轉 JPG · 免費線上照片轉換｜落霞千頁</title>
+<meta name="description" content="免費把 iPhone 的 HEIC/HEIF 照片轉成通用 JPG，支援批量、ZIP 打包。本機處理不上傳。">
+<meta property="og:title" content="HEIC 轉 JPG · 免費線上照片轉換｜落霞千頁">
+<meta property="og:description" content="免費把 iPhone 的 HEIC/HEIF 照片轉成通用 JPG，支援批量、ZIP 打包。本機處理不上傳。">
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://rocku112.github.io/sundown-studio/tools/luoxia/">
+<meta property="og:url" content="https://rocku112.github.io/sundown-studio/tools/luoxia/heic-to-jpg.html">
+<link rel="canonical" href="https://rocku112.github.io/sundown-studio/tools/luoxia/heic-to-jpg.html">
+<link rel="alternate" hreflang="zh-Hant" href="https://rocku112.github.io/sundown-studio/tools/luoxia/heic-to-jpg.html">
+<link rel="alternate" hreflang="en" href="https://rocku112.github.io/sundown-studio/tools/luoxia/en/heic-to-jpg.html">
+<link rel="alternate" hreflang="x-default" href="https://rocku112.github.io/sundown-studio/tools/luoxia/heic-to-jpg.html">
 <meta property="og:site_name" content="SunDown Studio">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="落霞千頁 · 免費文件工具套件">
@@ -40,7 +45,7 @@ window.addEventListener('error', function(e) {
 
 <link rel="stylesheet" href="css/landing.css">
 
-<div id="lp-wrap">
+<div id="lp-wrap" class="hidden">
 
 <!-- ── Nav ── -->
 <nav class="lp-nav" id="lp-main-nav">
@@ -332,7 +337,8 @@ window.addEventListener('scroll', function() {
 
 </div>
 
-<div id="app-wrap" class="hidden">
+<div id="app-wrap">
+<header class="sd-seo"><h1>HEIC 轉 JPG — iPhone 照片轉換</h1><p>把 iPhone 拍的 HEIC / HEIF 照片轉成 Windows 也能開的 JPG，支援批量轉換與 ZIP 打包。全部在瀏覽器本機處理，不上傳。</p></header>
 
 
 <div id="toast"></div>
@@ -380,11 +386,11 @@ window.addEventListener('scroll', function() {
   </div>
   <!-- Row 2: tool tabs — flex-wrap, never hidden -->
   <nav class="tool-nav">
-    <button class="tab-btn active" data-tab="pdf"      onclick="switchTab('pdf')">
+    <button class="tab-btn" data-tab="pdf"      onclick="switchTab('pdf')">
       <i data-lucide="file-image" style="width:12px;height:12px;"></i> PDF → JPG
       <span class="tab-pill">合併</span>
     </button>
-    <button class="tab-btn" data-tab="heic"     onclick="switchTab('heic')">
+    <button class="tab-btn active" data-tab="heic"     onclick="switchTab('heic')">
       <i data-lucide="smartphone" style="width:12px;height:12px;"></i> HEIC → JPG
       <span class="tab-pill">批量</span>
     </button>
@@ -424,7 +430,7 @@ window.addEventListener('scroll', function() {
 </header>
 
 <!-- ═══════════ PANEL: PDF→JPG ═══════════ -->
-<div class="tab-panel active" id="panel-pdf"><div class="tool-layout">
+<div class="tab-panel" id="panel-pdf"><div class="tool-layout">
   <div class="drop-area">
     <div class="drop-zone" id="pdfDZ">
       <span class="drop-icon"><i data-lucide="file-stack" style="width:48px;height:48px;stroke-width:1.3;"></i></span>
@@ -473,7 +479,7 @@ window.addEventListener('scroll', function() {
 </div></div>
 
 <!-- ═══════════ PANEL: HEIC→JPG ═══════════ -->
-<div class="tab-panel" id="panel-heic"><div class="tool-layout">
+<div class="tab-panel active" id="panel-heic"><div class="tool-layout">
   <div class="drop-area" style="gap:12px;">
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <div style="display:flex;align-items:center;gap:9px;background:var(--warm-white);border:1px solid var(--border);padding:9px 13px;border-radius:var(--rs);flex:1;min-width:180px;">

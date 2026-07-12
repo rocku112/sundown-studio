@@ -1,15 +1,20 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<script>window.SD_TOOL='pdf';window.SD_VENDOR='../vendor/';</script>
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>落霞千頁 · SunDown Studio</title>
-<meta name="description" content="免費線上文件工具套件：PDF 轉 JPG、HEIC 轉 JPG、圖片壓縮、尺寸調整、PDF 合併拆分壓縮。所有檔案在本機處理，不上傳伺服器。">
-<meta property="og:title" content="落霞千頁 · SunDown Studio">
-<meta property="og:description" content="十種文件工具，全部免費、免帳號、本機處理。PDF 轉圖、HEIC 轉換、圖片壓縮、PDF 合併拆分壓縮、頁面管理、浮水印、標註簽名。">
+<title>PDF to JPG · Free Online Converter | SunDown Studio</title>
+<meta name="description" content="Convert each PDF page to a JPG image for free. Adjustable DPI and quality, batch conversion, all processed locally in your browser — no upload.">
+<meta property="og:title" content="PDF to JPG · Free Online Converter | SunDown Studio">
+<meta property="og:description" content="Convert each PDF page to a JPG image for free. Adjustable DPI and quality, batch conversion, all processed locally in your browser — no upload.">
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://rocku112.github.io/sundown-studio/tools/luoxia/">
+<meta property="og:url" content="https://rocku112.github.io/sundown-studio/tools/luoxia/en/pdf-to-jpg.html">
+<link rel="canonical" href="https://rocku112.github.io/sundown-studio/tools/luoxia/en/pdf-to-jpg.html">
+<link rel="alternate" hreflang="zh-Hant" href="https://rocku112.github.io/sundown-studio/tools/luoxia/pdf-to-jpg.html">
+<link rel="alternate" hreflang="en" href="https://rocku112.github.io/sundown-studio/tools/luoxia/en/pdf-to-jpg.html">
+<link rel="alternate" hreflang="x-default" href="https://rocku112.github.io/sundown-studio/tools/luoxia/pdf-to-jpg.html">
 <meta property="og:site_name" content="SunDown Studio">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="落霞千頁 · 免費文件工具套件">
@@ -30,17 +35,17 @@ window.addEventListener('error', function(e) {
   }
 });
 </script>
-<script src="vendor/pdf.min.js"></script>
-<script src="vendor/jszip.min.js"></script>
-<script src="vendor/FileSaver.min.js"></script>
-<script src="vendor/lucide.min.js"></script>
-<link rel="stylesheet" href="css/app.css">
+<script src="../vendor/pdf.min.js"></script>
+<script src="../vendor/jszip.min.js"></script>
+<script src="../vendor/FileSaver.min.js"></script>
+<script src="../vendor/lucide.min.js"></script>
+<link rel="stylesheet" href="../css/app.css">
 </head>
 <body>
 
-<link rel="stylesheet" href="css/landing.css">
+<link rel="stylesheet" href="../css/landing.css">
 
-<div id="lp-wrap">
+<div id="lp-wrap" class="hidden">
 
 <!-- ── Nav ── -->
 <nav class="lp-nav" id="lp-main-nav">
@@ -332,7 +337,8 @@ window.addEventListener('scroll', function() {
 
 </div>
 
-<div id="app-wrap" class="hidden">
+<div id="app-wrap">
+<header class="sd-seo"><h1>PDF to JPG — Free Online Converter</h1><p>Turn every page of a PDF into a JPG image. Adjustable DPI and quality, batch conversion and ZIP packaging. Everything runs locally in your browser — files never leave your device.</p></header>
 
 
 <div id="toast"></div>
@@ -758,7 +764,7 @@ window.addEventListener('scroll', function() {
     </div>
   </aside>
 </div></div>
-<script src="js/core.js"></script>
+<script src="../js/core.js"></script>
 
 <!-- ═══════════ PANEL: 混合合併 PDF ═══════════ -->
 <div class="tab-panel" id="panel-pdfmix"><div class="tool-layout">
@@ -932,7 +938,7 @@ window.addEventListener('scroll', function() {
   </aside>
 </div></div>
 
-<script src="js/tool-pageman.js"></script>
+<script src="../js/tool-pageman.js"></script>
 
 <style>
 /* ── PDF watermark ── */
@@ -1016,7 +1022,7 @@ window.addEventListener('scroll', function() {
   </aside>
 </div></div>
 
-<script src="js/tool-watermark.js"></script>
+<script src="../js/tool-watermark.js"></script>
 
 <style>
 /* ── PDF annotate / sign / stamp editor ── */
@@ -1121,9 +1127,9 @@ window.addEventListener('scroll', function() {
   </aside>
 </div></div>
 
-<script src="js/tool-annotate.js"></script>
+<script src="../js/tool-annotate.js"></script>
 
-<script src="js/tool-mix.js"></script>
+<script src="../js/tool-mix.js"></script>
 
 <footer style="flex-shrink:0;border-top:1px solid var(--border);background:var(--cream2);padding:12px 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;font-family:var(--sans);">
   <div style="display:flex;align-items:center;gap:8px;">
@@ -1139,18 +1145,18 @@ window.addEventListener('scroll', function() {
 </footer>
 </div>
 
-<script src="js/app.js"></script>
+<script src="../js/app.js"></script>
 
 
 <script>
 window.SD_CONFIG = {
   product: '落霞千頁',
   productColor: '#2D4A6E',
-  portalUrl: '../../index.html',
+  portalUrl: '../../../index.html',
   noNav: true,   // LP 已有自己的 nav，避免重複
 };
 </script>
-<script src="../../brand.js"></script>
+<script src="../../../brand.js"></script>
 <script>
 // 切換 app/LP 時同步顯示/隱藏 brand.js footer
 (function() {
