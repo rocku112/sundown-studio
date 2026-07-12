@@ -118,7 +118,7 @@
             <select class="ly-cat">${QUESTIONS.map(q => `<option value="${q.id}">${q.name}</option>`).join('')}</select></div>
           <div class="field"><label>性別</label><select class="ly-g"><option value="M">男</option><option value="F">女</option></select></div>
         </div>
-        <button class="btn" id="ly-go">🪙 搖卦（三錢六擲）</button>
+        <button class="btn" id="ly-go">${Icons.svg('liuyao')} 搖卦（三錢六擲）</button>
         <p class="muted" style="margin-top:10px">以此刻日辰起卦，京房納甲裝卦，取六親、世應、六神、動爻，依所問定用神。</p>
       </div>
       <div id="ly-result"></div>`;
@@ -224,7 +224,7 @@ ${bianHex ? `變卦：${bianHex.name}` : '（無動爻，卦靜）'}
 
   App.register({
     id: 'liuyao',
-    icon: '🪙',
+    icon: Icons.svg('liuyao'),
     title: '六爻卜卦',
     desc: '文王卦・京房納甲，三錢起卦，六親世應六神俱全，依問事定用神。',
     render

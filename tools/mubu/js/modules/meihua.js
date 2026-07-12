@@ -53,7 +53,7 @@
       <div class="big-glyph">${h.data ? h.data.symbol : ''}</div>
       <div style="color:var(--gold-bright);font-size:17px;margin:4px 0">${h.data ? h.data.name : (h.upper.name + h.lower.name)}</div>
       <div style="font-family:monospace">${rows}</div>
-      <div class="muted">${h.upper.name}${h.upper.sym}上 ${h.lower.name}${h.lower.sym}下</div>
+      <div class="muted">${h.upper.name}${Icons.trigramSVG(h.upper.lines, { size: 14 })}上 ${h.lower.name}${Icons.trigramSVG(h.lower.lines, { size: 14 })}下</div>
     </div>`;
   }
 
@@ -86,8 +86,8 @@
       <hr class="divider">
       <div style="text-align:center">
         <span class="tag gold">第 ${dong} 爻動</span>
-        <span class="tag">體卦 ${ti.name}${ti.sym}（${ti.wx}）</span>
-        <span class="tag">用卦 ${yong.name}${yong.sym}（${yong.wx}）</span>
+        <span class="tag">體卦 ${ti.name}${Icons.trigramSVG(ti.lines, { size: 14 })}（${ti.wx}）</span>
+        <span class="tag">用卦 ${yong.name}${Icons.trigramSVG(yong.lines, { size: 14 })}（${yong.wx}）</span>
       </div>
       <div style="text-align:center;margin-top:8px">
         <span class="fortune-level ${App.fortuneClass(ty.level)}">${ty.level}</span>
@@ -122,7 +122,7 @@
 
   App.register({
     id: 'meihua',
-    icon: '☯',
+    icon: Icons.svg('meihua'),
     title: '梅花易數',
     desc: '時間起卦或數字起卦，觀本卦、互卦、變卦，以體用生剋斷吉凶。',
     render(el) {

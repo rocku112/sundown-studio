@@ -134,7 +134,7 @@
 
   App.register({
     id: 'hehun',
-    icon: '💑',
+    icon: Icons.svg('hehun'),
     title: '八字合婚',
     desc: '雙方八字生肖、夫妻宮、日主、五行、納音五重比對，附契合評分。',
     render(el) {
@@ -145,7 +145,7 @@
             <div class="hh-a" style="flex:1;min-width:280px">${personForm('甲方')}</div>
             <div class="hh-b" style="flex:1;min-width:280px">${personForm('乙方')}</div>
           </div>
-          <button class="btn" id="hh-go" style="margin-top:14px">💑 合 婚</button>
+          <button class="btn" id="hh-go" style="margin-top:14px">${Icons.svg('hehun')} 合 婚</button>
           <p class="muted" style="margin-top:8px">依傳統合婚法比對；出生時辰不確定可先填 12 時（僅影響時柱五行統計，不影響主要判斷）。</p>
         </div>
         <div id="hh-result"></div>`;

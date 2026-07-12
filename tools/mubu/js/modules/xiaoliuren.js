@@ -110,7 +110,7 @@
 
   App.register({
     id: 'xiaoliuren',
-    icon: '🤞',
+    icon: Icons.svg('xiaoliuren'),
     title: '小六壬',
     desc: '諸葛掐指神算，月日時三宮起課，大安留連速喜赤口小吉空亡。',
     render(el) {

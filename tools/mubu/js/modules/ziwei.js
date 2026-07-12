@@ -179,7 +179,7 @@
       <div class="panel">
         <h3>輸入出生資料</h3>
         ${bf.html}
-        <button class="btn" id="zw-go" style="margin-top:14px">🌟 排 盤</button>
+        <button class="btn" id="zw-go" style="margin-top:14px">${Icons.svg('ziwei')} 排 盤</button>
         <p class="muted" style="margin-top:8px">請填國曆生日，系統自動換算農曆（閏月以本月計）。安星依中州派通行規則。</p>
       </div>
       <div id="zw-result"></div>`;
@@ -301,7 +301,7 @@ ${c.nowYear}年流年命宮在${Ganzhi.ZHI[c.liunianZhi]}；流年（${c.liunian
 
   App.register({
     id: 'ziwei',
-    icon: '🌟',
+    icon: Icons.svg('ziwei'),
     title: '紫微斗數',
     desc: '安命身宮、十四主星、輔煞諸星、生年四化，完整十二宮命盤。',
     render

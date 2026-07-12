@@ -28,6 +28,11 @@
   const signOf = (lon) => SIGNS[Math.floor(Astro.norm360(lon) / 30)];
   const elemOf = (lon) => ELEM[Math.floor(Astro.norm360(lon) / 30)];
   const modeOf = (lon) => MODE[Math.floor(Astro.norm360(lon) / 30)];
+  const ZODIAC_ICON_ORDER = ['aries', 'taurus', 'gemini', 'cancer', 'leo', 'virgo', 'libra', 'scorpio', 'sagittarius', 'capricorn', 'aquarius', 'pisces'];
+  const ASPECT_ICON = { 合相: 'conjunction', 六分相: 'sextile', 四分相: 'square', 三分相: 'trine', 對分相: 'opposition' };
+  const zodiacIconOf = (lon, opts) => Icons.svg(ZODIAC_ICON_ORDER[Math.floor(Astro.norm360(lon) / 30)], opts || { size: 14 });
+  const planetIcon = (p, opts) => Icons.svg(p.id, opts || { size: 15 });
+  const aspectIcon = (asp, opts) => Icons.svg(ASPECT_ICON[asp.name], opts || { size: 13 });
 
   // 依交互相位的行星組合分類，判定關係主要調性
   function relationType(inter) {
@@ -125,7 +130,7 @@
 
   App.register({
     id: 'synastry',
-    icon: '💞',
+    icon: Icons.svg('synastry'),
     title: '占星合盤',
     desc: '雙人星盤互相位分析，日月金火加權，測你們的天體化學反應。',
     render(el) {
@@ -136,7 +141,7 @@
             <div class="sy-a" style="flex:1;min-width:280px"><h4 style="margin-top:0">你</h4>${personForm()}</div>
             <div class="sy-b" style="flex:1;min-width:280px"><h4 style="margin-top:0">對方</h4>${personForm()}</div>
           </div>
-          <button class="btn" id="sy-go" style="margin-top:14px">💞 合 盤</button>
+          <button class="btn" id="sy-go" style="margin-top:14px">${Icons.svg('synastry')} 合 盤</button>
           <p class="muted" style="margin-top:8px">分析七大行星的交互相位（Synastry）；時間不確定填 12 時即可（月亮誤差最大約 ±7°）。</p>
         </div>
         <div id="sy-result"></div>`;
@@ -152,7 +157,7 @@
         const color = r.score >= 72 ? 'var(--gold-deep)' : r.score >= 45 ? 'var(--ink-dim)' : 'var(--cinnabar)';
 
         const row = (x) => `<div class="aspect" style="margin-top:8px;display:flex;justify-content:space-between;gap:10px;border-left:3px solid ${x.pts > 0 ? 'var(--gold-mid)' : 'var(--cinnabar)'}">
-          <span><b style="display:inline">你的${x.pa.sym}${x.pa.name} ${x.asp.sym} 對方的${x.pb.sym}${x.pb.name}</b>
+          <span><b style="display:inline">你的${planetIcon(x.pa)}${x.pa.name} ${aspectIcon(x.asp)} 對方的${planetIcon(x.pb)}${x.pb.name}</b>
           <span class="muted">（${x.asp.name}，差${x.orb}°）</span>
           ${x.isLuminaryPair ? '<span class="tag gold">日月相位・靈魂級</span>' : ''}${x.isVenusMars ? '<span class="tag gold">金火相位・來電</span>' : ''}</span>
           <b style="color:${x.pts > 0 ? 'var(--gold-deep)' : 'var(--cinnabar)'}">${x.pts > 0 ? '+' : ''}${x.pts}</b></div>`;
@@ -160,7 +165,7 @@
         const div = document.createElement('div');
         div.innerHTML = `<div class="panel result">
           <div style="text-align:center">
-            <div class="muted">你 ${A.y}/${A.m}/${A.d}（☉${signOf(r.ca[0].lon)} ☽${signOf(r.ca[1].lon)}）× 對方 ${B.y}/${B.m}/${B.d}（☉${signOf(r.cb[0].lon)} ☽${signOf(r.cb[1].lon)}）</div>
+            <div class="muted">你 ${A.y}/${A.m}/${A.d}（${Icons.svg('sun', { size: 14 })}${signOf(r.ca[0].lon)} ${Icons.svg('moon', { size: 14 })}${signOf(r.ca[1].lon)}）× 對方 ${B.y}/${B.m}/${B.d}（${Icons.svg('sun', { size: 14 })}${signOf(r.cb[0].lon)} ${Icons.svg('moon', { size: 14 })}${signOf(r.cb[1].lon)}）</div>
             <div style="font-size:56px;font-weight:700;color:${color};line-height:1.4">${r.score}<span style="font-size:20px">分</span></div>
             <span class="fortune-level ${r.score >= 72 ? 'good' : r.score >= 45 ? 'mid' : 'bad'}">${r.grade}</span>
             <div style="margin-top:6px"><span class="tag gold">${r.relType.name}</span><span class="tag">你主${r.domA}象 × 對方主${r.domB}象（${r.elemGood ? '相容' : '互異'}）</span><span class="tag">你${r.modeA}／對方${r.modeB}</span><span class="tag">${r.inter.length} 組交互相位</span></div>

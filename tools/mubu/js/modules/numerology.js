@@ -92,7 +92,7 @@
           <div class="field"><label>手機／電話號碼</label>
             <input id="nu-phone" placeholder="0912345678" style="width:220px" inputmode="numeric"></div>
         </div>
-        <button class="btn" id="nu-go" style="margin-top:14px">🔢 分析</button>
+        <button class="btn" id="nu-go" style="margin-top:14px">${Icons.svg('numerology')} 分析</button>
         <p class="muted" style="margin-top:8px">生命靈數＝出生年月日數字相加至個位（含大師數 11/22/33）；手機能量依河洛八星磁場配對，末碼影響最大。</p>
       </div>
       <div id="nu-result"></div>`;
@@ -165,7 +165,7 @@
 
   App.register({
     id: 'numerology',
-    icon: '🔢',
+    icon: Icons.svg('numerology'),
     title: '數字能量',
     desc: '西方生命靈數（含大師數）＋手機號碼八星磁場，一次看懂你的數字。',
     render

@@ -161,8 +161,8 @@
         <div style="text-align:center">
           <div style="font-size:15px;color:var(--ink-dim)">${y} 年 ${m} 月 · 星期${week}</div>
           <div style="font-size:56px;color:var(--gold-bright);line-height:1.3">${d}</div>
-          <div style="font-size:17px">農曆 ${lunar.monthName}${lunar.dayName} ${phase.emoji}</div>
-          ${fests.length ? `<div style="margin-top:4px">${fests.map(f => `<span class="tag" style="color:var(--cinnabar);border-color:rgba(176,48,32,.4);background:rgba(176,48,32,.06)">🎉 ${f}</span>`).join('')}</div>` : ''}
+          <div style="font-size:17px">農曆 ${lunar.monthName}${lunar.dayName} ${phase.icon}</div>
+          ${fests.length ? `<div style="margin-top:4px">${fests.map(f => `<span class="tag" style="color:var(--cinnabar);border-color:rgba(176,48,32,.4);background:rgba(176,48,32,.06)">${Icons.svg('festival')} ${f}</span>`).join('')}</div>` : ''}
           <div class="muted" style="margin-top:4px">${yp.name}${yp.shengxiao}年 · ${mp.name}月 · ${dp.name}日（${dp.nayin}）</div>
           <div class="muted">${termNote}</div>
         </div>
@@ -202,7 +202,7 @@
 
   App.register({
     id: 'almanac',
-    icon: '📅',
+    icon: Icons.svg('almanac'),
     title: '農民曆',
     desc: '每日干支、農曆節氣、建除宜忌、沖煞方位、黃道吉時。',
     render

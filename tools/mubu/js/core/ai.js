@@ -112,15 +112,15 @@ const AI = (() => {
       const tools = document.createElement('div');
       tools.className = 'result-tools';
       tools.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap';
-      tools.innerHTML = `<button class="btn small ghost t-share">📸 存成分享圖</button>
-        <button class="btn small ghost t-save">💾 存入紀錄</button>`;
+      tools.innerHTML = `<button class="btn small ghost t-share">${Icons.svg('share')} 存成分享圖</button>
+        <button class="btn small ghost t-save">${Icons.svg('save')} 存入紀錄</button>`;
       tools.querySelector('.t-share').addEventListener('click', () => {
         Extras.shareImage(container, (window.App && App.currentTitle && App.currentTitle()) || '占卜結果');
       });
       tools.querySelector('.t-save').addEventListener('click', (e) => {
         Extras.saveHistory(location.hash.replace(/^#\//, ''), (window.App && App.currentTitle && App.currentTitle()) || '占卜結果', container);
-        e.target.textContent = '✅ 已存入紀錄';
-        setTimeout(() => { e.target.textContent = '💾 存入紀錄'; }, 1600);
+        e.target.innerHTML = `${Icons.svg('check')} 已存入紀錄`;
+        setTimeout(() => { e.target.innerHTML = `${Icons.svg('save')} 存入紀錄`; }, 1600);
       });
       container.appendChild(tools);
     }
@@ -129,7 +129,7 @@ const AI = (() => {
     box.className = 'ai-box';
     box.innerHTML = `
       <div class="ai-head">
-        <b>🔮 AI 深度解讀</b>
+        <b>${Icons.svg('ai')} AI 深度解讀</b>
         <button class="btn small ai-go">開始解讀</button>
         <span class="muted ai-hint"></span>
       </div>
@@ -206,7 +206,7 @@ const AI = (() => {
     mask.className = 'modal-mask';
     mask.innerHTML = `
       <div class="modal">
-        <h3>⚙ AI 解讀設定</h3>
+        <h3>${Icons.svg('settings')} AI 解讀設定</h3>
         <p class="muted">本站排盤與基本解讀完全免費。若想要 AI 深度整合解讀，請填入自己的 API Key —— Key 只儲存在<b>你自己的瀏覽器</b>（localStorage），不會傳給本站或任何第三方，呼叫 API 的費用由你的帳戶支付。</p>
         <div class="field">
           <label>AI 服務</label>

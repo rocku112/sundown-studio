@@ -10,13 +10,15 @@
     { name: '水瓶座', sym: '♒', elem: '風', s: 121, e: 218 }, { name: '雙魚座', sym: '♓', elem: '水', s: 219, e: 320 }
   ];
   const signByDate = (m, d) => { const v = m * 100 + d; return SIGNS.find(s => s.name === '摩羯座' && (v >= 1222 || v <= 120)) || SIGNS.find(s => v >= s.s && v <= s.e) || SIGNS[9]; };
+  const ZODIAC_ICON_ORDER = ['aries', 'taurus', 'gemini', 'cancer', 'leo', 'virgo', 'libra', 'scorpio', 'sagittarius', 'capricorn', 'aquarius', 'pisces'];
+  const zodiacIcon = (sign, opts) => Icons.svg(ZODIAC_ICON_ORDER[SIGNS.indexOf(sign)], opts || { size: 14 });
   const zhiRel = (a, b) => Ganzhi.zhiRelation(a, b);
 
   // 依關係給星等與短評
   function starOf(rel) {
     return ({ 六合: 5, 三合: 5, 同支: 4, 平: 3, 六害: 2, 相刑: 2, 自刑: 2, 六沖: 1 })[rel.type] || 3;
   }
-  const starBar = (n) => '★'.repeat(n) + '☆'.repeat(5 - n);
+  const starBar = (n) => Icons.starBarHTML(n);
   const lucky = { 1: '大凶', 2: '小凶', 3: '平', 4: '吉', 5: '大吉' };
 
   // 依分數（1-5）給四面向短語（deterministic，用星等挑）
@@ -128,7 +130,7 @@
           <div class="field"><label>國曆生日（看星座）</label>
             <input type="number" class="ft-m" value="1" min="1" max="12" style="width:64px" placeholder="月">
             <input type="number" class="ft-d" value="1" min="1" max="31" style="width:64px" placeholder="日"></div>
-          <button class="btn small" id="ft-go" style="align-self:flex-end">🌟 看運勢</button>
+          <button class="btn small" id="ft-go" style="align-self:flex-end">${Icons.svg('fortune')} 看運勢</button>
         </div>
         <p class="muted" style="margin-top:8px">生肖以立春為界；星座以國曆生日。每日運勢依當日干支與月亮實際過境計算（同一天結果固定）。</p>
       </div>
@@ -159,7 +161,7 @@
           <div class="muted">${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()} ${dp.name}日</div>
         </div>
         <hr class="divider">
-        <h4>🐾 生肖今日（屬${SHENGXIAO[zhiIdx]}）<span class="muted" style="font-weight:400">　今日${dp.zhi}日與你生肖${zd.rel.type}</span></h4>
+        <h4>${Icons.svg('paw')} 生肖今日（屬${SHENGXIAO[zhiIdx]}）<span class="muted" style="font-weight:400">　今日${dp.zhi}日與你生肖${zd.rel.type}</span></h4>
         <div style="text-align:center;margin:6px 0"><span class="fortune-level ${zd.overall >= 4 ? 'good' : zd.overall <= 2 ? 'bad' : 'mid'}">${starBar(zd.overall)} ${lucky[zd.overall]}</span></div>
         <div class="aspect-grid">
           ${aspectBlock('事業', zd.career, ADVICE.career[zd.career])}
@@ -168,14 +170,14 @@
           ${aspectBlock('健康', zd.health, ADVICE.health[zd.health])}
         </div>
         <h4 style="margin-top:16px">🌙 星座今日（${sign.name}）</h4>
-        <p>${starBar(ad.star)} ${lucky[ad.star]}　<span class="muted">今日月亮在${ad.moonSign.sym}${ad.moonSign.name}</span></p>
+        <p>${starBar(ad.star)} ${lucky[ad.star]}　<span class="muted">今日月亮在${zodiacIcon(ad.moonSign)}${ad.moonSign.name}</span></p>
         <p>${ad.note}</p>
         <hr class="divider">
         <h4>📅 ${now.getFullYear()} 生肖流年（屬${SHENGXIAO[zhiIdx]}）</h4>
         <p><span class="tag ${zy.good === false ? '' : 'gold'}" ${zy.good === false ? 'style="color:var(--cinnabar)"' : ''}>${zy.title}</span></p>
         <p>${zy.text}</p>
         <h4>🪐 ${now.getFullYear()} 星座流年（${sign.name}）</h4>
-        <p>${starBar(ay.star)}　<span class="muted">流年木星在${ay.jupSign.sym}${ay.jupSign.name}</span></p>
+        <p>${starBar(ay.star)}　<span class="muted">流年木星在${zodiacIcon(ay.jupSign)}${ay.jupSign.name}</span></p>
         <p>${ay.note}</p>
         <p class="muted" style="margin-top:10px">※ 每日運勢每天更新（依當日天象計算）；此為概略指引，個人詳批請看八字或紫微命盤。</p>
       </div>`;
@@ -194,7 +196,7 @@ ${now.getFullYear()}流年：生肖${zy.title}，木星在${ay.jupSign.name}
 
   App.register({
     id: 'fortune',
-    icon: '🌟',
+    icon: Icons.svg('fortune'),
     title: '每日運勢',
     desc: '生肖＋星座的今日與流年運勢，依當日干支與月亮實際過境計算。',
     render

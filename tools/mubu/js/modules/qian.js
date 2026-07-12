@@ -44,7 +44,7 @@
 
   App.register({
     id: 'qian',
-    icon: '🎋',
+    icon: Icons.svg('qian'),
     title: '求籤',
     desc: '默念所求，誠心抽一支日落靈籤，六十籤藏人生百味。',
     render(el) {
@@ -54,8 +54,8 @@
           <div class="field" style="margin:0 auto 14px;max-width:420px">
             <input class="qq-q" placeholder="心中所問（可留空）" style="width:100%;text-align:center">
           </div>
-          <div id="qq-tube" style="font-size:72px;transition:transform .1s">🏮</div>
-          <button class="btn" id="qq-draw" style="margin-top:10px">🎋 求 籤</button>
+          <div id="qq-tube" style="transition:transform .1s;color:var(--gold-mid)">${Icons.svg('qian', { size: 72 })}</div>
+          <button class="btn" id="qq-draw" style="margin-top:10px">${Icons.svg('qian')} 求 籤</button>
         </div>
         <div id="qq-result"></div>`;
       const tube = el.querySelector('#qq-tube');

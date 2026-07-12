@@ -21,9 +21,9 @@ const App = (() => {
       <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center">
         <div style="text-align:center;min-width:120px">
           <div class="muted">${n.getFullYear()}/${n.getMonth() + 1}/${n.getDate()} 週${week}</div>
-          <div style="font-size:26px;color:var(--navy);font-weight:700">${info.lunar.monthName}${info.lunar.dayName} ${info.phase.emoji}</div>
+          <div style="font-size:26px;color:var(--navy);font-weight:700">${info.lunar.monthName}${info.lunar.dayName} ${info.phase.icon}</div>
           <div class="muted">${info.yp.name}年 ${info.dp.name}日</div>
-          ${info.fests.length ? `<div style="color:var(--cinnabar);font-size:13px">🎉 ${info.fests.join('、')}</div>` : ''}
+          ${info.fests.length ? `<div style="color:var(--cinnabar);font-size:13px">${Icons.svg('festival')} ${info.fests.join('、')}</div>` : ''}
         </div>
         <div style="flex:1;min-width:220px">
           <div><span class="tag gold">${info.jc.name}日</span><span class="tag">沖${Ganzhi.SHENGXIAO[info.chongZhi]}</span><span class="tag ${info.xiuGood ? 'gold' : ''}">${info.xiu}宿</span></div>
@@ -43,7 +43,7 @@ const App = (() => {
     const el = $main();
     el.innerHTML = `
       <header class="site">
-        <span class="taiji">☯</span>
+        <span class="taiji">${Icons.svg('meihua', { size: 44 })}</span>
         <h1>暮卜先知</h1>
         <div class="sub">日暮觀星 · 未卜先知</div>
         <div class="free-badge">完全免費 · 無需註冊 · 排盤全在你的瀏覽器運算</div>
@@ -134,7 +134,7 @@ const App = (() => {
     // 設定按鈕
     const fab = document.createElement('button');
     fab.className = 'settings-fab';
-    fab.textContent = '⚙ 設定';
+    fab.innerHTML = `${Icons.svg('settings')} 設定`;
     fab.addEventListener('click', () => AI.openSettings());
     document.body.appendChild(fab);
 

@@ -1,5 +1,6 @@
 /* 暮卜先知 · 塔羅牌 */
 (() => {
+  const RANK_LABEL = { 1: 'A', 2: '2', 3: '3', 4: '4', 5: '5', 6: '6', 7: '7', 8: '8', 9: '9', 10: '10', page: '侍', knight: '騎', queen: '后', king: '王' };
   const SPREADS = [
     { id: 'one', name: '單張指引', n: 1, slots: () => ['指引'] },
     { id: 'yesno', name: '是非牌陣（快問快答）', n: 1, yesno: true, slots: () => ['是非'] },
@@ -24,7 +25,7 @@
   function cardMetaHTML(p) {
     const c = p.card;
     const kw = p.reversed ? c.keywordsRev : c.keywordsUp;
-    return `<span class="emoji">${c.emoji}</span>
+    return `<span class="emoji">${Icons.tarotCardIcon(c)}${c.suit ? `<b class="rank-badge">${RANK_LABEL[c.rank] || ''}</b>` : ''}</span>
       <span class="cname">${c.name}</span>
       <span class="pos-label ${p.reversed ? 'rev' : ''}">${p.reversed ? '逆位' : '正位'}</span>
       <div class="muted" style="font-size:11px;margin-top:4px">${kw.slice(0, 3).join('・')}</div>`;
@@ -60,13 +61,13 @@
 
   App.register({
     id: 'tarot',
-    icon: '🃏',
+    icon: Icons.svg('tarot'),
     title: '塔羅牌',
     desc: '韋特七十八牌，單張／是非／愛情／二選一／時間之流／凱爾特十字牌陣，附每日指引卡。',
     render(el) {
       el.innerHTML = `
         <div class="panel" style="margin-bottom:12px">
-          <h3>🌞 今日指引卡</h3>
+          <h3>${Icons.svg('fortune')} 今日指引卡</h3>
           <p class="muted" style="margin-top:-4px;margin-bottom:10px">每天固定一張，明天會換新的一張。</p>
           <div id="tr-daily"></div>
         </div>
@@ -85,7 +86,7 @@
             <div class="field"><label>選項 A</label><input class="tr-opt-a" placeholder="例：留在現職" style="width:100%"></div>
             <div class="field"><label>選項 B</label><input class="tr-opt-b" placeholder="例：換新工作" style="width:100%"></div>
           </div>
-          <button class="btn" id="tr-go" style="margin-top:12px">🔮 洗牌抽牌</button>
+          <button class="btn" id="tr-go" style="margin-top:12px">${Icons.svg('tarot')} 洗牌抽牌</button>
         </div>
         <div id="tr-result"></div>`;
 

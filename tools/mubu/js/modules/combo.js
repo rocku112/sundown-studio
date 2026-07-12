@@ -25,7 +25,7 @@
       <div class="panel">
         <h3>輸入出生資料</h3>
         ${bf.html}
-        <button class="btn" id="cb-go" style="margin-top:14px">🔮 三盤合參</button>
+        <button class="btn" id="cb-go" style="margin-top:14px">${Icons.svg('combo')} 三盤合參</button>
         <p class="muted" style="margin-top:8px">同時排出八字、紫微斗數、西洋占星三套命盤，交叉比對三個體系對同一個「你」的描繪。這是 AI 深度解讀最有價值的地方——三盤互相印證。</p>
       </div>
       <div id="cb-result"></div>`;
@@ -63,15 +63,15 @@
         <h3>三盤總覽</h3>
         <div class="muted" style="text-align:center">國曆 ${b.y}/${b.m}/${b.d} ${String(b.hh).padStart(2, '0')}:${String(b.mi).padStart(2, '0')} · 農曆${lunar.lunarYear}年${lunar.monthName}${lunar.dayName} · ${b.gender === 'M' ? '男' : '女'}命</div>
         <div class="aspect-grid" style="margin-top:14px">
-          <div class="aspect"><b>🀄 八字</b>
+          <div class="aspect"><b>${Icons.svg('bazi')} 八字</b>
             四柱：${p.year.name}・${p.month.name}・${p.day.name}・${p.hour.name}<br>
             日主 <b>${p.day.gan}${p.day.ganWx}</b> · 屬${p.year.shengxiao}<br>
             五行：${Object.entries(wx).map(([k, v]) => `${k}${v}`).join(' ')}${missing.length ? `（缺${missing.join('、')}）` : ''}</div>
-          <div class="aspect"><b>🌟 紫微斗數</b>
+          <div class="aspect"><b>${Icons.svg('ziwei')} 紫微斗數</b>
             ${zw.juName}，命宮在${Ganzhi.ZHI[zw.mingIdx]}<br>
             命宮主星：<b>${mingStars.join('、') || '無'}</b>${borrowed ? '（借對宮）' : ''}<br>
             身宮在${Ganzhi.ZHI[zw.shenIdx]}</div>
-          <div class="aspect"><b>🪐 西洋占星</b>
+          <div class="aspect"><b>${Icons.svg('astrology')} 西洋占星</b>
             太陽 <b>${sunSign}</b> · 月亮 <b>${moonSign}</b><br>
             上升 ${ascSign}（依台北）<br>
             金星${venusSign} · 火星${marsSign}</div>
@@ -107,7 +107,7 @@
 
   App.register({
     id: 'combo',
-    icon: '🔮',
+    icon: Icons.svg('combo'),
     title: '三合一綜合命盤',
     desc: '八字＋紫微斗數＋西洋占星同時排盤，三個體系交叉印證，AI 整合解讀。',
     wide: true,

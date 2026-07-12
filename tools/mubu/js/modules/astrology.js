@@ -62,6 +62,11 @@
     { angle: 120, orb: 6, name: '三分相', sym: '△', good: true },
     { angle: 180, orb: 7, name: '對分相', sym: '☍', good: false }
   ];
+  const ZODIAC_ICON_ORDER = ['aries', 'taurus', 'gemini', 'cancer', 'leo', 'virgo', 'libra', 'scorpio', 'sagittarius', 'capricorn', 'aquarius', 'pisces'];
+  const ASPECT_ICON = { 合相: 'conjunction', 六分相: 'sextile', 四分相: 'square', 三分相: 'trine', 對分相: 'opposition' };
+  const zodiacIcon = (sign, opts) => Icons.svg(ZODIAC_ICON_ORDER[SIGNS.indexOf(sign)], opts || { size: 16 });
+  const planetIcon = (p, opts) => Icons.svg(p.id, opts || { size: 15 });
+  const aspectIcon = (asp, opts) => Icons.svg(ASPECT_ICON[asp.name], opts || { size: 13 });
   const HOUSE_MEAN = ['自我形象', '金錢價值', '溝通學習', '家庭根基', '創造戀愛', '工作健康', '伴侶關係', '共享轉化', '遠行信念', '事業成就', '朋友願景', '潛意識靈性'];
   // 城市（名稱、緯度、經度、時區）
   const CITIES = [
@@ -225,7 +230,7 @@
           <div class="field as-custom" style="display:none"><label>經度</label><input class="as-lon" type="number" step="0.01" value="121.51" style="width:90px"></div>
           <div class="field as-custom" style="display:none"><label>時區(UTC+)</label><input class="as-tz" type="number" step="0.5" value="8" style="width:80px"></div>
         </div>
-        <button class="btn" id="as-go" style="margin-top:14px">🪐 排星盤</button>
+        <button class="btn" id="as-go" style="margin-top:14px">${Icons.svg('astrology')} 排星盤</button>
         <p class="muted" style="margin-top:8px">宮位採 Placidus 制；海外城市請留意：時間請填出生地當地時間（未含日光節約時間，若出生於夏令期間請自行減 1 小時）。</p>
       </div>
       <div id="as-result"></div>`;
@@ -289,24 +294,24 @@
         真太陽時 ${String(tsH).padStart(2, '0')}:${String(tsM).padStart(2, '0')}（均時差 ${eot >= 0 ? '+' : ''}${eot.toFixed(1)} 分）· 宮位制：${pc.system}</div>
         ${wheelSVG(positions, pc.cusps, pc.asc, pc.mc)}
         <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin:12px 0">
-          <div class="aspect" style="text-align:center;min-width:130px"><b>☉ 太陽星座</b><span style="font-size:22px">${positions[0].sign.sym} ${positions[0].sign.name}</span></div>
-          <div class="aspect" style="text-align:center;min-width:130px"><b>☽ 月亮星座</b><span style="font-size:22px">${positions[1].sign.sym} ${positions[1].sign.name}</span></div>
-          <div class="aspect" style="text-align:center;min-width:130px"><b>↑ 上升星座</b><span style="font-size:22px">${ascSign.sym} ${ascSign.name}</span></div>
+          <div class="aspect" style="text-align:center;min-width:130px"><b>${Icons.svg('sun', { size: 16 })} 太陽星座</b><span style="font-size:22px">${zodiacIcon(positions[0].sign, { size: 22 })} ${positions[0].sign.name}</span></div>
+          <div class="aspect" style="text-align:center;min-width:130px"><b>${Icons.svg('moon', { size: 16 })} 月亮星座</b><span style="font-size:22px">${zodiacIcon(positions[1].sign, { size: 22 })} ${positions[1].sign.name}</span></div>
+          <div class="aspect" style="text-align:center;min-width:130px"><b>${Icons.svg('ascendant', { size: 16 })} 上升星座</b><span style="font-size:22px">${zodiacIcon(ascSign, { size: 22 })} ${ascSign.name}</span></div>
         </div>
         <table class="chart astro-table">
           <tr><th>行星</th><th>星座</th><th>度數</th><th>宮位</th><th>意涵</th></tr>
-          ${positions.map(p => `<tr><td>${p.sym} ${p.name}${p.retro ? ' <b style="color:var(--cinnabar)">℞</b>' : ''}</td><td>${p.sign.sym} ${p.sign.name}</td><td>${degInSign(p.lon)}</td><td>第${p.house}宮<span class="muted">（${HOUSE_MEAN[p.house - 1]}）</span></td><td class="muted">${p.mean}</td></tr>`).join('')}
-          <tr><td>↑ 上升</td><td>${ascSign.sym} ${ascSign.name}</td><td>${degInSign(pc.asc)}</td><td>第1宮首</td><td class="muted">外在形象與人生舞台入口</td></tr>
-          <tr><td>MC 天頂</td><td>${mcSign.sym} ${mcSign.name}</td><td>${degInSign(pc.mc)}</td><td>第10宮首</td><td class="muted">事業志向與社會成就</td></tr>
+          ${positions.map(p => `<tr><td>${planetIcon(p)} ${p.name}${p.retro ? ' <b style="color:var(--cinnabar)">℞</b>' : ''}</td><td>${zodiacIcon(p.sign)} ${p.sign.name}</td><td>${degInSign(p.lon)}</td><td>第${p.house}宮<span class="muted">（${HOUSE_MEAN[p.house - 1]}）</span></td><td class="muted">${p.mean}</td></tr>`).join('')}
+          <tr><td>${Icons.svg('ascendant', { size: 14 })} 上升</td><td>${zodiacIcon(ascSign)} ${ascSign.name}</td><td>${degInSign(pc.asc)}</td><td>第1宮首</td><td class="muted">外在形象與人生舞台入口</td></tr>
+          <tr><td>${Icons.svg('midheaven', { size: 14 })} MC 天頂</td><td>${zodiacIcon(mcSign)} ${mcSign.name}</td><td>${degInSign(pc.mc)}</td><td>第10宮首</td><td class="muted">事業志向與社會成就</td></tr>
         </table>
         <h4>宮首一覽（${pc.system}）</h4>
-        <p>${[1,2,3,4,5,6,7,8,9,10,11,12].map(h => `<span class="tag">${h}宮 ${signOf(pc.cusps[h]).sym}${degInSign(pc.cusps[h])}</span>`).join('')}</p>
+        <p>${[1,2,3,4,5,6,7,8,9,10,11,12].map(h => `<span class="tag">${h}宮 ${zodiacIcon(signOf(pc.cusps[h]), { size: 14 })}${degInSign(pc.cusps[h])}</span>`).join('')}</p>
         <h4>主要相位</h4>
-        <p>${aspList.length ? aspList.map(x => `<span class="tag ${x.asp.good === true ? 'gold' : ''}" ${x.asp.good === false ? 'style="color:var(--cinnabar)"' : ''}>${x.a.sym}${x.a.name} ${x.asp.sym} ${x.b.sym}${x.b.name}（差${x.orb}°）</span>`).join('') : '無明顯主要相位'}</p>
+        <p>${aspList.length ? aspList.map(x => `<span class="tag ${x.asp.good === true ? 'gold' : ''}" ${x.asp.good === false ? 'style="color:var(--cinnabar)"' : ''}>${planetIcon(x.a)}${x.a.name} ${aspectIcon(x.asp)} ${planetIcon(x.b)}${x.b.name}（差${x.orb}°）</span>`).join('') : '無明顯主要相位'}</p>
         <hr class="divider">
-        <h4>☉ 太陽${positions[0].sign.name}（第${positions[0].house}宮）—— 核心自我</h4><p>${positions[0].sign.trait}生命重心落在${HOUSE_MEAN[positions[0].house - 1]}的領域。</p>
-        <h4>☽ 月亮${positions[1].sign.name}（第${positions[1].house}宮）—— 內在情感</h4><p>${MOON_TRAIT[SIGNS.indexOf(positions[1].sign)]}內心層面在${HOUSE_MEAN[positions[1].house - 1]}的領域格外敏感、需要被滋養。</p>
-        <h4>↑ 上升${ascSign.name} —— 外在形象</h4><p>${ASC_TRAIT[SIGNS.indexOf(ascSign)]}</p>
+        <h4>${Icons.svg('sun', { size: 16 })} 太陽${positions[0].sign.name}（第${positions[0].house}宮）—— 核心自我</h4><p>${positions[0].sign.trait}生命重心落在${HOUSE_MEAN[positions[0].house - 1]}的領域。</p>
+        <h4>${Icons.svg('moon', { size: 16 })} 月亮${positions[1].sign.name}（第${positions[1].house}宮）—— 內在情感</h4><p>${MOON_TRAIT[SIGNS.indexOf(positions[1].sign)]}內心層面在${HOUSE_MEAN[positions[1].house - 1]}的領域格外敏感、需要被滋養。</p>
+        <h4>${Icons.svg('ascendant', { size: 16 })} 上升${ascSign.name} —— 外在形象</h4><p>${ASC_TRAIT[SIGNS.indexOf(ascSign)]}</p>
         <p style="margin-top:8px">星盤元素以<b style="color:var(--gold-bright)">${domElem}象</b>為主（火${elemCount.火}・土${elemCount.土}・風${elemCount.風}・水${elemCount.水}）。${positions.filter(p => p.retro).length ? `逆行行星：${positions.filter(p => p.retro).map(p => p.name).join('、')}——逆行處課題向內收斂，宜回顧再出發。` : ''}</p>
       </div>`;
       resEl.appendChild(div);
@@ -326,7 +331,7 @@ ${positions.map(p => `${p.name}：${p.sign.name} ${degInSign(p.lon)}，第${p.ho
 
   App.register({
     id: 'astrology',
-    icon: '🪐',
+    icon: Icons.svg('astrology'),
     title: '西洋占星',
     desc: 'Placidus 宮位制、SVG 星盤、十大行星逆行標示、真太陽時。',
     render

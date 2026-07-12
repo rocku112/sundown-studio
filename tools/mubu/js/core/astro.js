@@ -310,16 +310,17 @@ const Astro = (() => {
     const T = (jd - 2451545.0) / 36525;
     const D = norm360(297.8501921 + 445267.1114034 * T - 0.0018819 * T * T) ; // 月日距角（平）
     const phase = D / 360; // 0=朔 0.5=望
-    let name, emoji;
-    if (phase < 0.03 || phase > 0.97) { name = '新月'; emoji = '🌑'; }
-    else if (phase < 0.22) { name = '眉月'; emoji = '🌒'; }
-    else if (phase < 0.28) { name = '上弦月'; emoji = '🌓'; }
-    else if (phase < 0.47) { name = '盈凸月'; emoji = '🌔'; }
-    else if (phase < 0.53) { name = '滿月'; emoji = '🌕'; }
-    else if (phase < 0.72) { name = '虧凸月'; emoji = '🌖'; }
-    else if (phase < 0.78) { name = '下弦月'; emoji = '🌗'; }
-    else { name = '殘月'; emoji = '🌘'; }
-    return { phase, name, emoji };
+    let name;
+    if (phase < 0.03 || phase > 0.97) { name = '新月'; }
+    else if (phase < 0.22) { name = '眉月'; }
+    else if (phase < 0.28) { name = '上弦月'; }
+    else if (phase < 0.47) { name = '盈凸月'; }
+    else if (phase < 0.53) { name = '滿月'; }
+    else if (phase < 0.72) { name = '虧凸月'; }
+    else if (phase < 0.78) { name = '下弦月'; }
+    else { name = '殘月'; }
+    const icon = (typeof Icons !== 'undefined') ? Icons.moonPhaseSVG(phase, { size: 18 }) : '';
+    return { phase, name, icon };
   }
 
   // ---------- 行星黃經（西洋占星用，Meeus 截斷級數） ----------

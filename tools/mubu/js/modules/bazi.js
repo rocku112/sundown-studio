@@ -101,7 +101,7 @@
       <div class="panel">
         <h3>輸入出生資料</h3>
         ${bf.html}
-        <button class="btn" id="bz-go" style="margin-top:14px">🀄 排 盤</button>
+        <button class="btn" id="bz-go" style="margin-top:14px">${Icons.svg('bazi')} 排 盤</button>
         <p class="muted" style="margin-top:8px">請填國曆（西元）生日；年柱以立春為界、月柱以節氣為界，皆為即時天文計算。</p>
       </div>
       <div id="bz-result"></div>`;
@@ -215,7 +215,7 @@
 
   App.register({
     id: 'bazi',
-    icon: '🀄',
+    icon: Icons.svg('bazi'),
     title: '八字命理',
     desc: '四柱排盤、十神藏干、五行喜忌、大運走勢，天文級節氣精度。',
     render

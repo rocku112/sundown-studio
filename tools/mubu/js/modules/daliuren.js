@@ -195,7 +195,7 @@
           <div class="field" style="flex:1"><label>所問之事</label><input class="dl-q" placeholder="例：這件事能成嗎？" style="width:100%"></div>
           <div class="field"><label>問類</label><select class="dl-cat">${QCATS.map(c => `<option>${c}</option>`).join('')}</select></div>
         </div>
-        <button class="btn" id="dl-go">🎴 以此刻起課</button>
+        <button class="btn" id="dl-go">${Icons.svg('daliuren')} 以此刻起課</button>
         <p class="muted" style="margin-top:10px">大六壬以「月將加時」布天地盤，立四課、發三傳、加十二天將。月將依中氣、時辰依此刻。</p>
       </div>
       <div id="dl-result"></div>`;
@@ -280,7 +280,7 @@ ${q.courses.map((c, i) => `${c.label}：上${ZHI[c.u]}(${JIANG[c.u]}/${q.tjOf[c.
 
   App.register({
     id: 'daliuren',
-    icon: '🎴',
+    icon: Icons.svg('daliuren'),
     title: '大六壬',
     desc: '月將加時布天地盤，四課三傳、十二天將，占事精微的帝王之學。',
     render

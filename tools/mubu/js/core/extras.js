@@ -95,7 +95,7 @@ const Extras = (() => {
   // 歷史紀錄頁
   App.register({
     id: 'history',
-    icon: '📜',
+    icon: Icons.svg('history'),
     title: '占卜紀錄',
     desc: '你存下的占卜結果都在這（僅存於本機瀏覽器，最多 100 筆）。',
     render(el) {
@@ -104,9 +104,9 @@ const Extras = (() => {
         el.innerHTML = `
           <div class="panel">
             <h3>歷史紀錄（${list.length} 筆）</h3>
-            ${list.length ? '' : '<p class="muted">還沒有紀錄。占卜後點結果下方的「💾 存入紀錄」即可保存。</p>'}
+            ${list.length ? '' : `<p class="muted">還沒有紀錄。占卜後點結果下方的「${Icons.svg('save')} 存入紀錄」即可保存。</p>`}
             <div id="hist-list"></div>
-            ${list.length ? '<button class="btn small ghost" id="hist-clear" style="margin-top:12px">🗑 清空全部</button>' : ''}
+            ${list.length ? `<button class="btn small ghost" id="hist-clear" style="margin-top:12px">${Icons.svg('trash')} 清空全部</button>` : ''}
           </div>`;
         const listEl = el.querySelector('#hist-list');
         for (const h of list) {

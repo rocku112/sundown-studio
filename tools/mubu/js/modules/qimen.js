@@ -151,7 +151,7 @@
           <label>所問之事（可留空）</label>
           <input class="qm-q" placeholder="例：這筆生意往哪個方向談有利？" style="width:100%">
         </div>
-        <button class="btn" id="qm-now">🌀 以此刻起局</button>
+        <button class="btn" id="qm-now">${Icons.svg('qimen')} 以此刻起局</button>
         <p class="muted" style="margin-top:10px">時家奇門，轉盤法，拆補三元。冬至後陽遁、夏至後陰遁，依節氣定局。</p>
       </div>
       <div id="qm-result"></div>`;
@@ -224,7 +224,7 @@ ${GRID.filter(g => g !== 5).map(g => `${GONG_INFO[g].name}（${GONG_INFO[g].dir}
 
   App.register({
     id: 'qimen',
-    icon: '🌀',
+    icon: Icons.svg('qimen'),
     title: '奇門遁甲',
     desc: '時家轉盤奇門，九星八門八神，值符值使，趨吉避凶問方位。',
     render

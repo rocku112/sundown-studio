@@ -373,7 +373,7 @@
 
   App.register({
     id: 'naming',
-    icon: '✍️',
+    icon: Icons.svg('naming'),
     title: '姓名學取名',
     desc: '三才五格＋81數理＋生肖＋八字喜用＋易卦＋音靈讀音，五派合參取名／詳批。',
     render(el) {
