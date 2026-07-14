@@ -1,0 +1,12 @@
+# 暮卜先知 · Gemini 共用額度中介層 · Cloudflare Worker 設定檔
+#
+# 部署流程（在這個資料夾底下執行）：
+#   1. npx wrangler login              → 瀏覽器跳出授權，登入/註冊 Cloudflare 帳號
+#   2. npx wrangler secret put GEMINI_API_KEY  → 貼上你的 Gemini API Key（aistudio.google.com/apikey 申請）
+#   3. npx wrangler deploy              → 部署，完成後會印出你的 Worker 網址
+#
+# 部署完成後，把印出的網址填到 ../js/core/ai.js 裡的 SHARED_PROXY_URL 常數。
+
+name = "mubu-ai-proxy"
+main = "gemini-proxy.js"
+compatibility_date = "2025-01-01"

@@ -1,0 +1,20 @@
+{
+  "name": "mubu-ai-proxy",
+  "version": "1.0.0",
+  "description": "暮卜先知 · Gemini 共用免費額度中介層（Cloudflare Worker）",
+  "main": "gemini-proxy.js",
+  "private": true,
+  "scripts": {
+    "login": "wrangler login",
+    "set-key": "wrangler secret put GEMINI_API_KEY",
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "tail": "wrangler tail"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "wrangler": "^4.110.0"
+  }
+}
