@@ -133,6 +133,38 @@ const Ganzhi = (() => {
   const WX_SHENG = { 木: '火', 火: '土', 土: '金', 金: '水', 水: '木' }; // 我生
   const WX_KE = { 木: '土', 土: '水', 水: '火', 火: '金', 金: '木' };    // 我剋
 
+  // p: fourPillars；統計四柱天干地支的五行分佈
+  function wuxingCount(p) {
+    const count = { 木: 0, 火: 0, 土: 0, 金: 0, 水: 0 };
+    for (const key of ['year', 'month', 'day', 'hour']) {
+      count[p[key].ganWx]++;
+      count[p[key].zhiWx]++;
+    }
+    return count;
+  }
+
+  // 日主強弱（簡化：月令權重加倍，同我/生我為助）
+  function strength(p) {
+    const me = p.day.ganWx;
+    const shengMe = Object.entries(WX_SHENG).find(([, v]) => v === me)[0];
+    const keMe = Object.entries(WX_KE).find(([, v]) => v === me)[0]; // 剋我者（官殺）
+    let score = 0, total = 0;
+    const items = [
+      [p.year.ganWx, 1], [p.month.ganWx, 1], [p.hour.ganWx, 1],
+      [p.year.zhiWx, 1], [p.month.zhiWx, 2.5], [p.day.zhiWx, 1], [p.hour.zhiWx, 1]
+    ];
+    for (const [wx, w] of items) {
+      total += w;
+      if (wx === me || wx === shengMe) score += w;
+    }
+    const ratio = score / total;
+    const label = ratio >= 0.5 ? '偏強' : ratio >= 0.35 ? '中和' : '偏弱';
+    // 用神／忌神粗判：身強洩剋為用、印比為忌；身弱印比為用、官殺為忌；中和不特別忌
+    const like = label === '偏強' ? WX_SHENG[me] : (label === '偏弱' ? shengMe : me);
+    const avoid = label === '偏強' ? shengMe : (label === '偏弱' ? keMe : null);
+    return { ratio, label, shengMe, keMe, like, avoid };
+  }
+
   // ---------- 大運 ----------
   // 陽年男/陰年女順行，陰年男/陽年女逆行；起運歲數＝距節氣天數/3
   function luck(y, m, d, hh, gender, pillars) {
@@ -298,7 +330,7 @@ const Ganzhi = (() => {
 
   return {
     GAN, ZHI, SHENGXIAO, GAN_WUXING, ZHI_WUXING, GAN_YINYANG, ZHI_CANGGAN, NAYIN,
-    WX_SHENG, WX_KE,
+    WX_SHENG, WX_KE, wuxingCount, strength,
     pillar, idx60, dayPillar, yearPillar, monthPillar, hourPillar, fourPillars, tenGod, luck,
     branchRelations, tiaohou, yearlyFortune, monthlyFortune, zhiRelation, ganRelation
   };

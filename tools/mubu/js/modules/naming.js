@@ -113,20 +113,17 @@
     return s;
   }
 
-  // 喜用五行（同八字模組的簡化法）
+  // 喜用五行——與八字命理模組共用同一套判斷（強弱三分＋調候用神＋忌神），而非各自簡化
   function likeWxOf(y, m, d, hh) {
     const p = Ganzhi.fourPillars(y, m, d, hh);
-    const me = p.day.ganWx;
-    const shengMe = Object.entries(wxSheng).find(([k, v]) => v === me)[0];
-    let score = 0, total = 0;
-    for (const [wx, w] of [[p.year.ganWx, 1], [p.month.ganWx, 1], [p.hour.ganWx, 1], [p.year.zhiWx, 1], [p.month.zhiWx, 2.5], [p.day.zhiWx, 1], [p.hour.zhiWx, 1]]) {
-      total += w;
-      if (wx === me || wx === shengMe) score += w;
-    }
-    const strong = score / total >= 0.5;
-    const wxCount = { 木: 0, 火: 0, 土: 0, 金: 0, 水: 0 };
-    for (const k of ['year', 'month', 'day', 'hour']) { wxCount[p[k].ganWx]++; wxCount[p[k].zhiWx]++; }
-    return { like: strong ? wxSheng[me] : shengMe, strong, pillars: p, wxCount, missing: Object.entries(wxCount).filter(([k, v]) => v === 0).map(([k]) => k) };
+    const str = Ganzhi.strength(p);
+    const wxCount = Ganzhi.wuxingCount(p);
+    const th = Ganzhi.tiaohou(p.day.ganIdx, p.month.zhiIdx);
+    return {
+      like: str.like, avoid: str.avoid, label: str.label, strong: str.label === '偏強',
+      tiaohou: th, pillars: p, wxCount,
+      missing: Object.entries(wxCount).filter(([, v]) => v === 0).map(([k]) => k)
+    };
   }
 
   function gridsHTML(g, surname, name) {
@@ -322,8 +319,13 @@
     }
     // 三才
     max += 15; s += g.sancaiGood ? 15 : (g.tr.good || g.rd.good ? 8 : 2);
-    // 八字喜用配合
-    if (birth && chars.length) { max += 10; s += chars.some(c => c.wx === birth.like) ? 10 : (chars.some(c => birth.missing.includes(c.wx)) ? 6 : 3); }
+    // 八字喜用配合（與八字命理模組同一套強弱判斷；命中忌神扣分）
+    if (birth && chars.length) {
+      max += 10;
+      const hitsLike = chars.some(c => c.wx === birth.like);
+      const hitsAvoid = birth.avoid && chars.some(c => c.wx === birth.avoid);
+      s += hitsAvoid ? (hitsLike ? 5 : 0) : (hitsLike ? 10 : (chars.some(c => birth.missing.includes(c.wx)) ? 6 : 3));
+    }
     const score = Math.round(s / max * 100);
     const grade = score >= 88 ? '上上・大吉' : score >= 76 ? '上吉' : score >= 62 ? '中上' : score >= 48 ? '中平' : '偏弱・宜斟酌';
     return { score, grade };
@@ -352,7 +354,7 @@
     let tips = [];
     if (bad.length) tips.push(`${bad.join('、')}落凶數，建議改名時調整名字筆畫，使人格、總格落於吉數（如 11、13、15、16、21、23、24、25、31、33 等）。`);
     if (!g.sancaiGood) tips.push('三才有相剋，可挑選五行相生的用字調和（讓天—人—地五行順接）。');
-    if (birth) tips.push(`八字喜用為 ${birth.like}，補強此五行的字有助平衡。`);
+    if (birth) tips.push(`八字喜用為 ${birth.like}${birth.avoid ? `，忌神為 ${birth.avoid}（避開此五行的字）` : ''}，補強喜用五行的字有助平衡。`);
     tips.push('※ 姓名影響為後天輔助，非改運萬靈丹；若無明顯困擾，不必為求全吉而改名。');
     return `<h4 style="color:var(--cinnabar)">補救建議</h4><div class="aspect" style="border-left:3px solid var(--cinnabar)">${tips.join('<br>')}</div>`;
   }
@@ -431,8 +433,8 @@
         const zt = zodiacIdx !== null ? ZODIAC_TAGS[zodiacIdx] : null;
 
         const birthNote = birth
-          ? `<p>八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k].name).join(' ')}，日主${birth.pillars.day.gan}${birth.pillars.day.ganWx}身${birth.strong ? '強' : '弱'}${birth.missing.length ? `，五行缺${birth.missing.join('、')}` : ''}。
-             取名喜用五行：<b style="color:var(--gold-bright)">${birth.like}</b>${birth.missing.length && birth.missing[0] !== birth.like ? `（兼顧補${birth.missing.join('、')}）` : ''}；生肖屬<b>${Ganzhi.SHENGXIAO[zodiacIdx]}</b>。</p>`
+          ? `<p>八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k].name).join(' ')}，日主${birth.pillars.day.gan}${birth.pillars.day.ganWx}身${birth.label}${birth.missing.length ? `，五行缺${birth.missing.join('、')}` : ''}${birth.tiaohou ? `，調候先取${birth.tiaohou.split('').join('、')}` : ''}。
+             取名喜用五行：<b style="color:var(--gold-bright)">${birth.like}</b>${birth.missing.length && birth.missing[0] !== birth.like ? `（兼顧補${birth.missing.join('、')}）` : ''}${birth.avoid ? `；忌神 <b style="color:var(--cinnabar)">${birth.avoid}</b>（宜避開此五行用字）` : ''}；生肖屬<b>${Ganzhi.SHENGXIAO[zodiacIdx]}</b>。</p>`
           : '<p class="muted">未填生日——以數理與三才為主，未連動八字喜用與生肖。</p>';
 
         if (modeSel.value === 'ana') {
@@ -454,6 +456,7 @@
             zodiacNote = `<p>生肖${Ganzhi.SHENGXIAO[zodiacIdx]}：${likes.length ? `「${likes.join('、')}」含喜用字根 ✓` : ''}${dislikes.length ? `　<span style="color:var(--cinnabar)">「${dislikes.join('、')}」含忌用字根</span>` : ''}${!likes.length && !dislikes.length ? '名字字根與生肖無明顯宜忌。' : ''}</p>`;
           }
           const wxMatch = birth ? chars.some(c => c.wx === birth.like) : null;
+          const wxAvoidHit = birth && birth.avoid ? chars.some(c => c.wx === birth.avoid) : false;
           const div = document.createElement('div');
           div.innerHTML = `<div class="panel result">
             <div style="text-align:center;font-size:34px;letter-spacing:.2em;color:var(--navy);font-weight:700">${surname}${name}</div>
@@ -473,7 +476,7 @@
               <p>以天格起上卦、地格起下卦、動爻取第 ${nh.dong} 爻，得 <b style="color:var(--navy)">${nh.hex.symbol} ${nh.hex.name}</b>（${nh.upper}上${nh.lower}下）。</p>
               <p class="muted">${nh.hex.duan} 此卦象徵姓名所帶的先天氣場趨勢。</p>` : ''; })()}
             ${birthNote}
-            <p>名字五行：${wxList}${wxMatch !== null ? wxMatch ? '——<b style="color:var(--gold-deep)">符合喜用五行 ✓</b>' : `——<span style="color:var(--cinnabar)">未含喜用五行「${birth.like}」</span>` : ''}</p>
+            <p>名字五行：${wxList}${wxMatch !== null ? wxMatch ? '——<b style="color:var(--gold-deep)">符合喜用五行 ✓</b>' : `——<span style="color:var(--cinnabar)">未含喜用五行「${birth.like}」</span>` : ''}${wxAvoidHit ? `　<span style="color:var(--cinnabar)">⚠ 含忌神「${birth.avoid}」，與八字調候方向相左</span>` : ''}</p>
             ${zodiacNote}
             ${(() => { if (!fullMeta) return ''; const ph = phonetics(surname, chars); return ph.unknown ? '' : `<h4>音韻（音靈五行＋讀音）</h4>${yinlingHTML(ph.syllables)}${ph.notes.length ? `<p class="muted">讀音提醒：${ph.notes.join('、')}。</p>` : '<p class="muted">讀音順口，無明顯拗口或諧音問題。</p>'}`; })()}
             ${chars.length ? `<p>寓意：${chars.map(c => `${c.c}＝${c.m}`).join('；')}。</p>` : ''}
@@ -485,8 +488,8 @@
 康熙筆畫：${[...surname + name].map(c => `${c}=${strokeOf(c)}`).join('、')}
 五格：天格${g.tian}（${luckOf(g.tian)}）、人格${g.ren}（${luckOf(g.ren)}）、地格${g.di}（${luckOf(g.di)}）、外格${g.wai}（${luckOf(g.wai)}）、總格${g.zong}（${luckOf(g.zong)}）
 三才：${g.sancai.join('')}（${g.sancaiGood ? '相生' : '有剋'}）
-${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k].name).join(' ')}，喜用${birth.like}，生肖${Ganzhi.SHENGXIAO[zodiacIdx]}` : '（無生日資料）'}
-請分析：1) 五格數理對性格與運勢的影響（人格主運、總格晚運）2) 三才配置 3) 字義與音韻 4) 與八字喜用的配合度 5) 若有不足，給出化解或補強建議。`);
+${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k].name).join(' ')}，日主身${birth.label}，喜用${birth.like}，忌神${birth.avoid || '無特別忌'}${birth.tiaohou ? `，調候先取${birth.tiaohou.split('').join('、')}` : ''}，生肖${Ganzhi.SHENGXIAO[zodiacIdx]}` : '（無生日資料）'}
+請分析：1) 五格數理對性格與運勢的影響（人格主運、總格晚運）2) 三才配置 3) 字義與音韻 4) 與八字喜用神、忌神、調候的配合度（請結合完整八字強弱精確判斷，而非只看單一喜用五行）5) 若有不足，給出化解或補強建議。`);
           return;
         }
 
@@ -610,6 +613,7 @@ ${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k]
             let s = 4; // 基礎分，讓非喜用好字也有機會浮出
             if (birth && c.wx === birth.like) s += 4;
             if (birth && birth.missing.includes(c.wx)) s += 1.5;
+            if (birth && birth.avoid && c.wx === birth.avoid) s -= 5; // 命中忌神大幅降權，避免補到與調候方向相左的五行
             if (zt && c.tags.some(t => zt.like.includes(t))) s += 2;
             if (zt && c.tags.some(t => zt.dislike.includes(t))) s -= 8;
             if (prefer && c.wx === prefer) s += 2;
@@ -669,14 +673,14 @@ ${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k]
             </div>`).join('')}
           </div>
           <div style="text-align:center;margin-top:14px"><button class="btn small ghost" id="nm-again">${Icons.svg('dice')} 換一批</button></div>
-          <p class="muted" style="margin-top:10px">※ ${nameCount === 1 ? '單名數理較難全吉（人格＝總格被迫相等、外格固定為2），本工具已優先排全吉、放寬收半吉，並只用「能單獨成名」的字。' : '每個提案皆三才相生、人格總格全吉。'}已依喜用五行與生肖字根加權。實際取名請同時考慮讀音、諧音與家族輩分。</p>
+          <p class="muted" style="margin-top:10px">※ ${nameCount === 1 ? '單名數理較難全吉（人格＝總格被迫相等、外格固定為2），本工具已優先排全吉、放寬收半吉，並只用「能單獨成名」的字。' : '每個提案皆三才相生、人格總格全吉。'}已依喜用五行、生肖字根加權，並大幅降低忌神五行用字的出現機率。實際取名請同時考慮讀音、諧音與家族輩分。</p>
         </div>`;
         resEl.appendChild(div);
         div.querySelector('#nm-again').addEventListener('click', () => el.querySelector('#nm-go').click());
 
         AI.attach(div.querySelector('.panel'), () =>
           `請以姓名學專家角度，評比以下為「${surname}」姓${gender === 'M' ? '男' : gender === 'F' ? '女' : ''}寶寶生成的命名提案，並挑出最好的 3 個說明理由（考量：數理、三才、字義、音韻是否順口、有無不良諧音、與八字的配合）。
-${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k].name).join(' ')}，日主${birth.pillars.day.gan}身${birth.strong ? '強' : '弱'}，喜用五行${birth.like}，生肖${Ganzhi.SHENGXIAO[zodiacIdx]}。` : ''}
+${birth ? `八字：${['year', 'month', 'day', 'hour'].map(k => birth.pillars[k].name).join(' ')}，日主${birth.pillars.day.gan}身${birth.label}，喜用五行${birth.like}，忌神${birth.avoid || '無特別忌'}，生肖${Ganzhi.SHENGXIAO[zodiacIdx]}。` : ''}
 提案：${results.map(r => `${surname}${r.c1.c}${r.c2 ? r.c2.c : ''}（${r.c1.k}${r.c2 ? '+' + r.c2.k : ''}劃，三才${r.g.sancai.join('')}，人格${r.g.ren}總格${r.g.zong}）`).join('、')}
 也歡迎你在同樣筆畫組合下建議更好的用字。`);
       });

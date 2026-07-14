@@ -69,32 +69,6 @@
     return found;
   }
 
-  function wuxingCount(p) {
-    const count = { 木: 0, 火: 0, 土: 0, 金: 0, 水: 0 };
-    for (const key of ['year', 'month', 'day', 'hour']) {
-      count[p[key].ganWx]++;
-      count[p[key].zhiWx]++;
-    }
-    return count;
-  }
-
-  // 日主強弱（簡化：月令權重加倍，同我/生我為助）
-  function strength(p) {
-    const me = p.day.ganWx;
-    const shengMe = Object.entries(Ganzhi.WX_SHENG).find(([k, v]) => v === me)[0];
-    let score = 0, total = 0;
-    const items = [
-      [p.year.ganWx, 1], [p.month.ganWx, 1], [p.hour.ganWx, 1],
-      [p.year.zhiWx, 1], [p.month.zhiWx, 2.5], [p.day.zhiWx, 1], [p.hour.zhiWx, 1]
-    ];
-    for (const [wx, w] of items) {
-      total += w;
-      if (wx === me || wx === shengMe) score += w;
-    }
-    const ratio = score / total;
-    return { ratio, label: ratio >= 0.5 ? '偏強' : ratio >= 0.35 ? '中和' : '偏弱', shengMe };
-  }
-
   function render(el) {
     const bf = App.birthForm({ gender: true, time: true });
     el.innerHTML = `
@@ -112,16 +86,13 @@
       resEl.innerHTML = '';
       const p = Ganzhi.fourPillars(b.y, b.m, b.d, b.hh, b.mi);
       const lunar = Astro.toLunar(b.y, b.m, b.d);
-      const wx = wuxingCount(p);
-      const str = strength(p);
+      const wx = Ganzhi.wuxingCount(p);
+      const str = Ganzhi.strength(p);
       const luck = Ganzhi.luck(b.y, b.m, b.d, b.hh, b.gender, p);
       const dayGan = p.day.ganIdx;
       const missing = Object.entries(wx).filter(([k, v]) => v === 0).map(([k]) => k);
       const most = Object.entries(wx).sort((a, b2) => b2[1] - a[1])[0];
-      // 用神粗判：身強洩剋、身弱生扶
-      const like = str.label === '偏強'
-        ? Ganzhi.WX_SHENG[p.day.ganWx]
-        : (str.label === '偏弱' ? str.shengMe : p.day.ganWx);
+      const like = str.like; // 用神粗判：身強洩剋、身弱生扶（Ganzhi.strength 內建）
       const ss = shensha(p);
       const relations = Ganzhi.branchRelations(p);
       const th = Ganzhi.tiaohou(p.day.ganIdx, p.month.zhiIdx);
