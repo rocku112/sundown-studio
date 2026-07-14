@@ -125,9 +125,9 @@
     el.innerHTML = `
       <div class="panel">
         <div class="form-grid">
-          <div class="field"><label>你的生肖（或出生年）</label>
+          <div class="field"><label>出生年（西元）</label>
             <input type="number" class="ft-y" value="${now.getFullYear() - 30}" min="1900" max="2100" style="width:110px"></div>
-          <div class="field"><label>國曆生日（看星座）</label>
+          <div class="field"><label>國曆生日（月／日）</label>
             <input type="number" class="ft-m" value="1" min="1" max="12" style="width:64px" placeholder="月">
             <input type="number" class="ft-d" value="1" min="1" max="31" style="width:64px" placeholder="日"></div>
           <button class="btn small" id="ft-go" style="align-self:flex-end">${Icons.svg('fortune')} 看運勢</button>
@@ -141,7 +141,7 @@
       const m = +el.querySelector('.ft-m').value, d = +el.querySelector('.ft-d').value;
       const resEl = el.querySelector('#ft-result');
       resEl.innerHTML = '';
-      const yp = Ganzhi.yearPillar(y, 6, 1); // 以年中取生肖（避免立春邊界；提示已註明）
+      const yp = Ganzhi.yearPillar(y, m, d); // 以真實生日（含月日）判斷生肖，正確處理立春邊界（例如1989/1/12在立春前，屬前一年生肖龍而非蛇）
       const zhiIdx = yp.zhiIdx;
       const sign = signByDate(m, d);
 
