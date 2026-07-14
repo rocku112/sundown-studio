@@ -59,6 +59,28 @@
     遷移: '外出運與人際際遇', 交友: '朋友部屬與人脈助力', 官祿: '事業成就與工作型態',
     田宅: '不動產與居家運勢', 福德: '精神享受與內在福分', 父母: '父母緣分與長輩貴人'
   };
+  // 紫微流日：今日地支對應到命盤哪一宮，該宮領域今天較受牽動（簡化：以真實日柱地支比對本命宮位）
+  const DAILY_PALACE_TIP = {
+    命宮: '今天的言行特別能代表你，是展現自我、做重要決定的好時機。',
+    兄弟: '適合聯繫手足、朋友或合夥人，人際互動是今天的重點。',
+    夫妻: '感情與伴侶關係受到牽動，適合花時間陪伴另一半或好好溝通。',
+    子女: '適合陪伴孩子或投入創作、企劃發想，靈感與親子緣分較旺。',
+    財帛: '財運與金錢決策受矚目，適合檢視收支或談合作分潤。',
+    疾厄: '身體與情緒的訊號今天特別明顯，宜多休息、留意飲食作息。',
+    遷移: '適合外出、洽公或處理對外事務，機會多在外頭而非原地等待。',
+    交友: '朋友、部屬與人脈今天特別重要，社交場合容易帶來助力。',
+    官祿: '工作與事業運受牽動，適合推進計畫、爭取表現的好時機。',
+    田宅: '居家、不動產與家庭事務適合今天處理，家運波動較明顯。',
+    福德: '適合靜心、休閒或處理心靈層面的事，內在感受比外在成就更重要。',
+    父母: '與父母長輩、上司的互動受到牽動，適合聯繫請益或盡孝道。'
+  };
+  function todayPalace(chart, dayZhiIdx) {
+    const p = chart.palaces.find(p => p.zhi === dayZhiIdx);
+    let mains = p.main, borrow = false;
+    if (!mains.length) { mains = chart.stars[(p.zhi + 6) % 12].main; borrow = true; }
+    const huaHere = mains.filter(s => chart.hua[s]).map(s => `${s}化${chart.hua[s]}`);
+    return { palace: p, mains, borrow, huaHere };
+  }
 
   // 祿存位置（年干）
   const LUCUN = { 甲: 2, 乙: 3, 丙: 5, 丁: 6, 戊: 5, 己: 6, 庚: 8, 辛: 9, 壬: 11, 癸: 0 };
@@ -192,6 +214,9 @@
       const yp = Ganzhi.yearPillar(b.y, b.m, b.d, b.hh, b.mi);
       const hourIdx = Math.floor(((b.hh + 1) % 24) / 2) % 12;
       const c = buildChart(lunar, hourIdx, yp, b.gender);
+      const now = new Date();
+      const todayDp = Ganzhi.dayPillar(now.getFullYear(), now.getMonth() + 1, now.getDate());
+      const tp = todayPalace(c, todayDp.zhiIdx);
 
       // 命盤格
       const cells = new Array(17).fill('');
@@ -279,6 +304,14 @@
         <h4>十二宮簡析</h4>
         <p class="muted" style="margin-top:-2px">命宮以外的十一宮逐一簡述，完整交叉解讀（如夫妻宮看流年、事業與財帛互涉）建議用 AI 深度解讀。</p>
         ${otherPalacesHTML}
+        <hr class="divider">
+        <h4>${Icons.svg('almanac')} 今日紫微流日</h4>
+        <p class="muted" style="margin-top:-2px">${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}（${todayDp.name}日）行運至你命盤的<b style="color:var(--gold-bright)">${tp.palace.name}宮${tp.borrow ? '（借對宮星曜）' : ''}</b>——${PALACE_DOMAIN[tp.palace.name]}。</p>
+        <div class="aspect">
+          ${tp.mains.length ? `<b>坐星：${tp.mains.join('、')}</b>` : '<b class="muted">本宮無主星，受對宮牽動</b>'}
+          ${tp.huaHere.length ? `<span class="tag gold" style="margin-left:6px">命中生年${tp.huaHere.join('、')}</span>` : ''}
+          <p style="margin-top:4px">${DAILY_PALACE_TIP[tp.palace.name]}${tp.huaHere.length ? `今天恰好也是本命「${tp.huaHere.join('、')}」的落宮，能量格外集中，${tp.huaHere.some(h => h.includes('忌')) ? '若感覺卡關反覆是正常的，宜多留意、不硬拚。' : '把握這股順勢而為的助力。'}` : ''}</p>
+        </div>
         <p class="muted" style="margin-top:12px">※ 內建解讀為各宮主星簡述；完整十二宮互涉、格局與大限流年，請使用 AI 深度解讀。</p>
       </div>`;
       resEl.appendChild(div);
@@ -292,7 +325,8 @@ ${b.gender === 'M' ? '男' : '女'}命，農曆${lunar.lunarYear}年${lunar.mont
 ${c.palaces.map(p => `${p.name}（${p.gan}${Ganzhi.ZHI[p.zhi]}，大限${p.daxian[0]}-${p.daxian[1]}歲）：主星[${p.main.map(s => s + (brightOf(s, p.zhi) || '')).join('、') || '無，借對宮'}] 輔星[${p.minor.join('、') || '無'}]`).join('\n')}
 生年四化：${huaList}
 ${c.nowYear}年流年命宮在${Ganzhi.ZHI[c.liunianZhi]}；流年（${c.liunianGan}年）四化飛星：${Object.entries(c.liuHua).map(([s, h]) => `${s}化${h}（落${(c.palaces.find(p => p.main.includes(s) || p.minor.includes(s)) || {}).name || '－'}宮）`).join('、')}。
-請分析：1) 命身宮與整體格局（注意主星廟旺利陷的強弱） 2) 性格特質 3) 事業官祿 4) 財帛 5) 感情婚姻（夫妻宮）6) 目前所行大限與${c.nowYear}流年運勢——特別解讀流年四化飛入各宮的意義（年忌所落宮位是今年課題） 7) 需注意的宮位與化忌影響，並給出人生建議。`);
+今日（${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}，${todayDp.name}日）流日行運至${tp.palace.name}宮${tp.huaHere.length ? `（命中生年${tp.huaHere.join('、')}）` : ''}。
+請分析：1) 命身宮與整體格局（注意主星廟旺利陷的強弱） 2) 性格特質 3) 事業官祿 4) 財帛 5) 感情婚姻（夫妻宮）6) 目前所行大限與${c.nowYear}流年運勢——特別解讀流年四化飛入各宮的意義（年忌所落宮位是今年課題） 7) 需注意的宮位與化忌影響 8) 簡短點評今日流日行運至${tp.palace.name}宮對今天的提示，並給出人生建議。`);
     });
   }
 
@@ -303,7 +337,7 @@ ${c.nowYear}年流年命宮在${Ganzhi.ZHI[c.liunianZhi]}；流年（${c.liunian
     id: 'ziwei',
     icon: Icons.svg('ziwei'),
     title: '紫微斗數',
-    desc: '安命身宮、十四主星、輔煞諸星、生年四化，完整十二宮命盤。',
+    desc: '安命身宮、十四主星、輔煞諸星、生年四化、今日流日行運，完整十二宮命盤。',
     render
   });
 })();
