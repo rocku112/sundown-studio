@@ -26,7 +26,7 @@ const ALLOWED_ORIGINS = [
 ];
 
 const GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
-const DEFAULT_MODEL = 'gemini-2.0-flash';
+const DEFAULT_MODEL = 'gemini-flash-lite-latest'; // gemini-2.0/2.5-flash 已停用或不開放新用戶，免費額度變成 limit:0 或 404
 const MAX_OUTPUT_TOKENS = 1800; // 伺服器端強制上限，不採信客端傳來的數值，避免被濫用打爆額度
 const MAX_MESSAGES = 20;        // 單次請求最多幾輪對話（含追問）
 const MAX_TOTAL_CHARS = 20000;  // 所有訊息合計字數上限

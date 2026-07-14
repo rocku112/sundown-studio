@@ -4,8 +4,7 @@
  */
 const AI = (() => {
   const LS_KEY = 'mubu.ai.config';
-  // 部署 tools/mubu/cloudflare-worker/gemini-proxy.js 後，把 Worker 網址填在這裡
-  const SHARED_PROXY_URL = 'https://mubu-ai-proxy.YOUR-SUBDOMAIN.workers.dev';
+  const SHARED_PROXY_URL = 'https://mubu-ai-proxy.evil1203.workers.dev';
 
   function getConfig() {
     try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch (e) { return {}; }
@@ -128,7 +127,7 @@ const AI = (() => {
     if (provider === 'claude') return callClaude(cfg, messages, onDelta);
     if (provider === 'gemini') {
       // Google Gemini 的 OpenAI 相容端點；瀏覽器直呼、串流（使用者自己的 Key）
-      return callOpenAI({ apiKey: cfg.apiKey, model: cfg.model || 'gemini-2.0-flash', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai' }, messages, onDelta);
+      return callOpenAI({ apiKey: cfg.apiKey, model: cfg.model || 'gemini-flash-lite-latest', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai' }, messages, onDelta);
     }
     return callOpenAI(cfg, messages, onDelta);
   }
@@ -255,11 +254,11 @@ const AI = (() => {
           </select>
         </div>
         <div class="field" id="ai-gemini-hint" style="display:${provider === 'gemini' ? '' : 'none'}">
-          <p class="muted" style="margin:0">Gemini 免費 Key 申請：到 <b>aistudio.google.com/apikey</b> 登入 Google 帳號 → 建立 API 金鑰 → 複製貼到下方。模型留空預設用 <b>gemini-2.0-flash</b>（免費、繁中佳）。</p></div>
+          <p class="muted" style="margin:0">Gemini 免費 Key 申請：到 <b>aistudio.google.com/apikey</b> 登入 Google 帳號 → 建立 API 金鑰 → 複製貼到下方。模型留空預設用 <b>gemini-flash-lite-latest</b>（免費、繁中佳）。</p></div>
         <div class="field" id="ai-key-row" style="display:${needsKeyFields ? '' : 'none'}"><label>API Key</label>
           <input id="ai-key" type="password" placeholder="${provider === 'gemini' ? 'AIza...' : 'sk-...'}" value="${cfg.apiKey || ''}"></div>
         <div class="field" id="ai-model-row" style="display:${needsKeyFields ? '' : 'none'}"><label>模型（可留空用預設）</label>
-          <input id="ai-model" placeholder="${provider === 'gemini' ? 'gemini-2.0-flash / gemini-2.5-flash' : 'claude-sonnet-5 / gpt-4o-mini'}" value="${cfg.model || ''}"></div>
+          <input id="ai-model" placeholder="${provider === 'gemini' ? 'gemini-flash-lite-latest / gemini-flash-latest' : 'claude-sonnet-5 / gpt-4o-mini'}" value="${cfg.model || ''}"></div>
         <div class="field" id="ai-base-row" style="display:${provider === 'openai' ? '' : 'none'}">
           <label>API 端點（OpenAI 相容服務可改，留空用官方）</label>
           <input id="ai-base" placeholder="https://api.openai.com/v1" value="${cfg.baseUrl || ''}"></div>
@@ -277,7 +276,7 @@ const AI = (() => {
       mask.querySelector('#ai-base-row').style.display = v === 'openai' ? '' : 'none';
       mask.querySelector('#ai-gemini-hint').style.display = v === 'gemini' ? '' : 'none';
       mask.querySelector('#ai-key').placeholder = v === 'gemini' ? 'AIza...' : 'sk-...';
-      mask.querySelector('#ai-model').placeholder = v === 'gemini' ? 'gemini-2.0-flash / gemini-2.5-flash' : 'claude-sonnet-5 / gpt-4o-mini';
+      mask.querySelector('#ai-model').placeholder = v === 'gemini' ? 'gemini-flash-lite-latest / gemini-flash-latest' : 'claude-sonnet-5 / gpt-4o-mini';
     });
     mask.addEventListener('click', (e) => { if (e.target === mask) mask.remove(); });
     mask.querySelector('#ai-cancel').addEventListener('click', () => mask.remove());
