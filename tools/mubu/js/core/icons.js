@@ -21,7 +21,7 @@ const Icons = (() => {
     bazi: C.goldDeep, ziwei: C.navy, astrology: C.navyMid, tarot: C.cinnabar, xiaoliuren: C.sunset,
     qimen: C.ink, qian: C.gold, almanac: C.green, liuyao: C.water, daliuren: C.navyMid,
     fortune: C.gold, numerology: C.inkDim, naming: C.cinnabar, hehun: C.sunset, synastry: C.water,
-    combo: C.goldDeep, history: C.inkDim, meihua: C.navy
+    combo: C.goldDeep, history: C.inkDim, meihua: C.navy, zeri: C.green, namematch: C.cinnabar
   };
   // 五行配色（元素/五行共用）：木青綠、火硃紅、土赭黃、金冷灰、水靛藍
   const WX_COLOR = { 木: C.green, 火: C.sunset, 土: C.goldDeep, 金: C.inkDim, 水: C.water };
@@ -60,7 +60,9 @@ const Icons = (() => {
     synastry: '<circle cx="8" cy="9" r="4"/><circle cx="16.5" cy="15.5" r="4"/><path d="M10.8 11.8l2.4 2.4"/>',
     combo: '<circle cx="9" cy="9.5" r="6"/><circle cx="15" cy="9.5" r="6"/><circle cx="12" cy="15.5" r="6"/>',
     history: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2"/><path d="M8.5 3.3A9 9 0 004.2 7"/><path d="M4.2 3.5l0 3.8 3.8 0"/>',
-    meihua: '<circle cx="12" cy="12" r="9"/><path d="M12 3a4.5 4.5 0 010 9 4.5 4.5 0 000 9 9 9 0 000-18z" fill="currentColor" stroke="none"/><circle cx="12" cy="7.5" r="1.3" fill="var(--panel,#FEFCF8)" stroke="none"/><circle cx="12" cy="16.5" r="1.3" fill="currentColor" stroke="none"/>'
+    meihua: '<circle cx="12" cy="12" r="9"/><path d="M12 3a4.5 4.5 0 010 9 4.5 4.5 0 000 9 9 9 0 000-18z" fill="currentColor" stroke="none"/><circle cx="12" cy="7.5" r="1.3" fill="var(--panel,#FEFCF8)" stroke="none"/><circle cx="12" cy="16.5" r="1.3" fill="currentColor" stroke="none"/>',
+    zeri: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M8 15l2.5 2.5L16 12"/>',
+    namematch: '<circle cx="8.5" cy="9" r="3.3"/><circle cx="15.5" cy="9" r="3.3"/><path d="M6.5 20v-2.2a3.7 3.7 0 013.7-3.7h.6a3.7 3.7 0 013.7 3.7V20"/><path d="M12 12.3v3.4"/>'
   };
 
   // ---------- 共用 UI 圖示 ----------

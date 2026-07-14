@@ -98,6 +98,13 @@
         chongZhi: (dp.zhiIdx + 6) % 12,
         fests: festivalsOf(y, m, d, lunar)
       };
+    },
+    // 當日十二時辰中「黃道吉時」的數量（0-6），供擇日等其他模組快速判斷日子品質
+    goodHourCount(dpZhiIdx) {
+      const start = HUANGDAO_START[dpZhiIdx];
+      let n = 0;
+      for (let i = 0; i < 12; i++) if (SHEN_GOOD.has(SHIER_SHEN[((i - start) % 12 + 12) % 12])) n++;
+      return n;
     }
   };
 
