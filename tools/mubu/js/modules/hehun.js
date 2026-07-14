@@ -1,31 +1,9 @@
 /* 暮卜先知 · 八字合婚 */
 (() => {
-  function wuxingCount(p) {
-    const c = { 木: 0, 火: 0, 土: 0, 金: 0, 水: 0 };
-    for (const k of ['year', 'month', 'day', 'hour']) { c[p[k].ganWx]++; c[p[k].zhiWx]++; }
-    return c;
-  }
   // 納音五行字
   const nayinWx = (nayin) => ['金', '木', '水', '火', '土'].find(w => nayin.includes(w));
-
-  // 日主強弱（同 bazi.js 簡化判法：月令權重加倍，同我/生我為助）
-  function strengthOf(p) {
-    const me = p.day.ganWx;
-    const shengMe = Object.entries(Ganzhi.WX_SHENG).find(([, v]) => v === me)[0];
-    let score = 0, total = 0;
-    const items = [
-      [p.year.ganWx, 1], [p.month.ganWx, 1], [p.hour.ganWx, 1],
-      [p.year.zhiWx, 1], [p.month.zhiWx, 2.5], [p.day.zhiWx, 1], [p.hour.zhiWx, 1]
-    ];
-    for (const [wx, w] of items) { total += w; if (wx === me || wx === shengMe) score += w; }
-    const ratio = score / total;
-    return { ratio, label: ratio >= 0.5 ? '偏強' : ratio >= 0.35 ? '中和' : '偏弱', shengMe };
-  }
-  // 喜用神粗判：身強洩剋、身弱生扶
-  function likeOf(p) {
-    const str = strengthOf(p);
-    return str.label === '偏強' ? Ganzhi.WX_SHENG[p.day.ganWx] : (str.label === '偏弱' ? str.shengMe : p.day.ganWx);
-  }
+  // 喜用神粗判：與八字命理模組共用同一套強弱判斷（Ganzhi.strength）
+  const likeOf = (p) => Ganzhi.strength(p).like;
 
   // 十神正緣意涵：對方日主在我命中扮演的角色
   const GOD_TEXT = {
@@ -89,7 +67,7 @@
         : '日主相剋，強弱互見，吸引也強、摩擦也強，需學會欣賞差異。', gr.good);
 
     // 4. 五行互補
-    const wa = wuxingCount(pa), wb = wuxingCount(pb);
+    const wa = Ganzhi.wuxingCount(pa), wb = Ganzhi.wuxingCount(pb);
     let comp = 0; const compNotes = [];
     for (const x of ['木', '火', '土', '金', '水']) {
       if (wa[x] === 0 && wb[x] >= 2) { comp += 5; compNotes.push(`乙方的${x}補了甲方所缺`); }
@@ -127,6 +105,21 @@
     add(xyPts, `喜用神互補（甲喜${likeA}・乙喜${likeB}）`,
       xyNotes.length ? xyNotes.join('；') + '。' : '雙方喜用神在彼此命中皆無顯著助益或損傷，中性之配。', xyPts >= 0);
 
+    // 8. 夫妻宮交叉沖合：不只看「年支對年支、日支對日支」，也檢查甲乙雙方 4×4 柱位交叉關係
+    // （例如甲方日支沖乙方年支），傳統合婚常見但前七項尚未涵蓋的一塊
+    const CROSS_PTS = { 六合: 6, 三合: 5, 同支: 2, 六害: -5, 相刑: -6, 自刑: -6, 六沖: -7 };
+    const cross = Ganzhi.crossRelations(pa, pb)
+      .filter(r => !(r.sameCol && (r.posA === '年' || r.posA === '日'))) // 排除已在項目1、2呈現的同位比對
+      .map(r => ({ ...r, pts: Math.round(CROSS_PTS[r.type] * (r.posA === '日' || r.posB === '日' ? 1.3 : 1)) }))
+      .sort((a, b) => Math.abs(b.pts) - Math.abs(a.pts))
+      .slice(0, 6);
+    if (cross.length) {
+      const crossTotal = Math.max(-14, Math.min(14, cross.reduce((s, r) => s + r.pts, 0)));
+      add(crossTotal, `夫妻宮交叉沖合（${cross.length} 組）`,
+        cross.map(r => `甲方${r.posA}支${r.zhiA} × 乙方${r.posB}支${r.zhiB}（${r.type}）`).join('、') + '。',
+        crossTotal >= 0);
+    }
+
     score = Math.max(5, Math.min(98, score));
     const grade = score >= 85 ? '天作之合' : score >= 72 ? '上等婚配' : score >= 58 ? '中上之配' : score >= 45 ? '中等・需磨合' : '多有考驗・重在經營';
     return { pa, pb, items, score, grade, wa, wb };
@@ -136,7 +129,7 @@
     id: 'hehun',
     icon: Icons.svg('hehun'),
     title: '八字合婚',
-    desc: '雙方八字生肖、夫妻宮、日主、五行、納音五重比對，附契合評分。',
+    desc: '雙方八字生肖、夫妻宮、日主、五行、納音、十神正緣多重比對，並檢查雙方四柱交叉沖合，附契合評分。',
     render(el) {
       el.innerHTML = `
         <div class="panel">

@@ -268,6 +268,22 @@ const Ganzhi = (() => {
     return { type: '平', good: null };
   }
 
+  // 兩份四柱之間的交叉沖合（供合婚等雙人比對用）：檢查甲乙雙方 4×4 共16組地支關係，
+  // 只回傳有明確吉凶意涵者（略過「平」與同位置的「同支」，避免與逐柱同位比對重複）
+  function crossRelations(pa, pb) {
+    const cols = ['year', 'month', 'day', 'hour'];
+    const posName = { year: '年', month: '月', day: '日', hour: '時' };
+    const out = [];
+    for (const ca of cols) {
+      for (const cb of cols) {
+        const rel = zhiRelation(pa[ca].zhiIdx, pb[cb].zhiIdx);
+        if (rel.type === '平' || (rel.type === '同支' && ca === cb)) continue;
+        out.push({ posA: posName[ca], posB: posName[cb], zhiA: pa[ca].zhi, zhiB: pb[cb].zhi, sameCol: ca === cb, ...rel });
+      }
+    }
+    return out;
+  }
+
   // 兩天干的關係：五合／相生／比和／相剋
   function ganRelation(a, b) {
     if ((a + 5) % 10 === b || (b + 5) % 10 === a) return { type: '五合', good: true };
@@ -332,7 +348,7 @@ const Ganzhi = (() => {
     GAN, ZHI, SHENGXIAO, GAN_WUXING, ZHI_WUXING, GAN_YINYANG, ZHI_CANGGAN, NAYIN,
     WX_SHENG, WX_KE, wuxingCount, strength,
     pillar, idx60, dayPillar, yearPillar, monthPillar, hourPillar, fourPillars, tenGod, luck,
-    branchRelations, tiaohou, yearlyFortune, monthlyFortune, zhiRelation, ganRelation
+    branchRelations, tiaohou, yearlyFortune, monthlyFortune, zhiRelation, ganRelation, crossRelations
   };
 })();
 if (typeof module !== 'undefined') module.exports = Ganzhi;
