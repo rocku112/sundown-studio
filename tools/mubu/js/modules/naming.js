@@ -373,6 +373,9 @@
     return { hex: HEXBYTRI[upper + lower], upper, lower, dong };
   }
 
+  // 供姓名速配等其他模組共用（避免重複實作筆畫/五格/數理判斷）
+  window.NamingEngine = { strokeOf, fiveGrids, luckOf, luckTag, sancaiPair, numWx, wxSheng, wxKe, SHULI };
+
   App.register({
     id: 'naming',
     icon: Icons.svg('naming'),
