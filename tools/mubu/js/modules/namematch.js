@@ -129,6 +129,9 @@
     });
   }
 
+  // 供八字合婚等模組共用姓名合參（避免重複實作）
+  window.NameMatchEngine = { parseName, match };
+
   App.register({
     id: 'namematch',
     icon: Icons.svg('namematch'),

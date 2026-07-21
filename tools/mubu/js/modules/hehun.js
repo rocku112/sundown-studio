@@ -29,11 +29,18 @@
         <div class="field"><label>時</label><input type="number" class="hh-h" value="12" min="0" max="23" style="width:64px"></div>
         <div class="field"><label>性別</label><select class="hh-g" style="width:72px"><option value="M">男</option><option value="F">女</option></select></div>
       </div>
+      <div class="form-grid" style="margin-top:6px">
+        <div class="field"><label>姓氏<span class="muted">（選填）</span></label><input class="hh-sur" placeholder="陳" style="width:70px"></div>
+        <div class="field"><label>名字<span class="muted">（選填）</span></label><input class="hh-name" placeholder="美玲" style="width:100px"></div>
+      </div>
     </div>`;
   }
   function readPerson(root) {
     const g = (cls) => +root.querySelector(cls).value;
-    return { y: g('.hh-y'), m: g('.hh-m'), d: g('.hh-d'), hh: g('.hh-h'), gender: root.querySelector('.hh-g').value };
+    return {
+      y: g('.hh-y'), m: g('.hh-m'), d: g('.hh-d'), hh: g('.hh-h'), gender: root.querySelector('.hh-g').value,
+      surname: root.querySelector('.hh-sur').value.trim(), given: root.querySelector('.hh-name').value.trim()
+    };
   }
 
   function match(A, B) {
@@ -129,7 +136,7 @@
     id: 'hehun',
     icon: Icons.svg('hehun'),
     title: '八字合婚',
-    desc: '雙方八字生肖、夫妻宮、日主、五行、納音、十神正緣多重比對，並檢查雙方四柱交叉沖合，附契合評分。',
+    desc: '雙方八字生肖、夫妻宮、日主、五行、納音、十神正緣多重比對＋四柱交叉沖合，另可選填姓名加做數理合參，附契合評分。',
     render(el) {
       el.innerHTML = `
         <div class="panel">
@@ -139,7 +146,7 @@
             <div class="hh-b" style="flex:1;min-width:280px">${personForm('乙方')}</div>
           </div>
           <button class="btn" id="hh-go" style="margin-top:14px">${Icons.svg('hehun')} 合 婚</button>
-          <p class="muted" style="margin-top:8px">依傳統合婚法比對；出生時辰不確定可先填 12 時（僅影響時柱五行統計，不影響主要判斷）。</p>
+          <p class="muted" style="margin-top:8px">依傳統合婚法比對；出生時辰不確定可先填 12 時（僅影響時柱五行統計，不影響主要判斷）。姓名為選填——填了會加碼一段姓名數理合參（趣味加碼，不計入八字合婚分數）。</p>
         </div>
         <div id="hh-result"></div>`;
 
@@ -149,6 +156,25 @@
         const resEl = el.querySelector('#hh-result');
         resEl.innerHTML = '';
         const r = match(A, B);
+
+        // 選填：若雙方都填了姓名，加做姓名數理合參（沿用姓名速配引擎，不影響八字合婚主分數）
+        let nameBlock = '', nameForAI = '', nm = null;
+        if (window.NameMatchEngine && A.surname && A.given && B.surname && B.given) {
+          const nA = NameMatchEngine.parseName(A.surname, A.given);
+          const nB = NameMatchEngine.parseName(B.surname, B.given);
+          if (nA.ok && nB.ok) {
+            nm = NameMatchEngine.match(nA, nB);
+            nameBlock = `<hr class="divider">
+              <h4>${Icons.svg('namematch')} 姓名數理合參 <span class="muted" style="font-weight:400">${A.surname}${A.given} × ${B.surname}${B.given}　${nm.score}分・${nm.grade}</span></h4>
+              <p class="muted" style="margin-top:-2px">此為趣味加碼（取材自三才五格數理，非傳統合婚方法），不計入上方八字合婚分數。</p>
+              ${nm.items.map(it => `<div class="aspect" style="margin-top:8px;border-left:3px solid ${it.good === false ? 'var(--cinnabar)' : it.good ? 'var(--gold-mid)' : 'var(--panel-border)'}">
+                <b style="display:flex;justify-content:space-between">${it.title}<span style="color:${it.pts >= 0 ? 'var(--gold-deep)' : 'var(--cinnabar)'}">${it.pts >= 0 ? '+' : ''}${it.pts}</span></b>
+                ${it.text}</div>`).join('')}`;
+            nameForAI = `\n雙方姓名數理合參（趣味加碼）：${A.surname}${A.given}（人格${nm.gA.ren}總格${nm.gA.zong}）× ${B.surname}${B.given}（人格${nm.gB.ren}總格${nm.gB.zong}），速配 ${nm.score} 分（${nm.grade}）。`;
+          } else {
+            nameBlock = `<hr class="divider"><p class="muted">※ 姓名含查無筆劃的字，略過姓名合參（八字合婚不受影響）。</p>`;
+          }
+        }
 
         const color = r.score >= 72 ? 'var(--gold-deep)' : r.score >= 45 ? 'var(--ink-dim)' : 'var(--cinnabar)';
         const div = document.createElement('div');
@@ -162,6 +188,7 @@
           ${r.items.map(it => `<div class="aspect" style="margin-top:10px;border-left:3px solid ${it.good === false ? 'var(--cinnabar)' : it.good ? 'var(--gold-mid)' : 'var(--panel-border)'}">
             <b style="display:flex;justify-content:space-between">${it.title}<span style="color:${it.pts >= 0 ? 'var(--gold-deep)' : 'var(--cinnabar)'}">${it.pts >= 0 ? '+' : ''}${it.pts}</span></b>
             ${it.text}</div>`).join('')}
+          ${nameBlock}
           <p class="muted" style="margin-top:12px">※ 合婚是參考不是判決——分數低代表需要更多理解與經營，不代表不能在一起。完整喜用神層面的深度合參請用 AI 解讀。</p>
         </div>`;
         resEl.appendChild(div);
@@ -170,8 +197,8 @@
           `請做八字合婚深度分析。
 甲方（${A.gender === 'M' ? '男' : '女'}）：${A.y}/${A.m}/${A.d} ${A.hh}時生，四柱：${r.pa.year.name} ${r.pa.month.name} ${r.pa.day.name} ${r.pa.hour.name}，五行：${Object.entries(r.wa).map(([k, v]) => k + v).join(' ')}
 乙方（${B.gender === 'M' ? '男' : '女'}）：${B.y}/${B.m}/${B.d} ${B.hh}時生，四柱：${r.pb.year.name} ${r.pb.month.name} ${r.pb.day.name} ${r.pb.hour.name}，五行：${Object.entries(r.wb).map(([k, v]) => k + v).join(' ')}
-初步比對：${r.items.map(it => `${it.title}${it.pts >= 0 ? '+' : ''}${it.pts}`).join('；')}，總分 ${r.score}（${r.grade}）
-請深入分析：1) 雙方日主強弱與喜用神是否互補（已知甲喜${likeOf(r.pa)}、乙喜${likeOf(r.pb)}，請結合合沖刑害精確判斷，可修正粗判）2) 彼此在對方命中扮演的十神角色（正緣程度，已知甲於乙為「${Ganzhi.tenGod(r.pb.day.ganIdx, r.pa.day.ganIdx)}」、乙於甲為「${Ganzhi.tenGod(r.pa.day.ganIdx, r.pb.day.ganIdx)}」）3) 性格與相處模式 4) 婚後家庭與財務互動 5) 需要注意的年份（沖夫妻宮之流年）6) 給這對組合的相處建議。`);
+初步比對：${r.items.map(it => `${it.title}${it.pts >= 0 ? '+' : ''}${it.pts}`).join('；')}，總分 ${r.score}（${r.grade}）${nameForAI}
+請深入分析：1) 雙方日主強弱與喜用神是否互補（已知甲喜${likeOf(r.pa)}、乙喜${likeOf(r.pb)}，請結合合沖刑害精確判斷，可修正粗判）2) 彼此在對方命中扮演的十神角色（正緣程度，已知甲於乙為「${Ganzhi.tenGod(r.pb.day.ganIdx, r.pa.day.ganIdx)}」、乙於甲為「${Ganzhi.tenGod(r.pa.day.ganIdx, r.pb.day.ganIdx)}」）3) 性格與相處模式 4) 婚後家庭與財務互動 5) 需要注意的年份（沖夫妻宮之流年）6) 給這對組合的相處建議${nameForAI ? '，並可順帶一提姓名數理合參是否呼應八字結論（但以八字為主）' : ''}。`);
       });
     }
   });
