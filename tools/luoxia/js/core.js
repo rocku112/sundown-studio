@@ -33,7 +33,7 @@ function toggleSidebar() {
 
 // ─── Shared ────────────────────────────────────────────────────────────────────
 function switchTab(name) {
-  const valid = ['pdf','heic','compress','resize','pdfops','pdfcmp','pdfmix','pageman','pdfwm','pdfann'];
+  const valid = ['pdf','heic','compress','resize','pdfops','pdfcmp','pdfmix','pageman','pdfwm','pdfann','officeimg'];
   if (!valid.includes(name)) return;
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));

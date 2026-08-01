@@ -53,7 +53,7 @@ document.querySelectorAll('.radio-g').forEach(g => {
 // ═══════════════════════════════════════════════════════════════════════════
 (function() {
   const hash = location.hash.replace('#','');
-  const valid = ['pdf','heic','compress','resize','pdfops','pdfcmp','pdfmix','pageman','pdfwm','pdfann'];
+  const valid = ['pdf','heic','compress','resize','pdfops','pdfcmp','pdfmix','pageman','pdfwm','pdfann','officeimg'];
   if (valid.includes(hash)) {
     // Only apply if app-wrap is visible (user navigated directly to tool)
     const tryApply = () => {
@@ -173,7 +173,7 @@ document.addEventListener('keydown', function(e) {
   // Enter: start conversion on current tool
   if (e.key === 'Enter') {
     e.preventDefault();
-    const btnMap = {pdf:'pdfCvt',heic:'hCvt',compress:'cpCvt',resize:'rzCvt',pdfcmp:'pcCvt',pdfmix:'mxCvt',pageman:'pmExport',pdfwm:'wmExport',pdfann:'annExport'};
+    const btnMap = {pdf:'pdfCvt',heic:'hCvt',compress:'cpCvt',resize:'rzCvt',pdfcmp:'pcCvt',pdfmix:'mxCvt',pageman:'pmExport',pdfwm:'wmExport',pdfann:'annExport',officeimg:'ofZip'};
     if (tab === 'pdfops') {
       const mergeBtn = document.getElementById('poMCvt');
       const splitBtn = document.getElementById('poSCvt');
@@ -188,7 +188,7 @@ document.addEventListener('keydown', function(e) {
 
   // Escape: clear current tool
   if (e.key === 'Escape') {
-    const clrMap = {pdf:'pdfClr',heic:'hClr',compress:'cpClr',resize:'rzClr',pdfcmp:'pcClr',pdfmix:'mxClr',pageman:'pmClr',pdfwm:'wmClr',pdfann:'annClr'};
+    const clrMap = {pdf:'pdfClr',heic:'hClr',compress:'cpClr',resize:'rzClr',pdfcmp:'pcClr',pdfmix:'mxClr',pageman:'pmClr',pdfwm:'wmClr',pdfann:'annClr',officeimg:'ofClr'};
     const btn = document.getElementById(clrMap[tab]);
     if (btn && !btn.disabled) btn.click();
   }
@@ -208,11 +208,12 @@ const CHAIN_MAP = {
   pageman:[['pdfcmp','PDF 壓縮'],['pdfops','PDF 合併/拆分']],
   pdfwm:  [['pdfcmp','PDF 壓縮'],['pageman','頁面管理']],
   pdfann: [['pdfwm','浮水印'],['pdfcmp','PDF 壓縮']],
+  officeimg:[['compress','圖片壓縮'],['resize','尺寸調整']],
 };
 
 function showChain(tab) {
   const bannerId = {pdf:'chain-pdf',heic:'chain-heic',compress:'chain-compress',
-                    resize:'chain-resize',pdfcmp:'chain-pdfcmp',pageman:'chain-pageman',pdfwm:'chain-pdfwm',pdfann:'chain-pdfann'}[tab];
+                    resize:'chain-resize',pdfcmp:'chain-pdfcmp',pageman:'chain-pageman',pdfwm:'chain-pdfwm',pdfann:'chain-pdfann',officeimg:'chain-officeimg'}[tab];
   if (!bannerId) return;
   const banner = document.getElementById(bannerId);
   if (!banner) return;

@@ -18,7 +18,7 @@ const D=[
  ['文件處理，<br>','Your files,<br>'],
  ['一頁搞定','done in the browser'],
  ['PDF 轉圖、照片轉換、圖片壓縮、PDF 合併壓縮。','PDF to image, photo conversion, image compression, merge & compress PDF.'],
- ['十種工具，完全在你的裝置上執行。','Ten tools, all running on your own device.'],
+ ['十一種工具，完全在你的裝置上執行。','Eleven tools, all running on your own device.'],
  ['免費、免帳號、免安裝。','Free, no account, no install.'],
  ['立即免費使用','Start free now'],
  ['查看所有工具','See all tools'],
@@ -45,7 +45,7 @@ const D=[
  ['>輸出品質<','>Output quality<'],
  ['>處理進度<','>Progress<'],
  ['>選擇工具</div>','>Choose a tool</div>'],
- ['十種功能，一站完成','Ten tools, one place'],
+ ['十一種功能，一站完成','Eleven tools, one place'],
  ['PDF、圖片、照片，各種文件格式問題，全部解決。','PDF, images, photos — every file-format problem, solved.'],
  // tool cards: tag / name / desc
  ['tc-tag">PDF 轉換</div>','tc-tag">PDF convert</div>'],
@@ -76,6 +76,9 @@ const D=[
  ['tc-tag">PDF 編輯 <span style="display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:#1D7A6A','tc-tag">PDF edit <span style="display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:#1D7A6A'],
  ['tc-name">標註 / 簽名</div>','tc-name">Annotate & Sign</div>'],
  ['tc-desc">在 PDF 上打字填寫、手寫簽名、蓋圖章、畫框標註後輸出。</p>','tc-desc">Type to fill, hand-sign, stamp and box-annotate PDFs.</p>'],
+ ['tc-tag">文件取圖 <span','tc-tag">Office images <span'],
+ ['tc-name">Office 取圖</div>','tc-name">Office Images</div>'],
+ ['tc-desc">從 Word / PowerPoint / Excel 撈出內嵌圖片，輸出 JPG。</p>','tc-desc">Extract embedded images from Word, PowerPoint and Excel as JPG.</p>'],
  ['進入工具 <svg','Open tool <svg'],
  // trust
  ['安全 · 免費 · 本機','Private · Free · Local'],

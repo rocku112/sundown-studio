@@ -609,3 +609,15 @@ select, input[type=number], input[type=text] { font-family:inherit; }
 .sd-seo h1{font-size:22px;font-weight:800;color:var(--navy);letter-spacing:-.01em;margin-bottom:8px;line-height:1.3;}
 .sd-seo p{font-size:13.5px;color:var(--text2);line-height:1.75;font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;max-width:640px;margin:0 auto;}
 @media(max-width:640px){.sd-seo h1{font-size:19px;}.sd-seo{padding:16px 16px 2px;}}
+
+/* ── Office 取圖 ── */
+.of-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;}
+.of-loading{grid-column:1/-1;text-align:center;font-size:13px;color:var(--text3);font-weight:600;padding:16px;font-family:'Noto Sans TC',sans-serif;}
+.of-note{grid-column:1/-1;font-size:11.5px;line-height:1.7;color:var(--text2);background:var(--gold-tint);border:1px solid rgba(232,184,75,.3);border-radius:var(--rs);padding:9px 12px;font-family:'Noto Sans TC',sans-serif;}
+.of-card{background:var(--warm-white);border:1px solid var(--border);border-radius:8px;overflow:hidden;display:flex;flex-direction:column;}
+.of-thumb{height:120px;display:flex;align-items:center;justify-content:center;background:var(--cream);padding:6px;}
+.of-thumb img{max-width:100%;max-height:100%;object-fit:contain;box-shadow:0 1px 5px rgba(30,53,84,.14);background:#fff;}
+.of-noimg{text-align:center;color:var(--text3);font-size:11px;font-weight:700;display:flex;flex-direction:column;gap:3px;}
+.of-noimg small{font-size:9px;color:var(--muted);font-weight:600;}
+.of-meta{font-size:10px;color:var(--text3);font-family:var(--mono);padding:6px 8px 0;text-align:center;}
+.of-dl{margin:6px 8px 8px !important;width:auto !important;padding:6px 8px !important;font-size:11px !important;}

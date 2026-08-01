@@ -15,8 +15,8 @@ async function buildPdf(specs,texts){
 function imgCount(ab){return (new TextDecoder('latin1').decode(new Uint8Array(ab)).match(/\/Subtype\s*\/Image/g)||[]).length;}
 async function capture(clickTargetId,fn){let cap=null;const od=dlBlob;window.dlBlob=(b,n)=>cap={b,n};try{await fn();}finally{window.dlBlob=od;}return cap;}
 
-test('core: switchTab activates all 10 tabs',()=>{
-  ['pdf','heic','compress','resize','pdfops','pdfcmp','pdfmix','pageman','pdfwm','pdfann'].forEach(t=>{
+test('core: switchTab activates all 11 tabs',()=>{
+  ['pdf','heic','compress','resize','pdfops','pdfcmp','pdfmix','pageman','pdfwm','pdfann','officeimg'].forEach(t=>{
     switchTab(t);assert(document.getElementById('panel-'+t).classList.contains('active'),t+' not active');});
 });
 test('core: parsePageRange',()=>{eq(JSON.stringify(parsePageRange('1-3,5',10)),JSON.stringify([1,2,3,5]));});
@@ -104,6 +104,18 @@ test('mix: images + PDF → merged PDF',async()=>{
   mxS.conv=false;document.getElementById('mxCvt').disabled=false;
   const cap=await capture('mxCvt',()=>document.getElementById('mxCvt').onclick());
   eq((await PDFLib.PDFDocument.load(await cap.b.arrayBuffer())).getPageCount(),3,'1 image + 2 pdf pages');
+});
+
+test('officeimg: extract embedded image from .docx',async()=>{
+  switchTab('officeimg');
+  const cv=document.createElement('canvas');cv.width=64;cv.height=40;cv.getContext('2d').fillStyle='#c30';cv.getContext('2d').fillRect(0,0,64,40);
+  const png=new Uint8Array(await (await new Promise(r=>cv.toBlob(r,'image/png'))).arrayBuffer());
+  const zip=new JSZip();zip.file('[Content_Types].xml','<x/>');zip.file('word/media/image1.png',png);
+  const file=new File([await zip.generateAsync({type:'blob'})],'doc.docx',{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+  ofClear();
+  await ofHandle([file]);
+  eq(ofItems.length,1,'one image extracted');
+  assert(ofItems[0].ok&&ofItems[0].converted,'png converted to jpg');
 });
 
 test('logic: resize NaN guard / target-png→jpeg / split range filter',()=>{
