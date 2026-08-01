@@ -60,6 +60,10 @@
       <div class="panel">
         <h3>輸入出生資料</h3>
         ${bf.html}
+        <div class="form-grid" style="margin-top:6px">
+          <div class="field"><label>出生地（算上升與宮位）</label>
+            <select id="cb-city" style="width:130px">${MUBU_CITIES.map((c, i) => `<option value="${i}"${c[0] === '台北' ? ' selected' : ''}>${c[0]}</option>`).join('')}</select></div>
+        </div>
         <button class="btn" id="cb-go" style="margin-top:14px">${Icons.svg('combo')} 三盤合參</button>
         <p class="muted" style="margin-top:8px">同時排出八字、紫微斗數、西洋占星三套命盤，交叉比對三個體系對同一個「你」的描繪。這是 AI 深度解讀最有價值的地方——三盤互相印證。</p>
       </div>
@@ -84,12 +88,13 @@
       let borrowed = false;
       if (!mingStars.length) { mingStars = zw.stars[(zw.mingIdx + 6) % 12].main; borrowed = true; }
 
-      // 占星
-      const jdUT = Astro.toJD(b.y, b.m, b.d, b.hh, b.mi) - 8 / 24;
+      // 占星（依真實出生地經緯度與時區，上升才會準）
+      const [cityName, cLat, cLon, cTz] = MUBU_CITIES[+el.querySelector('#cb-city').value] || MUBU_CITIES[0];
+      const jdUT = Astro.toJD(b.y, b.m, b.d, b.hh, b.mi) - cTz / 24;
       const jde = jdUT + Astro.deltaT(b.y) / 86400;
       const sunSign = signOf(Astro.sunLongitude(jde));
       const moonSign = signOf(Astro.moonLongitude(jde));
-      const ascSign = signOf(ascendant(jdUT, 25.04, 121.51));
+      const ascSign = signOf(ascendant(jdUT, cLat, cLon));
       const venusSign = signOf(Astro.planetLongitude('venus', jde));
       const marsSign = signOf(Astro.planetLongitude('mars', jde));
 
@@ -114,7 +119,7 @@
             身宮在${Ganzhi.ZHI[zw.shenIdx]}</div>
           <div class="aspect"><b>${Icons.svg('astrology')} 西洋占星</b>
             太陽 <b>${sunSign}</b> · 月亮 <b>${moonSign}</b><br>
-            上升 ${ascSign}（依台北）<br>
+            上升 ${ascSign}（依${cityName}）<br>
             金星${venusSign} · 火星${marsSign}</div>
         </div>
         <hr class="divider">
@@ -145,7 +150,7 @@
 十二宮：${zw.palaces.map(pl => `${pl.name}[${pl.main.join('') || '空'}]`).join(' ')}
 生年四化：${Object.entries(zw.hua).map(([s, h]) => s + '化' + h).join('、')}
 
-【西洋占星】太陽${sunSign}、月亮${moonSign}、上升${ascSign}、金星${venusSign}、火星${marsSign}
+【西洋占星】出生地${cityName}；太陽${sunSign}、月亮${moonSign}、上升${ascSign}、金星${venusSign}、火星${marsSign}
 
 【內建交叉印證·能量方向】八字${DIR_LABEL[vB.dir]}（${vB.why}）、紫微${DIR_LABEL[vZ.dir]}（${vZ.why}）、占星${DIR_LABEL[vA.dir]}（${vA.why}）——初判：${verdict.text.replace(/<[^>]+>/g, '')}
 
