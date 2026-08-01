@@ -62,6 +62,24 @@
     { angle: 120, orb: 6, name: '三分相', sym: '△', good: true },
     { angle: 180, orb: 7, name: '對分相', sym: '☍', good: false }
   ];
+  // 相位解讀：行星主題 × 相位性質，可組合出任意兩星相位的意涵
+  const PLANET_THEME = {
+    sun: '自我意志與生命核心', moon: '情緒需求與內在安全感', mercury: '思考與溝通方式',
+    venus: '愛情觀與價值感', mars: '行動力與慾望', jupiter: '擴展、機會與信念',
+    saturn: '責任、紀律與現實框架', uranus: '對變革與自由的追求', neptune: '想像、靈性與理想', pluto: '深層蛻變與掌控力'
+  };
+  const ASPECT_FLAVOR = {
+    合相: '緊密結合、能量互相強化——這兩股力量在你身上幾乎融為一體，是鮮明的天賦，但也可能被過度放大，需善加駕馭。',
+    六分相: '和諧配合、機會順暢——只要主動一點，這兩股力量就能彼此加分，是可培養的天賦。',
+    三分相: '天生順流、才華渾然天成——這兩股力量毫不費力地互相支援，是你與生俱來的優勢。',
+    四分相: '彼此拉扯、形成內在張力——這兩股力量常互相牽制，是需要磨合的成長課題，一旦處理好反而是最大的動力來源。',
+    對分相: '兩極拉鋸、需要平衡——這兩股力量像蹺蹺板，容易在關係與內在來回擺盪，學會整合兩端是這輩子的功課。'
+  };
+  const PERSONAL_PLANETS = new Set(['sun', 'moon', 'mercury', 'venus', 'mars', 'jupiter', 'saturn']);
+  function aspectText(x) {
+    const outerOnly = !PERSONAL_PLANETS.has(x.a.id) && !PERSONAL_PLANETS.has(x.b.id);
+    return `${x.a.name}（${PLANET_THEME[x.a.id]}）與 ${x.b.name}（${PLANET_THEME[x.b.id]}）${ASPECT_FLAVOR[x.asp.name]}${outerOnly ? '（外行星世代相位，對個人的影響較間接）' : ''}`;
+  }
   const ZODIAC_ICON_ORDER = ['aries', 'taurus', 'gemini', 'cancer', 'leo', 'virgo', 'libra', 'scorpio', 'sagittarius', 'capricorn', 'aquarius', 'pisces'];
   const ASPECT_ICON = { 合相: 'conjunction', 六分相: 'sextile', 四分相: 'square', 三分相: 'trine', 對分相: 'opposition' };
   const zodiacIcon = (sign, opts) => Icons.svg(ZODIAC_ICON_ORDER[SIGNS.indexOf(sign)], opts || { size: 16 });
@@ -308,6 +326,12 @@
         <p>${[1,2,3,4,5,6,7,8,9,10,11,12].map(h => `<span class="tag">${h}宮 ${zodiacIcon(signOf(pc.cusps[h]), { size: 14 })}${degInSign(pc.cusps[h])}</span>`).join('')}</p>
         <h4>主要相位</h4>
         <p>${aspList.length ? aspList.map(x => `<span class="tag ${x.asp.good === true ? 'gold' : ''}" ${x.asp.good === false ? 'style="color:var(--cinnabar)"' : ''}>${planetIcon(x.a)}${x.a.name} ${aspectIcon(x.asp)} ${planetIcon(x.b)}${x.b.name}（差${x.orb}°）</span>`).join('') : '無明顯主要相位'}</p>
+        ${aspList.length ? `<div style="margin-top:6px">${[...aspList].sort((m, n) => {
+          const rank = (z) => (PERSONAL_PLANETS.has(z.a.id) ? 0 : 1) + (PERSONAL_PLANETS.has(z.b.id) ? 0 : 1);
+          return rank(m) - rank(n) || (+m.orb) - (+n.orb);
+        }).map(x => `<div class="aspect" style="margin-top:6px;border-left:3px solid ${x.asp.good === true ? 'var(--gold-mid)' : x.asp.good === false ? 'var(--cinnabar)' : 'var(--panel-border)'}">
+          <b>${planetIcon(x.a)}${x.a.name} ${aspectIcon(x.asp)} ${x.asp.name} ${planetIcon(x.b)}${x.b.name}</b>
+          <p style="margin-top:3px">${aspectText(x)}</p></div>`).join('')}</div>` : ''}
         <hr class="divider">
         <h4>${Icons.svg('sun', { size: 16 })} 太陽${positions[0].sign.name}（第${positions[0].house}宮）—— 核心自我</h4><p>${positions[0].sign.trait}生命重心落在${HOUSE_MEAN[positions[0].house - 1]}的領域。</p>
         <h4>${Icons.svg('moon', { size: 16 })} 月亮${positions[1].sign.name}（第${positions[1].house}宮）—— 內在情感</h4><p>${MOON_TRAIT[SIGNS.indexOf(positions[1].sign)]}內心層面在${HOUSE_MEAN[positions[1].house - 1]}的領域格外敏感、需要被滋養。</p>
@@ -333,7 +357,7 @@ ${positions.map(p => `${p.name}：${p.sign.name} ${degInSign(p.lon)}，第${p.ho
     id: 'astrology',
     icon: Icons.svg('astrology'),
     title: '西洋占星',
-    desc: 'Placidus 宮位制、SVG 星盤、十大行星逆行標示、真太陽時。',
+    desc: 'Placidus 宮位制、SVG 星盤、十大行星逆行標示、相位逐條解讀、真太陽時。',
     render
   });
 })();

@@ -3,6 +3,41 @@
   const SIGNS = ['牡羊座', '金牛座', '雙子座', '巨蟹座', '獅子座', '處女座', '天秤座', '天蠍座', '射手座', '摩羯座', '水瓶座', '雙魚座'];
   const signOf = (lon) => SIGNS[Math.floor(Astro.norm360(lon) / 30)];
 
+  // ---------- 三盤交叉印證：以「外向主動 ⇄ 內向沉靜」為共同軸線，看三套系統是否指向同一底色 ----------
+  const ZW_DONG = new Set(['紫微', '太陽', '武曲', '七殺', '破軍', '貪狼', '廉貞']); // 剛／主動星
+  const ZW_JING = new Set(['天機', '天同', '太陰', '天府', '天相', '天梁', '巨門']); // 柔／內斂星
+  // 八字：日主陰陽＋身強弱＋最旺五行 三票
+  function baziVote(p, str, mostWx) {
+    const yang = ['甲', '丙', '戊', '庚', '壬'].includes(p.day.gan);
+    const strong = str.label === '偏強';
+    const wxScore = { 火: 1, 木: 1, 金: 0.5, 土: 0, 水: 0 }[mostWx];
+    const score = (yang ? 1 : 0) + (strong ? 1 : 0) + wxScore;
+    return { dir: score >= 1.5 ? '動' : '靜', why: `日主${p.day.gan}（${yang ? '陽' : '陰'}）、身${str.label}、${mostWx}最旺` };
+  }
+  // 紫微：命宮主星動靜歸類
+  function ziweiVote(mingStars) {
+    let d = 0, j = 0;
+    mingStars.forEach(s => { if (ZW_DONG.has(s)) d++; else if (ZW_JING.has(s)) j++; });
+    const dir = d > j ? '動' : j > d ? '靜' : '中';
+    return { dir, why: mingStars.length ? `命宮${mingStars.join('、')}` : '命宮無主星' };
+  }
+  // 占星：太陽星座陰陽（火風=陽=動、土水=陰=靜；SIGNS 偶數索引為陽性）
+  function astroVote(sunSign) {
+    const idx = SIGNS.indexOf(sunSign);
+    const yang = idx % 2 === 0;
+    return { dir: yang ? '動' : '靜', why: `太陽${sunSign}（${yang ? '陽性火風象' : '陰性土水象'}）` };
+  }
+  const DIR_LABEL = { 動: '外向主動', 靜: '內向沉靜', 中: '剛柔並存' };
+  function crossVerdict(votes) {
+    const d = votes.filter(v => v.dir === '動').length;
+    const j = votes.filter(v => v.dir === '靜').length;
+    if (d === 3) return { good: true, text: '三盤一致指向<b>外向主動</b>——這是你最核心、最可信的人格底色：行動力強、樂於表現、能量向外發散。' };
+    if (j === 3) return { good: true, text: '三盤一致指向<b>內向沉靜</b>——這是你最核心、最可信的人格底色：沉穩內斂、重感受與思考、能量向內收斂。' };
+    if (d >= 2) return { good: null, text: '三盤多數指向<b>外向主動</b>，但有一套系統偏向沉靜——你整體活躍外放，內在卻藏著較安靜、需要獨處的一面，這種「外動內靜」的反差正是你可整合的地方。' };
+    if (j >= 2) return { good: null, text: '三盤多數指向<b>內向沉靜</b>，但有一套系統偏向主動——你外表沉穩，內在其實藏著不安於室、想衝想闖的能量，這種「外靜內動」的反差值得你正視。' };
+    return { good: null, text: '三盤在動靜之間分歧較大——代表你是個多面向、剛柔並存的人，不同情境會展現截然不同的樣貌，難以被單一標籤定義。' };
+  }
+
   function ascendant(jdUT, latDeg, lonDeg) {
     const RAD = Math.PI / 180;
     const T = (jdUT - 2451545.0) / 36525;
@@ -58,6 +93,12 @@
       const venusSign = signOf(Astro.planetLongitude('venus', jde));
       const marsSign = signOf(Astro.planetLongitude('mars', jde));
 
+      // 三盤交叉印證（動靜軸）
+      const str = Ganzhi.strength(p);
+      const mostWx = Object.entries(wx).sort((a, c) => c[1] - a[1])[0][0];
+      const vB = baziVote(p, str, mostWx), vZ = ziweiVote(mingStars), vA = astroVote(sunSign);
+      const verdict = crossVerdict([vB, vZ, vA]);
+
       const div = document.createElement('div');
       div.innerHTML = `<div class="panel result">
         <h3>三盤總覽</h3>
@@ -77,9 +118,19 @@
             金星${venusSign} · 火星${marsSign}</div>
         </div>
         <hr class="divider">
-        <h4>三盤合參怎麼看</h4>
-        <p>八字看的是<b>五行氣機與人生節奏</b>（日主 ${p.day.gan}${p.day.ganWx}），紫微看的是<b>人生劇本與舞台配置</b>（${mingStars.join('、')}坐命），占星看的是<b>心理原型與天賦傾向</b>（太陽${sunSign}／月亮${moonSign}）。三套體系從不同角度描繪同一個你——重疊之處就是你最核心的特質，分歧之處往往是內外反差或成長課題。</p>
-        <p class="muted" style="margin-top:8px">${Icons.svg('pointer')} 建議使用 AI 深度解讀進行真正的三盤交叉分析（這是本功能的精華）。沒有 API Key 也可分別到各模組查看完整單盤解讀。</p>
+        <h4>三盤性格印證 · 能量方向</h4>
+        <p class="muted" style="margin-top:-2px">以「外向主動 ⇄ 內向沉靜」為共同軸線，看八字、紫微、占星三套系統是否指向同一種底色——一致處最可信，分歧處就是內外反差。</p>
+        <table class="chart">
+          <tr><th>系統</th><th>訊號</th><th>指向</th></tr>
+          <tr><td>${Icons.svg('bazi')} 八字</td><td class="muted">${vB.why}</td><td><b style="color:${vB.dir === '動' ? 'var(--cinnabar)' : 'var(--navy)'}">${DIR_LABEL[vB.dir]}</b></td></tr>
+          <tr><td>${Icons.svg('ziwei')} 紫微</td><td class="muted">${vZ.why}</td><td><b style="color:${vZ.dir === '動' ? 'var(--cinnabar)' : vZ.dir === '靜' ? 'var(--navy)' : 'var(--ink-dim)'}">${DIR_LABEL[vZ.dir]}</b></td></tr>
+          <tr><td>${Icons.svg('astrology')} 占星</td><td class="muted">${vA.why}</td><td><b style="color:${vA.dir === '動' ? 'var(--cinnabar)' : 'var(--navy)'}">${DIR_LABEL[vA.dir]}</b></td></tr>
+        </table>
+        <div class="aspect" style="margin-top:10px;border-left:3px solid ${verdict.good ? 'var(--gold-mid)' : 'var(--panel-border)'}"><p>${verdict.text}</p></div>
+        <hr class="divider">
+        <h4>三盤各看什麼</h4>
+        <p>八字看的是<b>五行氣機與人生節奏</b>（日主 ${p.day.gan}${p.day.ganWx}），紫微看的是<b>人生劇本與舞台配置</b>（${mingStars.join('、') || '借對宮'}坐命），占星看的是<b>心理原型與天賦傾向</b>（太陽${sunSign}／月亮${moonSign}）。上方的能量方向只是最粗的一條軸線，事業、感情、財運等完整的三盤交叉印證，交給 AI 深度解讀。</p>
+        <p class="muted" style="margin-top:8px">${Icons.svg('pointer')} 建議使用 AI 深度解讀進行完整的三盤交叉分析（這是本功能的精華）。沒有 API Key 也可分別到各模組查看完整單盤解讀。</p>
       </div>`;
       resEl.appendChild(div);
 
@@ -96,8 +147,10 @@
 
 【西洋占星】太陽${sunSign}、月亮${moonSign}、上升${ascSign}、金星${venusSign}、火星${marsSign}
 
+【內建交叉印證·能量方向】八字${DIR_LABEL[vB.dir]}（${vB.why}）、紫微${DIR_LABEL[vZ.dir]}（${vZ.why}）、占星${DIR_LABEL[vA.dir]}（${vA.why}）——初判：${verdict.text.replace(/<[^>]+>/g, '')}
+
 請分析：
-1) 三盤共同指向的核心人格特質（重疊印證處）
+1) 三盤共同指向的核心人格特質（重疊印證處，可延伸上方能量方向的初判）
 2) 三盤分歧處代表的內外反差或潛在課題
 3) 事業財運方向（綜合三盤）
 4) 感情婚姻模式（綜合三盤）
