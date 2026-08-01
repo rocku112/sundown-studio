@@ -124,7 +124,7 @@
         </div>
         <hr class="divider">
         <h4>三盤性格印證 · 能量方向</h4>
-        <p class="muted" style="margin-top:-2px">以「外向主動 ⇄ 內向沉靜」為共同軸線，看八字、紫微、占星三套系統是否指向同一種底色——一致處最可信，分歧處就是內外反差。</p>
+        <p class="muted" style="margin-top:-2px">以「外向主動 ⇄ 內向沉靜」為共同軸線，看八字、紫微、占星三套系統是否指向同一種底色——一致處最可信，分歧處就是內外反差。<b>（此為本站自訂的粗略對照指標，非任何傳統命理方法，僅供趣味參考）</b></p>
         <table class="chart">
           <tr><th>系統</th><th>訊號</th><th>指向</th></tr>
           <tr><td>${Icons.svg('bazi')} 八字</td><td class="muted">${vB.why}</td><td><b style="color:${vB.dir === '動' ? 'var(--cinnabar)' : 'var(--navy)'}">${DIR_LABEL[vB.dir]}</b></td></tr>

@@ -319,7 +319,8 @@
           return rank(m) - rank(n) || (+m.orb) - (+n.orb);
         }).map(x => `<div class="aspect" style="margin-top:6px;border-left:3px solid ${x.asp.good === true ? 'var(--gold-mid)' : x.asp.good === false ? 'var(--cinnabar)' : 'var(--panel-border)'}">
           <b>${planetIcon(x.a)}${x.a.name} ${aspectIcon(x.asp)} ${x.asp.name} ${planetIcon(x.b)}${x.b.name}</b>
-          <p style="margin-top:3px">${aspectText(x)}</p></div>`).join('')}</div>` : ''}
+          <p style="margin-top:3px">${aspectText(x)}</p></div>`).join('')}
+        <p class="muted" style="font-size:11.5px;margin-top:4px">※ 相位角度為天文精算；意涵為「行星主題×相位性質」的簡化通則，未錨定特定占星流派，僅供參考。</p></div>` : ''}
         <hr class="divider">
         <h4>${Icons.svg('sun', { size: 16 })} 太陽${positions[0].sign.name}（第${positions[0].house}宮）—— 核心自我</h4><p>${positions[0].sign.trait}生命重心落在${HOUSE_MEAN[positions[0].house - 1]}的領域。</p>
         <h4>${Icons.svg('moon', { size: 16 })} 月亮${positions[1].sign.name}（第${positions[1].house}宮）—— 內在情感</h4><p>${MOON_TRAIT[SIGNS.indexOf(positions[1].sign)]}內心層面在${HOUSE_MEAN[positions[1].house - 1]}的領域格外敏感、需要被滋養。</p>

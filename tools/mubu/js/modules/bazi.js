@@ -193,6 +193,7 @@
         <h4>格局 · ${ge.name}</h4>
         <p><span class="tag gold">月令取格</span>${ge.luFlag ? '' : `<span class="tag">${ge.exposed ? '格神透干・格局清純' : '格神藏而未透・需行運引動'}</span>`}</p>
         <p style="margin-top:6px">${ge.info}</p>
+        <p class="muted" style="font-size:11.5px;margin-top:4px">※ 格局以月令本氣取格、大運吉凶依用神粗判、十神性格取命中最旺者——皆為簡化規則的初步判讀，未錨定特定門派（成敗、格局高低尚須綜合全局），僅供參考，深入論命請用 AI 深度解讀或請教專業命理師。</p>
         <hr class="divider">
         <h4>日主性格 · ${p.day.gan}${p.day.ganWx}</h4>
         <p>${GAN_CHAR[p.day.gan]}</p>

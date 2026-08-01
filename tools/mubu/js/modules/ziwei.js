@@ -95,7 +95,7 @@
   }
 
   function buildChart(lunar, hourIdx, yearPillar, gender) {
-    const month = lunar.month; // 閏月以本月計（簡化）
+    const month = lunar.month; // 閏月一律歸本月論（歸本月為一派正規約定，非簡化；閏月歸月各派不同，待日後門派錨定時再定案）
     const day = lunar.day;
     const ys = yearPillar.ganIdx, yz = yearPillar.zhiIdx;
 

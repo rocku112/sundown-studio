@@ -1,5 +1,5 @@
 /* 暮卜先知 · Service Worker（stale-while-revalidate：先回快取秒開，背景更新） */
-const CACHE = 'mubu-v48';
+const CACHE = 'mubu-v49';
 const PRECACHE = [
   './', 'index.html', 'css/style.css', 'icon.svg', 'manifest.webmanifest',
   'js/core/icons.js', 'js/core/astro.js', 'js/core/ganzhi.js', 'js/core/ai.js', 'js/core/extras.js',
