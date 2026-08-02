@@ -6,6 +6,10 @@
 const Astro = (() => {
   const RAD = Math.PI / 180;
   const TZ = 8 / 24; // UTC+8
+  // VSOP87D 精簡係數＋冥王星表（瀏覽器為全域 script、Node 為 require）
+  const _EPH = (typeof VSOP87D === 'undefined' && typeof require !== 'undefined') ? require('../data/vsop87d.js') : null;
+  const VSOP = (typeof VSOP87D !== 'undefined') ? VSOP87D : (_EPH ? _EPH.VSOP87D : null);
+  const PLUTO_T = (typeof PLUTO_T37 !== 'undefined') ? PLUTO_T37 : (_EPH ? _EPH.PLUTO_T37 : null);
 
   // ---------- 儒略日 ----------
   // 公曆 → JD（不含時區概念，輸入什麼時刻就是什麼時刻）
@@ -72,16 +76,18 @@ const Astro = (() => {
   const norm360 = (x) => ((x % 360) + 360) % 360;
 
   // ---------- 太陽視黃經（Meeus 低精度，誤差 ~0.01°） ----------
+  // 太陽地心視黃經（度）：走 VSOP87D（地球日心＋180°＋光行差＋章動），精度 ~2″
+  // 節氣／立春以此為準；VSOP 資料缺席時退回 Meeus Ch.25 低精度式（~36″）
   function sunLongitude(jde) {
+    if (VSOP && VSOP.earth) return _vsopGeoLon('sun', jde);
     const T = (jde - 2451545.0) / 36525;
     const L0 = 280.46646 + 36000.76983 * T + 0.0003032 * T * T;
     const M = (357.52911 + 35999.05029 * T - 0.0001537 * T * T) * RAD;
     const C = (1.914602 - 0.004817 * T - 0.000014 * T * T) * Math.sin(M)
       + (0.019993 - 0.000101 * T) * Math.sin(2 * M)
       + 0.000289 * Math.sin(3 * M);
-    const trueLong = L0 + C;
     const omega = (125.04 - 1934.136 * T) * RAD;
-    return norm360(trueLong - 0.00569 - 0.00478 * Math.sin(omega));
+    return norm360(L0 + C - 0.00569 - 0.00478 * Math.sin(omega));
   }
 
   // 求太陽到達指定黃經的時刻（TT JD），jdGuess 為初估值
@@ -349,6 +355,60 @@ const Astro = (() => {
     pluto: { a: 39.48211675, e: [0.24882730, 0.0000517], i: [17.14001206, 0.00004818], O: [110.30393684, -0.01183482], w: [224.06891629, -0.04062942], L: [238.92903833, 145.20780515] }
   };
 
+  // ---------- VSOP87D 求值（水星～海王星，天文級） ----------
+  // 求某座標級數在 τ（儒略千年）的值：Σ_k τ^k Σ_i A cos(B+Cτ)
+  function _vsopSum(series, tau) {
+    let sum = 0, tp = 1;
+    for (let k = 0; k < series.length; k++) {
+      const terms = series[k]; let s = 0;
+      for (let i = 0; i < terms.length; i++) { const t = terms[i]; s += t[0] * Math.cos(t[1] + t[2] * tau); }
+      sum += s * tp; tp *= tau;
+    }
+    return sum;
+  }
+  // 日心黃經黃緯距離（黃道與春分點：當日），L,B 弧度、R AU
+  function _vsopLBR(name, jde) {
+    const tau = (jde - 2451545.0) / 365250.0;
+    const d = VSOP[name];
+    return { L: _vsopSum(d.L, tau), B: _vsopSum(d.B, tau), R: _vsopSum(d.R, tau) };
+  }
+  function _vsopRect(name, jde) {
+    const { L, B, R } = _vsopLBR(name, jde);
+    const cb = Math.cos(B);
+    return { x: R * cb * Math.cos(L), y: R * cb * Math.sin(L), z: R * Math.sin(B) };
+  }
+  // 地心視黃經（度）：VSOP87D＋光行時迭代＋章動；行星與太陽共用
+  // 傳 name='earth' 特殊處理為太陽（地心太陽＝地球日心＋180°）
+  const ABERR_K = 20.49552 / 3600; // 光行差常數 κ（度）
+  function _vsopGeoLon(name, jde) {
+    const T = (jde - 2451545.0) / 36525;
+    if (name === 'sun') {
+      // 太陽地心黃經＝地球日心黃經＋180°。以「延遲時刻的地球位置」計算，光行時本身已含周年光行差，故不再另扣 κ
+      const tau = (jde - 2451545.0) / 365250.0;
+      const R = _vsopSum(VSOP.earth.R, tau);
+      const jde2 = jde - 0.0057755183 * R;
+      const e2 = _vsopRect('earth', jde2);
+      const lon = Math.atan2(-e2.y, -e2.x) / RAD;
+      return norm360(lon + nutationLon(T) / 3600);
+    }
+    const e = _vsopRect('earth', jde);
+    let x, y, z, jdt = jde;
+    for (let it = 0; it < 3; it++) {
+      const p = _vsopRect(name, jdt);
+      x = p.x - e.x; y = p.y - e.y; z = p.z - e.z;
+      const dist = Math.sqrt(x * x + y * y + z * z);
+      jdt = jde - 0.0057755183 * dist;
+    }
+    let lon = Math.atan2(y, x) / RAD;
+    const lat = Math.atan2(z, Math.sqrt(x * x + y * y)) / RAD;
+    // 周年光行差（Meeus Ch.23）：需太陽真黃經⊙、地球軌道近日點經度ϖ、離心率e
+    const sunLon = norm360(_vsopLBR('earth', jde).L / RAD + 180);
+    const ecc = 0.016708634 - 0.000042037 * T - 0.0000001267 * T * T;
+    const peri = 102.93735 + 1.71946 * T + 0.00046 * T * T;
+    const dLon = (-ABERR_K * Math.cos((sunLon - lon) * RAD) + ecc * ABERR_K * Math.cos((peri - lon) * RAD)) / Math.cos(lat * RAD);
+    return norm360(lon + dLon + nutationLon(T) / 3600);
+  }
+
   function _heliocentric(name, T) {
     const o = ORBITS[name];
     const L = norm360(o.L[0] + o.L[1] * T);
@@ -368,12 +428,47 @@ const Astro = (() => {
   }
 
   // 地心視黃經（度）：mercury..neptune
-  function planetLongitude(name, jde) {
+  // 冥王星日心黃經黃緯距離（Meeus Ch.37，J2000 黃道），l,b 度、r AU
+  function _plutoHelioJ2000(jde) {
     const T = (jde - 2451545.0) / 36525;
+    const J = 34.35 + 3034.9057 * T, S = 50.08 + 1222.1138 * T, P = 238.96 + 144.96 * T;
+    let l = 0, b = 0, r = 0;
+    for (let i = 0; i < PLUTO_T.length; i++) {
+      const t = PLUTO_T[i];
+      const a = (t[0] * J + t[1] * S + t[2] * P) * RAD, sa = Math.sin(a), ca = Math.cos(a);
+      l += t[3] * sa + t[4] * ca; b += t[5] * sa + t[6] * ca; r += t[7] * sa + t[8] * ca;
+    }
+    return { lon: l + 238.958116 + 144.96 * T, lat: b - 3.908239, range: r + 40.7241346 };
+  }
+  // 冥王星地心視黃經（度）：Meeus 冥王星＋J2000→當日歲差＋光行時＋光行差＋章動
+  function _plutoGeoLon(jde) {
+    const T = (jde - 2451545.0) / 36525;
+    const e = _vsopRect('earth', jde);
+    const prec = 1.396971 * T + 0.0003086 * T * T; // J2000→當日 黃經歲差（度，近似）
+    let x, y, z, jdt = jde;
+    for (let it = 0; it < 2; it++) {
+      const h = _plutoHelioJ2000(jdt);
+      const lonOD = (h.lon + prec) * RAD, latR = h.lat * RAD, cb = Math.cos(latR);
+      x = h.range * cb * Math.cos(lonOD) - e.x;
+      y = h.range * cb * Math.sin(lonOD) - e.y;
+      z = h.range * Math.sin(latR) - e.z;
+      jdt = jde - 0.0057755183 * Math.sqrt(x * x + y * y + z * z);
+    }
+    let lon = Math.atan2(y, x) / RAD;
+    const lat = Math.atan2(z, Math.sqrt(x * x + y * y)) / RAD;
+    const sunLon = norm360(_vsopLBR('earth', jde).L / RAD + 180);
+    const ecc = 0.016708634 - 0.000042037 * T, peri = 102.93735 + 1.71946 * T;
+    const dLon = (-ABERR_K * Math.cos((sunLon - lon) * RAD) + ecc * ABERR_K * Math.cos((peri - lon) * RAD)) / Math.cos(lat * RAD);
+    return norm360(lon + dLon + nutationLon(T) / 3600);
+  }
+
+  function planetLongitude(name, jde) {
+    if (name === 'pluto' && PLUTO_T) return _plutoGeoLon(jde);       // 冥王星走 Meeus Ch.37
+    if (VSOP && VSOP[name]) return _vsopGeoLon(name, jde);           // 水星～海王星走 VSOP87D
+    const T = (jde - 2451545.0) / 36525;                            // 資料缺席時退回克卜勒近似
     const p = _heliocentric(name, T);
     const e = _heliocentric('earth', T);
-    const dx = p.x - e.x, dy = p.y - e.y, dz = p.z - e.z;
-    return norm360(Math.atan2(dy, dx) / RAD);
+    return norm360(Math.atan2(p.y - e.y, p.x - e.x) / RAD);
   }
 
   // 月球地心視黃經（Meeus 天文演算法 Ch.47 完整 Table 47.A 60 項＋附加項＋章動，精度 ~10″）
