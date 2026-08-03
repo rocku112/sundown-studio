@@ -150,6 +150,62 @@ pdfClr.onclick=()=>{pS.files=[];pdfGrid.innerHTML='';pdfGrid.style.display='none
 function pdfUI(){const h=pS.files.length>0;pdfCvt.disabled=!h;pdfClr.disabled=!h;pdfDZ.style.display=h?'none':'block';pdfGrid.style.display=h?'grid':'none';pdfSt();}
 function pdfSt(){document.getElementById('ps1').textContent=pS.files.length;document.getElementById('ps2').textContent=pS.files.reduce((s,f)=>s+(f.pc||0),0);document.getElementById('ps3').textContent=pS.done;document.getElementById('ps4').textContent=pS.imgs;}
 
+// ── Folder batch (File System Access API, Chromium): convert every PDF in a picked
+//    folder tree to JPG and write the images back into each PDF's own folder (in place) ──
+async function pdfCollectPdfs(dirHandle){
+  const out=[];
+  async function walk(dh){
+    for await(const e of dh.values()){
+      if(e.kind==='directory')await walk(e);
+      else if(e.kind==='file'&&/\.pdf$/i.test(e.name))out.push({handle:e,dir:dh,name:e.name});
+    }
+  }
+  await walk(dirHandle);
+  return out;
+}
+async function pdfRenderToJpgs(ab,base,scale,qual){
+  const pdf=await pdfjsLib.getDocument({data:ab}).promise,single=pdf.numPages===1,out=[];
+  for(let pn=1;pn<=pdf.numPages;pn++){
+    const pg=await pdf.getPage(pn),vp=pg.getViewport({scale}),cv=document.createElement('canvas');
+    cv.width=vp.width;cv.height=vp.height;
+    await pg.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+    out.push({name:single?`${base}.jpg`:`${base}_p${String(pn).padStart(3,'0')}.jpg`,blob:await new Promise(r=>cv.toBlob(r,'image/jpeg',qual))});
+    await tick();
+  }
+  if(pdf.destroy)pdf.destroy();
+  return out;
+}
+async function pdfBatchFolder(){
+  if(pS.conv)return;
+  if(!window.showDirectoryPicker){toast('此瀏覽器不支援資料夾批次，請改用 Chrome 或 Edge',true);return;}
+  let dir;try{dir=await window.showDirectoryPicker({mode:'readwrite'});}catch(e){return;}   // user cancelled
+  pS.conv=true;pS.done=0;pS.imgs=0;pdfCvt.disabled=true;pdfClr.disabled=true;
+  document.getElementById('pdfBatch').disabled=true;
+  document.getElementById('pdfPW').style.display='block';document.getElementById('pdfPT').textContent='掃描資料夾…';
+  try{
+    const dpi=+document.getElementById('pdfDpi').value,qual=+document.getElementById('pdfQual').value/100,scale=dpi/72;
+    const pdfs=await pdfCollectPdfs(dir);
+    if(!pdfs.length){toast('這個資料夾（含子資料夾）裡沒有 PDF',true);return;}
+    for(let i=0;i<pdfs.length;i++){
+      const p=pdfs[i];document.getElementById('pdfPT').textContent=`${p.name}（${i+1}/${pdfs.length}）`;
+      try{
+        const ab=await (await p.handle.getFile()).arrayBuffer();
+        const jpgs=await pdfRenderToJpgs(ab,p.name.replace(/\.pdf$/i,''),scale,qual);
+        for(const j of jpgs){
+          const fh=await p.dir.getFileHandle(j.name,{create:true});
+          const w=await fh.createWritable();await w.write(j.blob);await w.close();
+          pS.imgs++;
+        }
+      }catch(e){}
+      pS.done++;pdfProg(i+1,pdfs.length);await tick();
+    }
+    toast(`批次完成：${pS.done} 個 PDF，就地輸出 ${pS.imgs} 張 JPG`);
+  }catch(e){toast('批次失敗：'+(e.message||e),true);}
+  finally{pS.conv=false;pdfCvt.disabled=false;pdfClr.disabled=false;document.getElementById('pdfBatch').disabled=false;setTimeout(()=>document.getElementById('pdfPW').style.display='none',900);}
+}
+// only show the batch button where the API exists (Chromium)
+if(window.showDirectoryPicker){const _b=document.getElementById('pdfBatch');if(_b)_b.style.display='';}
+
 // ════════════════════════════════════════════════
 //  2. HEIC → JPG
 // ════════════════════════════════════════════════

@@ -118,6 +118,21 @@ test('officeimg: extract embedded image from .docx',async()=>{
   assert(ofItems[0].ok&&ofItems[0].converted,'png converted to jpg');
 });
 
+test('pdf folder-batch: recurse + write JPGs back into each source folder',async()=>{
+  const writes=[];
+  const mkFile=(name)=>({kind:'file',name,getFile:async()=>new File([new Uint8Array([1])],name)});
+  const mkDir=(name,entries)=>({kind:'directory',name,async*values(){for(const e of entries)yield e;},getFileHandle:async(fn)=>{writes.push(name+'/'+fn);return{createWritable:async()=>({write:async()=>{},close:async()=>{}})};}});
+  const root=mkDir('root',[mkFile('top.pdf'),mkDir('sub',[mkFile('a.pdf'),mkFile('x.txt')])]);
+  eq((await pdfCollectPdfs(root)).length,2,'found 2 pdfs, skipped .txt');
+  const oR=window.pdfRenderToJpgs,oP=window.showDirectoryPicker;
+  window.pdfRenderToJpgs=async(ab,base)=>[{name:base+'.jpg',blob:new Blob(['x'])}];
+  window.showDirectoryPicker=async()=>root;
+  await pdfBatchFolder();
+  window.pdfRenderToJpgs=oR;window.showDirectoryPicker=oP;
+  writes.sort();
+  eq(JSON.stringify(writes),JSON.stringify(['root/top.jpg','sub/a.jpg']),'jpg written into each source folder (in place)');
+});
+
 test('logic: resize NaN guard / target-png→jpeg / split range filter',()=>{
   eq(Math.max(1,Math.round(NaN)||600),600,'empty height falls back');
   const calc=(mode,mime)=>{if(mode==='target'&&mime==='image/png')mime='image/jpeg';return mime;};
