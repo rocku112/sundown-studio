@@ -89,6 +89,12 @@ function ofRender(){
 
 function ofDownload(id){const it=ofItems.find(x=>x.id===id);if(it)dlBlob(it.blob,it.name);}
 
+document.getElementById('ofAll').onclick=async()=>{
+  const ok=ofItems.filter(x=>x.ok);
+  if(!ok.length){toast('沒有可下載的圖片',true);return;}
+  for(const it of ok){dlBlob(it.blob,it.name);await new Promise(r=>setTimeout(r,180));}   // spaced so the browser doesn't block the batch
+  toast(`已下載 ${ok.length} 張 JPG`);
+};
 document.getElementById('ofZip').onclick=async()=>{
   const ok=ofItems.filter(x=>x.ok);
   if(!ok.length){toast('沒有可打包的圖片',true);return;}
@@ -100,4 +106,4 @@ document.getElementById('ofZip').onclick=async()=>{
 };
 document.getElementById('ofClr').onclick=ofClear;
 function ofClear(){ofItems.forEach(it=>it.thumbUrl&&URL.revokeObjectURL(it.thumbUrl));ofItems=[];ofGrid.innerHTML='';ofDZ.style.display='block';ofUI();}
-function ofUI(){document.getElementById('ofZip').disabled=!ofItems.some(x=>x.ok);document.getElementById('ofClr').disabled=!ofItems.length;}
+function ofUI(){const anyOk=ofItems.some(x=>x.ok);document.getElementById('ofAll').disabled=!anyOk;document.getElementById('ofZip').disabled=!anyOk;document.getElementById('ofClr').disabled=!ofItems.length;}
