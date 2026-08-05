@@ -116,6 +116,42 @@ P.SHRINES.forEach(s => {
   if (r.score >= 60) inverted.push(`${s.id}: 全選錯仍拿到 ${r.score} 分`);
 });
 
+// 走位回歸測試：沿著島緣與橋面往各方向衝，不能走出可走區域。
+// （曾經的 bug：只逐軸判定，斜著走到圓弧邊界就會掉進深淵。）
+let walkPaths = 0, escapes = [];
+{
+  const SPD = 330 / 60;                       // 奔跑速度，每幀位移
+  const combos = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
+  const run = (sx, sy, dx, dy, label) => {
+    walkPaths++;
+    let x = sx, y = sy;
+    const m = Math.hypot(dx, dy);
+    for (let f = 0; f < 70; f++) {
+      const mv = L.resolveMove(x, y, x + dx / m * SPD, y + dy / m * SPD, null);
+      x = mv.x; y = mv.y;
+      if (!L.walkable(x, y)) { escapes.push(`${label} 方向(${dx},${dy}) 走到 (${Math.round(x)},${Math.round(y)})`); return; }
+    }
+  };
+  P.REGIONS.forEach(r => {
+    for (let a = 0; a < Math.PI * 2; a += Math.PI / 8) {
+      const R = L.radiusAt(r, a) * 0.94;
+      const sx = r.x + Math.cos(a) * R, sy = r.y + Math.sin(a) * R * 0.92;
+      if (!L.walkable(sx, sy)) continue;
+      combos.forEach(d => run(sx, sy, d[0], d[1], `${r.name} 邊緣 ∠${a.toFixed(2)}`));
+    }
+  });
+  P.BRIDGES.forEach(pr => {
+    const a = P.REGIONS.find(z => z.id === pr[0]), b = P.REGIONS.find(z => z.id === pr[1]);
+    [0.3, 0.5, 0.7].forEach(t => {
+      const sx = a.x + (b.x - a.x) * t, sy = a.y + (b.y - a.y) * t;
+      if (!L.walkable(sx, sy)) return;
+      combos.forEach(d => run(sx, sy, d[0], d[1], `橋 ${a.name}→${b.name} t=${t}`));
+    });
+  });
+}
+escapes.slice(0, 8).forEach(e => fails.push('走出地面：' + e));
+if (escapes.length > 8) fails.push(`走出地面：另有 ${escapes.length - 8} 條路徑同樣出界`);
+
 // 反向：空白與關鍵字堆砌
 const soup = P.score('角色 任務 格式 範例 引用 工具 代理 快取 注入 遷移', [{ id: 'goal', weight: 1 }], { pickAccuracy: 1 });
 const empty = P.score('', [{ id: 'goal', weight: 1 }], { pickAccuracy: 1 });
@@ -134,6 +170,7 @@ console.log('廠家標記      :', JSON.stringify(vt));
 console.log('境數          :', P.REGIONS.length);
 console.log('結構檢核條數  :', P.checkCount);
 console.log('題型分布      :', JSON.stringify(boards));
+console.log('走位路徑      :', walkPaths, escapes.length ? `（${escapes.length} 條出界）` : '（全部沒走出地面）');
 console.log('可自動驗證關卡:', scores.length);
 console.log('滿分作答最低分:', scores.length ? Math.min(...scores) : '-');
 console.log('關鍵字堆砌得分:', soup.score, '(應為低分)');

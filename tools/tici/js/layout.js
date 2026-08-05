@@ -104,6 +104,59 @@
     return collectCache;
   };
 
+  // ---- 可走區域與移動解算 -------------------------------------------
+  L.BRIDGE_HALF = 30;
+
+  function segDist(px, py, ax, ay, bx, by) {
+    var dx = bx - ax, dy = by - ay, len = dx * dx + dy * dy;
+    var t = len ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len)) : 0;
+    return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+  }
+
+  L.onBridge = function (x, y) {
+    for (var i = 0; i < P.BRIDGES.length; i++) {
+      var a = null, b = null;
+      for (var k = 0; k < P.REGIONS.length; k++) {
+        if (P.REGIONS[k].id === P.BRIDGES[i][0]) a = P.REGIONS[k];
+        if (P.REGIONS[k].id === P.BRIDGES[i][1]) b = P.REGIONS[k];
+      }
+      if (a && b && segDist(x, y, a.x, a.y, b.x, b.y) < L.BRIDGE_HALF) return true;
+    }
+    return false;
+  };
+
+  L.walkable = function (x, y) {
+    for (var i = 0; i < P.REGIONS.length; i++) if (L.inRegion(P.REGIONS[i], x, y)) return true;
+    return L.onBridge(x, y);
+  };
+
+  L.regionOf = function (x, y) {
+    for (var i = 0; i < P.REGIONS.length; i++) if (L.inRegion(P.REGIONS[i], x, y)) return P.REGIONS[i];
+    return null;
+  };
+
+  /**
+   * 解算一次移動。
+   *
+   * 移動是相對鏡頭的，所以連按單鍵在世界座標上也是斜走。若只逐軸判定，
+   * 會漏掉「兩軸各自都通過、但合起來出界」的情況——沿著島緣走就會掉下去。
+   * 這裡先驗合併後的位置，不行才退成逐軸滑行，兩者都不行就停住。
+   *
+   * @param {object} blocked 這一輪被門扉擋住的境（可為 null）
+   * @returns {{x,y,stopX,stopY}}
+   */
+  L.resolveMove = function (px, py, nx, ny, blocked) {
+    function canGo(x, y) {
+      if (!L.walkable(x, y)) return false;
+      if (blocked && L.regionOf(x, y) === blocked) return false;
+      return true;
+    }
+    if (canGo(nx, ny)) return { x: nx, y: ny, stopX: false, stopY: false };
+    if (canGo(nx, py)) return { x: nx, y: py, stopX: false, stopY: true };
+    if (canGo(px, ny)) return { x: px, y: ny, stopX: true, stopY: false };
+    return { x: px, y: py, stopX: true, stopY: true };
+  };
+
   L.reset = function () { shrineCache = null; collectCache = null; };
 
   P.layout = L;

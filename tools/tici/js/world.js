@@ -110,6 +110,8 @@
     buildBridges(); layoutShrines(); seedSky();
     var st = P.save.state;
     if (st.pos) { player.x = st.pos.x; player.y = st.pos.y; }
+    if (!walkable(player.x, player.y)) { player.x = P.REGIONS[0].x + 30; player.y = P.REGIONS[0].y + 120; }
+    lastSafe = { x: player.x, y: player.y };
     cam.x = cam.tx = player.x; cam.y = cam.ty = player.y;
     W.resize();
     window.addEventListener('resize', W.resize);
@@ -159,6 +161,7 @@
   var blockedMsg = 0, blockedRegion = null;
   W.blockedInfo = function () { return blockedMsg > 0 ? blockedRegion : null; };
 
+  var lastSafe = { x: player.x, y: player.y };
   var stepAcc = 0;
 
   W.update = function (dt, paused) {
@@ -179,16 +182,20 @@
 
     var nx = player.x + player.vx * dt, ny = player.y + player.vy * dt;
 
-    // 逐軸判定，貼牆時仍可滑行
-    var okX = walkable(nx, player.y), okY = walkable(player.x, ny);
     var target = W.regionOf(nx, ny);
-    if (target && W.regionLocked(target) && W.regionOf(player.x, player.y) !== target) {
-      okX = okY = false; blockedMsg = 1.6; blockedRegion = target;
-      P.audio.sfx.gate();
-    }
-    if (okX) player.x = nx; else player.vx *= -0.2;
-    if (okY) player.y = ny; else player.vy *= -0.2;
+    var gated = target && W.regionLocked(target) && W.regionOf(player.x, player.y) !== target;
+    if (gated) { blockedMsg = 1.6; blockedRegion = target; P.audio.sfx.gate(); }
     if (blockedMsg > 0) blockedMsg -= dt;
+
+    // 只逐軸判定會漏掉「兩軸各自都通過、但合起來出界」的斜走情況，
+    // 那會讓人沿著島緣走著走著就掉下去。先驗合併位置，不行再退成逐軸滑行。
+    var mv = P.layout.resolveMove(player.x, player.y, nx, ny, gated ? target : null);
+    player.x = mv.x; player.y = mv.y;
+    if (mv.stopX) player.vx *= -0.2;
+    if (mv.stopY) player.vy *= -0.2;
+
+    if (walkable(player.x, player.y)) { lastSafe.x = player.x; lastSafe.y = player.y; }
+    else { player.x = lastSafe.x; player.y = lastSafe.y; player.vx = player.vy = 0; }
 
     if (ax || ay) player.face = ax >= 0 ? 1 : -1;
     player.moving = len > 0.01 && (Math.abs(player.vx) + Math.abs(player.vy) > 12);

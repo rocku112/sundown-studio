@@ -32,6 +32,7 @@
   var camCtl = { yaw: Math.PI * 0.25, pitch: 0.30, dist: 165, tDist: 165, skyPeek: 0 };
   var keys = {};
   var dragging = false, dragMoved = 0, lastPtr = null, dragGuard = 0;
+  var lastSafe = { x: player.x, y: player.y };   // 最後一個確定站得住的位置
 
   // ---- 雜訊與地形 ---------------------------------------------------
   function hash(n) { var s = Math.sin(n) * 43758.5453123; return s - Math.floor(s); }
@@ -258,7 +259,7 @@
     var dx = seg.bx - seg.ax, dz = seg.by - seg.ay;
     var len = Math.hypot(dx, dz);
     var locked = W.regionLocked(seg.a) || W.regionLocked(seg.b);
-    var g = new THREE.BoxGeometry(len, 2.4, 44);
+    var g = new THREE.BoxGeometry(len, 2.6, 68);
     var m = new THREE.MeshStandardMaterial({
       color: locked ? 0x141a25 : 0x1c2635, roughness: 0.9,
       emissive: new THREE.Color(locked ? 0x0a0e14 : 0x16283f), emissiveIntensity: 0.6
@@ -281,7 +282,7 @@
         );
         var px = seg.ax + dx * t, pz = seg.ay + dz * t;
         var nx = -dz / len, nz = dx / len;
-        p.position.set(px + nx * 21 * sgn, BRIDGE_Y + 6, pz + nz * 21 * sgn);
+        p.position.set(px + nx * 32 * sgn, BRIDGE_Y + 6, pz + nz * 32 * sgn);
         grp.add(p);
       });
     }
@@ -571,6 +572,12 @@
       var r0 = P.REGIONS[0];
       player.x = r0.x + 30; player.y = r0.y + 120;
     }
+    if (!walkable(player.x, player.y)) {
+      // 存檔裡的座標站不住（舊版掉出去過、或資料改了），送回起點
+      var rs = P.REGIONS[0];
+      player.x = rs.x + 30; player.y = rs.y + 120;
+    }
+    lastSafe = { x: player.x, y: player.y };
     player.h = heightAt(player.x, player.y);
 
     buildScene();
@@ -638,6 +645,7 @@
     player.x = r.x; player.y = r.y + 40;
     player.h = heightAt(player.x, player.y);
     player.vx = player.vy = 0;
+    lastSafe = { x: player.x, y: player.y };
   };
 
   W.nearestShrine = function () {
@@ -716,15 +724,24 @@
       player.vy += (ay * SPD - player.vy) * Math.min(1, dt * 11);
 
       var nx = player.x + player.vx * dt, ny = player.y + player.vy * dt;
-      var okX = walkable(nx, player.y), okY = walkable(player.x, ny);
+
+      // 門扉：沒集滿碑文就進不去
       var target = W.regionOf(nx, ny);
-      if (target && W.regionLocked(target) && W.regionOf(player.x, player.y) !== target) {
-        okX = okY = false; blockedT = 1.8; blockedRegion = target;
-        P.audio.sfx.gate();
-      }
-      if (okX) player.x = nx; else player.vx *= -0.15;
-      if (okY) player.y = ny; else player.vy *= -0.15;
+      var gated = target && W.regionLocked(target) && W.regionOf(player.x, player.y) !== target;
+      if (gated) { blockedT = 1.8; blockedRegion = target; P.audio.sfx.gate(); }
       if (blockedT > 0) blockedT -= dt;
+
+      // 移動是相對鏡頭的，所以連按單鍵在世界座標上也是斜走。
+      // 只逐軸判定會漏掉「兩軸各自都通過、但合起來出界」的情況——那正是
+      // 沿著圓弧邊緣走會掉下去的原因。先驗合併後的位置，不行再退成逐軸滑行。
+      var mv = P.layout.resolveMove(player.x, player.y, nx, ny, gated ? target : null);
+      player.x = mv.x; player.y = mv.y;
+      if (mv.stopX) player.vx *= -0.15;
+      if (mv.stopY) player.vy *= -0.15;
+
+      // 保險：真的落在地面外（壞掉的存檔、傳送落點偏了）就送回上一個安全點
+      if (walkable(player.x, player.y)) { lastSafe.x = player.x; lastSafe.y = player.y; }
+      else { player.x = lastSafe.x; player.y = lastSafe.y; player.vx = player.vy = 0; }
 
       player.moving = L > 0.01 && (Math.abs(player.vx) + Math.abs(player.vy)) > 14;
       if (L > 0) player.face = Math.atan2(ax, ay);
