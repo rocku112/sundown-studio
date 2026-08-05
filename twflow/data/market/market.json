@@ -1,0 +1,424 @@
+{
+ "days": [
+  {
+   "twse_index": 41603.94,
+   "twse_chg_pct": -0.79,
+   "advancers": 376.0,
+   "decliners": 611.0,
+   "date": "2026-05-08"
+  },
+  {
+   "twse_index": 41790.06,
+   "twse_chg_pct": 0.45,
+   "advancers": 541.0,
+   "decliners": 473.0,
+   "date": "2026-05-11"
+  },
+  {
+   "twse_index": 41898.32,
+   "twse_chg_pct": 0.26,
+   "advancers": 311.0,
+   "decliners": 708.0,
+   "date": "2026-05-12"
+  },
+  {
+   "twse_index": 41374.5,
+   "twse_chg_pct": -1.25,
+   "advancers": 330.0,
+   "decliners": 676.0,
+   "date": "2026-05-13"
+  },
+  {
+   "twse_index": 41751.75,
+   "twse_chg_pct": 0.91,
+   "advancers": 335.0,
+   "decliners": 677.0,
+   "date": "2026-05-14"
+  },
+  {
+   "twse_index": 41172.36,
+   "twse_chg_pct": -1.39,
+   "advancers": 245.0,
+   "decliners": 770.0,
+   "date": "2026-05-15"
+  },
+  {
+   "twse_index": 40891.82,
+   "twse_chg_pct": -0.68,
+   "advancers": 451.0,
+   "decliners": 547.0,
+   "date": "2026-05-18"
+  },
+  {
+   "twse_index": 40175.56,
+   "twse_chg_pct": -1.75,
+   "advancers": 416.0,
+   "decliners": 576.0,
+   "date": "2026-05-19"
+  },
+  {
+   "twse_index": 40020.82,
+   "twse_chg_pct": -0.39,
+   "advancers": 452.0,
+   "decliners": 530.0,
+   "date": "2026-05-20"
+  },
+  {
+   "twse_index": 41368.21,
+   "twse_chg_pct": 3.37,
+   "advancers": 850.0,
+   "decliners": 156.0,
+   "date": "2026-05-21"
+  },
+  {
+   "twse_index": 42267.97,
+   "twse_chg_pct": 2.18,
+   "advancers": 625.0,
+   "decliners": 364.0,
+   "date": "2026-05-22"
+  },
+  {
+   "twse_index": 43644.4,
+   "twse_chg_pct": 3.26,
+   "advancers": 538.0,
+   "decliners": 469.0,
+   "date": "2026-05-25"
+  },
+  {
+   "twse_index": 43525.37,
+   "twse_chg_pct": -0.27,
+   "advancers": 433.0,
+   "decliners": 560.0,
+   "date": "2026-05-26"
+  },
+  {
+   "twse_index": 44256.8,
+   "twse_chg_pct": 1.68,
+   "advancers": 333.0,
+   "decliners": 672.0,
+   "date": "2026-05-27"
+  },
+  {
+   "twse_index": 43636.44,
+   "twse_chg_pct": -1.4,
+   "advancers": 408.0,
+   "decliners": 591.0,
+   "date": "2026-05-28"
+  },
+  {
+   "twse_index": 44732.94,
+   "twse_chg_pct": 2.51,
+   "advancers": 805.0,
+   "decliners": 202.0,
+   "date": "2026-05-29"
+  },
+  {
+   "twse_index": 45337.91,
+   "twse_chg_pct": 1.35,
+   "advancers": 767.0,
+   "decliners": 253.0,
+   "date": "2026-06-01"
+  },
+  {
+   "twse_index": 45557.31,
+   "twse_chg_pct": 0.48,
+   "advancers": 495.0,
+   "decliners": 502.0,
+   "date": "2026-06-02"
+  },
+  {
+   "twse_index": 46459.16,
+   "twse_chg_pct": 1.98,
+   "advancers": 751.0,
+   "decliners": 289.0,
+   "date": "2026-06-03"
+  },
+  {
+   "twse_index": 45677.46,
+   "twse_chg_pct": -1.68,
+   "advancers": 457.0,
+   "decliners": 562.0,
+   "date": "2026-06-04"
+  },
+  {
+   "twse_index": 45070.94,
+   "twse_chg_pct": -1.33,
+   "advancers": 342.0,
+   "decliners": 671.0,
+   "date": "2026-06-05"
+  },
+  {
+   "twse_index": 43502.78,
+   "twse_chg_pct": -3.48,
+   "advancers": 81.0,
+   "decliners": 961.0,
+   "date": "2026-06-08"
+  },
+  {
+   "twse_index": 44704.44,
+   "twse_chg_pct": 2.76,
+   "advancers": 761.0,
+   "decliners": 237.0,
+   "date": "2026-06-09"
+  },
+  {
+   "twse_index": 43225.54,
+   "twse_chg_pct": -3.31,
+   "advancers": 259.0,
+   "decliners": 748.0,
+   "date": "2026-06-10"
+  },
+  {
+   "twse_index": 43149.46,
+   "twse_chg_pct": -0.18,
+   "advancers": 440.0,
+   "decliners": 550.0,
+   "date": "2026-06-11"
+  },
+  {
+   "twse_index": 44169.04,
+   "twse_chg_pct": 2.36,
+   "advancers": 808.0,
+   "decliners": 203.0,
+   "date": "2026-06-12"
+  },
+  {
+   "twse_index": 45396.99,
+   "twse_chg_pct": 2.78,
+   "advancers": 721.0,
+   "decliners": 276.0,
+   "date": "2026-06-15"
+  },
+  {
+   "twse_index": 45809.19,
+   "twse_chg_pct": 0.91,
+   "advancers": 324.0,
+   "decliners": 663.0,
+   "date": "2026-06-16"
+  },
+  {
+   "twse_index": 45877.39,
+   "twse_chg_pct": 0.15,
+   "advancers": 631.0,
+   "decliners": 304.0,
+   "date": "2026-06-17"
+  },
+  {
+   "twse_index": 46465.2,
+   "twse_chg_pct": 1.28,
+   "advancers": 574.0,
+   "decliners": 395.0,
+   "date": "2026-06-18"
+  },
+  {
+   "twse_index": 47741.51,
+   "twse_chg_pct": 2.75,
+   "advancers": 523.0,
+   "decliners": 459.0,
+   "date": "2026-06-22"
+  },
+  {
+   "twse_index": 47100.65,
+   "twse_chg_pct": -1.34,
+   "advancers": 236.0,
+   "decliners": 757.0,
+   "date": "2026-06-23"
+  },
+  {
+   "twse_index": 46043.6,
+   "twse_chg_pct": -2.24,
+   "advancers": 476.0,
+   "decliners": 496.0,
+   "date": "2026-06-24"
+  },
+  {
+   "twse_index": 46255.26,
+   "twse_chg_pct": 0.46,
+   "advancers": 402.0,
+   "decliners": 561.0,
+   "date": "2026-06-25"
+  },
+  {
+   "twse_index": 44571.76,
+   "twse_chg_pct": -3.64,
+   "advancers": 75.0,
+   "decliners": 969.0,
+   "date": "2026-06-26"
+  },
+  {
+   "twse_index": 44999.9,
+   "twse_chg_pct": 0.96,
+   "advancers": 659.0,
+   "decliners": 322.0,
+   "date": "2026-06-29"
+  },
+  {
+   "twse_index": 46125.91,
+   "twse_chg_pct": 2.5,
+   "advancers": 747.0,
+   "decliners": 237.0,
+   "date": "2026-06-30"
+  },
+  {
+   "twse_index": 47018.99,
+   "twse_chg_pct": 1.94,
+   "advancers": 417.0,
+   "decliners": 560.0,
+   "date": "2026-07-01"
+  },
+  {
+   "twse_index": 46744.16,
+   "twse_chg_pct": -0.58,
+   "advancers": 649.0,
+   "decliners": 323.0,
+   "date": "2026-07-02"
+  },
+  {
+   "twse_index": 46780.62,
+   "twse_chg_pct": 0.08,
+   "advancers": 828.0,
+   "decliners": 192.0,
+   "date": "2026-07-03"
+  },
+  {
+   "twse_index": 46556.39,
+   "twse_chg_pct": -0.48,
+   "advancers": 534.0,
+   "decliners": 431.0,
+   "date": "2026-07-06"
+  },
+  {
+   "twse_index": 45479.11,
+   "twse_chg_pct": -2.31,
+   "advancers": 128.0,
+   "decliners": 892.0,
+   "date": "2026-07-07"
+  },
+  {
+   "twse_index": 45734.41,
+   "twse_chg_pct": 0.56,
+   "advancers": 394.0,
+   "decliners": 599.0,
+   "date": "2026-07-08"
+  },
+  {
+   "twse_index": 45354.61,
+   "twse_chg_pct": -0.83,
+   "advancers": 411.0,
+   "decliners": 552.0,
+   "date": "2026-07-09"
+  },
+  {
+   "twse_index": 45380.52,
+   "twse_chg_pct": 0.06,
+   "advancers": 356.0,
+   "decliners": 653.0,
+   "date": "2026-07-13"
+  },
+  {
+   "twse_index": 44737.95,
+   "twse_chg_pct": -1.42,
+   "advancers": 207.0,
+   "decliners": 800.0,
+   "date": "2026-07-14"
+  },
+  {
+   "twse_index": 45631.59,
+   "twse_chg_pct": 2.0,
+   "advancers": 893.0,
+   "decliners": 125.0,
+   "date": "2026-07-15"
+  },
+  {
+   "twse_index": 45624.98,
+   "twse_chg_pct": -0.01,
+   "advancers": 371.0,
+   "decliners": 597.0,
+   "date": "2026-07-16"
+  },
+  {
+   "twse_index": 42671.27,
+   "twse_chg_pct": -6.47,
+   "advancers": 87.0,
+   "decliners": 960.0,
+   "date": "2026-07-17"
+  },
+  {
+   "twse_index": 42449.7,
+   "twse_chg_pct": -0.52,
+   "advancers": 377.0,
+   "decliners": 622.0,
+   "date": "2026-07-20"
+  },
+  {
+   "twse_index": 44232.87,
+   "twse_chg_pct": 4.2,
+   "advancers": 870.0,
+   "decliners": 142.0,
+   "date": "2026-07-21"
+  },
+  {
+   "twse_index": 44825.78,
+   "twse_chg_pct": 1.34,
+   "advancers": 530.0,
+   "decliners": 464.0,
+   "date": "2026-07-22"
+  },
+  {
+   "twse_index": 44850.81,
+   "twse_chg_pct": 0.06,
+   "advancers": 375.0,
+   "decliners": 584.0,
+   "date": "2026-07-23"
+  },
+  {
+   "twse_index": 43654.84,
+   "twse_chg_pct": -2.67,
+   "advancers": 333.0,
+   "decliners": 645.0,
+   "date": "2026-07-24"
+  },
+  {
+   "twse_index": 43634.19,
+   "twse_chg_pct": -0.05,
+   "advancers": 436.0,
+   "decliners": 542.0,
+   "date": "2026-07-27"
+  },
+  {
+   "twse_index": 41603.36,
+   "twse_chg_pct": -4.65,
+   "advancers": 96.0,
+   "decliners": 931.0,
+   "date": "2026-07-28"
+  },
+  {
+   "twse_index": 40039.18,
+   "twse_chg_pct": -3.76,
+   "advancers": 243.0,
+   "decliners": 777.0,
+   "date": "2026-07-29"
+  },
+  {
+   "twse_index": 39933.3,
+   "twse_chg_pct": -0.26,
+   "advancers": 224.0,
+   "decliners": 775.0,
+   "date": "2026-07-30"
+  },
+  {
+   "twse_index": 43119.75,
+   "twse_chg_pct": 7.98,
+   "advancers": 892.0,
+   "decliners": 145.0,
+   "date": "2026-07-31"
+  },
+  {
+   "twse_index": 43386.41,
+   "twse_chg_pct": 0.62,
+   "advancers": 648.0,
+   "decliners": 354.0,
+   "date": "2026-08-03"
+  }
+ ]
+}

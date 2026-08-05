@@ -1,0 +1,7 @@
+.cache/
+__pycache__/
+*.pyc
+
+# 由 data/market/days/*.json 推導，可隨時重建，且每天整份改寫（7MB）
+# ——進版控會讓 git 歷史以 GB 計。逐日檔才是真源。
+data/market/panel.json

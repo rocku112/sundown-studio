@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>twflow — 台股板塊資金流</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0F1413">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icons/icon-192.svg">
+<link rel="icon" href="icons/icon-192.svg">
+<style>
+:root{
+  --bg:#0F1413; --panel:#161C1B; --card:#1A2120; --line:#232C2A;
+  --s10:#E8EDEC; --s9:#9AA8A5; --s8:#6B7975;
+  --up:#D85A30; --down:#1D9E75; --gold:#E4B125;
+  --nav:56px;
+}
+:root[data-theme="light"]{
+  --bg:#F7F9F8; --panel:#FFFFFF; --card:#FFFFFF; --line:#E2E8E6;
+  --s10:#1A2120; --s9:#5A6866; --s8:#8A9895;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--s10);overflow:hidden;
+  font:14px/1.5 "Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+
+/* ── 頂列 ───────────────────────────────────────────── */
+header{display:flex;align-items:center;gap:12px;padding:9px 14px;
+  border-bottom:1px solid var(--line);position:relative;z-index:20}
+.brand{font-size:15px;font-weight:700;letter-spacing:.4px;white-space:nowrap}
+.brand span{color:var(--s8);font-weight:400;margin-left:6px;font-size:12px}
+.meta{color:var(--s9);font-size:12px;white-space:nowrap}
+.meta b{color:var(--s10);font-variant-numeric:tabular-nums}
+.spacer{flex:1}
+.tabs{display:flex;gap:2px;background:var(--card);border:1px solid var(--line);
+  border-radius:9px;padding:2px}
+.tabs button{padding:5px 14px;border-radius:7px;font-size:13px;color:var(--s9)}
+.tabs button.on{background:var(--bg);color:var(--s10);font-weight:600}
+.icon{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;
+  font-size:15px;color:var(--s9)}
+.icon:hover{background:var(--card)}
+
+/* ── 搜尋 ───────────────────────────────────────────── */
+.search{position:relative}
+.search input{width:150px;padding:6px 10px;border-radius:8px;font:inherit;font-size:13px;
+  background:var(--card);border:1px solid var(--line);color:var(--s10);outline:none}
+.search input:focus{border-color:var(--s8);width:200px}
+.sresult{position:absolute;top:calc(100% + 6px);left:0;width:240px;max-height:300px;
+  overflow-y:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.4);display:none;z-index:30}
+.sresult.on{display:block}
+.sresult div{padding:8px 12px;font-size:13px;cursor:pointer;display:flex;gap:8px}
+.sresult div:hover,.sresult div.sel{background:var(--card)}
+.sresult i{color:var(--s8);font-style:normal;font-variant-numeric:tabular-nums}
+
+/* ── 版面 ───────────────────────────────────────────── */
+#main{height:calc(100vh - 51px);position:relative}
+.view{position:absolute;inset:0;display:none;overflow:auto}
+.view.on{display:block}
+#v-chart.on{display:block;overflow:hidden}
+
+/* ── 泡泡圖 ─────────────────────────────────────────── */
+#chart{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#chart.drag{cursor:grabbing}
+.bub{cursor:pointer}
+.bub:hover circle{stroke:var(--s10);stroke-width:2}
+.bub text{pointer-events:none;text-anchor:middle;font-weight:700;
+  paint-order:stroke;stroke:rgba(0,0,0,.5);stroke-width:2.5px}
+:root[data-theme="light"] .bub text{stroke:rgba(255,255,255,.75)}
+.dim{opacity:.12}
+.axis{stroke:var(--line)}
+.axis-lab{fill:var(--s8);font-size:11px}
+.quad{fill:var(--s8);font-size:12px;font-weight:700;opacity:.4}
+.stats{position:absolute;top:10px;right:12px;display:flex;gap:7px;z-index:5}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:9px;
+  padding:5px 11px;min-width:74px;cursor:pointer}
+.stat.on{border-color:currentColor}
+.stat .n{font-size:17px;font-weight:700;line-height:1.15}
+.stat .l{font-size:11px;color:var(--s9)}
+.hint{position:absolute;left:14px;bottom:10px;color:var(--s8);font-size:11px;
+  pointer-events:none}
+
+/* ── 排行榜 ─────────────────────────────────────────── */
+.wrap{max-width:960px;margin:0 auto;padding:14px}
+.rtabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.rtabs button{padding:6px 13px;border-radius:8px;font-size:13px;color:var(--s9);
+  border:1px solid var(--line);background:var(--card)}
+.rtabs button.on{color:var(--s10);border-color:var(--s8);font-weight:600}
+.segs{display:flex;gap:4px;margin-left:auto}
+.segs button{padding:5px 11px;font-size:12px;border-radius:7px;color:var(--s9)}
+.segs button.on{background:var(--card);color:var(--s10);border:1px solid var(--line)}
+.ritem{display:grid;grid-template-columns:26px 1fr auto;gap:11px;align-items:center;
+  padding:11px 12px;border-bottom:1px solid var(--line);cursor:pointer}
+.ritem:hover{background:var(--card)}
+.rk{color:var(--s8);font-size:13px;font-variant-numeric:tabular-nums;text-align:center}
+.rname{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rsub{font-size:11.5px;color:var(--s9);margin-top:2px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rval{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;font-size:14px}
+.rval small{display:block;font-weight:400;font-size:11.5px;margin-top:2px}
+.empty{padding:40px 16px;text-align:center;color:var(--s8);font-size:13px}
+
+/* ── 今日 ───────────────────────────────────────────── */
+.card{background:var(--card);border:1px solid var(--line);border-radius:13px;
+  padding:15px;margin-bottom:11px}
+.card h3{font-size:12px;color:var(--s9);font-weight:600;margin-bottom:11px;
+  letter-spacing:.5px}
+.mood{height:7px;border-radius:4px;position:relative;margin:9px 0 5px;
+  background:linear-gradient(90deg,#1D9E75,#E4B125,#D85A30)}
+.mood i{position:absolute;top:-4px;width:3px;height:15px;border-radius:2px;
+  background:var(--s10);transform:translateX(-50%);
+  box-shadow:0 0 0 2px var(--card)}
+.mood-l{display:flex;justify-content:space-between;font-size:11px;color:var(--s8)}
+.big{font-size:26px;font-weight:700;line-height:1.1}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{padding:6px 11px;border-radius:8px;background:var(--panel);
+  border:1px solid var(--line);font-size:12.5px;cursor:pointer;
+  font-variant-numeric:tabular-nums}
+.chip:hover{border-color:var(--s8)}
+.krow{display:flex;justify-content:space-between;padding:7px 0;font-size:13px;
+  border-bottom:1px solid var(--line)}
+.krow:last-child{border:0}
+.krow b{font-variant-numeric:tabular-nums}
+
+/* ── 面板 ───────────────────────────────────────────── */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.45);opacity:0;pointer-events:none;
+  transition:opacity .2s;z-index:40}
+.ov.on{opacity:1;pointer-events:auto}
+.side{position:fixed;top:0;right:0;width:390px;max-width:92vw;height:100%;
+  background:var(--panel);border-left:1px solid var(--line);z-index:50;
+  transform:translateX(101%);transition:transform .24s cubic-bezier(.4,0,.2,1);
+  display:flex;flex-direction:column}
+.side.on{transform:none}
+.sh{padding:14px 16px;border-bottom:1px solid var(--line);flex-shrink:0}
+.sh-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.sh h2{font-size:16px;line-height:1.35}
+.sh .sub{color:var(--s9);font-size:12px;margin-top:6px;line-height:1.6}
+.sh .sub b{font-variant-numeric:tabular-nums}
+.sbody{overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch}
+.badge{display:inline-block;font-size:10px;padding:1px 6px;border-radius:4px;
+  background:rgba(228,177,37,.16);color:var(--gold);margin-left:6px;
+  vertical-align:middle;font-weight:600}
+.row{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;
+  padding:9px 16px;border-bottom:1px solid var(--line);font-size:12.5px;cursor:pointer}
+.row:hover{background:var(--card)}
+.row .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .nm i{color:var(--s8);font-style:normal;margin-right:6px;font-size:11px;
+  font-variant-numeric:tabular-nums}
+.row .v{font-variant-numeric:tabular-nums;text-align:right;min-width:60px}
+.kv{display:flex;justify-content:space-between;padding:9px 16px;font-size:13px;
+  border-bottom:1px solid var(--line)}
+.kv span{color:var(--s9)}
+.kv b{font-variant-numeric:tabular-nums}
+.sect{padding:12px 16px;display:flex;flex-wrap:wrap;gap:6px}
+.stitle{padding:12px 16px 6px;font-size:11px;color:var(--s8);letter-spacing:.6px}
+
+#tip{position:fixed;pointer-events:none;background:var(--panel);z-index:60;
+  border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:12px;
+  opacity:0;transition:opacity .12s;max-width:290px;
+  box-shadow:0 10px 30px rgba(0,0,0,.5)}
+#tip .t{font-weight:700;margin-bottom:5px;font-size:13px}
+#tip .r{color:var(--s9);display:flex;justify-content:space-between;gap:18px}
+#tip .r b{color:var(--s10);font-variant-numeric:tabular-nums}
+
+.star{color:var(--s8);font-size:15px;line-height:1;padding:2px 4px;flex-shrink:0}
+.star.on{color:var(--gold)}
+.star:hover{color:var(--gold)}
+.wl-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.wl-head h2{font-size:16px}
+.wl-head .cnt{color:var(--s9);font-size:12px}
+.ev{display:grid;grid-template-columns:auto 1fr auto;gap:11px;align-items:center;
+  padding:10px 12px;border-bottom:1px solid var(--line);cursor:pointer}
+.ev:hover{background:var(--card)}
+.ev-k{font-size:11px;padding:2px 7px;border-radius:5px;white-space:nowrap;font-weight:600}
+.ev-d{font-size:11px;color:var(--s8);margin-top:2px}
+.wl-empty{text-align:center;padding:48px 20px;color:var(--s9)}
+.wl-empty .em{font-size:34px;margin-bottom:12px}
+.wl-empty p{font-size:13px;line-height:1.9;margin-bottom:14px}
+.btn{padding:8px 16px;border-radius:9px;border:1px solid var(--line);
+  background:var(--card);font-size:13px}
+.btn:hover{border-color:var(--s8)}
+.btn.pri{background:var(--gold);color:#1A2120;border-color:var(--gold);font-weight:600}
+.subtabs{display:flex;gap:6px;margin-bottom:12px}
+.subtabs button{padding:6px 14px;border-radius:8px;font-size:13px;color:var(--s9);
+  border:1px solid var(--line);background:var(--card)}
+.subtabs button.on{color:var(--s10);border-color:var(--s8);font-weight:600}
+.dot{display:inline-block;min-width:16px;height:16px;line-height:16px;padding:0 4px;
+  border-radius:8px;background:var(--gold);color:#1A2120;font-size:10px;
+  font-weight:700;text-align:center;margin-left:5px;vertical-align:middle}
+
+.ch{background:var(--card);border:1px solid var(--line);border-radius:13px;
+  padding:14px 15px;margin-bottom:10px}
+.ch-top{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:11px}
+.ch-top h3{font-size:15px;font-weight:700;color:var(--s10);margin:0;letter-spacing:0}
+.ch-tag{font-size:11.5px;padding:2px 8px;border-radius:6px;font-weight:600}
+.ch-mag{color:var(--s9);font-size:12px;font-variant-numeric:tabular-nums;margin-left:auto}
+.seg{display:grid;grid-template-columns:38px 1fr 78px;gap:10px;align-items:center;
+  padding:5px 0;cursor:pointer}
+.seg:hover .seg-n{color:var(--s10)}
+.seg-l{font-size:12px;color:var(--s9);text-align:right}
+.seg-bar{height:20px;position:relative;background:var(--panel);border-radius:4px}
+.seg-bar i{position:absolute;top:0;height:100%;border-radius:4px}
+.seg-bar .zero{position:absolute;top:-2px;bottom:-2px;width:1px;background:var(--line)}
+.seg-n{font-size:12.5px;font-variant-numeric:tabular-nums;text-align:right;color:var(--s9)}
+.ch-move{margin-top:9px;padding-top:9px;border-top:1px solid var(--line);
+  font-size:11.5px;color:var(--s9);display:flex;align-items:center;gap:8px}
+.ch-axis{position:relative;height:15px;flex:1;max-width:180px;
+  background:linear-gradient(90deg,var(--line),var(--line));border-radius:8px}
+.ch-axis span{position:absolute;top:50%;transform:translate(-50%,-50%);
+  width:9px;height:9px;border-radius:50%}
+.ch-nodes{font-size:11px;color:var(--s8);margin-top:2px;line-height:1.5}
+
+.nav{display:none}
+@media (max-width:720px){
+  header{gap:8px;padding:8px 11px}
+  .brand span,.tabs{display:none}
+  .stats{top:auto;bottom:8px;left:8px;right:8px;justify-content:space-between;gap:5px}
+  .stat{flex:1;min-width:0;padding:5px 4px;text-align:center}
+  .hint{display:none}
+  #main{height:calc(100vh - 49px - var(--nav))}
+  .nav{display:flex;position:fixed;bottom:0;left:0;right:0;height:var(--nav);
+    background:var(--panel);border-top:1px solid var(--line);z-index:45;
+    padding-bottom:env(safe-area-inset-bottom)}
+  .nav button{flex:1;display:grid;place-items:center;gap:2px;font-size:10px;
+    color:var(--s8);position:relative}
+  .nav button.on{color:var(--s10)}
+  .nav em{font-size:17px;font-style:normal}
+  .side{width:100%;max-width:100%}
+  .search input:focus{width:150px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">twflow<span>台股板塊資金流</span></div>
+  <div class="meta"><b id="d-date">—</b>　大盤 <b id="d-mkt">—</b></div>
+  <div class="spacer"></div>
+  <div class="search">
+    <input id="q" placeholder="搜尋代號/名稱" autocomplete="off">
+    <div class="sresult" id="qr"></div>
+  </div>
+  <div class="tabs" id="tabs">
+    <button data-v="chart" class="on">泡泡圖</button>
+    <button data-v="rank">排行榜</button>
+    <button data-v="today">今日</button>
+    <button data-v="chain">供應鏈</button>
+    <button data-v="watch">自選</button>
+  </div>
+  <button class="icon" id="install" title="安裝到主畫面" style="display:none">⬇</button>
+  <button class="icon" id="theme" title="切換主題">◐</button>
+</header>
+
+<div id="main">
+  <section class="view on" id="v-chart">
+    <svg id="chart"></svg>
+    <div class="stats" id="stats"></div>
+    <div class="hint">右＝近5日買超　上＝力道加速　圈大小＝近20日金額　｜　滾輪縮放・拖曳移動</div>
+  </section>
+  <section class="view" id="v-rank"><div class="wrap" id="rank"></div></section>
+  <section class="view" id="v-today"><div class="wrap" id="today"></div></section>
+  <section class="view" id="v-chain"><div class="wrap" id="chain"></div></section>
+  <section class="view" id="v-watch"><div class="wrap" id="watch"></div></section>
+</div>
+
+<nav class="nav" id="nav">
+  <button data-v="chart" class="on"><em>◎</em>泡泡圖</button>
+  <button data-v="rank"><em>☰</em>排行榜</button>
+  <button data-v="today"><em>★</em>今日</button>
+  <button data-v="chain"><em>⇄</em>供應鏈</button>
+  <button data-v="watch"><em>☆</em>自選</button>
+</nav>
+
+<div class="ov" id="ov"></div>
+
+<aside class="side" id="sec-panel">
+  <div class="sh"><div class="sh-top"><h2 id="sp-name"></h2>
+    <button class="icon" data-close>✕</button></div>
+    <div class="sub" id="sp-sub"></div></div>
+  <div class="sbody" id="sp-list"></div>
+</aside>
+
+<aside class="side" id="stk-panel">
+  <div class="sh"><div class="sh-top"><h2 id="kp-name"></h2>
+    <div style="display:flex;gap:4px;flex-shrink:0">
+      <button class="icon star" id="kp-star" title="加入自選">☆</button>
+      <button class="icon" data-close>✕</button></div></div>
+    <div class="sub" id="kp-sub"></div></div>
+  <div class="sbody" id="kp-body"></div>
+</aside>
+
+<div id="tip"></div>
+
+<script>
+/* ══ 常數 ══════════════════════════════════════════════════════ */
+const COLORS={green:'#D85A30',yellow:'#E4B125',gray:'#6B7975',red:'#1D9E75'};
+const META=[{c:'green',l:'漲潮',s:'資金加速流入'},{c:'yellow',l:'輪動',s:'資金流入但放緩'},
+            {c:'gray',l:'觀望',s:'資金流出但放緩'},{c:'red',l:'退潮',s:'資金加速流出'}];
+// 四象限＝(近5日淨額正負)×(加速度正負)
+const classify=s=> s.net_5d_yi>0 ? (s.accel>0?'green':'yellow')
+                                 : (s.accel>0?'gray':'red');
+// 對稱式 log：兩軸都有極端值，線性軸會把多數泡泡擠在原點
+const TX=10,TY=2;
+const slog=(v,T)=>Math.sign(v)*Math.log10(1+Math.abs(v)/T);
+const slogInv=(u,T)=>Math.sign(u)*(Math.pow(10,Math.abs(u))-1)*T;
+
+let D=null,H=null,SEARCH=null,sectors=[],filter=null,layout=null;
+let view={k:1,x:0,y:0},rankMode='buy',rankWin='5d';
+
+const $=id=>document.getElementById(id);
+const yi=v=>v==null?'—':(v>=0?'+':'')+v.toFixed(1)+'億';
+const pct=v=>v==null?'—':(v>=0?'+':'')+v.toFixed(2)+'%';
+const col=v=>v==null?'var(--s9)':(v>=0?'var(--up)':'var(--down)');
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ══ 載入 ══════════════════════════════════════════════════════ */
+Promise.all([
+  fetch('data/latest.json?'+Date.now()).then(r=>r.json()),
+  fetch('data/search.json').then(r=>r.json()),
+]).then(([d,s])=>{
+  D=d; SEARCH=s; sectors=d.sectors;
+  $('d-date').textContent=d.date;
+  const m=$('d-mkt'); m.textContent=pct(d.market_chg_1d); m.style.color=col(d.market_chg_1d);
+  buildStats(); render(); buildRank(); buildToday(); buildWatch();
+  evReady().then(()=>{updateBadge(); if(watchTab==='feed') buildWatch();});
+});
+// 走勢圖資料 1.3MB，開個股頁才需要——延後載入，不擋首屏
+const histReady=()=>H?Promise.resolve(H)
+  :fetch('data/history.json').then(r=>r.json()).then(j=>(H=j));
+
+/* ══ 泡泡圖 ════════════════════════════════════════════════════ */
+function buildStats(){
+  const cnt={green:0,yellow:0,gray:0,red:0};
+  sectors.forEach(s=>cnt[classify(s)]++);
+  $('stats').innerHTML=META.map(m=>
+    `<button class="stat" data-c="${m.c}" style="color:${COLORS[m.c]}">
+       <div class="n">${cnt[m.c]}</div><div class="l">${m.l}</div></button>`).join('');
+  $('stats').onclick=e=>{
+    const el=e.target.closest('.stat'); if(!el) return;
+    filter = filter===el.dataset.c ? null : el.dataset.c;
+    [...$('stats').children].forEach(x=>x.classList.toggle('on',x.dataset.c===filter));
+    render();
+  };
+}
+
+function computeLayout(W,H_){
+  const PAD={l:52,r:24,t:24,b:44};
+  const iW=W-PAD.l-PAD.r, iH=H_-PAD.t-PAD.b;
+  const xs=sectors.map(s=>s.net_5d_yi), ys=sectors.map(s=>s.accel);
+  const uxMin=slog(Math.min(...xs),TX)-.08, uxMax=slog(Math.max(...xs),TX)+.08;
+  const uyMin=slog(Math.min(...ys),TY)-.10, uyMax=slog(Math.max(...ys),TY)+.10;
+  // 零點最多推到 50% 寬：台股常態是流出端極值遠大於流入端，純資料驅動的
+  // 零點會落在偏右，右半（流入側）就稀疏浪費
+  const mx=Math.max(...sectors.map(s=>Math.abs(s.net_20d_yi)),1);
+  const isSmall=W<720, lo=isSmall?13:19, hi=isSmall?34:50;
+  const r=v=>Math.max(lo,Math.min(hi,lo+(Math.abs(v)/mx)*(hi-lo)));
+  // 圓心的可用範圍要再往內縮一個最大半徑，否則邊緣的泡泡會被裁掉一半。
+  // symlog 的 ±0.08 邊距是留在「對數空間」的，跟像素半徑無關——桌機恰好夠寬
+  // 看不出來，手機一縮就有 12 顆泡泡跑到畫布外。
+  const px=Math.min(hi,iW*.18), py=Math.min(hi,iH*.18);
+  const cW=Math.max(1,iW-px*2), cH=Math.max(1,iH-py*2);
+  const both=uxMin<0&&uxMax>0, zf=both?Math.min(-uxMin/(uxMax-uxMin),.5):0;
+  const gx=v=>{const u=slog(v,TX);
+    const f=!both?(u-uxMin)/(uxMax-uxMin)
+                 :(u<0?(1-u/uxMin)*zf:zf+(u/uxMax)*(1-zf));
+    return PAD.l+px+f*cW;};
+  const gy=v=>PAD.t+py+(1-(slog(v,TY)-uyMin)/(uyMax-uyMin))*cH;
+  return {PAD,iW,iH,gx,gy,r,x0:gx(0),y0:gy(0),isSmall};
+}
+
+function render(){
+  const svg=$('chart'), rect=svg.getBoundingClientRect();
+  const W=rect.width,H_=rect.height;
+  // 尺寸還沒定案時畫會得到負的內距，120 顆泡泡全跑到畫布外，
+  // 而且之後沒有事件會觸發重畫。等到有版面再畫。
+  if(W<80||H_<80){ requestAnimationFrame(render); return; }
+  lastSize=Math.round(W)+'x'+Math.round(H_);
+  const L=layout=computeLayout(W,H_), {PAD,iW,iH,gx,gy,r}=L;
+
+  const ticks=[-1000,-300,-100,-30,0,30,100,300,1000].filter(t=>{
+    const x=gx(t); return x>PAD.l+6&&x<PAD.l+iW-6;});
+  const axis=`
+    <line class="axis" x1="${L.x0}" y1="${PAD.t}" x2="${L.x0}" y2="${PAD.t+iH}"/>
+    <line class="axis" x1="${PAD.l}" y1="${L.y0}" x2="${PAD.l+iW}" y2="${L.y0}"/>
+    ${ticks.map(t=>`<text class="axis-lab" x="${gx(t)}" y="${PAD.t+iH+17}" text-anchor="middle">${t}</text>`).join('')}
+    <text class="axis-lab" x="${PAD.l+iW}" y="${PAD.t+iH+33}" text-anchor="end">資金流入（億）→</text>
+    <text class="axis-lab" x="${PAD.l}" y="${PAD.t+iH+33}">← 資金流出（億）</text>
+    <text class="quad" x="${PAD.l+iW-8}" y="${PAD.t+15}" text-anchor="end">漲潮</text>
+    <text class="quad" x="${PAD.l+8}" y="${PAD.t+15}">觀望</text>
+    <text class="quad" x="${PAD.l+iW-8}" y="${PAD.t+iH-5}" text-anchor="end">輪動</text>
+    <text class="quad" x="${PAD.l+8}" y="${PAD.t+iH-5}">退潮</text>`;
+
+  // 大圈先畫、小圈後畫，小板塊才不會被大板塊蓋掉
+  const bubbles=[...sectors].sort((a,b)=>Math.abs(b.net_20d_yi)-Math.abs(a.net_20d_yi))
+   .map((s,i)=>{
+    const cat=classify(s),c=COLORS[cat],R=r(s.net_20d_yi);
+    const x=gx(s.net_5d_yi),y=gy(s.accel);
+    const f1=Math.max(9,Math.min(14,R*.36)),f2=Math.max(8,Math.min(12,R*.32));
+    const nm=s.name.replace(/^【待命名\d+】/,'✦').replace(/^[^・]+・/,'');
+    const mc=Math.max(2,Math.floor(R*1.75/f1));
+    return `<g class="bub${filter&&filter!==cat?' dim':''}" data-i="${sectors.indexOf(s)}">
+      <circle cx="${x}" cy="${y}" r="${R}" fill="${c}" fill-opacity=".26" stroke="${c}" stroke-width="1.5"/>
+      <text x="${x}" y="${y-1}" font-size="${f1}" fill="var(--s10)">${esc(nm.length>mc?nm.slice(0,mc)+'…':nm)}</text>
+      <text x="${x}" y="${y+f2+2}" font-size="${f2}" fill="${c}">${yi(s.net_5d_yi)}</text></g>`;
+  }).join('');
+
+  svg.innerHTML=`<g>${axis}</g><g id="zoom" transform="translate(${view.x},${view.y}) scale(${view.k})">${bubbles}</g>`;
+}
+
+$('chart').addEventListener('pointerdown',e=>{
+  const g=e.target.closest('.bub');
+  drag={x:e.clientX-view.x,y:e.clientY-view.y,moved:0,hit:g};
+  $('chart').setPointerCapture(e.pointerId);
+});
+$('chart').addEventListener('pointermove',e=>{
+  const g=e.target.closest('.bub');
+  if(g&&!drag) showTip(e,sectors[+g.dataset.i]); else if(!g) $('tip').style.opacity=0;
+  if(!drag) return;
+  drag.moved+=Math.abs(e.movementX)+Math.abs(e.movementY);
+  if(drag.moved>4){ $('chart').classList.add('drag'); $('tip').style.opacity=0;
+    view.x=e.clientX-drag.x; view.y=e.clientY-drag.y; applyView(); }
+});
+let drag=null;
+['pointerup','pointercancel'].forEach(ev=>$('chart').addEventListener(ev,e=>{
+  // 拖曳超過 4px 就不算點擊——手機上輕微位移會讓每次拖曳都誤開面板
+  if(drag&&drag.moved<=4&&drag.hit) openSector(sectors[+drag.hit.dataset.i]);
+  drag=null; $('chart').classList.remove('drag');
+}));
+$('chart').addEventListener('mouseleave',()=>$('tip').style.opacity=0);
+$('chart').addEventListener('wheel',e=>{
+  e.preventDefault();
+  const r=$('chart').getBoundingClientRect();
+  const mx=e.clientX-r.left,my=e.clientY-r.top;
+  const k2=Math.max(.5,Math.min(8,view.k*(e.deltaY<0?1.12:1/1.12)));
+  // 以游標為錨點縮放
+  view.x=mx-(mx-view.x)*(k2/view.k); view.y=my-(my-view.y)*(k2/view.k);
+  view.k=k2; applyView();
+},{passive:false});
+function applyView(){const g=$('zoom'); if(g) g.setAttribute('transform',
+  `translate(${view.x},${view.y}) scale(${view.k})`);}
+
+function showTip(e,s){
+  const cat=classify(s),m=META.find(x=>x.c===cat),t=$('tip');
+  t.innerHTML=`<div class="t" style="color:${COLORS[cat]}">${esc(s.name)}</div>
+    <div class="r"><span>狀態</span><b style="color:${COLORS[cat]}">${m.l}・${m.s}</b></div>
+    <div class="r"><span>近5日法人</span><b style="color:${col(s.net_5d_yi)}">${yi(s.net_5d_yi)}</b></div>
+    <div class="r"><span>近20日累計</span><b style="color:${col(s.net_20d_yi)}">${yi(s.net_20d_yi)}</b></div>
+    <div class="r"><span>近5日漲跌</span><b style="color:${col(s.chg_5d)}">${pct(s.chg_5d)}</b></div>
+    <div class="r"><span>幾檔在買</span><b>${s.breadth?s.breadth[0]+'/'+s.breadth[1]:'—'}</b></div>`;
+  const w=t.offsetWidth||260,h=t.offsetHeight||130;
+  t.style.left=Math.min(e.clientX+14,innerWidth-w-8)+'px';
+  t.style.top=Math.max(8,Math.min(e.clientY-h-14,innerHeight-h-8))+'px';
+  t.style.opacity=1;
+}
+
+/* ══ 排行榜 ════════════════════════════════════════════════════ */
+// 每列副標放三件「主數字沒告訴你」的事：另一個期間的數字、廣度、最大貢獻股。
+// 板塊淨額是成分股加總，一檔大的就能撐起整個板塊；廣度與主力讓人自己分得出
+// 「全員一致」和「一檔在演」。只給數字不下判斷。
+const RANKS=[
+  {k:'buy',  n:'法人買超',seg:1},
+  {k:'sell', n:'法人賣超',seg:1},
+  {k:'cp',   n:'買多漲少'},
+  {k:'bottom',n:'逆勢買超'},
+  {k:'abbuy',n:'個股爆買'},
+  {k:'absell',n:'個股爆賣'},
+];
+function buildRank(){
+  const el=$('rank'),sd=D.stock_data;
+  const isFlow=rankMode==='buy'||rankMode==='sell';
+  el.innerHTML=`<div class="rtabs">
+    ${RANKS.map(r=>`<button data-k="${r.k}" class="${r.k===rankMode?'on':''}">${r.n}</button>`).join('')}
+    ${isFlow?`<span class="segs">${[['1d','當日'],['5d','5 日']].map(([w,l])=>
+      `<button data-w="${w}" class="${w===rankWin?'on':''}">${l}</button>`).join('')}</span>`:''}
+  </div><div id="rbody"></div>`;
+  el.querySelectorAll('.rtabs [data-k]').forEach(b=>b.onclick=()=>{rankMode=b.dataset.k;buildRank();});
+  el.querySelectorAll('.segs [data-w]').forEach(b=>b.onclick=()=>{rankWin=b.dataset.w;buildRank();});
+  $('rbody').innerHTML=renderRank();
+  $('rbody').onclick=e=>{
+    const it=e.target.closest('.ritem'); if(!it) return;
+    if(it.dataset.code) openStock(it.dataset.code);
+    else openSector(sectors[+it.dataset.i]);
+  };
+}
+function renderRank(){
+  const sd=D.stock_data;
+  if(rankMode==='abbuy'||rankMode==='absell'){
+    const sign=rankMode==='abbuy'?1:-1;
+    const rows=Object.entries(sd)
+      .filter(([c,d])=>d.anomaly&&(d.net_1d_yi||0)*sign>0)
+      .sort((a,b)=>Math.abs(b[1].net_1d_yi)-Math.abs(a[1].net_1d_yi));
+    if(!rows.length) return `<div class="empty">今日沒有個股出現異常買賣訊號</div>`;
+    return rows.map(([c,d],i)=>`<div class="ritem" data-code="${c}">
+      <div class="rk">${i+1}</div>
+      <div><div class="rname">${esc(d.name)} <span style="color:var(--s8);font-weight:400">${c}</span></div>
+        <div class="rsub">力道 ${d.power??'—'} 倍平常　${(D.stock_sectors[c]||[]).slice(0,2).map(esc).join('、')||'未分類'}</div></div>
+      <div class="rval" style="color:${col(d.net_1d_yi)}">${yi(d.net_1d_yi)}
+        <small style="color:${col(d.chg_1d)}">${pct(d.chg_1d)}</small></div></div>`).join('');
+  }
+  if(rankMode==='bottom'){
+    const bf=D.digest.bottom_fishing||[];
+    if(!bf.length) return `<div class="empty">逆勢買超只在大盤重挫（跌逾 1%）的日子出現。<br>
+      今日大盤 ${pct(D.market_chg_1d)}，改看「法人買超」榜。</div>`;
+    return bf.map((b,i)=>{const s=sectors.find(x=>x.name===b.name);
+      return `<div class="ritem" data-i="${sectors.indexOf(s)}"><div class="rk">${i+1}</div>
+        <div><div class="rname">${esc(b.name)}</div>
+        <div class="rsub">板塊當日 ${pct(b.chg_1d)}，法人卻買超</div></div>
+        <div class="rval" style="color:var(--up)">${yi(b.net_1d_yi)}</div></div>`;}).join('');
+  }
+  if(rankMode==='cp'){
+    // 買多漲少：近5日資金流入大、但股價還沒反映。純事實排序，不含買賣建議。
+    const rows=sectors.filter(s=>s.net_5d_yi>0)
+      .map(s=>({s,r:s.net_5d_yi/Math.max(Math.abs(s.chg_5d),.5)}))
+      .sort((a,b)=>b.r-a.r).slice(0,30);
+    return rows.map((x,i)=>row(x.s,i,'net_5d_yi','chg_5d','5 日'))
+      .join('')||`<div class="empty">今日無資料</div>`;
+  }
+  const F=rankWin==='1d'?'net_1d_yi':'net_5d_yi';
+  const G=rankWin==='1d'?'net_5d_yi':'net_1d_yi';
+  const CH=rankWin==='1d'?'chg_1d':'chg_5d';
+  const buy=rankMode==='buy';
+  const rows=sectors.filter(s=>buy?s[F]>0:s[F]<0)
+    .sort((a,b)=>buy?b[F]-a[F]:a[F]-b[F]).slice(0,40);
+  if(!rows.length) return `<div class="empty">今日沒有板塊${buy?'買':'賣'}超</div>`;
+  return rows.map((s,i)=>row(s,i,F,CH,rankWin==='1d'?'當日':'5 日',G,
+    rankWin==='1d'?'5日':'今日')).join('');
+
+  // 廣度與主力必須跟著「主數字的期間」算，不能沿用後端固定的 5 日版本。
+  // 否則當日榜會出現「今天買超 +49.8 億」配上「主力旺宏 -31.1 億」——
+  // 那個 -31.1 是 5 日的數字，讀起來像自相矛盾，實際上只是兩個不同期間。
+  function row(s,i,f,ch,lb,g,glb){
+    const mem=s.stocks.map(c=>({c,...(sd[c]||{})})).filter(x=>x[f]!=null);
+    const nBuy=mem.filter(x=>x[f]>0).length;
+    const top=mem.reduce((a,b)=>Math.abs(b[f])>Math.abs(a?.[f]??-1)?b:a,null);
+    const alt=g?`${glb} ${yi(s[g])}　`:'';
+    const bd=mem.length?`${nBuy}/${mem.length} 檔在買　`:'';
+    const tp=top?`主力 ${esc(top.name)} ${yi(top[f])}`:'';
+    return `<div class="ritem" data-i="${sectors.indexOf(s)}">
+      <div class="rk">${i+1}</div>
+      <div><div class="rname">${esc(s.name)}</div><div class="rsub">${alt}${bd}${tp}</div></div>
+      <div class="rval" style="color:${col(s[f])}">${yi(s[f])}
+        <small style="color:${col(s[ch])}">${lb} ${pct(s[ch])}</small></div></div>`;
+  }
+}
+
+/* ══ 今日 ══════════════════════════════════════════════════════ */
+function buildToday(){
+  const g=D.digest,se=g.sentiment,bm=g.big_money,rv=g.review;
+  const strong=[...sectors].sort((a,b)=>b.net_5d_yi-a.net_5d_yi).slice(0,8);
+  const weak=[...sectors].sort((a,b)=>a.net_5d_yi-b.net_5d_yi).slice(0,8);
+  const sc=se.score>=60?'var(--up)':se.score>=40?'var(--gold)':'var(--down)';
+  $('today').innerHTML=`
+    <div class="card"><h3>今日情緒</h3>
+      <div class="big" style="color:${sc}">${se.score} <span style="font-size:15px">${se.label}</span></div>
+      <div class="mood"><i style="left:${Math.max(2,Math.min(98,se.score))}%"></i></div>
+      <div class="mood-l"><span>樂觀</span><span>恐慌</span></div>
+      <div class="krow" style="margin-top:10px"><span>上漲 / 下跌</span>
+        <b><span style="color:var(--up)">${se.advancers??'—'}</span> / <span style="color:var(--down)">${se.decliners??'—'}</span></b></div>
+      <div class="krow"><span>個股異常買賣訊號</span><b>${g.anomaly_count} 檔</b></div>
+    </div>
+    ${rv?`<div class="card"><h3>成效回顧・${rv.prev_date} ${rv.label}的 ${rv.n} 個板塊，今日表現</h3>
+      <div class="big" style="color:${col(rv.avg_chg)}">${pct(rv.avg_chg)}<span style="font-size:13px;color:var(--s9)"> 平均</span></div>
+      <div style="margin-top:10px">${rv.sectors.map(s=>
+        `<div class="krow"><span>${esc(s.name)}</span><b style="color:${col(s.chg_1d)}">${pct(s.chg_1d)}</b></div>`).join('')}</div>
+    </div>`:''}
+    <div class="card"><h3>大戶異常・法人買賣超相對這檔平常放大逾 2.5 倍</h3>
+      <div style="display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))">
+        <div><div class="rsub" style="margin-bottom:7px">被大買</div>
+          ${bm.buy.length?bm.buy.map(x=>kchip(x)).join(''):'<div class="rsub">今日無</div>'}</div>
+        <div><div class="rsub" style="margin-bottom:7px">被大賣</div>
+          ${bm.sell.length?bm.sell.map(x=>kchip(x)).join(''):'<div class="rsub">今日無</div>'}</div>
+      </div></div>
+    <div class="card"><h3>近 5 日資金流入前 8</h3>
+      <div class="chips">${strong.map(s=>schip(s)).join('')}</div></div>
+    <div class="card"><h3>近 5 日資金流出前 8</h3>
+      <div class="chips">${weak.map(s=>schip(s)).join('')}</div></div>
+    <div class="card" style="color:var(--s8);font-size:11.5px;line-height:1.7">
+      資料來源：臺灣證券交易所、證券櫃檯買賣中心公開資料。本服務僅就公開市場資訊進行彙整與統計呈現，
+      非證券投資顧問事業，不對特定有價證券提供分析意見或推介建議，亦不構成任何投資建議；
+      投資人應自行判斷並自負盈虧。
+    </div>`;
+  $('today').onclick=e=>{
+    const c=e.target.closest('[data-code]'), s=e.target.closest('[data-i]');
+    if(c) openStock(c.dataset.code); else if(s) openSector(sectors[+s.dataset.i]);
+  };
+  function kchip(x){return `<div class="krow" data-code="${x.code}" style="cursor:pointer">
+    <span>${esc(x.name)} <small style="color:var(--s8)">${x.code}</small></span>
+    <b style="color:${col(x.net_1d_yi)}">${yi(x.net_1d_yi)}　<span style="color:${col(x.chg_1d)}">${pct(x.chg_1d)}</span></b></div>`;}
+  function schip(s){return `<button class="chip" data-i="${sectors.indexOf(s)}">${esc(s.name)}
+    <b style="color:${col(s.net_5d_yi)}">${yi(s.net_5d_yi)}</b></button>`;}
+}
+
+/* ══ 板塊面板 ══════════════════════════════════════════════════ */
+const BADGE={discovered:'自動發掘',unnamed:'待命名'};
+function openSector(s){
+  if(!s) return;
+  const sd=D.stock_data;
+  $('sp-name').innerHTML=esc(s.name.replace(/^【待命名\d+】/,''))
+    +(BADGE[s.source]?`<span class="badge">${BADGE[s.source]}</span>`:'');
+  $('sp-sub').innerHTML=
+    `近5日 <b style="color:${col(s.net_5d_yi)}">${yi(s.net_5d_yi)}</b>　`+
+    `近20日 <b style="color:${col(s.net_20d_yi)}">${yi(s.net_20d_yi)}</b><br>`+
+    `${s.stocks.length} 檔・${s.breadth?s.breadth[0]+' 檔在買・':''}內聚度 ${s.cohesion}`;
+  const rows=s.stocks.map(c=>({c,w:(s.weights||{})[c],...(sd[c]||{})}))
+    .sort((a,b)=>(b.net_5d_yi??-1e9)-(a.net_5d_yi??-1e9));
+  $('sp-list').innerHTML=
+    `<div class="stitle">成分股　依近 5 日法人買賣超排序</div>`+
+    rows.map(r=>`<div class="row" data-code="${r.c}">
+      <div class="nm"><button class="star" data-star="${r.c}">☆</button>
+        <i>${r.c}</i>${esc(r.name||'')}${r.w!=null&&r.w<0.999?
+        `<span style="color:var(--s8);font-size:10.5px">　權重 ${r.w}</span>`:''}</div>
+      <div class="v" style="color:${col(r.net_5d_yi)}">${yi(r.net_5d_yi)}</div>
+      <div class="v" style="color:${col(r.chg_1d)}">${pct(r.chg_1d)}</div></div>`).join('');
+  $('sp-list').onclick=e=>{
+    if(e.target.closest('[data-star]')) return;   // 點星號不要順勢開個股頁
+    const r=e.target.closest('[data-code]'); if(r) openStock(r.dataset.code);};
+  refreshStars();
+  show('sec-panel');
+}
+
+/* ══ 個股面板 ══════════════════════════════════════════════════ */
+function openStock(code){
+  const d=D.stock_data[code]; if(!d) return;
+  $('kp-name').innerHTML=`${esc(d.name)} <span style="color:var(--s8);font-size:13px">${code}</span>`
+    +(d.anomaly?`<span class="badge">${d.anomaly}</span>`:'');
+  $('kp-sub').innerHTML=`<b style="font-size:17px;color:var(--s10)">${d.price??'—'}</b>　`
+    +`<b style="color:${col(d.chg_1d)}">${pct(d.chg_1d)}</b>　`
+    +`<span style="color:var(--s8)">${d.market}</span>`;
+  const secs=(D.stock_sectors[code]||[]);
+  $('kp-body').innerHTML=`
+    <div id="kchart" style="padding:14px 12px 4px"><div class="rsub" style="text-align:center;padding:30px">載入走勢…</div></div>
+    <div class="stitle">法人買賣超</div>
+    ${kv('當日',d.net_1d_yi,'億')}${kv('近 5 日',d.net_5d_yi,'億')}${kv('近 20 日',d.net_20d_yi,'億')}
+    <div class="stitle">近 5 日法人分項</div>
+    ${kv('外資',d.foreign_5d,'億')}${kv('投信',d.trust_5d,'億')}${kv('自營商（自行）',d.dealer_5d,'億')}
+    <div class="stitle">其他</div>
+    <div class="kv"><span>資金停留</span><b style="color:${d.streak>0?'var(--up)':d.streak<0?'var(--down)':''}">
+      ${d.streak>0?`連買 ${d.streak} 天`:d.streak<0?`連賣 ${-d.streak} 天`:'—'}</b></div>
+    <div class="kv"><span>力道　今日是平常的幾倍</span><b>${d.power!=null?d.power+' 倍':'—'}</b></div>
+    <div class="kv"><span>價格位階　近 60 日高低區間</span><b>${d.position!=null?d.position+'%':'—'}</b></div>
+    ${secs.length?`<div class="stitle">所屬板塊</div><div class="sect">
+      ${secs.map(n=>`<button class="chip" data-sec="${esc(n)}">${esc(n)}</button>`).join('')}</div>`:''}`;
+  $('kp-body').onclick=e=>{const b=e.target.closest('[data-sec]');
+    if(b) openSector(sectors.find(s=>s.name===b.dataset.sec));};
+  $('kp-star').dataset.code=code; refreshStars();
+  show('stk-panel');
+  histReady().then(h=>drawStockChart(code,h));
+  function kv(k,v,u){return `<div class="kv"><span>${k}</span>
+    <b style="color:${col(v)}">${v==null?'—':(v>=0?'+':'')+v.toFixed(2)+u}</b></div>`;}
+}
+
+// 近 30 日：收盤線 + 月線(MA20，虛線) + 法人買賣超柱
+function drawStockChart(code,h){
+  const s=h.stocks[code], el=$('kchart'); if(!s||!el) return;
+  const W=el.clientWidth||340, HC=140, HB=48, PAD={l:6,r:44,t:8,b:4};
+  const iW=W-PAD.l-PAD.r;
+  const c=s.c,m=s.m,n=s.n,ds=h.dates;
+  const vals=c.filter(x=>x!=null).concat(m.filter(x=>x!=null));
+  if(!vals.length){el.innerHTML='<div class="rsub" style="text-align:center;padding:24px">無走勢資料</div>';return;}
+  const lo=Math.min(...vals),hi=Math.max(...vals),sp=(hi-lo)||1;
+  const X=i=>PAD.l+i/(c.length-1)*iW;
+  const Y=v=>PAD.t+(1-(v-lo)/sp)*(HC-PAD.t-PAD.b);
+  const line=(a,dash)=>{let d='',up=false;
+    a.forEach((v,i)=>{if(v==null){up=false;return;} d+=(up?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1)+' ';up=true;});
+    return d?`<path d="${d}" fill="none" stroke="${dash?'var(--gold)':'var(--s10)'}" stroke-width="${dash?1.2:1.6}"${dash?' stroke-dasharray="4 3" opacity=".85"':''}/>`:'';};
+  const nm=Math.max(...n.map(x=>Math.abs(x||0)),.01);
+  const bars=n.map((v,i)=>{if(v==null)return'';
+    const bh=Math.abs(v)/nm*(HB/2-2), y0=HB/2;
+    return `<rect x="${X(i)-Math.max(1.5,iW/c.length/2.6)}" y="${v>=0?y0-bh:y0}"
+      width="${Math.max(3,iW/c.length*.72)}" height="${Math.max(.8,bh)}"
+      fill="${v>=0?'var(--up)':'var(--down)'}" opacity=".78"/>`;}).join('');
+  const last=c.filter(x=>x!=null).slice(-1)[0], lastM=m.filter(x=>x!=null).slice(-1)[0];
+  const above=lastM!=null&&last!=null&&last>=lastM;
+  el.innerHTML=`
+    <svg width="100%" viewBox="0 0 ${W} ${HC}" style="display:block">
+      ${line(m,1)}${line(c,0)}
+      <text x="${W-PAD.r+4}" y="${Y(hi)+4}" font-size="10" fill="var(--s8)">${hi.toFixed(1)}</text>
+      <text x="${W-PAD.r+4}" y="${Y(lo)+4}" font-size="10" fill="var(--s8)">${lo.toFixed(1)}</text>
+    </svg>
+    <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--s8);padding:2px 0 6px">
+      <span>${ds[0]}</span>
+      <span><b style="color:${above?'var(--up)':'var(--down)'}">${lastM!=null?(above?'站上':'跌破')+'月線':''}</b>
+        　<span style="color:var(--gold)">▬</span> MA20</span>
+      <span>${ds[ds.length-1]}</span></div>
+    <svg width="100%" viewBox="0 0 ${W} ${HB}" style="display:block">
+      <line x1="0" y1="${HB/2}" x2="${W}" y2="${HB/2}" stroke="var(--line)"/>${bars}</svg>
+    <div class="rsub" style="text-align:center;padding:2px 0 4px">近 30 日收盤與法人買賣超（億）</div>`;
+}
+
+
+/* ══ 自選股 ════════════════════════════════════════════════════
+   純 localStorage，不需要帳號——加入自選是使用者第一次投入，不該先擋一道登入。
+   跨裝置同步等真的有人要求時再接後端。 */
+const WKEY='twflow_watch', SEENKEY='twflow_seen';
+let WATCH=[], EV=null, watchTab='list';
+try{ WATCH=JSON.parse(localStorage.getItem(WKEY)||'[]'); }catch(_){ WATCH=[]; }
+const inWatch=c=>WATCH.includes(c);
+function saveWatch(){ try{localStorage.setItem(WKEY,JSON.stringify(WATCH))}catch(_){} }
+function toggleWatch(c){
+  const i=WATCH.indexOf(c);
+  if(i<0) WATCH.push(c); else WATCH.splice(i,1);
+  saveWatch(); refreshStars(); buildWatch(); updateBadge();
+  return i<0;
+}
+function refreshStars(){
+  document.querySelectorAll('[data-star]').forEach(el=>{
+    const on=inWatch(el.dataset.star);
+    el.classList.toggle('on',on); el.textContent=on?'★':'☆';
+    el.title=on?'從自選移除':'加入自選';
+  });
+  const k=$('kp-star');
+  if(k&&k.dataset.code){ const on=inWatch(k.dataset.code);
+    k.classList.toggle('on',on); k.textContent=on?'★':'☆'; }
+}
+// 事件委派：星號在很多地方出現（面板、排行、自選頁），統一在 document 攔
+document.addEventListener('click',e=>{
+  const st=e.target.closest('[data-star]');
+  if(st){ e.stopPropagation(); toggleWatch(st.dataset.star); }
+});
+$('kp-star').onclick=e=>{ e.stopPropagation();
+  const c=$('kp-star').dataset.code; if(c) toggleWatch(c); };
+
+const evReady=()=>EV?Promise.resolve(EV)
+  :fetch('data/events.json').then(r=>r.json()).then(j=>(EV=j));
+
+/* 未讀計數：以「上次看過的最新事件日期」為界 */
+function lastSeen(){ try{return localStorage.getItem(SEENKEY)||''}catch(_){return''} }
+function markSeen(d){ try{localStorage.setItem(SEENKEY,d)}catch(_){} }
+function myEvents(){
+  if(!EV) return [];
+  const set=new Set(WATCH);
+  return EV.events.filter(e=>set.has(e.code)).reverse();
+}
+function updateBadge(){
+  const seen=lastSeen();
+  const n=myEvents().filter(e=>e.date>seen).length;
+  document.querySelectorAll('[data-v="watch"]').forEach(b=>{
+    b.querySelector('.dot')?.remove();
+    if(n>0){ const s=document.createElement('span');
+      s.className='dot'; s.textContent=n>99?'99+':n; b.appendChild(s); }
+  });
+}
+
+const EVCOLOR={anomaly_buy:'var(--up)',anomaly_sell:'var(--down)',
+  streak_buy:'var(--up)',streak_sell:'var(--down)',foreign_buy:'var(--gold)'};
+
+function buildWatch(){
+  const el=$('watch'), sd=D?D.stock_data:{};
+  if(!WATCH.length){
+    el.innerHTML=`<div class="wl-empty"><div class="em">☆</div>
+      <p>還沒有追蹤任何股票。<br>
+      在個股頁或成分股列表點 ☆ 就會加進來。<br>
+      加入後，這裡會盤後彙整它們的籌碼異動。</p>
+      <button class="btn pri" id="wl-demo">加入今日大戶異常的 5 檔看看</button></div>`;
+    $('wl-demo').onclick=()=>{
+      (D.digest.big_money.buy||[]).slice(0,5).forEach(x=>{
+        if(!inWatch(x.code)) WATCH.push(x.code);});
+      saveWatch(); buildWatch(); refreshStars(); updateBadge();
+    };
+    return;
+  }
+  const evs=myEvents();
+  const unseen=evs.filter(e=>e.date>lastSeen()).length;
+  el.innerHTML=`
+    <div class="wl-head"><h2>自選股</h2><span class="cnt">${WATCH.length} 檔</span>
+      <span class="spacer" style="flex:1"></span>
+      <button class="btn" id="wl-clear">清空</button></div>
+    <div class="subtabs">
+      <button data-t="list" class="${watchTab==='list'?'on':''}">持股清單</button>
+      <button data-t="feed" class="${watchTab==='feed'?'on':''}">籌碼異動
+        ${unseen?`<span class="dot">${unseen}</span>`:''}</button>
+    </div><div id="wl-body"></div>`;
+  el.querySelectorAll('.subtabs button').forEach(b=>b.onclick=()=>{
+    watchTab=b.dataset.t; buildWatch();
+    if(watchTab==='feed') evReady().then(()=>{buildWatch();
+      const e=myEvents()[0]; if(e){markSeen(e.date);updateBadge();}});
+  });
+  $('wl-clear').onclick=()=>{ if(confirm('確定清空自選股？')){
+    WATCH=[]; saveWatch(); buildWatch(); refreshStars(); updateBadge(); }};
+
+  const body=$('wl-body');
+  if(watchTab==='list'){
+    const rows=WATCH.map(c=>({c,...(sd[c]||{})}))
+      .sort((a,b)=>(b.net_5d_yi??-1e9)-(a.net_5d_yi??-1e9));
+    body.innerHTML=rows.map(r=>`<div class="ritem" data-code="${r.c}">
+      <button class="star ${inWatch(r.c)?'on':''}" data-star="${r.c}">★</button>
+      <div><div class="rname">${esc(r.name||r.c)}
+        <span style="color:var(--s8);font-weight:400">${r.c}</span>
+        ${r.anomaly?`<span class="badge">${r.anomaly}</span>`:''}</div>
+        <div class="rsub">${r.price??'—'}　${(D.stock_sectors[r.c]||[]).slice(0,2).map(esc).join('、')||'未分類'}</div></div>
+      <div class="rval" style="color:${col(r.net_5d_yi)}">${yi(r.net_5d_yi)}
+        <small style="color:${col(r.chg_1d)}">${pct(r.chg_1d)}</small></div></div>`).join('');
+  } else {
+    if(!EV){ body.innerHTML='<div class="empty">載入中…</div>'; evReady().then(buildWatch); return; }
+    if(!evs.length){ body.innerHTML=
+      `<div class="empty">近 ${EV.dates.length} 個交易日，你追蹤的股票沒有出現籌碼異動。<br>
+       事件包含：異常大買/大賣、法人連買 7 天、法人連賣 5 天、外資連買 7 天。</div>`; return; }
+    body.innerHTML=evs.map(e=>`<div class="ev" data-code="${e.code}">
+      <span class="ev-k" style="background:${EVCOLOR[e.kind]}22;color:${EVCOLOR[e.kind]}">${e.text}</span>
+      <div><div class="rname">${esc(e.name)}
+        <span style="color:var(--s8);font-weight:400">${e.code}</span></div>
+        <div class="ev-d">${e.date}${e.power?`　力道 ${e.power} 倍`:''}</div></div>
+      <div class="rval" style="color:${col(e.net_1d_yi)}">${yi(e.net_1d_yi)}
+        <small style="color:${col(e.chg_1d)}">${pct(e.chg_1d)}</small></div></div>`).join('');
+  }
+  body.onclick=ev=>{ const r=ev.target.closest('[data-code]');
+    if(r&&!ev.target.closest('[data-star]')) openStock(r.dataset.code); };
+  refreshStars();
+}
+
+
+/* ══ 供應鏈上下游 ══════════════════════════════════════════════
+   Tide 的板塊是平的，我們有官方產業價值鏈的上/中/下游拓撲，
+   所以能回答「這條鏈的買盤(或賣壓)集中在哪一段、有沒有在移動」。 */
+let CH=null;
+const chReady=()=>CH?Promise.resolve(CH)
+  :fetch('data/chains.json').then(r=>r.json()).then(j=>(CH=j));
+
+function buildChain(){
+  const el=$('chain');
+  if(!CH){ el.innerHTML='<div class="empty">載入中…</div>';
+    chReady().then(buildChain); return; }
+  const list=CH.chains.filter(c=>c.focus!=null);
+  const weak=CH.chains.length-list.length;
+  if(!list.length){ el.innerHTML='<div class="empty">今日沒有規模足夠判斷的產業鏈。</div>'; return; }
+  list.sort((a,b)=>b.magnitude-a.magnitude);
+
+  el.innerHTML=`<div class="wl-head"><h2>供應鏈資金重心</h2>
+      <span class="cnt">近 5 日</span></div>
+    <div class="card" style="padding:12px 14px;color:var(--s9);font-size:12px;line-height:1.75">
+      每條鏈整體被買或被賣，那股力道集中在<b style="color:var(--s10)">上游／中游／下游</b>哪一段。
+      只取與整鏈同向的段計算——鏈被賣時看的是賣壓分布，不是「錢流到哪」。
+      <br>規模低於 20 億的鏈不判斷（今日 ${weak} 條），數字太小時重心純粹是雜訊。
+    </div>
+    ${list.map(card).join('')}`;
+  el.onclick=e=>{
+    const sg=e.target.closest('[data-nodes]');
+    if(sg) alert(sg.dataset.chain+'　'+sg.dataset.seg+'\n\n'+
+      sg.dataset.nodes.split('|').join('\n'));
+  };
+
+  function card(c){
+    const buy=c.side>0;
+    const tone=buy?'var(--up)':'var(--down)';
+    const mx=Math.max(...c.segments.map(r=>Math.abs(r.net_5d||0)),1);
+    const segs=c.segments.map(r=>{
+      const v=r.net_5d||0, w=Math.abs(v)/mx*50;   // 半幅 50%
+      const pos=v>=0;
+      return `<div class="seg" data-nodes="${esc(r.nodes.join('|'))}"
+                data-chain="${esc(c.name)}" data-seg="${r.seg}">
+        <div class="seg-l">${r.seg}</div>
+        <div class="seg-bar"><div class="zero" style="left:50%"></div>
+          <i style="${pos?`left:50%;width:${w}%`:`right:50%;width:${w}%`};
+             background:${pos?'var(--up)':'var(--down)'};opacity:.8"></i></div>
+        <div class="seg-n" style="color:${col(v)}">${yi(v)}
+          <span style="color:var(--s8);font-size:10.5px">${r.stocks}檔</span></div>
+      </div>`;}).join('');
+    // 重心位置條：0=上游 1=下游
+    const move=c.shift==null?'方向與前期不同，不比較'
+      :(c.shift>0.05?`往下游移動 ${c.shift.toFixed(2)}`
+       :c.shift<-0.05?`往上游移動 ${Math.abs(c.shift).toFixed(2)}`:'重心持平');
+    return `<div class="ch">
+      <div class="ch-top"><h3>${esc(c.name)}</h3>
+        <span class="ch-tag" style="background:${tone}22;color:${tone}">${buy?'買盤':'賣壓'}${esc(c.label||'')}</span>
+        <span class="ch-mag">${c.stocks} 檔・力道 ${Math.round(c.magnitude)} 億</span></div>
+      ${segs}
+      <div class="ch-move"><span>重心</span>
+        <div class="ch-axis">
+          ${c.focus_prev!=null?`<span style="left:${c.focus_prev*100}%;background:var(--s8);opacity:.55"></span>`:''}
+          <span style="left:${c.focus*100}%;background:${tone}"></span></div>
+        <span>${move}</span></div>
+      <div class="ch-nodes">上游 ← → 下游　點各段可看包含哪些節點</div></div>`;
+  }
+}
+
+/* ══ 面板開關 ══════════════════════════════════════════════════ */
+function show(id){
+  document.querySelectorAll('.side').forEach(s=>s.classList.toggle('on',s.id===id));
+  $('ov').classList.add('on');
+}
+function hideAll(){document.querySelectorAll('.side').forEach(s=>s.classList.remove('on'));
+  $('ov').classList.remove('on');}
+$('ov').onclick=hideAll;
+document.querySelectorAll('[data-close]').forEach(b=>b.onclick=hideAll);
+addEventListener('keydown',e=>{
+  if(e.key==='Escape'){hideAll();$('qr').classList.remove('on');}
+  if(e.key==='0'&&e.target.tagName!=='INPUT'){view={k:1,x:0,y:0};applyView();}
+});
+
+/* ══ 視圖切換 ══════════════════════════════════════════════════ */
+function setView(v){
+  document.querySelectorAll('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));
+  document.querySelectorAll('#tabs button,#nav button').forEach(b=>
+    b.classList.toggle('on',b.dataset.v===v));
+  if(v==='chart') requestRender(true);
+  if(v==='chain') chReady().then(buildChain);
+  if(v==='watch'){ buildWatch();
+    evReady().then(()=>{ if(watchTab==='feed'){
+      const e=myEvents()[0]; if(e){markSeen(e.date);} } updateBadge(); buildWatch(); }); }
+}
+document.querySelectorAll('#tabs button,#nav button').forEach(b=>
+  b.onclick=()=>setView(b.dataset.v));
+
+/* ══ 搜尋 ══════════════════════════════════════════════════════ */
+let selIdx=-1;
+$('q').oninput=()=>{
+  const q=$('q').value.trim().toLowerCase(); const box=$('qr');
+  if(!q||!SEARCH){box.classList.remove('on');return;}
+  const hits=Object.entries(SEARCH)
+    .filter(([c,n])=>c.startsWith(q)||n.toLowerCase().includes(q)).slice(0,20);
+  selIdx=-1;
+  box.innerHTML=hits.length?hits.map(([c,n],i)=>
+    `<div data-code="${c}"><i>${c}</i><span>${esc(n)}</span></div>`).join('')
+    :'<div style="color:var(--s8)">查無此股</div>';
+  box.classList.toggle('on',true);
+};
+$('qr').onclick=e=>{const d=e.target.closest('[data-code]');
+  if(d){openStock(d.dataset.code);$('qr').classList.remove('on');$('q').value='';}};
+$('q').onkeydown=e=>{
+  const items=[...$('qr').querySelectorAll('[data-code]')];
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){
+    e.preventDefault(); selIdx+=e.key==='ArrowDown'?1:-1;
+    selIdx=Math.max(0,Math.min(items.length-1,selIdx));
+    items.forEach((x,i)=>x.classList.toggle('sel',i===selIdx));
+    items[selIdx]?.scrollIntoView({block:'nearest'});
+  } else if(e.key==='Enter'&&items.length){
+    openStock(items[Math.max(0,selIdx)].dataset.code);
+    $('qr').classList.remove('on'); $('q').value=''; $('q').blur();
+  }
+};
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.search')) $('qr').classList.remove('on');
+});
+
+/* ══ 主題 ══════════════════════════════════════════════════════ */
+const applyTheme=t=>{document.documentElement.dataset.theme=t;
+  try{localStorage.setItem('twflow_theme',t)}catch(_){}};
+$('theme').onclick=()=>{
+  applyTheme(document.documentElement.dataset.theme==='light'?'dark':'light');
+  if($('v-chart').classList.contains('on')) render();
+};
+try{applyTheme(localStorage.getItem('twflow_theme')||'dark')}catch(_){applyTheme('dark')}
+
+/* ══ 重畫觸發 ══════════════════════════════════════════════════
+   泡泡座標是依畫布尺寸算死的，尺寸變了不重畫，泡泡就會留在舊版面的位置——
+   實測從手機切回桌機時，版面高度還停在 707（實際 453），25 顆泡泡跑到畫布外，
+   而且不會有任何錯誤。
+
+   ⚠️ 不能只靠 ResizeObserver：在部分內嵌瀏覽器環境它完全不觸發（連 observe
+   當下的初次回呼都沒有，實測過）。所以以 window resize 為主、RO 為輔，
+   並且在真正要畫之前比對「上次畫用的尺寸」，不同才重畫。 */
+let rt=null, lastSize='';
+function requestRender(force){
+  if(!D) return;
+  clearTimeout(rt);
+  rt=setTimeout(()=>{
+    if(!$('v-chart').classList.contains('on')) return;
+    const r=$('chart').getBoundingClientRect();
+    const key=Math.round(r.width)+'x'+Math.round(r.height);
+    if(!force && key===lastSize) return;
+    lastSize=key; render();
+  },80);
+}
+/* ══ PWA ══════════════════════════════════════════════════════
+   單檔 snapshot 用 file:// 開時沒有 SW，也不該註冊——包在 try 裡靜默略過。 */
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+let deferredPrompt=null;
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;
+  const b=$('install'); if(b) b.style.display='grid';});
+$('install').onclick=async()=>{
+  if(!deferredPrompt) return;
+  deferredPrompt.prompt(); await deferredPrompt.userChoice;
+  deferredPrompt=null; $('install').style.display='none';
+};
+
+addEventListener('resize',()=>requestRender());
+addEventListener('orientationchange',()=>requestRender());
+try{ new ResizeObserver(()=>requestRender()).observe($('main')); }catch(_){}
+// 最後一道保險：使用者把指標移進圖表時對一次尺寸。上面三個事件在少數環境
+// （實測某些內嵌瀏覽器）都不會派送，這條至少保證「要動它之前」是對的。
+// requestRender 內部會比對尺寸，沒變就不重畫，所以不會有額外成本。
+$('chart').addEventListener('pointerenter',()=>requestRender());
+</script>
+</body>
+</html>
