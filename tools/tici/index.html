@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>提詞挈領 · 玩著學提示詞工程 | SunDown Studio</title>
+<meta name="description" content="在夜色裡的碑林群島走動，用選字刻碑的方式學會提示詞工程。74 塊碑、12 境、11 種題板、101 條離線評分檢核。無帳號、無後端、無外部請求。">
+<meta property="og:title" content="提詞挈領 · 玩著學提示詞工程">
+<meta property="og:description" content="提示詞不是唸咒，是有規矩的。74 關、12 境、11 種題板，評分全在你的瀏覽器裡跑。">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#050813">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23050813'/%3E%3Cpath d='M16 5c4 2 6 5 6 9v13H10V14c0-4 2-7 6-9z' fill='%23131d2e' stroke='%23ffd76a' stroke-width='1.4'/%3E%3Cpath d='M13 14h6M13 18h6M13 22h6' stroke='%23ffd76a' stroke-width='1.2' opacity='.75'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+<canvas id="stage" tabindex="0" aria-label="碑林世界。使用方向鍵或 WASD 走動，按 E 叩碑。"></canvas>
+
+<!-- HUD -->
+<div id="hud">
+  <div id="hud-rank">過路人</div>
+  <div class="hud-row">
+    <span id="hud-xp">0 XP</span>
+    <span id="hud-progress">0 / 0 碑</span>
+    <span id="hud-seals">印 0 / 12</span>
+  </div>
+  <div id="hud-bar"><div id="hud-bar-fill"></div></div>
+</div>
+
+<canvas id="minimap" aria-hidden="true"></canvas>
+
+<div id="toolbar">
+  <button class="tool" id="btn-map" type="button">地圖 <kbd>M</kbd></button>
+  <button class="tool" id="btn-codex" type="button">圖鑑 <kbd>C</kbd></button>
+  <button class="tool" id="btn-set" type="button">設定 <kbd>P</kbd></button>
+  <button class="tool" id="btn-share" type="button">成果卡</button>
+</div>
+
+<div id="interact" role="status" aria-live="polite"></div>
+
+<div id="touchpad"><div id="stick"></div></div>
+<button id="touch-e" type="button">叩碑</button>
+
+<!-- ============ 挑戰主控台（四幕） ============ -->
+<div class="overlay" id="console" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="c-name">
+  <div class="sheet">
+    <div class="sheet-head">
+      <div>
+        <div class="sheet-kicker" id="c-region"></div>
+        <h2 id="c-name"></h2>
+        <div class="tag-row">
+          <span class="tag" id="c-skill"></span>
+          <span class="tag" id="c-board"></span>
+          <span class="tag" id="c-src"></span>
+        </div>
+      </div>
+      <button class="x-btn" id="c-x" type="button" aria-label="關閉">✕</button>
+    </div>
+
+    <nav class="acts" aria-label="挑戰進度">
+      <div class="act on">授</div>
+      <div class="act">題</div>
+      <div class="act">評</div>
+      <div class="act">收</div>
+    </nav>
+
+    <div class="sheet-body">
+      <section class="act-panel on">
+        <div class="teach" id="c-teach"></div>
+        <div class="brief" id="c-brief"></div>
+      </section>
+
+      <section class="act-panel">
+        <div id="c-board-root"></div>
+      </section>
+
+      <section class="act-panel">
+        <div id="c-result"></div>
+      </section>
+
+      <section class="act-panel">
+        <div id="c-collect"></div>
+      </section>
+    </div>
+
+    <div class="sheet-foot">
+      <button class="btn" id="c-next" type="button">開始作答</button>
+      <button class="btn hidden" id="c-submit" type="button" disabled>交碑評鑑</button>
+      <button class="btn hidden" id="c-finish" type="button">收錄</button>
+      <button class="btn hidden" id="c-close" type="button">返回碑林</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 圖鑑 ============ -->
+<div class="overlay" id="codex" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="codex-title">
+  <div class="sheet">
+    <div class="sheet-head">
+      <div>
+        <div class="sheet-kicker">CODEX</div>
+        <h2 id="codex-title">碑文圖鑑</h2>
+      </div>
+      <button class="x-btn" id="codex-close" type="button" aria-label="關閉">✕</button>
+    </div>
+    <div class="sheet-body" id="codex-body"></div>
+  </div>
+</div>
+
+<!-- ============ 地圖 ============ -->
+<div class="overlay" id="map" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="map-title">
+  <div class="sheet">
+    <div class="sheet-head">
+      <div>
+        <div class="sheet-kicker">ATLAS</div>
+        <h2 id="map-title">碑林群島</h2>
+      </div>
+      <button class="x-btn" id="map-close" type="button" aria-label="關閉">✕</button>
+    </div>
+    <div class="sheet-body">
+      <canvas id="map-canvas"></canvas>
+      <div id="map-body"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 設定 ============ -->
+<div class="overlay" id="settings" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="set-title">
+  <div class="sheet">
+    <div class="sheet-head">
+      <div>
+        <div class="sheet-kicker">SETTINGS</div>
+        <h2 id="set-title">設定</h2>
+      </div>
+      <button class="x-btn" id="set-close" type="button" aria-label="關閉">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="set-row">
+        <label for="set-bgm">背景樂<small>十三段依境而變的合成夜曲，完全在瀏覽器裡生成。</small></label>
+        <input type="checkbox" id="set-bgm">
+      </div>
+      <div class="set-row">
+        <label for="set-sfx">音效<small>腳步、刻碑、封印。</small></label>
+        <input type="checkbox" id="set-sfx">
+      </div>
+      <div class="set-row">
+        <label for="set-motion">動態效果<small>關掉極光飄動與浮塵，減少畫面晃動。</small></label>
+        <input type="checkbox" id="set-motion">
+      </div>
+      <div class="set-row">
+        <label for="set-font">文字大小</label>
+        <input type="range" id="set-font" min="0.85" max="1.4" step="0.05">
+      </div>
+      <div class="set-row" style="border-bottom:none">
+        <label>重置進度<small>清掉所有碑文、評等與境印。這件事不可逆。</small></label>
+        <button class="btn danger" id="set-reset" type="button">全部重來</button>
+      </div>
+      <p style="color:var(--ink-faint);font-size:.82em;line-height:1.8;margin-top:18px">
+        進度只存在你這台裝置的 localStorage 裡。沒有帳號、沒有後端、沒有任何外部請求。
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 序章 ============ -->
+<div class="overlay" id="prologue" role="dialog" aria-modal="true" aria-labelledby="pro-h">
+  <div class="sheet">
+    <div class="sheet-body" style="padding:38px 34px 30px">
+      <h2 id="pro-h"></h2>
+      <p id="pro-p"></p>
+      <div id="pro-k"></div>
+    </div>
+    <div class="sheet-foot" style="justify-content:space-between;align-items:center">
+      <div id="pro-dots"></div>
+      <button class="btn" id="pro-next" type="button">繼續</button>
+    </div>
+  </div>
+</div>
+
+<div id="glosscard" role="tooltip"></div>
+
+<script src="js/save.js"></script>
+<script src="js/checks.js"></script>
+<script src="js/curriculum-a.js"></script>
+<script src="js/curriculum-b.js"></script>
+<script src="js/reference.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/world.js"></script>
+<script src="js/boards.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
