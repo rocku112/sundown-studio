@@ -76,6 +76,46 @@
   }
 
   /**
+   * 一關的「正解長什麼樣」。自由書寫模式拿它當參考寫法，自我測試也拿它驗證。
+   * 不是唯一正解——評分引擎讀的是結構，不是字句。
+   */
+  function idealAnswer(s) {
+    switch (s.board) {
+      case 'carve': return s.segs.map(function (g) { return g.opts.find(function (o) { return o.ok; }).t; }).join('\n');
+      case 'gate': return s.opts.find(function (o) { return o.ok; }).t;
+      case 'slot': {
+        var t = s.template;
+        s.slots.forEach(function (sl, i) { t = t.replace('{{' + i + '}}', sl.opts.find(function (o) { return o.ok; }).t); });
+        return t;
+      }
+      case 'repair': {
+        var o = s.lines.slice();
+        o[s.flaw] = s.fixes.find(function (f) { return f.ok; }).t;
+        return o.join('\n');
+      }
+      case 'order': return s.answer.map(function (i) { return s.items[i].t; }).join('\n');
+      case 'sift': return s.opts.filter(function (o) { return o.ok; }).map(function (o) { return o.t; }).join('\n');
+      case 'trim': return s.lines.filter(function (o) { return !o.drop; }).map(function (o) { return o.t; }).join('\n');
+      case 'dispatch': return s.items.map(function (it) {
+        return it.t + ' → ' + s.buckets.find(function (b) { return b.id === it.ans; }).name;
+      }).join('\n');
+      case 'pair': return s.left.map(function (L, i) { return L.t + ' → ' + s.right[s.answer[i]].t; }).join('\n');
+      case 'gauge': return (s.prefix ? s.prefix + '\n' : '') +
+        s.knobs.map(function (k) { return k.key + ' = ' + k.answer; }).join('\n') + (s.tail ? '\n' + s.tail : '');
+      default: return (P.REFERENCE && P.REFERENCE[s.id]) || null;
+    }
+  }
+  P.idealAnswer = idealAnswer;
+
+  /** 從 rubric 反推幾個提示詞，給自由書寫模式當提示 */
+  function hintsFrom(shrine) {
+    return shrine.rubric
+      .filter(function (r) { return r.id !== 'picks'; })
+      .slice(0, 5)
+      .map(function (r) { return (P.CHECKS[r.id] || {}).label || r.id; });
+  }
+
+  /**
    * 建立題板。
    * @returns {{collect:Function, complete:Function, root:HTMLElement}}
    */
@@ -83,6 +123,18 @@
     root.innerHTML = '';
     var tr = new Tracker();
     var api = { tracker: tr };
+
+    // 全域切成自由書寫時，任何一關都變成打字題：情境不變、評分準則不變，
+    // 只是不再給你候選句子。這是課程的「困難模式」。
+    var forceWrite = P.save.state.settings.answerMode === 'write' && shrine.board !== 'write';
+    api.mode = (forceWrite || shrine.board === 'write') ? 'write' : 'carve';
+    if (forceWrite) {
+      shrine = Object.assign({}, shrine, {
+        board: 'write',
+        starter: '',
+        hints: hintsFrom(shrine)
+      });
+    }
 
     function feedback(node, ok, note) {
       if (!node || !node.parentNode) return;

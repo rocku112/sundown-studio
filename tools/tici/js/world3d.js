@@ -46,12 +46,8 @@
     return noise2(x, y) * 0.55 + noise2(x * 2.1, y * 2.1) * 0.28 + noise2(x * 4.3, y * 4.3) * 0.17;
   }
 
-  function regionSeed(r) { var s = 0; for (var i = 0; i < r.id.length; i++) s += r.id.charCodeAt(i); return s; }
-
-  function radiusAt(r, th) {
-    var s = regionSeed(r);
-    return R_BASE * (0.80 + 0.14 * Math.sin(3 * th + s) + 0.09 * Math.sin(5 * th + s * 1.7) + 0.05 * Math.sin(7 * th + s * 0.4));
-  }
+  var regionSeed = function (r) { return P.layout.regionSeed(r); };
+  var radiusAt = function (r, th) { return P.layout.radiusAt(r, th); };
 
   function inRegion(r, x, y) {
     var dx = x - r.x, dy = y - r.y, d = Math.hypot(dx, dy);
@@ -107,16 +103,8 @@
   // ---- 神碑座標 -----------------------------------------------------
   var shrineNodes = [];
   function layoutShrines() {
-    shrineNodes = [];
-    P.REGIONS.forEach(function (r) {
-      var list = P.SHRINES.filter(function (s) { return s.region === r.id; });
-      var n = list.length, seed = regionSeed(r);
-      list.forEach(function (s, i) {
-        var th = (i / n) * Math.PI * 2 + seed * 0.13;
-        var rad = s.trial ? 0 : radiusAt(r, th) * 0.58;
-        var x = r.x + Math.cos(th) * rad, y = r.y + Math.sin(th) * rad * 0.92;
-        shrineNodes.push({ shrine: s, region: r, x: x, y: y, h: islandH(r, x, y) });
-      });
+    shrineNodes = P.layout.shrines().map(function (n) {
+      return { shrine: n.shrine, region: n.region, x: n.x, y: n.y, h: islandH(n.region, n.x, n.y) };
     });
   }
 
@@ -346,6 +334,100 @@
     return grp;
   }
 
+  // ---- 走出來的收集：石版、器物、藏起來的地方 -------------------------
+  var collectNodes = [];
+  function layoutCollectibles() {
+    collectNodes = P.layout.collectibles().map(function (n) {
+      return { item: n.item, region: n.region, th: n.th, x: n.x, y: n.y, h: islandH(n.region, n.x, n.y) };
+    });
+  }
+
+  function makeCollectible(node) {
+    var c = node.item;
+    var got = P.progress.found(c.id);
+    var grp = new THREE.Group();
+    var tint = c.kind === 'hidden' ? 0xb98cff : (c.kind === 'ins' ? 0x9fd4ff : 0xffc98a);
+    var mat = new THREE.MeshStandardMaterial({
+      color: 0x1a2231, roughness: 0.85, flatShading: true,
+      emissive: new THREE.Color(tint), emissiveIntensity: got ? 0.06 : 0.26
+    });
+    var glowMat = new THREE.MeshBasicMaterial({ color: tint, transparent: true, opacity: got ? 0.18 : 0.8 });
+
+    if (c.kind === 'ins') {
+      var slab = new THREE.Mesh(new THREE.BoxGeometry(13, 17, 2.6), mat);
+      slab.position.y = 8.5; slab.rotation.x = -0.22; slab.rotation.y = c.th;
+      slab.castShadow = quality === 'high';
+      grp.add(slab);
+    } else if (c.kind === 'hidden') {
+      var rune = new THREE.Mesh(new THREE.OctahedronGeometry(6, 0), glowMat);
+      rune.position.y = 17;
+      grp.add(rune);
+      grp.userData.spin = rune;
+      var pedestal = new THREE.Mesh(new THREE.CylinderGeometry(6, 8, 5, 6), mat);
+      pedestal.position.y = 2.5;
+      grp.add(pedestal);
+    } else {
+      if (c.shape === 'jar') {
+        var jar = new THREE.Mesh(new THREE.CylinderGeometry(4.6, 6.4, 12, 9), mat);
+        jar.position.y = 6; jar.castShadow = quality === 'high'; grp.add(jar);
+        var lid = new THREE.Mesh(new THREE.CylinderGeometry(5, 5, 1.6, 9), glowMat);
+        lid.position.y = 12.6; grp.add(lid);
+      } else if (c.shape === 'brazier') {
+        var bowl = new THREE.Mesh(new THREE.CylinderGeometry(7, 4.4, 7, 10), mat);
+        bowl.position.y = 6; bowl.castShadow = quality === 'high'; grp.add(bowl);
+        var flame = new THREE.Mesh(new THREE.SphereGeometry(3.4, 8, 6), glowMat);
+        flame.position.y = 11.4; grp.add(flame);
+        grp.userData.flicker = flame;
+      } else if (c.shape === 'chime') {
+        var stone = new THREE.Mesh(new THREE.IcosahedronGeometry(6, 0), mat);
+        stone.position.y = 8; stone.castShadow = quality === 'high'; grp.add(stone);
+        grp.userData.spin = stone;
+      } else {
+        var wheel = new THREE.Mesh(new THREE.TorusGeometry(6.5, 1.8, 6, 12), mat);
+        wheel.position.y = 10; wheel.rotation.y = Math.PI / 2;
+        wheel.castShadow = quality === 'high'; grp.add(wheel);
+        grp.userData.spin = wheel;
+        var post = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2, 10, 6), mat);
+        post.position.y = 5; grp.add(post);
+      }
+    }
+
+    // 地面微光，讓人看得出「這裡有東西」
+    var pool = new THREE.Mesh(
+      new THREE.CircleGeometry(c.kind === 'hidden' ? 26 : 16, 18),
+      new THREE.MeshBasicMaterial({ color: tint, transparent: true, opacity: got ? 0.03 : 0.10, depthWrite: false, blending: THREE.AdditiveBlending })
+    );
+    pool.rotation.x = -Math.PI / 2; pool.position.y = 0.5;
+    grp.add(pool);
+    grp.userData.pool = pool;
+    grp.userData.mats = [mat, glowMat];
+    grp.userData.node = node;
+    grp.position.set(node.x, node.h, node.y);
+    return grp;
+  }
+
+  W.refreshCollectibles = function () {
+    if (!decoGroup) return;
+    decoGroup.children.forEach(function (g) {
+      var got = P.progress.found(g.userData.node.item.id);
+      g.userData.mats[0].emissiveIntensity = got ? 0.06 : 0.26;
+      g.userData.mats[1].opacity = got ? 0.18 : 0.8;
+      g.userData.pool.material.opacity = got ? 0.03 : (g.userData.node.item.kind === 'hidden' ? 0.10 : 0.10);
+    });
+  };
+
+  W.nearestCollectible = function () {
+    var best = null, bd = P.layout.ITEM_REACH;
+    collectNodes.forEach(function (n) {
+      var d = Math.hypot(n.x - player.x, n.y - player.y);
+      if (d < bd) { bd = d; best = n; }
+    });
+    if (best) best.dist = bd;
+    return best;
+  };
+
+  W.collectNodes = function () { return collectNodes; };
+
   function makePlayer() {
     var grp = new THREE.Group();
     var cloak = new THREE.Mesh(
@@ -415,6 +497,7 @@
     scene.add(steleGroup);
 
     decoGroup = new THREE.Group();
+    collectNodes.forEach(function (n) { decoGroup.add(makeCollectible(n)); });
     scene.add(decoGroup);
 
     playerObj = makePlayer();
@@ -472,6 +555,7 @@
     quality = P.save.state.settings.quality || 'high';
     buildBridgeData();
     layoutShrines();
+    layoutCollectibles();
 
     renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: quality === 'high', powerPreference: 'high-performance' });
     renderer.setClearColor(0x050813, 1);
@@ -557,11 +641,12 @@
   };
 
   W.nearestShrine = function () {
-    var best = null, bd = 74;
+    var best = null, bd = P.layout.SHRINE_REACH;
     shrineNodes.forEach(function (n) {
       var d = Math.hypot(n.x - player.x, n.y - player.y);
       if (d < bd) { bd = d; best = n; }
     });
+    if (best) best.dist = bd;
     return best;
   };
 
@@ -682,6 +767,15 @@
     if (skyMesh) skyMesh.position.set(cam.position.x, 0, cam.position.z);
     if (starPoints) { starPoints.position.set(cam.position.x, 0, cam.position.z); starPoints.material.uniforms.t.value = clock; }
     auroraMats.forEach(function (m) { m.uniforms.t.value = clock; });
+
+    // 器物：轉的轉、閃的閃
+    decoGroup.children.forEach(function (g, i) {
+      if (g.userData.spin) g.userData.spin.rotation.y += dt * 0.55;
+      if (g.userData.flicker) {
+        var f = 1 + Math.sin(clock * 7 + i) * 0.11 + Math.sin(clock * 3.3 + i * 2) * 0.07;
+        g.userData.flicker.scale.setScalar(f);
+      }
+    });
 
     // 碑頂旋轉與呼吸
     steleGroup.children.forEach(function (g, i) {

@@ -24,12 +24,8 @@
   }
 
   // ---- 地形 ---------------------------------------------------------
-  function regionSeed(r) { var s = 0; for (var i = 0; i < r.id.length; i++) s += r.id.charCodeAt(i); return s; }
-
-  function radiusAt(r, th) {
-    var s = regionSeed(r);
-    return R_BASE * (0.80 + 0.14 * Math.sin(3 * th + s) + 0.09 * Math.sin(5 * th + s * 1.7) + 0.05 * Math.sin(7 * th + s * 0.4));
-  }
+  var regionSeed = function (r) { return P.layout.regionSeed(r); };
+  var radiusAt = function (r, th) { return P.layout.radiusAt(r, th); };
 
   function inRegion(r, x, y) {
     var dx = x - r.x, dy = y - r.y, d = Math.hypot(dx, dy);
@@ -142,11 +138,12 @@
   W.regionLocked = function (r) { return P.save.doneCount() < r.need; };
 
   W.nearestShrine = function () {
-    var best = null, bd = 74;
+    var best = null, bd = P.layout.SHRINE_REACH;
     shrineNodes.forEach(function (n) {
       var d = Math.hypot(n.x - player.x, n.y - player.y);
       if (d < bd) { bd = d; best = n; }
     });
+    if (best) best.dist = bd;
     return best;
   };
 

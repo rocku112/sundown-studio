@@ -12,7 +12,7 @@ const sandbox = { window: {}, performance: { now: () => 0 }, console };
 sandbox.window.TICI = {};
 vm.createContext(sandbox);
 
-['js/checks.js', 'js/curriculum-a.js', 'js/curriculum-b.js', 'js/reference.js'].forEach(f => {
+['js/checks.js', 'js/curriculum-a.js', 'js/curriculum-b.js', 'js/reference.js', 'js/vendors.js', 'js/collect.js', 'js/layout.js'].forEach(f => {
   vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), sandbox, { filename: f });
 });
 const P = sandbox.window.TICI;
@@ -45,9 +45,53 @@ function worst(s) {
   }
 }
 
+// 世界佈局用 js/layout.js 解出來的最終座標驗——那才是玩家實際走到的位置。
+// 神碑互動半徑 74、收集品 46，且碑優先；收集品落在任何一座碑的 74 內就永遠按不到。
+const L = P.layout;
+const shrinePos = L.shrines();
+const itemPos = L.collectibles();
+
+const seenIds = new Set();
 let fails = [], scores = [], boards = {};
+
+if (itemPos.length !== P.COLLECTIBLES.length) {
+  fails.push(`佈局解出 ${itemPos.length} 個收集品，但資料有 ${P.COLLECTIBLES.length} 個`);
+}
+
+itemPos.forEach(n => {
+  const c = n.item;
+  if (seenIds.has(c.id)) fails.push(`收集品 ${c.id}: id 重複`);
+  seenIds.add(c.id);
+  if (!P.REGIONS.some(r => r.id === c.region)) fails.push(`收集品 ${c.id}: 指向不存在的境 ${c.region}`);
+  if (n.rad <= 0 || n.rad >= 1) fails.push(`收集品 ${c.id}: rad ${n.rad} 超出島的範圍`);
+  if (n.crowded) fails.push(`收集品 ${c.id}（${c.title}）在 ${c.region} 找不到空位，只能疊著放`);
+  if (!L.inRegion(n.region, n.x, n.y)) fails.push(`收集品 ${c.id}（${c.title}）掉到島外了`);
+
+  let nearest = null, nd = Infinity;
+  shrinePos.forEach(s => {
+    const d = Math.hypot(s.x - n.x, s.y - n.y);
+    if (d < nd) { nd = d; nearest = s; }
+  });
+  if (nd < L.CLEARANCE) {
+    fails.push(`收集品 ${c.id}（${c.title}）離神碑 ${nearest.shrine.id} 只有 ${Math.round(nd)}，` +
+      `在碑的互動半徑 ${L.SHRINE_REACH} 內就永遠按不到（需 ≥ ${L.CLEARANCE}）`);
+  }
+  itemPos.forEach(o => {
+    if (o === n) return;
+    const d = Math.hypot(o.x - n.x, o.y - n.y);
+    if (d < L.ITEM_GAP && c.id < o.item.id) {
+      fails.push(`收集品 ${c.id} 與 ${o.item.id} 只距離 ${Math.round(d)}（需 ≥ ${L.ITEM_GAP}）`);
+    }
+  });
+});
+
 P.SHRINES.forEach(s => {
   boards[s.board] = (boards[s.board] || 0) + 1;
+  // 每一關都要有廠家標記，徽章才數得出來
+  if (!P.SHRINE_VENDORS[s.id]) fails.push(`${s.id}: 缺少廠家標記`);
+  else P.SHRINE_VENDORS[s.id].forEach(v => {
+    if (!P.VENDORS.some(x => x.id === v)) fails.push(`${s.id}: 未知的廠家 ${v}`);
+  });
 
   // 每一條 rubric 都必須指向存在的檢核
   s.rubric.forEach(r => { if (!P.CHECKS[r.id]) fails.push(`${s.id}: 未知檢核 ${r.id}`); });
@@ -76,7 +120,17 @@ P.SHRINES.forEach(s => {
 const soup = P.score('角色 任務 格式 範例 引用 工具 代理 快取 注入 遷移', [{ id: 'goal', weight: 1 }], { pickAccuracy: 1 });
 const empty = P.score('', [{ id: 'goal', weight: 1 }], { pickAccuracy: 1 });
 
+const vt = {};
+P.VENDORS.forEach(v => { vt[v.name] = 0; });
+Object.keys(P.SHRINE_VENDORS).forEach(id =>
+  P.SHRINE_VENDORS[id].forEach(v => { vt[(P.VENDORS.find(x => x.id === v) || {}).name]++; }));
+
 console.log('關卡總數      :', P.SHRINES.length);
+console.log('收集品        :', P.COLLECTIBLES.length,
+  '（刻文', P.COLLECTIBLES.filter(c => c.kind === 'ins').length,
+  '· 器物', P.COLLECTIBLES.filter(c => c.kind === 'relic').length,
+  '· 隱藏', P.COLLECTIBLES.filter(c => c.kind === 'hidden').length + '）');
+console.log('廠家標記      :', JSON.stringify(vt));
 console.log('境數          :', P.REGIONS.length);
 console.log('結構檢核條數  :', P.checkCount);
 console.log('題型分布      :', JSON.stringify(boards));

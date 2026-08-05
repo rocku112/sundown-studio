@@ -6,22 +6,30 @@
   var $$ = function (s) { return Array.prototype.slice.call(document.querySelectorAll(s)); };
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
 
-  var paused = false, curNode = null, curBoard = null, curResult = null, act = 0;
+  var paused = false, curNode = null, curItem = null, curBoard = null, curResult = null, curHow = null, act = 0;
 
   // ===================================================================
   // HUD
   // ===================================================================
   function refreshHud() {
-    var st = P.save.state, r = P.save.rank();
+    var lv = P.progress.level(), r = P.progress.rank();
     $('#hud-rank').textContent = r.name;
-    $('#hud-xp').textContent = st.xp + ' XP';
+    $('#hud-lv').textContent = 'Lv.' + lv.lv;
+    $('#hud-xp').textContent = lv.into + ' / ' + lv.need + ' XP';
     var total = P.SHRINES.length, done = P.save.doneCount();
     $('#hud-progress').textContent = done + ' / ' + total + ' 碑';
-    var seals = P.REGIONS.filter(function (x) { return P.save.regionSealed(x.id); }).length;
+    var seals = P.progress.masteredRegions();
     $('#hud-seals').textContent = '印 ' + seals + ' / ' + P.REGIONS.length;
-    var pctNext = r.next ? Math.round((st.xp - r.floor) / (r.next.min - r.floor) * 100) : 100;
-    $('#hud-bar-fill').style.width = Math.max(2, Math.min(100, pctNext)) + '%';
-    $('#hud-bar').title = r.next ? ('距 ' + r.next.name + ' 還差 ' + (r.next.min - st.xp) + ' XP') : '已達最高階';
+    $('#hud-bar-fill').style.width = Math.max(2, Math.round(lv.into / lv.need * 100)) + '%';
+    if (r.next) {
+      var m = r.missing, want = [];
+      if (m.lv) want.push('Lv.' + r.next.lv);
+      if (m.got) want.push('收集 ' + r.next.got + ' 條');
+      if (m.mastered) want.push('精通 ' + r.next.mastered + ' 片土地');
+      $('#hud-bar').title = '下一個稱號「' + r.next.name + '」：' + (want.length ? '需要 ' + want.join(' · ') : '已達成，再刻一塊碑就生效');
+    } else {
+      $('#hud-bar').title = '已達最高稱號';
+    }
   }
 
   // ===================================================================
@@ -29,7 +37,8 @@
   // ===================================================================
   var lastRegionTrack = -1;
   function refreshPrompt() {
-    var n = P.world.nearestShrine();
+    var t = nearestTarget();
+    var n = t && t.kind === 'shrine' ? t.node : null;
     var bar = $('#interact');
     var blocked = P.world.blockedInfo();
     if (blocked) {
@@ -39,6 +48,20 @@
       return;
     }
     bar.classList.remove('warn');
+
+    curItem = t && t.kind === 'item' ? t.node : null;
+    if (curItem) {
+      curNode = null;
+      var c = curItem.item, got = P.progress.found(c.id);
+      bar.classList.add('show');
+      bar.innerHTML = '';
+      bar.appendChild(el('kbd', null, 'E'));
+      bar.appendChild(document.createTextNode(' ' + (got ? '再看一次 · ' : '看看 · ') + c.title + '　'));
+      bar.appendChild(el('span', 'skill-tag', P.COLLECT_KINDS[c.kind].name));
+      if (got) bar.appendChild(el('span', 'grade-chip gA', '✓'));
+      return;
+    }
+
     if (n) {
       curNode = n;
       var st = P.save.state.done[n.shrine.id];
@@ -110,11 +133,69 @@
   }
 
   // ===================================================================
+  // 互動：碑優先，其次路邊的東西
+  // ===================================================================
+  /**
+   * 站在碑跟器物中間時，聽比較近的那一個——碑的互動半徑（74）比器物（46）大，
+   * 若一律讓碑優先，貼著碑放的器物就永遠按不到。用各自半徑正規化後比大小。
+   */
+  function nearestTarget() {
+    var n = P.world.nearestShrine();
+    var c = P.world.nearestCollectible ? P.world.nearestCollectible() : null;
+    if (!n) return c ? { kind: 'item', node: c } : null;
+    if (!c) return { kind: 'shrine', node: n };
+    var L = P.layout;
+    var ns = (n.dist == null ? 0 : n.dist) / L.SHRINE_REACH;
+    var cs = (c.dist == null ? 0 : c.dist) / L.ITEM_REACH;
+    return cs < ns ? { kind: 'item', node: c } : { kind: 'shrine', node: n };
+  }
+
+  function interact() {
+    if (anyOpen()) return false;
+    var t = nearestTarget();
+    if (!t) return false;
+    if (t.kind === 'shrine') openChallenge(t.node); else openFind(t.node);
+    return true;
+  }
+
+  function openFind(node) {
+    var c = node.item;
+    var fresh = P.progress.markFound(c.id);
+    paused = true;
+    P.world.clearKeys();
+    if (fresh) { P.audio.sfx.great(); if (P.world.refreshCollectibles) P.world.refreshCollectibles(); }
+    else P.audio.sfx.open();
+
+    $('#find-kind').textContent = P.COLLECT_KINDS[c.kind].name;
+    $('#find-title').textContent = c.title;
+    var body = $('#find-text'); body.innerHTML = '';
+    c.text.split('\n').forEach(function (line) {
+      var p = el('p', null); p.appendChild(P.gloss(line)); body.appendChild(p);
+    });
+    var meta = $('#find-meta'); meta.innerHTML = '';
+    meta.appendChild(el('span', 'pill', node.region.name));
+    meta.appendChild(el('span', 'pill', P.COLLECT_KINDS[c.kind].name + ' ' +
+      P.collectGot(c.kind) + ' / ' + P.collectCount(c.kind)));
+    if (fresh) meta.appendChild(el('span', 'pill fresh', '初次尋得'));
+
+    $('#find').classList.add('open');
+    $('#find').setAttribute('aria-hidden', 'false');
+    setTimeout(function () { $('#find-close').focus(); }, 30);
+  }
+
+  function closeFind() {
+    $('#find').classList.remove('open');
+    $('#find').setAttribute('aria-hidden', 'true');
+    paused = false; P.audio.sfx.close();
+    setTimeout(function () { $('#stage').focus(); }, 20);
+  }
+
+  // ===================================================================
   // 四幕挑戰主控台
   // ===================================================================
   function openChallenge(node) {
     if (!node) return;
-    curNode = node; curResult = null; act = 0;
+    curNode = node; curResult = null; curHow = null; act = 0;
     paused = true;
     P.world.clearKeys();
     P.audio.sfx.open();
@@ -160,6 +241,7 @@
     curBoard.reveal();
     var res = P.score(data.text, curNode.shrine.rubric, { pickAccuracy: data.acc });
     curResult = res;
+    curHow = { mode: curBoard.mode, flawless: data.acc === 1 };
     renderResult(data, res);
     setAct(2);
     if (res.score >= 85) P.audio.sfx.great();
@@ -205,7 +287,7 @@
     box.appendChild(det);
 
     // 自由書寫沒有唯一正解，但給一份確定過關的寫法當對照
-    var ref = P.REFERENCE && P.REFERENCE[curNode.shrine.id];
+    var ref = curBoard.mode === 'write' ? P.idealAnswer(curNode.shrine) : null;
     if (ref) {
       var rd = el('details', 'assembled');
       rd.appendChild(el('summary', null, '參考寫法（不是唯一正解，評分引擎讀的是結構）'));
@@ -217,7 +299,7 @@
   function finish() {
     var s = curNode.shrine;
     var before = P.REGIONS.filter(function (x) { return P.save.regionSealed(x.id); }).length;
-    P.save.record(s, curResult);
+    P.save.record(s, curResult, curHow);
     var after = P.REGIONS.filter(function (x) { return P.save.regionSealed(x.id); }).length;
     refreshHud();
     if (P.world.refreshVisuals) P.world.refreshVisuals();   // 碑點亮、新解鎖的島褪去灰調
@@ -271,6 +353,98 @@
     paused = true; P.world.clearKeys(); P.audio.sfx.open();
     var body = $('#codex-body'); body.innerHTML = '';
     var st = P.save.state;
+
+    // ---- 稱號 ----
+    var rk = P.progress.rank(), lv = P.progress.level();
+    var rankSec = el('section', 'codex-region');
+    rankSec.appendChild(el('h3', null, '目前稱號 · RANK'));
+    var rankBox = el('div', 'rank-box');
+    rankBox.appendChild(el('div', 'rank-name', rk.name + '　Lv.' + lv.lv));
+    if (rk.next) {
+      var need = [];
+      if (rk.missing.lv) need.push('Lv.' + rk.next.lv);
+      if (rk.missing.got) need.push('收集 ' + rk.next.got + ' 條');
+      if (rk.missing.mastered) need.push('精通 ' + rk.next.mastered + ' 片土地');
+      rankBox.appendChild(el('div', 'rank-next',
+        '下一個稱號「' + rk.next.name + '」：' + (need.length ? '需要 ' + need.join(' · ') : '條件已達成')));
+    } else {
+      rankBox.appendChild(el('div', 'rank-next', '已達最高稱號'));
+    }
+    rankBox.appendChild(el('div', 'rank-next', lv.into + ' / ' + lv.need + ' XP　·　累積 ' + st.xp + ' XP'));
+    var shareBtn = el('button', 'btn ghost', '分享收集成果');
+    shareBtn.type = 'button';
+    shareBtn.addEventListener('click', makeShareCard);
+    rankBox.appendChild(shareBtn);
+    rankSec.appendChild(rankBox);
+    body.appendChild(rankSec);
+
+    // ---- 廠家徽章 ----
+    var marks = P.progress.vendorMarks(), totals = P.progress.vendorTotals();
+    var vSec = el('section', 'codex-region');
+    vSec.appendChild(el('h3', null, '廠家徽章 · VENDOR MARKS'));
+    vSec.appendChild(el('p', 'sec-note', '已收集 ' + Object.keys(marks).reduce(function (a, k) { return a + marks[k]; }, 0) +
+      ' 個技法標記　·　每廠集滿 5 個解開一項隱藏成就'));
+    var vGrid = el('div', 'vendor-grid');
+    P.VENDORS.forEach(function (v) {
+      var card = el('div', 'vendor-card' + (marks[v.id] >= 5 ? ' unlocked' : ''));
+      card.style.setProperty('--vh', v.hue);
+      card.appendChild(el('div', 'vc-name', v.name));
+      card.appendChild(el('div', 'vc-num', marks[v.id] + ' / ' + totals[v.id]));
+      var bar = el('div', 'vc-bar');
+      var fill = el('div', 'vc-fill');
+      fill.style.width = Math.min(100, marks[v.id] / 5 * 100) + '%';
+      bar.appendChild(fill); card.appendChild(bar);
+      card.appendChild(el('div', 'vc-ach', marks[v.id] >= 5 ? '✦ 已解開' : '再 ' + (5 - marks[v.id]) + ' 個'));
+      vGrid.appendChild(card);
+    });
+    vSec.appendChild(vGrid);
+    body.appendChild(vSec);
+
+    // ---- 走出來的收集 ----
+    var cSec = el('section', 'codex-region');
+    cSec.appendChild(el('h3', null, '走出來的收集'));
+    var cGrid = el('div', 'vendor-grid');
+    ['ins', 'hidden', 'relic'].forEach(function (kind) {
+      var k = P.COLLECT_KINDS[kind];
+      var card = el('div', 'collect-kind');
+      card.appendChild(el('div', 'ck-name', k.name));
+      card.appendChild(el('div', 'ck-num', P.collectGot(kind) + ' / ' + P.collectCount(kind)));
+      card.appendChild(el('div', 'ck-hint', k.hint));
+      cGrid.appendChild(card);
+    });
+    cSec.appendChild(cGrid);
+    var found = P.COLLECTIBLES.filter(function (c) { return P.progress.found(c.id); });
+    if (found.length) {
+      var fl = el('div', 'found-list');
+      found.forEach(function (c) {
+        var d = el('details', 'found-item');
+        d.appendChild(el('summary', null, c.title + '　' + P.COLLECT_KINDS[c.kind].name));
+        c.text.split('\n').forEach(function (line) { d.appendChild(el('p', 'found-text', line)); });
+        fl.appendChild(d);
+      });
+      cSec.appendChild(fl);
+    } else {
+      cSec.appendChild(el('p', 'sec-note', '還沒撿到任何東西。這些不給 XP、不解鎖任何事，純粹是走出來的。'));
+    }
+    body.appendChild(cSec);
+
+    // ---- 大師層 ----
+    var ms = P.progress.masterSeals();
+    var mSec = el('section', 'codex-region');
+    mSec.appendChild(el('h3', null, '大師層'));
+    mSec.appendChild(el('p', 'sec-note', '完全選配。不給 XP、不解鎖任何東西——只是記錄你用什麼方式走完。'));
+    var mGrid = el('div', 'vendor-grid');
+    [['無筆之印 ✒', ms.noPen, '用石碑刻印通關，而且每一段的第一次判斷都對'],
+    ['默寫之印 ✍', ms.byHand, '在自由書寫模式下通關並拿到 S'],
+    ['一區純手', ms.pure, '一整片土地全部用自由書寫走完']].forEach(function (row) {
+      var card = el('div', 'collect-kind');
+      card.appendChild(el('div', 'ck-name', row[0]));
+      card.appendChild(el('div', 'ck-num', row[1] + ' 枚'));
+      card.appendChild(el('div', 'ck-hint', row[2]));
+      mGrid.appendChild(card);
+    });
+    mSec.appendChild(mGrid);
+    body.appendChild(mSec);
 
     P.REGIONS.forEach(function (r) {
       var list = P.SHRINES.filter(function (s) { return s.region === r.id; });
@@ -385,6 +559,8 @@
     var q = P.world.quality ? P.world.quality() : 'high';
     $('#q-high').classList.toggle('on', q === 'high');
     $('#q-low').classList.toggle('on', q === 'low');
+    var mode = st.answerMode || 'carve';
+    $$('#mode-toggle button').forEach(function (b) { b.classList.toggle('on', b.dataset.mode === mode); });
     $('#settings').classList.add('open');
     $('#settings').setAttribute('aria-hidden', 'false');
   }
@@ -425,8 +601,9 @@
     }
     x.restore();
 
-    var r = P.save.rank(), st = P.save.state;
+    var r = P.progress.rank(), lv = P.progress.level(), st = P.save.state;
     var seals = P.REGIONS.filter(function (q) { return P.save.regionSealed(q.id); });
+    var marks = P.progress.vendorMarks(), ms = P.progress.masterSeals();
     var grades = { S: 0, A: 0, B: 0, C: 0 };
     Object.keys(st.done).forEach(function (k) { var gg = st.done[k].grade; if (grades[gg] != null) grades[gg]++; });
 
@@ -439,11 +616,16 @@
     x.fillText(r.name, 72, 196);
 
     x.fillStyle = 'rgba(220,235,255,0.9)';
-    x.font = '400 34px "Noto Sans TC", system-ui, sans-serif';
-    x.fillText(st.xp + ' XP　·　' + P.save.doneCount() + ' / ' + P.SHRINES.length + ' 塊碑文　·　' + seals.length + ' / 12 境印', 72, 256);
+    x.font = '400 32px "Noto Sans TC", system-ui, sans-serif';
+    x.fillText('Lv.' + lv.lv + '　·　' + st.xp + ' XP　·　' + P.save.doneCount() + ' / ' + P.SHRINES.length + ' 塊碑文　·　' + seals.length + ' / 12 境印', 72, 252);
+    x.fillStyle = 'rgba(180,205,235,0.7)';
+    x.font = '400 25px "Noto Sans TC", system-ui, sans-serif';
+    x.fillText('走出來的收集 ' + P.progress.foundTotal() + ' / ' + P.COLLECTIBLES.length +
+      '　·　廠家徽章 ' + P.VENDORS.map(function (v) { return v.name.slice(0, 2) + ' ' + marks[v.id]; }).join('　') , 72, 292);
+    x.fillText('無筆之印 ' + ms.noPen + '　·　默寫之印 ' + ms.byHand + '　·　一區純手 ' + ms.pure, 72, 326);
 
     // 評等長條
-    var bx = 72, by = 320;
+    var bx = 72, by = 366;
     ['S', 'A', 'B', 'C'].forEach(function (k, i) {
       var w = grades[k] * 22;
       x.fillStyle = ['#ffd76a', '#8ce4b0', '#7fc4ff', '#c0a8ff'][i];
@@ -471,7 +653,7 @@
 
     x.fillStyle = 'rgba(170,195,225,0.55)';
     x.font = '400 20px system-ui, sans-serif';
-    x.fillText('離線評分引擎 · ' + P.checkCount + ' 條結構檢核 · 無帳號、無後端、無外部請求', 72, 570);
+    x.fillText('提詞挈領 · 離線評分引擎 ' + P.checkCount + ' 條結構檢核 · 無帳號、無後端、無外部請求', 72, 580);
 
     c.toBlob(function (blob) {
       var url = URL.createObjectURL(blob);
@@ -485,27 +667,17 @@
   // ===================================================================
   // 序章
   // ===================================================================
+  // 序章《拾燈》。說話的是「留字的人」——這座碑林上一個走完的人，
+  // 他把想講的話刻在碑上就走了，你聽到的是那些字。
   var PROLOGUE = [
-    {
-      h: '這裡是碑林。',
-      p: '十二座島嶼漂在夜色裡，島上立著一塊塊碑。每一塊碑封著一個提示詞工程的技法——它們全部整併自九家模型廠商的官方文件，一共十七章、兩百多條技法。',
-      k: '用 W A S D 或方向鍵走動。'
-    },
-    {
-      h: '碑不會考你背誦。',
-      p: '走到碑前按 E，碑會先把技法講給你聽，然後給你一個實際的情境要你動手。多數時候你不用打字——你是從幾個句子裡挑出對的那一個，把提示詞一段一段刻出來。',
-      k: '按 E 叩碑。'
-    },
-    {
-      h: '選錯不會失敗。',
-      p: '挑到不對的句子，碑只會把它推回來，並用白話告訴你為什麼站不住。你可以一直試到對為止——但第一次的判斷會反映在評等上。S 到 C，四個等第。',
-      k: '評分完全在你的瀏覽器裡跑，不呼叫任何模型。'
-    },
-    {
-      h: '門扉認的是碑，不是等級。',
-      p: '往後的島嶼會鎖著，但它讀的不是你的等級，是你手上有幾塊碑。想去更遠的地方，就把眼前的碑刻完。',
-      k: 'M 開地圖　C 開圖鑑　Esc 返回'
-    }
+    { who: '留字的人', h: '……你醒了。', p: '別急著起身。你腳下這片地，是碑林。\n我不在這裡了，你聽到的是我留在石頭上的字。' },
+    { who: '留字的人', h: '這裡的每一塊碑，都封著一句別人吃過虧才寫下的話。', p: '它們來自九家做模型的人自己寫的文件——十七章，兩百多條。\n那些話原本散在幾百頁裡，我把它們一塊一塊搬到這裡立起來。' },
+    { who: '留字的人', h: '碑不考你背誦。', p: '走到碑前按 E，它會先把道理講給你聽，然後丟一個真的情境給你。\n多數時候你不用打字——你是從幾個句子裡，挑出站得住的那一句，把提示詞刻出來。' },
+    { who: '留字的人', h: '挑錯不會怎麼樣。', p: '碑只會把它推回來，順便用白話告訴你為什麼那句話撐不住。\n你可以一直試到對為止。只是第一次的判斷，會留在評等上。' },
+    { who: '留字的人', h: '評分不假手於人。', p: '這裡沒有連向任何模型、任何伺服器。\n給你分數的是一套刻在石頭裡的規矩：一百多條，只認結構，不認漂亮話。' },
+    { who: '留字的人', h: '門扉認的是碑，不是等級。', p: '再往外的島會鎖著。它不看你練到幾級，只看你手上有幾塊碑。\n想走遠一點，就把眼前這片刻完。' },
+    { who: '留字的人', h: '最後一句。', p: '路邊有些東西是可以動的——罐子、火盆、響石。有些地方不在路上，得繞。\n那些不給你任何好處。但你要是連繞路都不肯，這裡大概也待不久。' },
+    { who: null, h: '起身吧。', p: '燈在你手上。', k: 'W A S D 移動　·　E 互動　·　M 地圖　·　C 圖鑑　·　? 操作一覽' }
   ];
 
   function showPrologue(idx) {
@@ -518,18 +690,45 @@
       return;
     }
     paused = true;
+    $('#pro-who').textContent = s.who || '';
+    $('#pro-who').style.visibility = s.who ? 'visible' : 'hidden';
+    $('#pro-step').textContent = String(idx + 1).padStart(2, '0') + ' / ' + String(PROLOGUE.length).padStart(2, '0');
     $('#pro-h').textContent = s.h;
-    var p = $('#pro-p'); p.innerHTML = ''; p.appendChild(P.gloss(s.p));
-    $('#pro-k').textContent = s.k;
+    var p = $('#pro-p'); p.innerHTML = '';
+    s.p.split('\n').forEach(function (line) {
+      var d = el('p', null); d.appendChild(P.gloss(line)); p.appendChild(d);
+    });
+    $('#pro-k').textContent = s.k || '';
     $('#pro-dots').innerHTML = '';
     PROLOGUE.forEach(function (_, i) {
-      var d = el('span', 'pdot' + (i === idx ? ' on' : ''));
-      $('#pro-dots').appendChild(d);
+      $('#pro-dots').appendChild(el('span', 'pdot' + (i === idx ? ' on' : (i < idx ? ' past' : ''))));
     });
-    $('#pro-next').textContent = idx === PROLOGUE.length - 1 ? '啟程' : '繼續';
+    $('#pro-next').textContent = idx === PROLOGUE.length - 1 ? '起身' : '繼續';
     $('#pro-next').onclick = function () { P.audio.sfx.pick(); showPrologue(idx + 1); };
+    $('#pro-skip').onclick = function () { P.audio.sfx.close(); showPrologue(PROLOGUE.length); };
     $('#prologue').classList.add('open');
     setTimeout(function () { $('#pro-next').focus(); }, 30);
+  }
+
+  // ===================================================================
+  // 標題畫面
+  // ===================================================================
+  function showTitle() {
+    paused = true;
+    $('#title').classList.add('open');
+    var go = function (e) {
+      if (e.type === 'keydown' && (e.key === 'F5' || e.key === 'F12')) return;
+      window.removeEventListener('keydown', go);
+      window.removeEventListener('pointerdown', go);
+      P.audio.unlock();
+      P.audio.playTrack(0);
+      $('#title').classList.remove('open');
+      P.save.state.title = true; P.save.flush();
+      if (!P.save.state.prologue) showPrologue(0);
+      else { paused = false; setTimeout(function () { $('#stage').focus(); }, 20); }
+    };
+    window.addEventListener('keydown', go);
+    window.addEventListener('pointerdown', go);
   }
 
   // ===================================================================
@@ -585,6 +784,7 @@
 
       if (e.key === 'Escape') {
         if ($('#console').classList.contains('open')) closeConsole();
+        else if ($('#find').classList.contains('open')) closeFind();
         else if ($('#codex').classList.contains('open')) closeCodex();
         else if ($('#map').classList.contains('open')) closeMap();
         else if ($('#settings').classList.contains('open')) closeSettings();
@@ -593,8 +793,7 @@
       if (anyOpen()) return;
 
       if (e.key === 'e' || e.key === 'E' || e.key === 'Enter') {
-        var n = P.world.nearestShrine();
-        if (n) { openChallenge(n); e.preventDefault(); }
+        if (interact()) e.preventDefault();
       } else if (e.key === 'm' || e.key === 'M') openMap();
       else if (e.key === 'c' || e.key === 'C') openCodex();
       else if (e.key === 'o' || e.key === 'O' || e.key === 'p' || e.key === 'P') openSettings();
@@ -629,10 +828,7 @@
       e.preventDefault();
     }, { passive: false });
     pad.addEventListener('touchend', function () { origin = null; P.world.clearKeys(); $('#stick').style.transform = ''; });
-    $('#touch-e').addEventListener('click', function () {
-      var n = P.world.nearestShrine();
-      if (n) openChallenge(n);
-    });
+    $('#touch-e').addEventListener('click', interact);
   }
 
   // ===================================================================
@@ -693,6 +889,8 @@
     $('#c-close').addEventListener('click', closeConsole);
     $('#c-x').addEventListener('click', closeConsole);
     $('#codex-close').addEventListener('click', closeCodex);
+    $('#find-close').addEventListener('click', closeFind);
+    $('#find-x').addEventListener('click', closeFind);
     $('#map-close').addEventListener('click', closeMap);
     $('#set-close').addEventListener('click', closeSettings);
     $('#btn-codex').addEventListener('click', openCodex);
@@ -717,12 +915,22 @@
       $('#perf').hidden = !this.checked;
       P.save.state.settings.perf = this.checked; P.save.flush();
     });
-    $$('.seg-toggle button').forEach(function (b) {
+    $$('#q-high, #q-low').forEach(function (b) {
       b.addEventListener('click', function () {
-        var q = b.dataset.q;
-        $$('.seg-toggle button').forEach(function (x) { x.classList.toggle('on', x === b); });
-        if (P.world.setQuality) P.world.setQuality(q);
+        $$('#q-high, #q-low').forEach(function (x) { x.classList.toggle('on', x === b); });
+        if (P.world.setQuality) P.world.setQuality(b.dataset.q);
       });
+    });
+    $$('#mode-toggle button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        $$('#mode-toggle button').forEach(function (x) { x.classList.toggle('on', x === b); });
+        P.save.state.settings.answerMode = b.dataset.mode;
+        P.save.flush();
+      });
+    });
+    $('#set-replay').addEventListener('click', function () {
+      closeSettings();
+      setTimeout(function () { showPrologue(0); }, 120);
     });
     $('#set-reset').addEventListener('click', function () {
       if (!confirm('這會清掉所有進度、評等與圖鑑，而且無法復原。確定要重來嗎？')) return;
@@ -735,8 +943,7 @@
       P.audio.unlock();
       if (anyOpen()) return;
       if (P.world.justDragged && P.world.justDragged()) return;   // 那是在轉鏡頭
-      var n = P.world.nearestShrine();
-      if (n) openChallenge(n);
+      interact();
     });
 
     document.addEventListener('pointerdown', function once() {
@@ -745,7 +952,8 @@
       document.removeEventListener('pointerdown', once);
     });
 
-    if (!P.save.state.prologue) showPrologue(0);
+    if (!P.save.state.title) showTitle();
+    else if (!P.save.state.prologue) showPrologue(0);
     else paused = false;
 
     requestAnimationFrame(loop);

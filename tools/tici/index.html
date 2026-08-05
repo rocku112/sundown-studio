@@ -18,9 +18,10 @@
 
 <!-- HUD -->
 <div id="hud">
-  <div id="hud-rank">過路人</div>
+  <div id="hud-rank">初醒的旅人</div>
   <div class="hud-row">
-    <span id="hud-xp">0 XP</span>
+    <span id="hud-lv">Lv.1</span>
+    <span id="hud-xp">0 / 100 XP</span>
     <span id="hud-progress">0 / 0 碑</span>
     <span id="hud-seals">印 0 / 12</span>
   </div>
@@ -183,6 +184,17 @@
         <label for="set-font">文字大小</label>
         <input type="range" id="set-font" min="0.85" max="1.4" step="0.05">
       </div>
+      <div class="set-row">
+        <label>答題方式<small>石碑刻印大多是一段一段問你「這一段要填什麼」，選對就刻上去；有幾關改成把石版排順、或到工坊挑參數。自由書寫則是自己打整段提示詞——評分準則完全一樣，只是不再給你候選句子。</small></label>
+        <div class="seg-toggle" id="mode-toggle">
+          <button type="button" data-mode="carve">石碑刻印</button>
+          <button type="button" data-mode="write">自由書寫</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <label>引導課程<small>序章《拾燈》：八段留言，隨時可跳過。</small></label>
+        <button class="btn ghost" id="set-replay" type="button">重看引導</button>
+      </div>
       <div class="set-row" style="border-bottom:none">
         <label>重置進度<small>清掉所有碑文、評等與境印。這件事不可逆。</small></label>
         <button class="btn danger" id="set-reset" type="button">全部重來</button>
@@ -194,17 +206,58 @@
   </div>
 </div>
 
+<!-- ============ 標題畫面 ============ -->
+<div class="overlay" id="title" role="dialog" aria-modal="true" aria-labelledby="title-name">
+  <div id="title-inner">
+    <div id="title-mark">✦</div>
+    <h1 id="title-name">提詞挈領</h1>
+    <div id="title-en">LEARN PROMPT ENGINEERING BY PLAYING</div>
+    <p id="title-tag">在一片夜色的碑林裡走著，<br>用你寫的提示詞把它一塊一塊解開。</p>
+    <div id="title-go">按任意鍵開始<kbd>Enter</kbd></div>
+  </div>
+</div>
+
 <!-- ============ 序章 ============ -->
 <div class="overlay" id="prologue" role="dialog" aria-modal="true" aria-labelledby="pro-h">
   <div class="sheet">
-    <div class="sheet-body" style="padding:38px 34px 30px">
+    <div class="sheet-head" style="align-items:center">
+      <div>
+        <div class="sheet-kicker">序章 · 拾燈</div>
+        <div id="pro-who"></div>
+      </div>
+      <div id="pro-step"></div>
+    </div>
+    <div class="sheet-body" style="padding:32px 34px 26px">
       <h2 id="pro-h"></h2>
-      <p id="pro-p"></p>
+      <div id="pro-p"></div>
       <div id="pro-k"></div>
     </div>
     <div class="sheet-foot" style="justify-content:space-between;align-items:center">
       <div id="pro-dots"></div>
-      <button class="btn" id="pro-next" type="button">繼續</button>
+      <div style="display:flex;gap:10px;align-items:center">
+        <button class="btn ghost" id="pro-skip" type="button">跳過引導</button>
+        <button class="btn" id="pro-next" type="button">繼續</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 撿到東西 ============ -->
+<div class="overlay" id="find" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="find-title">
+  <div class="sheet" style="max-width:620px">
+    <div class="sheet-head">
+      <div>
+        <div class="sheet-kicker" id="find-kind"></div>
+        <h2 id="find-title"></h2>
+      </div>
+      <button class="x-btn" id="find-x" type="button" aria-label="關閉">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div id="find-text" class="find-text"></div>
+      <div id="find-meta" class="collect-row"></div>
+    </div>
+    <div class="sheet-foot">
+      <button class="btn" id="find-close" type="button">收起</button>
     </div>
   </div>
 </div>
@@ -222,6 +275,10 @@
 <script src="js/curriculum-a.js"></script>
 <script src="js/curriculum-b.js"></script>
 <script src="js/reference.js"></script>
+<script src="js/vendors.js"></script>
+<script src="js/collect.js"></script>
+<script src="js/progress.js"></script>
+<script src="js/layout.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/world.js"></script>
 <script src="js/world3d.js"></script>

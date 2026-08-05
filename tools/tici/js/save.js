@@ -10,9 +10,16 @@
     done: {},        // shrineId -> { score, grade, at }
     skills: {},      // shrineId -> true（知識軟門檻讀這個）
     seen: {},        // 看過教學碑文
+    found: {},       // 收集品 id -> true
+    how: {},         // shrineId -> { mode:'carve'|'write', flawless, grade }：大師層讀這個
     pos: null,       // 玩家世界座標
+    title: false,    // 是否過了標題畫面
     prologue: false, // 是否看過序章
-    settings: { bgm: true, sfx: true, motion: true, font: 1, quality: 'high', perf: false, volume: 0.5 }
+    settings: {
+      bgm: true, sfx: true, motion: true, font: 1,
+      quality: 'high', perf: false, volume: 0.5,
+      answerMode: 'carve'          // carve = 石碑刻印；write = 自由書寫
+    }
   };
 
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
@@ -46,8 +53,8 @@
     try { localStorage.removeItem(KEY); } catch (e) { }
   }
 
-  /** 記錄一次通關。只在分數更高時覆寫。 */
-  function record(shrine, result) {
+  /** 記錄一次通關。只在分數更高時覆寫。how 記的是「用什麼方式走完」，給大師層看。 */
+  function record(shrine, result, how) {
     var prev = state.done[shrine.id];
     if (!prev || result.score > prev.score) {
       if (!prev) state.xp += shrine.xp;
@@ -55,6 +62,15 @@
       state.done[shrine.id] = { score: result.score, grade: result.grade.g, at: Date.now() };
     }
     state.skills[shrine.id] = true;
+    if (how) {
+      // 大師層只往上記：曾經無瑕刻過、曾經默寫過，就一直算數
+      var old = state.how[shrine.id];
+      state.how[shrine.id] = {
+        mode: how.mode,
+        grade: result.grade.g,
+        flawless: how.flawless || (old && old.mode === how.mode && old.flawless) || false
+      };
+    }
     save();
   }
 
@@ -72,23 +88,9 @@
     return all.length > 0 && all.every(function (s) { return state.done[s.id]; });
   }
 
-  var RANKS = [
-    { min: 0, name: '過路人' }, { min: 400, name: '執筆者' }, { min: 1000, name: '刻碑生' },
-    { min: 1900, name: '碑師' }, { min: 3000, name: '掌律' }, { min: 4400, name: '典守' },
-    { min: 6000, name: '溯源者' }, { min: 8000, name: '燈下無眠' }
-  ];
-
-  function rank() {
-    var r = RANKS[0];
-    RANKS.forEach(function (x) { if (state.xp >= x.min) r = x; });
-    var i = RANKS.indexOf(r);
-    var next = RANKS[i + 1] || null;
-    return { name: r.name, next: next, cur: state.xp, floor: r.min };
-  }
-
   P.save = {
     get state() { return state; },
     load: load, flush: save, reset: reset, record: record,
-    doneCount: doneCount, regionSealed: regionSealed, rank: rank, RANKS: RANKS
+    doneCount: doneCount, regionSealed: regionSealed
   };
 })(window.TICI = window.TICI || {});
