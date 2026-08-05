@@ -663,7 +663,7 @@
 
   /** 羅盤朝向與下一個目標 */
   W.navInfo = function () {
-    var heading = ((-camCtl.yaw * 180 / Math.PI) % 360 + 360) % 360;
+    var heading = P.layout.heading(camCtl.yaw);
     // 先指教學碑；同一境的教學碑全通了，才把人帶去地標下的試煉
     var target = null, bd = Infinity, fallback = null, fd = Infinity;
     shrineNodes.forEach(function (n) {
@@ -704,20 +704,19 @@
       if (keys.zoomOut) camCtl.tDist = Math.min(420, camCtl.tDist + dt * 190);
       camCtl.skyPeek += ((keys.sky ? 1 : 0) - camCtl.skyPeek) * Math.min(1, dt * 5);
 
-      // 相對鏡頭的移動
-      var fx = 0, fz = 0;
-      if (keys.up) fz -= 1;
-      if (keys.down) fz += 1;
-      if (keys.left) fx -= 1;
-      if (keys.right) fx += 1;
-      var L = Math.hypot(fx, fz);
+      // 相對鏡頭的移動。
+      // 鏡頭擺在 player - (sin yaw, cos yaw)·dist，所以「看出去的方向」就是
+      // (sin yaw, cos yaw)；右手邊是 cross(前方, 上) = (-cos yaw, sin yaw)。
+      // 直接從這兩個向量疊出位移，不要另外推公式——之前推錯了一個符號，
+      // 整組基底變成鏡像，轉鏡頭之後前後左右就對不上了。
+      var b = P.layout.camBasis(camCtl.yaw);
       var ax = 0, ay = 0;
-      if (L > 0) {
-        fx /= L; fz /= L;
-        var cs = Math.cos(camCtl.yaw), sn = Math.sin(camCtl.yaw);
-        ax = fx * cs - fz * sn;
-        ay = fx * sn + fz * cs;
-      }
+      if (keys.up) { ax += b.fx; ay += b.fy; }
+      if (keys.down) { ax -= b.fx; ay -= b.fy; }
+      if (keys.right) { ax += b.rx; ay += b.ry; }
+      if (keys.left) { ax -= b.rx; ay -= b.ry; }
+      var L = Math.hypot(ax, ay);
+      if (L > 0) { ax /= L; ay /= L; }
 
       var SPD = keys.shift ? 330 : 195;
       player.vx += (ax * SPD - player.vx) * Math.min(1, dt * 11);
@@ -736,8 +735,10 @@
       // 沿著圓弧邊緣走會掉下去的原因。先驗合併後的位置，不行再退成逐軸滑行。
       var mv = P.layout.resolveMove(player.x, player.y, nx, ny, gated ? target : null);
       player.x = mv.x; player.y = mv.y;
-      if (mv.stopX) player.vx *= -0.15;
-      if (mv.stopY) player.vy *= -0.15;
+      // 撞到邊界就把那個方向的速度歸零。原本是乘 -0.15 反彈，
+      // 貼著島緣滑行時會一直被彈開一點點，走起來會抖。
+      if (mv.stopX) player.vx = 0;
+      if (mv.stopY) player.vy = 0;
 
       // 保險：真的落在地面外（壞掉的存檔、傳送落點偏了）就送回上一個安全點
       if (walkable(player.x, player.y)) { lastSafe.x = player.x; lastSafe.y = player.y; }
@@ -763,17 +764,21 @@
     // 角色姿態
     var bob = player.moving ? Math.sin(player.phase) * 1.7 : Math.sin(clock * 1.3) * 0.5;
     playerObj.position.set(player.x, player.h + bob, player.y);
-    playerObj.rotation.y += ((player.face) - playerObj.rotation.y) * Math.min(1, dt * 9);
+    // 轉身要走短的那一邊：角度差沒有繞回 ±π 的話，
+    // 從 +3.1 轉到 -3.1 會整整多轉一圈，提燈會很明顯地甩出去。
+    var dAng = player.face - playerObj.rotation.y;
+    dAng = ((dAng + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
+    playerObj.rotation.y += dAng * Math.min(1, dt * 9);
     playerObj.userData.orb.position.y = 16 + Math.sin(clock * 1.7) * 1.4;
 
     // 鏡頭
     var pitch = camCtl.pitch + camCtl.skyPeek * 0.95;
-    var cy = Math.cos(camCtl.yaw), sy = Math.sin(camCtl.yaw);
+    var cb = P.layout.camBasis(camCtl.yaw);          // 和 WASD 用同一組基底
     var cp = Math.cos(pitch), sp = Math.sin(pitch);
     var eye = new THREE.Vector3(
-      player.x - sy * cp * camCtl.dist,
+      player.x - cb.fx * cp * camCtl.dist,           // 鏡頭退到「前方」的反向
       player.h + 26 + sp * camCtl.dist,
-      player.y - cy * cp * camCtl.dist
+      player.y - cb.fy * cp * camCtl.dist
     );
     // 別讓鏡頭鑽進地裡
     var minY = heightAt(eye.x, eye.z) + 14;
@@ -851,8 +856,10 @@
     var px = mx(player.x), py = my(player.y);
     m.save();
     m.translate(px, py);
-    m.rotate(camCtl.yaw);
-    m.beginPath(); m.moveTo(0, 0); m.arc(0, 0, 18, -Math.PI / 2 - 0.5, -Math.PI / 2 + 0.5); m.closePath();
+    // 小地圖的 x/y 直接對應世界 x/y，所以視錐的畫布角度就是前方向量的角度
+    var fb = P.layout.camBasis(camCtl.yaw);
+    m.rotate(Math.atan2(fb.fy, fb.fx));
+    m.beginPath(); m.moveTo(0, 0); m.arc(0, 0, 18, -0.5, 0.5); m.closePath();
     m.fillStyle = 'rgba(255,214,140,0.18)'; m.fill();
     m.restore();
     m.beginPath(); m.arc(px, py, 3, 0, 6.284);

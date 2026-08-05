@@ -152,6 +152,48 @@ let walkPaths = 0, escapes = [];
 escapes.slice(0, 8).forEach(e => fails.push('走出地面：' + e));
 if (escapes.length > 8) fails.push(`走出地面：另有 ${escapes.length - 8} 條路徑同樣出界`);
 
+// 鏡頭基底回歸測試。
+// （曾經的 bug：鏡頭擺放與 WASD 各推導一次，其中一處符號推錯，整組基底
+//  變成鏡像，走起來前後左右會隨鏡頭角度亂掉。）
+{
+  const near = (a, b, eps = 1e-9) => Math.abs(a - b) < eps;
+  for (let yaw = -Math.PI * 2; yaw <= Math.PI * 2; yaw += Math.PI / 12) {
+    const b = L.camBasis(yaw);
+    // 單位長度、互相垂直
+    if (!near(Math.hypot(b.fx, b.fy), 1)) fails.push(`鏡頭基底 yaw=${yaw.toFixed(2)}：前方不是單位向量`);
+    if (!near(Math.hypot(b.rx, b.ry), 1)) fails.push(`鏡頭基底 yaw=${yaw.toFixed(2)}：右方不是單位向量`);
+    if (!near(b.fx * b.rx + b.fy * b.ry, 0)) fails.push(`鏡頭基底 yaw=${yaw.toFixed(2)}：前方與右方不垂直`);
+
+    // 右方必須是「前方順時針轉 90°」——在 y 向下的世界平面上，
+    // 這代表 cross(前, 右) 的 z 分量為正，也就是右手邊真的在右手邊。
+    const cross = b.fx * b.ry - b.fy * b.rx;
+    if (!(cross > 0.99)) fails.push(`鏡頭基底 yaw=${yaw.toFixed(2)}：右方在左邊（基底鏡像了）cross=${cross.toFixed(3)}`);
+
+    // 鏡頭永遠在角色的「後方」：eye = player - 前方·dist
+    const dist = 165;
+    const eye = { x: -b.fx * dist, y: -b.fy * dist };
+    const toPlayer = { x: -eye.x, y: -eye.y };
+    const dot = (toPlayer.x * b.fx + toPlayer.y * b.fy) / dist;
+    if (!near(dot, 1, 1e-9)) fails.push(`鏡頭基底 yaw=${yaw.toFixed(2)}：鏡頭沒有擺在前方的反向`);
+  }
+
+  // 方位角要對得上：前方指北→0°、指東→90°、指南→180°、指西→270°
+  const bearings = [
+    ['北', Math.PI, 0], ['東', Math.PI / 2, 90], ['南', 0, 180], ['西', -Math.PI / 2, 270]
+  ];
+  bearings.forEach(([name, yaw, want]) => {
+    const got = L.heading(yaw);
+    const diff = Math.min(Math.abs(got - want), 360 - Math.abs(got - want));
+    if (diff > 0.001) fails.push(`羅盤方位：yaw 指${name}時應為 ${want}°，實得 ${got.toFixed(1)}°`);
+    // 同時確認前方向量真的指向那個方位
+    const b = L.camBasis(yaw);
+    const expect = { '北': [0, -1], '東': [1, 0], '南': [0, 1], '西': [-1, 0] }[name];
+    if (Math.abs(b.fx - expect[0]) > 1e-9 || Math.abs(b.fy - expect[1]) > 1e-9) {
+      fails.push(`羅盤方位：yaw 指${name}時前方向量應為 (${expect}), 實得 (${b.fx.toFixed(2)},${b.fy.toFixed(2)})`);
+    }
+  });
+}
+
 // 反向：空白與關鍵字堆砌
 const soup = P.score('角色 任務 格式 範例 引用 工具 代理 快取 注入 遷移', [{ id: 'goal', weight: 1 }], { pickAccuracy: 1 });
 const empty = P.score('', [{ id: 'goal', weight: 1 }], { pickAccuracy: 1 });

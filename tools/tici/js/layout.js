@@ -104,6 +104,27 @@
     return collectCache;
   };
 
+  // ---- 鏡頭基底 -----------------------------------------------------
+  /**
+   * 給定鏡頭水平角，回傳地面上的「前方」與「右方」單位向量。
+   *
+   * 鏡頭擺放、WASD 位移、羅盤方位、小地圖視錐全部只能從這裡拿方向。
+   * 之前這四處各推導一次，其中一處符號推錯，整組基底就變成鏡像——
+   * 走起來前後左右會隨著鏡頭角度亂掉。合成一個來源之後就不可能對不上。
+   *
+   * 座標：世界平面 (x, y)，y 對應 three.js 的 z。北定為 -y。
+   */
+  L.camBasis = function (yaw) {
+    var fx = Math.sin(yaw), fy = Math.cos(yaw);
+    return { fx: fx, fy: fy, rx: -fy, ry: fx };   // right = cross(forward, up)
+  };
+
+  /** 鏡頭前方對應的羅盤方位（度，從北順時針） */
+  L.heading = function (yaw) {
+    var b = L.camBasis(yaw);
+    return (Math.atan2(b.fx, -b.fy) * 180 / Math.PI + 360) % 360;
+  };
+
   // ---- 可走區域與移動解算 -------------------------------------------
   L.BRIDGE_HALF = 30;
 
