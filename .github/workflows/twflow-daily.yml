@@ -1,0 +1,67 @@
+name: twflow 每日盤後更新
+
+# 台股 13:30 收盤，證交所/櫃買的三大法人日報約 17:00–18:00 陸續到齊。
+# 18:40(TW) = 10:40 UTC 起跑，留足緩衝；若來源延遲，隔日的排程會自動補上
+# （逐日檔是 append-only，缺哪天就補哪天，不會重抓已有的）。
+on:
+  schedule:
+    - cron: "40 10 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "至少保留幾個交易日"
+        default: "60"
+
+concurrency:
+  group: twflow-daily
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - run: pip install -r twflow/requirements.txt
+
+      # 只抓缺的交易日；已落檔的日期完全不碰來源站
+      - name: 抓當日盤後資料
+        working-directory: twflow
+        run: python -X utf8 scripts/fetch_market.py --days ${{ inputs.days || '60' }}
+
+      # 板塊「定義」（剪枝與題材）不在這裡重算——那會讓成分股天天變動。
+      # 定義由 twflow-weekly.yml 每週更新一次，這裡只重算數字。
+      - name: 重算板塊指標
+        working-directory: twflow
+        run: |
+          python -X utf8 scripts/build_sectors.py
+          python -X utf8 scripts/build_web.py
+          python -X utf8 scripts/build_events.py
+          python -X utf8 scripts/build_chains.py
+          python -X utf8 scripts/snapshot.py
+
+      - name: 檢查資料是否合理
+        working-directory: twflow
+        run: python -X utf8 scripts/sanity_check.py
+
+      - name: 提交
+        run: |
+          git config user.name  "twflow-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add twflow/data/market/days twflow/data/market/stock_meta.json \
+                  twflow/data/market/market.json twflow/web/data \
+                  twflow/web/snapshot.html
+          if git diff --staged --quiet; then
+            echo "沒有變動（非交易日或來源尚未更新）"
+          else
+            git commit -m "data: $(date -u -d '+8 hours' +%Y-%m-%d) 盤後更新"
+            git push
+          fi

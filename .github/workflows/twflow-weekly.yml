@@ -1,0 +1,78 @@
+name: twflow 每週重算板塊定義
+
+# 為什麼分開：剪枝與題材聚類吃的是滾動窗期，天天重算會讓板塊成分天天變動——
+# 使用者昨天看到「散熱模組 6 檔」今天變 8 檔，會以為數字在亂跳。
+# 分類表要穩定，數字才每天更新。週日重算一次，順便把當週新上市/改名納入。
+on:
+  schedule:
+    - cron: "0 18 * * 0"
+  workflow_dispatch:
+
+concurrency:
+  group: twflow-weekly
+
+permissions:
+  contents: write
+
+jobs:
+  reclassify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - run: pip install -r twflow/requirements.txt
+
+      - name: 更新產業鏈骨架
+        working-directory: twflow
+        run: python -X utf8 scripts/fetch_ic_chain.py --force
+
+      - name: 重建面板
+        working-directory: twflow
+        run: python -X utf8 scripts/fetch_market.py --days 60
+
+      - name: 重算分類
+        working-directory: twflow
+        run: |
+          python -X utf8 scripts/prune_sectors.py --samples 300
+          python -X utf8 scripts/validate_pruning.py
+          python -X utf8 scripts/discover_themes.py
+          python -X utf8 scripts/build_sectors.py
+          python -X utf8 scripts/build_web.py
+          python -X utf8 scripts/build_events.py
+          python -X utf8 scripts/build_chains.py
+          python -X utf8 scripts/snapshot.py
+
+      - name: 檢查資料是否合理
+        working-directory: twflow
+        run: python -X utf8 scripts/sanity_check.py
+
+      # 新冒出來的題材群還沒有人命名 → 開 issue 提醒，不要靜默留在圖上
+      - name: 有未命名題材就開 issue
+        working-directory: twflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          N=$(python -X utf8 -c "import json;d=json.load(open('web/data/latest.json',encoding='utf-8'));print(sum(1 for s in d['sectors'] if s['source']=='unnamed'))")
+          if [ "$N" -gt 0 ]; then
+            gh issue create \
+              --title "有 $N 個新題材群待命名" \
+              --body "本週重算後出現 $N 個尚未命名的題材群。請看 \`twflow/data/discovered_themes.json\`，判讀後補進 \`twflow/data/theme_names.json\`（anchors 用成分股當錨點，並寫上 why）。" \
+              || echo "開 issue 失敗，略過"
+          fi
+
+      - name: 提交
+        run: |
+          git config user.name  "twflow-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add twflow/data twflow/web/data twflow/web/snapshot.html
+          if git diff --staged --quiet; then
+            echo "分類無變動"
+          else
+            git commit -m "chore: 每週重算板塊定義"
+            git push
+          fi
