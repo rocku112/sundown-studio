@@ -429,34 +429,208 @@
 
   W.collectNodes = function () { return collectNodes; };
 
-  function makePlayer() {
-    var grp = new THREE.Group();
-    var cloak = new THREE.Mesh(
-      new THREE.ConeGeometry(7.5, 24, 7, 1, true),
-      new THREE.MeshStandardMaterial({ color: 0x1b2434, roughness: 0.85, flatShading: true, side: THREE.DoubleSide })
-    );
-    cloak.position.y = 12; cloak.castShadow = quality === 'high';
-    grp.add(cloak);
-    var head = new THREE.Mesh(
-      new THREE.SphereGeometry(4.2, 10, 8),
-      new THREE.MeshStandardMaterial({ color: 0x2b3a52, roughness: 0.7 })
-    );
-    head.position.y = 27; head.castShadow = quality === 'high';
-    grp.add(head);
-    // 提燈
-    var orb = new THREE.Mesh(
-      new THREE.SphereGeometry(2.6, 10, 8),
-      new THREE.MeshBasicMaterial({ color: 0xffdca0 })
-    );
-    orb.position.set(8, 16, 2);
-    grp.add(orb);
-    grp.userData.orb = orb;
+  // ---- 提燈的旅人 ---------------------------------------------------
+  // 全部用 three.js 的基本幾何拼出來，沒有外部模型檔。
+  // 分成幾個可獨立轉動的節點，走路、擺手、披風飄動都在 poseCharacter() 裡做。
+  var rig = null;
 
-    lantern = new THREE.PointLight(0xffc98a, 26000, 460, 2);
-    lantern.position.set(8, 18, 2);
-    if (quality === 'high') { lantern.castShadow = true; lantern.shadow.mapSize.set(512, 512); }
-    grp.add(lantern);
+  function makePlayer() {
+    var hi = quality === 'high';
+    var grp = new THREE.Group();
+
+    var CLOTH = new THREE.MeshStandardMaterial({ color: 0x1e2942, roughness: 0.92, flatShading: true, side: THREE.DoubleSide });
+    var CLOTH_IN = new THREE.MeshStandardMaterial({ color: 0x38304a, roughness: 0.95, flatShading: true, side: THREE.DoubleSide });
+    var SKIN = new THREE.MeshStandardMaterial({ color: 0x3a4a66, roughness: 0.8 });
+    var TRIM = new THREE.MeshStandardMaterial({ color: 0x6b5a34, roughness: 0.6, metalness: 0.35, emissive: 0x2a1f08, emissiveIntensity: 1 });
+    var GLOW = new THREE.MeshBasicMaterial({ color: 0xffdca0 });
+
+    var root = new THREE.Group();          // 呼吸、彈跳、前傾都掛這裡
+    grp.add(root);
+
+    // 腿：走路時前後擺
+    var legGeo = new THREE.CylinderGeometry(1.6, 1.25, 11, 6);
+    var legs = [];
+    [-2.5, 2.5].forEach(function (x) {
+      var hip = new THREE.Group();
+      hip.position.set(x, 11.5, 0);
+      var leg = new THREE.Mesh(legGeo, SKIN);
+      leg.position.y = -5.5; leg.castShadow = hi;
+      hip.add(leg);
+      var foot = new THREE.Mesh(new THREE.BoxGeometry(3, 1.6, 4.6), CLOTH);
+      foot.position.set(0, -10.9, 1.0); foot.castShadow = hi;
+      hip.add(foot);
+      root.add(hip);
+      legs.push(hip);
+    });
+
+    // 身體：用 Lathe 旋出一件有腰身、下襬散開的長袍
+    var profile = [];
+    [[0.3, 9], [5.5, 9.5], [5.3, 13], [4.8, 18], [4.3, 23], [4.2, 27], [4.6, 30], [3.1, 32]]
+      .forEach(function (p) { profile.push(new THREE.Vector2(p[0], p[1])); });
+    var torso = new THREE.Group();
+    root.add(torso);
+    var robe = new THREE.Mesh(new THREE.LatheGeometry(profile, hi ? 16 : 9), CLOTH);
+    robe.castShadow = hi;
+    torso.add(robe);
+
+    // 外披的短斗篷，走動時會晃
+    var capePivot = new THREE.Group();
+    capePivot.position.y = 29.5;
+    var cape = new THREE.Mesh(new THREE.ConeGeometry(6.6, 16, hi ? 12 : 8, 1, true), CLOTH_IN);
+    cape.position.y = -7.6; cape.castShadow = hi;
+    capePivot.add(cape);
+    torso.add(capePivot);
+
+    // 腰帶
+    var belt = new THREE.Mesh(new THREE.TorusGeometry(4.35, 0.55, 5, hi ? 14 : 8), TRIM);
+    belt.position.y = 20; belt.rotation.x = Math.PI / 2;
+    torso.add(belt);
+
+    // 手臂：上臂 + 前臂兩節
+    function makeArm(side) {
+      var shoulder = new THREE.Group();
+      shoulder.position.set(side * 4.0, 28.5, 0);
+      var upper = new THREE.Mesh(new THREE.CylinderGeometry(1.25, 1.05, 7, 6), CLOTH);
+      upper.position.y = -3.5; upper.castShadow = hi;
+      shoulder.add(upper);
+      var elbow = new THREE.Group();
+      elbow.position.y = -7;
+      var fore = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 0.85, 6.5, 6), SKIN);
+      fore.position.y = -3.2; fore.castShadow = hi;
+      elbow.add(fore);
+      shoulder.add(elbow);
+      torso.add(shoulder);
+      return { shoulder: shoulder, elbow: elbow };
+    }
+    var armL = makeArm(-1), armR = makeArm(1);
+
+    // 提燈：掛在右前臂末端，會自己晃
+    var lanternRig = new THREE.Group();
+    lanternRig.position.y = -6.6;
+    armR.elbow.add(lanternRig);
+    var hook = new THREE.Mesh(new THREE.TorusGeometry(1.0, 0.2, 4, 8), TRIM);
+    hook.rotation.x = Math.PI / 2; lanternRig.add(hook);
+    var swing = new THREE.Group();
+    swing.position.y = -1.2;
+    lanternRig.add(swing);
+    var chain = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 2.6, 4), TRIM);
+    chain.position.y = -1.3; swing.add(chain);
+    var cage = new THREE.Mesh(new THREE.CylinderGeometry(1.45, 1.25, 2.7, 6, 1, true), TRIM);
+    cage.position.y = -3.9; swing.add(cage);
+    var capTop = new THREE.Mesh(new THREE.ConeGeometry(1.7, 1.1, 6), TRIM);
+    capTop.position.y = -2.4; swing.add(capTop);
+    var orb = new THREE.Mesh(new THREE.SphereGeometry(1.05, 10, 8), GLOW);
+    orb.position.y = -3.9; swing.add(orb);
+
+    lantern = new THREE.PointLight(0xffc98a, 3400, 340, 2);
+    lantern.position.y = -3.9;
+    if (hi) { lantern.castShadow = true; lantern.shadow.mapSize.set(512, 512); lantern.shadow.bias = -0.002; }
+    swing.add(lantern);
+
+    // 腳邊的光暈：用一張加色貼片，不用第二盞光，才不會又把人洗白
+    var pool = new THREE.Mesh(
+      new THREE.CircleGeometry(46, 20),
+      new THREE.MeshBasicMaterial({ color: 0xffb46a, transparent: true, opacity: 0.10, depthWrite: false, blending: THREE.AdditiveBlending })
+    );
+    pool.rotation.x = -Math.PI / 2; pool.position.y = 0.7;
+    grp.add(pool);
+
+    // 頭與兜帽
+    var neck = new THREE.Group();
+    neck.position.y = 31.5;
+    torso.add(neck);
+    var head = new THREE.Mesh(new THREE.SphereGeometry(2.9, hi ? 14 : 8, hi ? 12 : 6), SKIN);
+    head.position.y = 2.2; head.castShadow = hi;
+    neck.add(head);
+    // 兜帽是一個開口朝前的半球殼
+    var hood = new THREE.Mesh(
+      new THREE.SphereGeometry(3.6, hi ? 16 : 9, hi ? 12 : 7, 0, Math.PI * 2, 0, Math.PI * 0.62),
+      CLOTH
+    );
+    hood.position.y = 2.9; hood.rotation.x = -0.30; hood.castShadow = hi;
+    neck.add(hood);
+    // 兜帽陰影裡透出來的臉光
+    var eyeMat = new THREE.MeshBasicMaterial({ color: 0xffd8a0, transparent: true, opacity: 0.85 });
+    var face = new THREE.Group();
+    [-0.95, 0.95].forEach(function (ex) {
+      var eye = new THREE.Mesh(new THREE.SphereGeometry(0.42, 6, 5), eyeMat);
+      eye.position.set(ex, 0, 0);
+      face.add(eye);
+    });
+    face.position.set(0, 2.5, 2.5);
+    face.userData.mat = eyeMat;
+    neck.add(face);
+
+    // 圍巾：五節，一節追一節，跑起來會甩在後面
+    var scarf = [];
+    var scarfMat = new THREE.MeshStandardMaterial({ color: 0x8a4a3c, roughness: 0.95, flatShading: true, side: THREE.DoubleSide });
+    for (var i = 0; i < 5; i++) {
+      var seg = new THREE.Group();
+      seg.position.set(i === 0 ? -1.0 : 0, i === 0 ? 29.4 : -2.0, i === 0 ? -2.8 : 0);
+      var m = new THREE.Mesh(new THREE.BoxGeometry(1.25 - i * 0.14, 2.2, 0.7), scarfMat);
+      m.position.y = -1.15; m.castShadow = hi && i < 2;
+      seg.add(m);
+      (i === 0 ? torso : scarf[i - 1]).add(seg);
+      scarf.push(seg);
+    }
+
+    rig = {
+      root: root, torso: torso, neck: neck, legs: legs,
+      armL: armL, armR: armR, cape: capePivot, swing: swing, scarf: scarf,
+      orb: orb, face: face
+    };
+    grp.userData.orb = orb;
     return grp;
+  }
+
+  /** 走路／待機的姿態。speed 是每秒的水平位移。 */
+  function poseCharacter(dt, speed) {
+    if (!rig) return;
+    var run = Math.min(1, speed / 300);
+    var walk = Math.min(1, speed / 120);
+    var ph = player.phase;
+
+    // 腿：左右反相前後擺
+    var swingAmp = 0.62 * walk;
+    rig.legs[0].rotation.x = Math.sin(ph) * swingAmp;
+    rig.legs[1].rotation.x = Math.sin(ph + Math.PI) * swingAmp;
+
+    // 手臂與腿反相；提燈那隻手擺幅小一點，免得燈甩太兇
+    rig.armL.shoulder.rotation.x = Math.sin(ph + Math.PI) * 0.5 * walk;
+    rig.armL.elbow.rotation.x = -0.25 - Math.max(0, Math.sin(ph)) * 0.3 * walk;
+    rig.armR.shoulder.rotation.x = -0.62 + Math.sin(ph) * 0.12 * walk;
+    rig.armR.shoulder.rotation.z = -0.22;
+    rig.armR.elbow.rotation.x = -0.95;
+
+    // 身體：走路時左右微擺，跑起來往前傾
+    rig.torso.rotation.z = Math.sin(ph) * 0.045 * walk;
+    rig.torso.rotation.y = Math.sin(ph) * 0.07 * walk;
+    rig.root.rotation.x = -0.16 * run;
+    rig.root.position.y = Math.abs(Math.sin(ph)) * 1.6 * walk;
+
+    // 呼吸（站著時才明顯）
+    var breath = 1 + Math.sin(clock * 1.6) * 0.012 * (1 - walk);
+    rig.torso.scale.set(1, breath, 1);
+    rig.neck.rotation.x = Math.sin(clock * 1.1) * 0.04 * (1 - walk) - 0.1 * run;
+
+    // 斗篷：跑起來被風掀起來
+    rig.cape.rotation.x = -0.05 - 0.42 * run + Math.sin(ph * 2) * 0.05 * walk;
+
+    // 提燈：晃動有阻尼，走越快晃越大
+    rig.swing.rotation.x = Math.sin(clock * 3.1 + 0.6) * (0.06 + 0.16 * walk);
+    rig.swing.rotation.z = Math.sin(clock * 2.3) * (0.05 + 0.12 * walk);
+    rig.orb.scale.setScalar(1 + Math.sin(clock * 7.3) * 0.07 + Math.sin(clock * 3.1) * 0.05);
+    rig.face.userData.mat.opacity = 0.7 + Math.sin(clock * 2.7) * 0.15;
+
+    // 圍巾：一節追一節，前面那節的角度傳到後面，跑起來整條飄起來
+    var lift = 0.55 + 0.75 * run;
+    for (var i = 0; i < rig.scarf.length; i++) {
+      var t = i / rig.scarf.length;
+      var target = lift * (0.5 + t) + Math.sin(clock * 4.2 - i * 0.7) * (0.05 + 0.14 * walk);
+      var s = rig.scarf[i];
+      s.rotation.x += (target - s.rotation.x) * Math.min(1, dt * (9 - i));
+      s.rotation.z += (Math.sin(clock * 2.9 - i * 0.9) * (0.04 + 0.16 * run) - s.rotation.z) * Math.min(1, dt * 7);
+    }
   }
 
   function buildScene() {
@@ -746,7 +920,9 @@
 
       player.moving = L > 0.01 && (Math.abs(player.vx) + Math.abs(player.vy)) > 14;
       if (L > 0) player.face = Math.atan2(ax, ay);
-      player.phase += dt * (player.moving ? 9 : 1.8);
+      // 步頻跟著實際速度走，慢走和奔跑的腳步才不會同一個節奏
+      var spd = Math.hypot(player.vx, player.vy);
+      player.phase += dt * (player.moving ? 2.4 + spd * 0.055 : 1.8);
 
       if (player.moving) {
         stepAcc += dt;
@@ -762,14 +938,13 @@
     camCtl.dist += (camCtl.tDist - camCtl.dist) * Math.min(1, dt * 6);
 
     // 角色姿態
-    var bob = player.moving ? Math.sin(player.phase) * 1.7 : Math.sin(clock * 1.3) * 0.5;
-    playerObj.position.set(player.x, player.h + bob, player.y);
+    playerObj.position.set(player.x, player.h, player.y);
     // 轉身要走短的那一邊：角度差沒有繞回 ±π 的話，
     // 從 +3.1 轉到 -3.1 會整整多轉一圈，提燈會很明顯地甩出去。
     var dAng = player.face - playerObj.rotation.y;
     dAng = ((dAng + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
     playerObj.rotation.y += dAng * Math.min(1, dt * 9);
-    playerObj.userData.orb.position.y = 16 + Math.sin(clock * 1.7) * 1.4;
+    poseCharacter(dt, Math.hypot(player.vx, player.vy));
 
     // 鏡頭
     var pitch = camCtl.pitch + camCtl.skyPeek * 0.95;
