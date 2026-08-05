@@ -512,5 +512,5 @@
     m.beginPath(); m.arc(mx(player.x), my(player.y), 7, 0, 6.284); m.stroke();
   };
 
-  P.world = W;
+  P.world2d = W;   // 沒有 WebGL 時的退路
 })(window.TICI = window.TICI || {});

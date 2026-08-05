@@ -12,7 +12,7 @@
     seen: {},        // 看過教學碑文
     pos: null,       // 玩家世界座標
     prologue: false, // 是否看過序章
-    settings: { bgm: true, sfx: true, motion: true, font: 1 }
+    settings: { bgm: true, sfx: true, motion: true, font: 1, quality: 'high', perf: false, volume: 0.5 }
   };
 
   function clone(o) { return JSON.parse(JSON.stringify(o)); }

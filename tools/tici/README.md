@@ -22,6 +22,7 @@ python -m http.server 3005 --directory tools/tici
 | 結構檢核 | 101 條 |
 | 詞彙表 | 24 則 |
 | 背景樂 | 13 段程序生成的夜曲 |
+| 世界 | three.js 第三人稱 3D（無 WebGL 時退回 2D） |
 
 課綱整併自九家模型廠商的官方 promptbook（Anthropic / OpenAI / Google / xAI / Qwen /
 DeepSeek / Mistral / Meta / Cohere / Microsoft），共 17 章、292 條技法。每一關的 `src`
@@ -78,7 +79,8 @@ DeepSeek / Mistral / Meta / Cohere / Microsoft），共 17 章、292 條技法�
 ## 自我測試
 
 ```bash
-node test/selftest.js
+node vendor/three.module.min.js  three.js r169（MIT）
+test/selftest.js
 ```
 
 對 74 關各組出一份完全正確的答案（自由書寫題用 `js/reference.js` 的參考答案），
@@ -96,7 +98,8 @@ js/
   curriculum-b.js  第七～十二境 + 詞彙表
   reference.js     自由書寫試煉的參考答案
   audio.js         Web Audio 合成配樂與音效
-  world.js         Canvas 2D 夜間世界、地形、角色控制
+  world.js         Canvas 2D 世界（沒有 WebGL 時的退路）
+  world3d.js       three.js 第三人稱 3D 世界、地形、鏡頭、羅盤導航
   boards.js        十一種題板
   game.js          四幕挑戰、圖鑑、地圖、設定、成果卡
 test/selftest.js
@@ -104,7 +107,7 @@ test/selftest.js
 
 ## 操作
 
-`W A S D` / 方向鍵走動 · `Shift` 快走 · `E` 叩碑 · `M` 地圖 · `C` 圖鑑 · `P` 設定 · `Esc` 返回。
+`W``A``S``D` 移動 · `Shift` 奔跑 · `←``→` 轉鏡頭 · `↑``↓` 抬頭低頭（或拖曳滑鼠） · `空白` 看天空 · `-``=` 拉遠拉近 · `E` 互動 · `M` 地圖 · `C` 圖鑑 · `O` 設定 · `?` 操作一覽 · `F3` 效能監視器 · `Esc` 返回。
 全程可用鍵盤，滑鼠與觸控搖桿為輔。進度存在瀏覽器的 localStorage，設定裡可以一鍵重置。
 
 ## 致意

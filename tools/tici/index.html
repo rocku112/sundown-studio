@@ -36,6 +36,24 @@
   <button class="tool" id="btn-share" type="button">成果卡</button>
 </div>
 
+<!-- 羅盤與導航 -->
+<div id="compass" aria-hidden="true">
+  <div id="compass-strip"></div>
+  <div id="compass-needle"></div>
+</div>
+<div id="waypoint">
+  <div id="wp-name"></div>
+  <div id="wp-dist"></div>
+</div>
+
+<div id="controls-hint">
+  <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 移動 ·
+  <kbd>Shift</kbd> 奔跑 · <kbd>←</kbd><kbd>→</kbd> 轉鏡頭 · <kbd>↑</kbd><kbd>↓</kbd> 抬頭低頭（或拖曳滑鼠） ·
+  <kbd>空白</kbd> 看天空 · <kbd>-</kbd><kbd>=</kbd> 拉遠拉近 · <kbd>E</kbd> 互動 · <kbd>?</kbd> 操作一覽
+</div>
+
+<div id="perf" hidden></div>
+
 <div id="interact" role="status" aria-live="polite"></div>
 
 <div id="touchpad"><div id="stick"></div></div>
@@ -143,6 +161,21 @@
         <input type="checkbox" id="set-sfx">
       </div>
       <div class="set-row">
+        <label for="set-vol">音量</label>
+        <input type="range" id="set-vol" min="0" max="1" step="0.05">
+      </div>
+      <div class="set-row">
+        <label>畫質<small>馬上生效。畫面會頓的話就切到低——低畫質會關掉陰影、極光與抗鋸齒，地形也用比較粗的網格。</small></label>
+        <div class="seg-toggle">
+          <button type="button" id="q-high" data-q="high">高</button>
+          <button type="button" id="q-low" data-q="low">低</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <label for="set-perf">效能監視器<small>在角落顯示更新速度、繪製次數與顯示卡型號。也可以隨時按 <kbd>F3</kbd> 開關。</small></label>
+        <input type="checkbox" id="set-perf">
+      </div>
+      <div class="set-row">
         <label for="set-motion">動態效果<small>關掉極光飄動與浮塵，減少畫面晃動。</small></label>
         <input type="checkbox" id="set-motion">
       </div>
@@ -178,6 +211,12 @@
 
 <div id="glosscard" role="tooltip"></div>
 
+<!-- three.js r169（MIT，隨庫附帶）。module script 是 deferred，會在 DOMContentLoaded 之前執行完。 -->
+<script type="module">
+  import * as THREE from './vendor/three.module.min.js';
+  window.THREE = THREE;
+</script>
+
 <script src="js/save.js"></script>
 <script src="js/checks.js"></script>
 <script src="js/curriculum-a.js"></script>
@@ -185,6 +224,7 @@
 <script src="js/reference.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/world.js"></script>
+<script src="js/world3d.js"></script>
 <script src="js/boards.js"></script>
 <script src="js/game.js"></script>
 </body>

@@ -10,7 +10,8 @@
     var AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return false;
     ctx = new AC();
-    master = ctx.createGain(); master.gain.value = 0.9; master.connect(ctx.destination);
+    var v = (P.save.state.settings.volume == null ? 0.5 : P.save.state.settings.volume);
+    master = ctx.createGain(); master.gain.value = Math.max(0, Math.min(1, v)) * 1.8; master.connect(ctx.destination);
     bgmGain = ctx.createGain(); bgmGain.gain.value = 0.0; bgmGain.connect(master);
     sfxGain = ctx.createGain(); sfxGain.gain.value = 0.5; sfxGain.connect(master);
     return true;
@@ -142,8 +143,14 @@
     else { bgmGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.4); stopBgm(); }
   }
 
+  function setVolume(v) {
+    P.save.state.settings.volume = v;
+    if (!ensure()) return;
+    master.gain.value = Math.max(0, Math.min(1, v)) * 1.8;
+  }
+
   P.audio = {
-    sfx: SFX, playTrack: playTrack, setBgm: setBgm, tracks: TRACKS,
+    sfx: SFX, playTrack: playTrack, setBgm: setBgm, setVolume: setVolume, tracks: TRACKS,
     unlock: function () { if (ensure()) resume(); }
   };
 })(window.TICI = window.TICI || {});

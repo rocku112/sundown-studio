@@ -62,6 +62,54 @@
   }
 
   // ===================================================================
+  // 羅盤 · 導航 · 效能監視器
+  // ===================================================================
+  var COMPASS = [['北', 0], ['東北', 45], ['東', 90], ['東南', 135], ['南', 180], ['西南', 225], ['西', 270], ['西北', 315]];
+
+  function refreshNav() {
+    var nav = P.world.navInfo ? P.world.navInfo() : null;
+    if (!nav) return;
+
+    // 羅盤刻度：以 90° 視野把方位平移到帶狀條上
+    var strip = $('#compass-strip');
+    strip.innerHTML = '';
+    COMPASS.forEach(function (c) {
+      var delta = ((c[1] - nav.heading + 540) % 360) - 180;
+      if (Math.abs(delta) > 62) return;
+      var tick = el('span', 'ctick' + (c[0].length === 1 ? ' major' : ''), c[0]);
+      tick.style.left = (50 + delta / 62 * 50) + '%';
+      tick.style.opacity = String(1 - Math.abs(delta) / 78);
+      strip.appendChild(tick);
+    });
+
+    var wn = $('#wp-name'), wd = $('#wp-dist');
+    if (!nav.name) { wn.textContent = '這片天地已經走完'; wd.textContent = ''; }
+    else if (nav.locked) { wn.textContent = nav.name; wd.textContent = '需 ' + nav.need + ' 塊碑文'; }
+    else { wn.textContent = nav.name; wd.textContent = '約 ' + nav.steps + ' 步'; }
+  }
+
+  function refreshPerf() {
+    var box = $('#perf');
+    if (box.hidden || !P.world.stats) return;
+    var s = P.world.stats();
+    box.textContent = s.fps + ' FPS　繪製 ' + s.calls + '　三角形 ' +
+      (s.tris > 9999 ? Math.round(s.tris / 1000) + 'k' : s.tris) + '　畫質 ' +
+      (s.quality === 'high' ? '高' : '低') + '\n' + s.gpu;
+  }
+
+  function togglePerf() {
+    var box = $('#perf');
+    box.hidden = !box.hidden;
+    P.save.state.settings.perf = !box.hidden; P.save.flush();
+    if ($('#set-perf')) $('#set-perf').checked = !box.hidden;
+  }
+
+  function toggleHint() {
+    var h = $('#controls-hint');
+    h.classList.toggle('pinned');
+  }
+
+  // ===================================================================
   // 四幕挑戰主控台
   // ===================================================================
   function openChallenge(node) {
@@ -172,6 +220,7 @@
     P.save.record(s, curResult);
     var after = P.REGIONS.filter(function (x) { return P.save.regionSealed(x.id); }).length;
     refreshHud();
+    if (P.world.refreshVisuals) P.world.refreshVisuals();   // 碑點亮、新解鎖的島褪去灰調
 
     var box = $('#c-collect'); box.innerHTML = '';
     box.appendChild(el('div', 'collect-kicker', '收錄至圖鑑'));
@@ -331,6 +380,11 @@
     $('#set-sfx').checked = st.sfx;
     $('#set-motion').checked = st.motion;
     $('#set-font').value = String(st.font);
+    $('#set-vol').value = String(st.volume);
+    $('#set-perf').checked = !!st.perf;
+    var q = P.world.quality ? P.world.quality() : 'high';
+    $('#q-high').classList.toggle('on', q === 'high');
+    $('#q-low').classList.toggle('on', q === 'low');
     $('#settings').classList.add('open');
     $('#settings').setAttribute('aria-hidden', 'false');
   }
@@ -506,10 +560,12 @@
   // ===================================================================
   // 鍵盤
   // ===================================================================
+  // WASD 走路、方向鍵轉鏡頭 —— 和原版一致
   var KEYMAP = {
-    ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
     w: 'up', s: 'down', a: 'left', d: 'right',
-    W: 'up', S: 'down', A: 'left', D: 'right'
+    W: 'up', S: 'down', A: 'left', D: 'right',
+    ArrowUp: 'camUp', ArrowDown: 'camDown', ArrowLeft: 'camLeft', ArrowRight: 'camRight',
+    ' ': 'sky', '-': 'zoomOut', '_': 'zoomOut', '=': 'zoomIn', '+': 'zoomIn'
   };
 
   function anyOpen() {
@@ -541,7 +597,9 @@
         if (n) { openChallenge(n); e.preventDefault(); }
       } else if (e.key === 'm' || e.key === 'M') openMap();
       else if (e.key === 'c' || e.key === 'C') openCodex();
-      else if (e.key === 'p' || e.key === 'P') openSettings();
+      else if (e.key === 'o' || e.key === 'O' || e.key === 'p' || e.key === 'P') openSettings();
+      else if (e.key === '?' || e.key === '/') toggleHint();
+      else if (e.key === 'F3') { togglePerf(); e.preventDefault(); }
     });
 
     document.addEventListener('keyup', function (e) {
@@ -580,24 +638,47 @@
   // ===================================================================
   // 主迴圈
   // ===================================================================
+  /** 一幀。抽出來是為了讓 requestAnimationFrame 停擺時（背景分頁、無頭測試）也驅動得了。 */
+  function frame(dt) {
+    P.world.update(dt, paused || anyOpen());
+    P.world.draw();
+    refreshPrompt();
+    refreshNav();
+    refreshPerf();
+    P.world.drawMinimap($('#minimap'));
+  }
+  P.frame = frame;
+
   var last = performance.now();
   function loop(now) {
     var dt = Math.min(0.05, (now - last) / 1000);
     last = now;
-    P.world.update(dt, paused || anyOpen());
-    P.world.draw();
-    refreshPrompt();
-    P.world.drawMinimap($('#minimap'));
+    frame(dt);
     requestAnimationFrame(loop);
   }
 
   // ===================================================================
   // 啟動
   // ===================================================================
+  function pickWorld() {
+    if (!window.THREE || !P.world3d) return P.world2d;
+    try {
+      var probe = document.createElement('canvas');
+      var gl = probe.getContext('webgl2') || probe.getContext('webgl');
+      if (!gl) return P.world2d;
+    } catch (e) { return P.world2d; }
+    return P.world3d;
+  }
+
   function boot() {
     P.save.load();
     document.documentElement.style.setProperty('--fs', P.save.state.settings.font);
+    $('#perf').hidden = !P.save.state.settings.perf;
+    if (P.audio.setVolume) P.audio.setVolume(P.save.state.settings.volume);
 
+    // 沒有 WebGL 的機器（老舊顯卡、遠端桌面、關掉硬體加速）退回 2D 世界，
+    // 兩邊介面一致，關卡與評分完全不受影響。
+    P.world = pickWorld();
     P.world.init($('#stage'));
     initKeys();
     initTouch();
@@ -627,6 +708,22 @@
       document.documentElement.style.setProperty('--fs', this.value);
       P.save.flush();
     });
+    $('#set-vol').addEventListener('input', function () {
+      P.save.state.settings.volume = parseFloat(this.value);
+      if (P.audio.setVolume) P.audio.setVolume(parseFloat(this.value));
+      P.save.flush();
+    });
+    $('#set-perf').addEventListener('change', function () {
+      $('#perf').hidden = !this.checked;
+      P.save.state.settings.perf = this.checked; P.save.flush();
+    });
+    $$('.seg-toggle button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var q = b.dataset.q;
+        $$('.seg-toggle button').forEach(function (x) { x.classList.toggle('on', x === b); });
+        if (P.world.setQuality) P.world.setQuality(q);
+      });
+    });
     $('#set-reset').addEventListener('click', function () {
       if (!confirm('這會清掉所有進度、評等與圖鑑，而且無法復原。確定要重來嗎？')) return;
       P.save.reset();
@@ -637,6 +734,7 @@
     $('#stage').addEventListener('click', function () {
       P.audio.unlock();
       if (anyOpen()) return;
+      if (P.world.justDragged && P.world.justDragged()) return;   // 那是在轉鏡頭
       var n = P.world.nearestShrine();
       if (n) openChallenge(n);
     });
