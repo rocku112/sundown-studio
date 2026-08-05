@@ -79,8 +79,7 @@ DeepSeek / Mistral / Meta / Cohere / Microsoft），共 17 章、292 條技法�
 ## 自我測試
 
 ```bash
-node vendor/three.module.min.js  three.js r169（MIT）
-test/selftest.js
+node test/selftest.js
 ```
 
 對 74 關各組出一份完全正確的答案（自由書寫題用 `js/reference.js` 的參考答案），
@@ -102,6 +101,8 @@ js/
   world3d.js       three.js 第三人稱 3D 世界、地形、鏡頭、羅盤導航
   boards.js        十一種題板
   game.js          四幕挑戰、圖鑑、地圖、設定、成果卡
+vendor/
+  three.module.min.js   three.js r169（MIT，隨庫附帶，執行期不連外）
 test/selftest.js
 ```
 
