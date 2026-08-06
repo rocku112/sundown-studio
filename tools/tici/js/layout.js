@@ -9,9 +9,9 @@
   var L = {};
 
   L.R_BASE = 250;
-  L.SHRINE_REACH = 74;     // 碑的互動半徑
+  L.SHRINE_REACH = 46;     // 碑的互動半徑（跟器物同級，站近一點才觸發）
   L.ITEM_REACH = 46;       // 收集品的互動半徑
-  L.CLEARANCE = 64;        // 收集品離碑至少這麼遠（互動用「誰近聽誰的」，只要不被蓋住）
+  L.CLEARANCE = 52;        // 收集品離碑至少這麼遠（互動用「誰近聽誰的」，只要不被蓋住）
   L.ITEM_GAP = 62;         // 收集品彼此的最小間距
 
   L.regionSeed = function (r) {
@@ -39,20 +39,68 @@
   L.polar = polar;
 
   // ---- 神碑 ---------------------------------------------------------
+  // 一境要放十一塊教學碑加一場試煉。固定圓環擺不下——互動半徑 74 需要的間距，
+  // 島的面積根本不夠。改成兩件事：互動半徑收到 46（跟器物一樣，站近一點才觸發，
+  // 反而更明確），位置用掃描自動排，內外交錯當作起始意圖。
+  L.RING_OUTER = 0.74;
+  L.RING_INNER = 0.44;
+  L.SHRINE_GAP = 58;       // 神碑彼此的最小間距
+
   var shrineCache = null;
   L.shrines = function () {
     if (shrineCache) return shrineCache;
     shrineCache = [];
+
     P.REGIONS.forEach(function (r) {
       var list = P.SHRINES.filter(function (s) { return s.region === r.id; });
       var seed = L.regionSeed(r);
-      list.forEach(function (s, i) {
-        var th = (i / list.length) * Math.PI * 2 + seed * 0.13;
-        var p = polar(r, th, s.trial ? 0 : 0.58);
-        shrineCache.push({ shrine: s, region: r, th: th, x: p.x, y: p.y });
+      var teach = list.filter(function (s) { return !s.trial; });
+      var placed = [];
+
+      // 試煉先放在島心當地標
+      list.filter(function (s) { return s.trial; }).forEach(function (s) {
+        var p = polar(r, seed * 0.13, 0);
+        var node = { shrine: s, region: r, th: seed * 0.13, rad: 0, x: p.x, y: p.y };
+        placed.push(node); shrineCache.push(node);
+      });
+
+      teach.forEach(function (s, i) {
+        var wantTh = (i / Math.max(1, teach.length)) * Math.PI * 2 + seed * 0.13;
+        var wantRad = i % 2 === 0 ? L.RING_OUTER : L.RING_INNER;
+
+        var best = null, bestCost = Infinity;
+        for (var rad = 0.30; rad <= 0.95; rad += 0.04) {
+          for (var dk = 0; dk < 70; dk++) {
+            var th = wantTh + (dk === 0 ? 0 : (dk % 2 ? 1 : -1) * Math.ceil(dk / 2) * 0.06);
+            var p = polar(r, th, rad);
+            var ok = true;
+            for (var j = 0; j < placed.length; j++) {
+              if (Math.hypot(placed[j].x - p.x, placed[j].y - p.y) < L.SHRINE_GAP) { ok = false; break; }
+            }
+            if (!ok) continue;
+            var dth = Math.abs(((th - wantTh + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+            var cost = dth * 1.5 + Math.abs(rad - wantRad);
+            if (cost < bestCost) { bestCost = cost; best = { shrine: s, region: r, th: th, rad: rad, x: p.x, y: p.y }; }
+          }
+        }
+        if (!best) {
+          var p0 = polar(r, wantTh, wantRad);
+          best = { shrine: s, region: r, th: wantTh, rad: wantRad, x: p0.x, y: p0.y, crowded: true };
+        }
+        placed.push(best); shrineCache.push(best);
       });
     });
     return shrineCache;
+  };
+
+  /** 技巧編號：由所屬境的前綴加序號推出來，不用在每一關手寫。 */
+  L.skillId = function (shrine) {
+    var r = P.REGIONS.filter(function (x) { return x.id === shrine.region; })[0];
+    if (!r) return shrine.id;
+    if (shrine.trial) return r.sid + '-trial';
+    var teach = P.SHRINES.filter(function (s) { return s.region === shrine.region && !s.trial; });
+    var n = teach.indexOf(shrine) + 1;
+    return r.sid + '-' + (n < 10 ? '0' + n : n);
   };
 
   // ---- 收集品 -------------------------------------------------------

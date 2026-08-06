@@ -28,6 +28,31 @@
     's12-6': ['oa', 'an', 'gg'], 's12-7': ['oa', 'xa'], 't12': ['an', 'oa', 'gg']
   };
 
+  // 補充碑
+  Object.assign(P.SHRINE_VENDORS, {
+    's1-6': ['oa', 'an'], 's1-7': ['oa', 'an', 'gg'], 's1-8': ['oa'], 's1-9': ['oa', 'an'],
+    's1-10': ['an', 'gg'], 's1-11': ['oa'],
+    's2-6': ['gg', 'oa'], 's2-7': ['an', 'oa'], 's2-8': ['an'], 's2-9': ['gg', 'an'],
+    's2-10': ['oa', 'gg'], 's2-11': ['gg', 'xa'],
+    's3-6': ['an', 'gg'], 's3-7': ['gg'], 's3-8': ['oa', 'an', 'gg'], 's3-9': ['an', 'oa'],
+    's3-10': ['gg'], 's3-11': ['an', 'oa']
+  });
+
+  Object.assign(P.SHRINE_VENDORS, {
+    's4-6': ['an','oa'], 's4-7': ['gg'], 's4-8': ['an'], 's4-9': ['oa'], 's4-10': ['oa','gg'], 's4-11': ['gg','oa'],
+    's5-6': ['an','gg'], 's5-7': ['an'], 's5-8': ['gg','oa'], 's5-9': ['oa'], 's5-10': ['an','oa'], 's5-11': ['an','gg'],
+    's6-6': ['oa','gg'], 's6-7': ['oa'], 's6-8': ['an','oa'], 's6-9': ['an','xa'], 's6-10': ['oa','an'], 's6-11': ['gg'],
+    's7-6': ['an'], 's7-7': ['an','oa'], 's7-8': ['an','oa','gg'], 's7-9': ['an'], 's7-10': ['oa','an'], 's7-11': ['oa']
+  });
+
+  Object.assign(P.SHRINE_VENDORS, {
+    's8-6': ['gg','an'], 's8-7': ['an','gg'], 's8-8': ['an'], 's8-9': ['an','oa'], 's8-10': ['an'], 's8-11': ['oa','gg'],
+    's9-6': ['an','gg','oa'], 's9-7': ['an','oa'], 's9-8': ['an'], 's9-9': ['an','gg'], 's9-10': ['an'], 's9-11': ['gg','oa'],
+    's10-6': ['oa','xa'], 's10-7': ['oa','xa'], 's10-8': ['oa'], 's10-9': ['an'], 's10-10': ['an','oa'], 's10-11': ['oa','gg'],
+    's11-6': ['an','oa'], 's11-7': ['an'], 's11-8': ['an','oa'], 's11-9': ['oa','an'], 's11-10': ['an'], 's11-11': ['an','oa'],
+    's12-8': ['an','oa'], 's12-9': ['an']
+  });
+
   P.vendorOf = function (shrineId) { return P.SHRINE_VENDORS[shrineId] || []; };
 
 })(window.TICI = window.TICI || {});

@@ -461,8 +461,12 @@
       list.forEach(function (s) {
         var d = st.done[s.id];
         var card = el('article', 'codex-card' + (d ? ' got' : '') + (s.trial ? ' trial' : ''));
-        card.appendChild(el('div', 'cc-name', s.name + (s.trial ? '（試煉）' : '')));
-        card.appendChild(el('div', 'cc-skill', d ? s.skill : '未刻'));
+        var head = el('div', 'cc-head');
+        head.appendChild(el('code', 'cc-sid', P.layout.skillId(s)));
+        head.appendChild(el('span', 'cc-name', s.name + (s.trial ? '（試煉）' : '')));
+        card.appendChild(head);
+        // 沒收集到的只留編號，技法本身是「？？？」
+        card.appendChild(el('div', 'cc-skill' + (d ? '' : ' unknown'), d ? s.skill : '？？？'));
         if (d) {
           var m = el('div', 'cc-meta');
           m.appendChild(el('span', 'grade-chip g' + d.grade, d.grade));

@@ -12,7 +12,7 @@ const sandbox = { window: {}, performance: { now: () => 0 }, console };
 sandbox.window.TICI = {};
 vm.createContext(sandbox);
 
-['js/checks.js', 'js/curriculum-a.js', 'js/curriculum-b.js', 'js/reference.js', 'js/vendors.js', 'js/collect.js', 'js/layout.js'].forEach(f => {
+['js/checks.js', 'js/curriculum-a.js', 'js/curriculum-b.js', 'js/curriculum-c.js', 'js/curriculum-d.js', 'js/curriculum-e.js', 'js/reference.js', 'js/vendors.js', 'js/collect.js', 'js/layout.js'].forEach(f => {
   vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), sandbox, { filename: f });
 });
 const P = sandbox.window.TICI;
@@ -53,6 +53,27 @@ const itemPos = L.collectibles();
 
 const seenIds = new Set();
 let fails = [], scores = [], boards = {};
+
+// 神碑彼此不能靠得比互動半徑還近，否則站在中間分不出是哪一塊
+shrinePos.forEach((a, i) => {
+  shrinePos.slice(i + 1).forEach(b => {
+    const d = Math.hypot(a.x - b.x, a.y - b.y);
+    if (d < L.SHRINE_GAP - 2) {
+      fails.push(`神碑 ${a.shrine.id} 與 ${b.shrine.id} 只距離 ${Math.round(d)}，` +
+        `小於要求的間距 ${L.SHRINE_GAP}，會分不出是哪一塊`);
+    }
+  });
+});
+
+shrinePos.filter(n => n.crowded).forEach(n => fails.push(`神碑排不下：${n.shrine.id} 在 ${n.region.id} 找不到夠遠的位置`));
+
+// 技巧編號不能重複
+const sidSeen = new Map();
+P.SHRINES.forEach(s => {
+  const sid = L.skillId(s);
+  if (sidSeen.has(sid)) fails.push(`技巧編號 ${sid} 重複：${sidSeen.get(sid)} 與 ${s.id}`);
+  sidSeen.set(sid, s.id);
+});
 
 if (itemPos.length !== P.COLLECTIBLES.length) {
   fails.push(`佈局解出 ${itemPos.length} 個收集品，但資料有 ${P.COLLECTIBLES.length} 個`);

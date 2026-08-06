@@ -7,18 +7,18 @@
   'use strict';
 
   P.REGIONS = [
-    { id: 'r1', name: '啟程原野', ch: '第一境 · 基礎工作與模型選擇', hue: 205, x: 420, y: 1240, need: 0 },
-    { id: 'r2', name: '澄光谷', ch: '第二境 · 清晰、具體與正面框架', hue: 190, x: 830, y: 980, need: 3 },
-    { id: 'r3', name: '溯因林', ch: '第三境 · 脈絡、動機與背景', hue: 160, x: 1160, y: 1320, need: 7 },
-    { id: 'r4', name: '界標高原', ch: '第四境 · 結構、分隔符與官方模板', hue: 135, x: 1520, y: 1010, need: 12 },
-    { id: 'r5', name: '範式湖', ch: '第五境 · 範例：Few-shot 與續寫', hue: 105, x: 1880, y: 1330, need: 17 },
-    { id: 'r6', name: '位階城', ch: '第六境 · 角色、系統訊息與指令位階', hue: 45, x: 2250, y: 1020, need: 22 },
-    { id: 'r7', name: '思維淵', ch: '第七境 · 推理、思考控制與取樣參數', hue: 20, x: 2540, y: 1360, need: 27 },
-    { id: 'r8', name: '長廊灣', ch: '第八境 · 長脈絡與資訊定位', hue: 345, x: 2360, y: 690, need: 32 },
-    { id: 'r9', name: '引據礁', ch: '第九境 · 接地、引用與抗幻覺', hue: 315, x: 1960, y: 500, need: 37 },
-    { id: 'r10', name: '形制殿', ch: '第十境 · 輸出格式、長度與結構化輸出', hue: 285, x: 1520, y: 600, need: 42 },
-    { id: 'r11', name: '器械港', ch: '第十一境 · 工具使用與函式呼叫', hue: 255, x: 1060, y: 470, need: 47 },
-    { id: 'r12', name: '代行塔', ch: '第十二境 · 代理、迭代、效率、安全與遷移', hue: 230, x: 620, y: 640, need: 52 }
+    { id: 'r1', name: '啟程原野', ch: '第一境 · 基礎工作與模型選擇', sid: 'foundation', hue: 205, x: 420, y: 1240, need: 0 },
+    { id: 'r2', name: '澄光谷', ch: '第二境 · 清晰、具體與正面框架', sid: 'clarity', hue: 190, x: 830, y: 980, need: 3 },
+    { id: 'r3', name: '溯因林', ch: '第三境 · 脈絡、動機與背景', sid: 'context', hue: 160, x: 1160, y: 1320, need: 7 },
+    { id: 'r4', name: '界標高原', ch: '第四境 · 結構、分隔符與官方模板', sid: 'structure', hue: 135, x: 1520, y: 1010, need: 12 },
+    { id: 'r5', name: '範式湖', ch: '第五境 · 範例：Few-shot 與續寫', sid: 'fewshot', hue: 105, x: 1880, y: 1330, need: 17 },
+    { id: 'r6', name: '位階城', ch: '第六境 · 角色、系統訊息與指令位階', sid: 'role', hue: 45, x: 2250, y: 1020, need: 22 },
+    { id: 'r7', name: '思維淵', ch: '第七境 · 推理、思考控制與取樣參數', sid: 'reasoning', hue: 20, x: 2540, y: 1360, need: 27 },
+    { id: 'r8', name: '長廊灣', ch: '第八境 · 長脈絡與資訊定位', sid: 'longctx', hue: 345, x: 2360, y: 690, need: 32 },
+    { id: 'r9', name: '引據礁', ch: '第九境 · 接地、引用與抗幻覺', sid: 'grounding', hue: 315, x: 1960, y: 500, need: 37 },
+    { id: 'r10', name: '形制殿', ch: '第十境 · 輸出格式、長度與結構化輸出', sid: 'format', hue: 285, x: 1520, y: 600, need: 42 },
+    { id: 'r11', name: '器械港', ch: '第十一境 · 工具使用與函式呼叫', sid: 'tools', hue: 255, x: 1060, y: 470, need: 47 },
+    { id: 'r12', name: '代行塔', ch: '第十二境 · 代理、迭代、效率、安全與遷移', sid: 'agent', hue: 230, x: 620, y: 640, need: 52 }
   ];
 
   P.BRIDGES = [

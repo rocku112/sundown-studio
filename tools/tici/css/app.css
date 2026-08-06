@@ -400,8 +400,14 @@ kbd {
 }
 .codex-card.got { border-color: rgba(255,215,106,0.3); background: rgba(255,215,106,0.04); }
 .codex-card.trial { border-style: dashed; }
+.cc-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.cc-sid {
+  font-family: var(--mono); font-size: .74em; color: var(--ink-faint);
+  border: 1px solid var(--line); border-radius: 5px; padding: 0 5px;
+}
 .cc-name { font-family: var(--serif); font-size: 1.06em; }
-.cc-skill { color: var(--gold); font-size: .9em; margin-top: 3px; }
+.cc-skill { color: var(--gold); font-size: .9em; margin-top: 4px; }
+.cc-skill.unknown { color: var(--ink-faint); letter-spacing: .2em; font-family: var(--mono); }
 .cc-meta { display: flex; gap: 10px; align-items: center; margin-top: 8px; font-size: .82em; color: var(--ink-dim); }
 .cc-src { margin-left: auto; color: var(--ink-faint); font-family: var(--mono); font-size: .9em; }
 .cc-teach { color: var(--ink-dim); font-size: .87em; line-height: 1.75; margin: 10px 0 0; }
