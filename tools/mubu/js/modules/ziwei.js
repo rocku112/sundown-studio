@@ -194,6 +194,51 @@
     };
   }
 
+  // ── 格局判定：依命宮＋三方四正（財帛、官祿、遷移）星曜組合斷通行格局 ──
+  function ziweiGeju(c) {
+    const M = c.mingIdx;
+    const sf = [M, (M + 4) % 12, (M + 8) % 12, (M + 6) % 12]; // 命＋官祿＋財帛＋遷移
+    const mainAt = z => c.stars[z].main;
+    const minorAt = z => c.stars[z].minor;
+    const sfMain = new Set(), sfMinor = new Set();
+    sf.forEach(z => { mainAt(z).forEach(s => sfMain.add(s)); minorAt(z).forEach(s => sfMinor.add(s)); });
+    let mingMain = mainAt(M);
+    if (!mingMain.length) mingMain = mainAt((M + 6) % 12); // 命宮無主星借對宮
+    const mm = new Set(mingMain);
+    const has = (set, ...a) => a.every(s => set.has(s));
+    const any = (set, ...a) => a.some(s => set.has(s));
+    const zhiOf = star => { for (let z = 0; z < 12; z++) if (c.stars[z].main.includes(star) || c.stars[z].minor.includes(star)) return z; return -1; };
+    const ge = [];
+
+    // 紫府同宮（紫微天府同守命，見於寅申）
+    if (has(mm, '紫微', '天府')) ge.push({ name: '紫府同宮', 論: '帝星與財庫同坐命宮，格局尊貴穩健，一生近貴、財官俱美、少憂衣食；惟性偏保守持重，開創之力需借煞星激發。' });
+    // 君臣慶會（紫微得左輔右弼會拱）
+    if (sfMain.has('紫微') && has(sfMinor, '左輔', '右弼')) ge.push({ name: '君臣慶會', 論: '紫微得左輔右弼會拱，如帝王得賢臣輔佐，領導有方、貴人相助，宜居要津、統御一方。' });
+    // 府相朝垣（府相拱命，命宮本身可無正曜）
+    if (has(sfMain, '天府', '天相') && !has(mm, '紫微', '天府')) ge.push({ name: '府相朝垣', 論: '天府天相於三方拱照命宮，逢凶化吉、衣食豐足、位居人上，一生較為安穩富裕。' });
+    // 殺破狼（命坐七殺／破軍／貪狼）
+    if (any(mm, '七殺', '破軍', '貪狼')) ge.push({ name: '殺破狼', 論: '命坐殺破狼星系，人生大開大闔、變動起伏而精彩，開創力與企圖心強、不安於現狀；宜掌一技之長或創業闖蕩，最忌因循守成。' });
+    // 機月同梁（宜文職吏人）
+    if (any(mm, '天機', '太陰', '天同', '天梁') && ['天機', '太陰', '天同', '天梁'].filter(s => sfMain.has(s)).length >= 3) ge.push({ name: '機月同梁', 論: '「機月同梁作吏人」——心思細膩、善於謀劃安排，宜公職、專業、幕僚或規律受薪之途，穩中求進，忌投機躁動。' });
+    // 日月並明
+    if (has(sfMain, '太陽', '太陰')) ge.push({ name: '日月並明', 論: '太陽太陰並會命宮，陰陽調和、聰明多才、富貴可期；然須日月得地不落陷，方顯其明。' });
+    // 火貪／鈴貪（暴發格；限貪狼落命宮三方四正方論命格）
+    const tanZhi = zhiOf('貪狼');
+    if (tanZhi >= 0 && sf.includes(tanZhi) && c.stars[tanZhi].main.includes('貪狼')) {
+      if (minorAt(tanZhi).includes('火星')) ge.push({ name: '火貪格', 論: '貪狼與火星同宮，橫發資財、暴起立成之格，善抓機遇、行動果決；亦防暴起暴落，宜見好即收。' });
+      if (minorAt(tanZhi).includes('鈴星')) ge.push({ name: '鈴貪格', 論: '貪狼與鈴星同宮，同主橫發突起、名利驟得；性格剛烈果斷，須防成敗皆速。' });
+    }
+    // 極向離明（紫微居午）
+    if (mm.has('紫微') && M === 6) ge.push({ name: '極向離明', 論: '紫微居午（離位）而無煞沖破，君臨天下之象，威望崇隆、位可至公卿。' });
+    // 石中隱玉（巨門子午）
+    if (mm.has('巨門') && (M === 0 || M === 6)) ge.push({ name: '石中隱玉', 論: '巨門坐子午，石中隱玉之格，才藏於內、先勞後逸、大器晚成，以口才專業服眾。' });
+    // 三奇嘉會（生年祿權科三化齊會命三方）
+    const huaIn = h => { const star = Object.keys(c.hua).find(s => c.hua[s] === h); if (!star) return false; const z = zhiOf(star); return z >= 0 && sf.includes(z); };
+    if (['祿', '權', '科'].every(huaIn)) ge.push({ name: '三奇嘉會', 論: '生年化祿、化權、化科三奇齊會命宮三方，功名顯達、逢凶化吉，主大格局、名利雙收。' });
+
+    return ge;
+  }
+
   // 4x4 命盤版位：宮支 → grid 位置
   const GRID_POS = { 5: 1, 6: 2, 7: 3, 8: 4, 4: 5, 9: 8, 3: 9, 10: 12, 2: 13, 1: 14, 0: 15, 11: 16 };
 
@@ -267,6 +312,12 @@
       const desc = mingStars.map(s => `<h4>${s}${c.hua[s] ? `（化${c.hua[s]}）` : ''}坐命${borrowed ? '（借對宮）' : ''}</h4><p>${STAR_DESC[s] || ''}</p>`).join('');
       const huaList = Object.entries(c.hua).map(([s, h]) => `${s}化${h}`).join('、');
 
+      // 命盤格局判定
+      const geList = ziweiGeju(c);
+      const geHTML = geList.length
+        ? geList.map(g => `<div class="aspect" style="margin-top:8px"><b style="color:var(--gold-bright)">${g.name}</b><p style="margin-top:4px">${g.論}</p></div>`).join('')
+        : '<p class="muted" style="margin-top:6px">命宮三方四正未構成通行明格，屬平常格局，宜以各宮主星廟旺與生年四化綜合論斷，未必不佳。</p>';
+
       // 十二宮簡析（命宮以外的11宮，逐宮列出主星與簡述）
       const otherPalacesHTML = c.palaces.filter(p => p.zhi !== c.mingIdx).map(p => {
         let mains = p.main, borrow = false;
@@ -299,6 +350,10 @@
         <hr class="divider">
         ${desc}
         <hr class="divider">
+        <h4>命盤格局</h4>
+        <p class="muted" style="margin-top:-2px">依命宮與三方四正（財帛、官祿、遷移）星曜組合判定通行格局；格局定人生大方向，仍須參酌廟旺、生年四化與煞星方能定高下。</p>
+        ${geHTML}
+        <hr class="divider">
         <h4>生年四化意涵</h4>
         <p class="muted" style="margin-top:-2px">四化是本命盤最關鍵的動態訊息，代表你這一生「錢財、權力、名聲、課題」四股能量各自流向哪個宮位。</p>
         ${huaHTML}
@@ -326,14 +381,15 @@ ${b.gender === 'M' ? '男' : '女'}命，農曆${lunar.lunarYear}年${lunar.mont
 十二宮佈星（含廟旺與大限歲數）：
 ${c.palaces.map(p => `${p.name}（${p.gan}${Ganzhi.ZHI[p.zhi]}，大限${p.daxian[0]}-${p.daxian[1]}歲）：主星[${p.main.map(s => s + (brightOf(s, p.zhi) || '')).join('、') || '無，借對宮'}] 輔星[${p.minor.join('、') || '無'}]`).join('\n')}
 生年四化：${huaList}
+本站已判命盤格局：${geList.map(g => g.name).join('、') || '無明顯正格（平常格局）'}。
 ${c.nowYear}年流年命宮在${Ganzhi.ZHI[c.liunianZhi]}；流年（${c.liunianGan}年）四化飛星：${Object.entries(c.liuHua).map(([s, h]) => `${s}化${h}（落${(c.palaces.find(p => p.main.includes(s) || p.minor.includes(s)) || {}).name || '－'}宮）`).join('、')}。
 今日（${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}，${todayDp.name}日）流日行運至${tp.palace.name}宮${tp.huaHere.length ? `（命中生年${tp.huaHere.join('、')}）` : ''}。
-請分析：1) 命身宮與整體格局（注意主星廟旺利陷的強弱） 2) 性格特質 3) 事業官祿 4) 財帛 5) 感情婚姻（夫妻宮）6) 目前所行大限與${c.nowYear}流年運勢——特別解讀流年四化飛入各宮的意義（年忌所落宮位是今年課題） 7) 需注意的宮位與化忌影響 8) 簡短點評今日流日行運至${tp.palace.name}宮對今天的提示，並給出人生建議。`);
+請分析：1) 命身宮與整體格局（印證上列本站已判格局是否成立、有無破格，並注意主星廟旺利陷的強弱） 2) 性格特質 3) 事業官祿 4) 財帛 5) 感情婚姻（夫妻宮）6) 目前所行大限與${c.nowYear}流年運勢——特別解讀流年四化飛入各宮的意義（年忌所落宮位是今年課題） 7) 需注意的宮位與化忌影響 8) 簡短點評今日流日行運至${tp.palace.name}宮對今天的提示，並給出人生建議。`);
     });
   }
 
   // 供三合一綜合命盤共用
-  window.ZiweiEngine = { buildChart, STAR_DESC, PALACE_NAMES };
+  window.ZiweiEngine = { buildChart, ziweiGeju, STAR_DESC, PALACE_NAMES };
 
   App.register({
     id: 'ziwei',
