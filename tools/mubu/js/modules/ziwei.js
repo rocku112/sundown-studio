@@ -95,7 +95,9 @@
   }
 
   function buildChart(lunar, hourIdx, yearPillar, gender) {
-    const month = lunar.month; // 閏月一律歸本月論（歸本月為一派正規約定，非簡化；閏月歸月各派不同，待日後門派錨定時再定案）
+    // 中州派閏月法：閏月上半月（初一～十五）歸本月安星、下半月（十六起）歸下月安星
+    let month = lunar.month;
+    if (lunar.isLeap && lunar.day >= 16) month = month % 12 + 1;
     const day = lunar.day;
     const ys = yearPillar.ganIdx, yz = yearPillar.zhiIdx;
 
@@ -202,7 +204,7 @@
         <h3>輸入出生資料</h3>
         ${bf.html}
         <button class="btn" id="zw-go" style="margin-top:14px">${Icons.svg('ziwei')} 排 盤</button>
-        <p class="muted" style="margin-top:8px">請填國曆生日，系統自動換算農曆（閏月以本月計）。安星依中州派通行規則。</p>
+        <p class="muted" style="margin-top:8px">請填國曆生日，系統自動換算農曆。安星依中州派通行規則；閏月依中州派法——上半月（初一～十五）歸本月、下半月（十六起）歸下月安星。</p>
       </div>
       <div id="zw-result"></div>`;
 

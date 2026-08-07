@@ -80,6 +80,44 @@
     const outerOnly = !PERSONAL_PLANETS.has(x.a.id) && !PERSONAL_PLANETS.has(x.b.id);
     return `${x.a.name}（${PLANET_THEME[x.a.id]}）與 ${x.b.name}（${PLANET_THEME[x.b.id]}）${ASPECT_FLAVOR[x.asp.name]}${outerOnly ? '（外行星世代相位，對個人的影響較間接）' : ''}`;
   }
+  // 相位格局（現代心理占星重視的整體圖形）
+  const PATTERN_INFO = {
+    大三角: '三顆行星互成三分相（120°×3）——三種能量天生和諧流動、才華渾然天成，是最幸運的相位格局；但太順也易安於現狀、缺乏突破動力，需主動給自己挑戰才不浪費天賦。',
+    T三角: 'T三角（兩星對分＋共同四分於頂點行星）——強大的張力與驅動力全聚焦在頂點行星，那是你最用力、也最容易卡關的人生課題；壓力導向對的方向，會成為最大的成就引擎。',
+    大十字: '大十字（四星兩兩對分、環環四分）——四股能量互相拉扯，人生多挑戰考驗，但也賦予極強的韌性與行動力；學會平衡四個方向，正是這輩子的修煉。',
+    星群: '星群（三顆以上行星聚於同一星座）——大量能量集中在該星座與其掌管的生命領域，使你在此處格外強烈、專注，也容易失衡；那是你人格的重心所在。'
+  };
+  // 從相位清單與行星位置偵測相位格局（回傳 [{type, planets:[...], sign?}]）
+  function detectPatterns(aspList, positions) {
+    const rel = {};
+    aspList.forEach(x => { rel[x.a.id + '|' + x.b.id] = x.asp.name; rel[x.b.id + '|' + x.a.id] = x.asp.name; });
+    const A = (p, q) => rel[p.id + '|' + q.id] || null;
+    const out = [], seen = new Set();
+    const key = (arr) => arr.map(p => p.id).sort().join(',');
+    const push = (type, arr, sign) => { const k = type + ':' + key(arr) + (sign || ''); if (!seen.has(k)) { seen.add(k); out.push({ type, planets: arr, sign }); } };
+    const N = positions.length;
+    for (let i = 0; i < N; i++) for (let j = i + 1; j < N; j++) {
+      const oij = A(positions[i], positions[j]);
+      // 大三角：i-j-k 三邊皆三分
+      if (oij === '三分相') for (let k = j + 1; k < N; k++)
+        if (A(positions[i], positions[k]) === '三分相' && A(positions[j], positions[k]) === '三分相') push('大三角', [positions[i], positions[j], positions[k]]);
+      // 對分為 T三角/大十字之骨幹
+      if (oij === '對分相') {
+        for (let k = 0; k < N; k++) if (k !== i && k !== j && A(positions[i], positions[k]) === '四分相' && A(positions[j], positions[k]) === '四分相') {
+          // 檢查是否再有一星與 k 對分 → 大十字，否則 T三角
+          let cross = null;
+          for (let m = 0; m < N; m++) if (m !== i && m !== j && m !== k && A(positions[k], positions[m]) === '對分相' && A(positions[i], positions[m]) === '四分相' && A(positions[j], positions[m]) === '四分相') cross = m;
+          if (cross !== null) push('大十字', [positions[i], positions[j], positions[k], positions[cross]]);
+          else push('T三角', [positions[i], positions[j], positions[k]]);
+        }
+      }
+    }
+    // 星群：同星座 ≥3
+    const bySign = {};
+    positions.forEach(p => { (bySign[p.sign.name] = bySign[p.sign.name] || []).push(p); });
+    Object.entries(bySign).forEach(([sn, arr]) => { if (arr.length >= 3) push('星群', arr, sn); });
+    return out;
+  }
   const ZODIAC_ICON_ORDER = ['aries', 'taurus', 'gemini', 'cancer', 'leo', 'virgo', 'libra', 'scorpio', 'sagittarius', 'capricorn', 'aquarius', 'pisces'];
   const ASPECT_ICON = { 合相: 'conjunction', 六分相: 'sextile', 四分相: 'square', 三分相: 'trine', 對分相: 'opposition' };
   const zodiacIcon = (sign, opts) => Icons.svg(ZODIAC_ICON_ORDER[SIGNS.indexOf(sign)], opts || { size: 16 });
@@ -289,6 +327,7 @@
           }
         }
       }
+      const patterns = detectPatterns(aspList, positions); // 相位格局（現代心理占星）
       const elemCount = { 火: 0, 土: 0, 風: 0, 水: 0 };
       positions.forEach(p => elemCount[p.sign.elem]++);
       const domElem = Object.entries(elemCount).sort((x, y2) => y2[1] - x[1])[0][0];
@@ -320,7 +359,10 @@
         }).map(x => `<div class="aspect" style="margin-top:6px;border-left:3px solid ${x.asp.good === true ? 'var(--gold-mid)' : x.asp.good === false ? 'var(--cinnabar)' : 'var(--panel-border)'}">
           <b>${planetIcon(x.a)}${x.a.name} ${aspectIcon(x.asp)} ${x.asp.name} ${planetIcon(x.b)}${x.b.name}</b>
           <p style="margin-top:3px">${aspectText(x)}</p></div>`).join('')}
-        <p class="muted" style="font-size:11.5px;margin-top:4px">※ 相位角度為天文精算；意涵為「行星主題×相位性質」的簡化通則，未錨定特定占星流派，僅供參考。</p></div>` : ''}
+        <p class="muted" style="font-size:11.5px;margin-top:4px">※ 相位角度為天文精算；意涵採<b>現代心理占星</b>取向——行星＝原型能量，相位描述兩股能量如何互動，硬相位（四分/對分）是成長張力而非命定凶兆。</p></div>` : ''}
+        ${patterns.length ? `<h4>相位格局（現代心理占星）</h4>${patterns.map(pt => `<div class="aspect" style="margin-top:6px;border-left:3px solid ${pt.type === '大三角' ? 'var(--gold-mid)' : pt.type === '大十字' ? 'var(--cinnabar)' : 'var(--navy)'}">
+          <b>${pt.type}${pt.sign ? `於${pt.sign}` : ''}：${pt.planets.map(p => p.name).join('、')}</b>
+          <p style="margin-top:3px">${PATTERN_INFO[pt.type]}</p></div>`).join('')}` : ''}
         <hr class="divider">
         <h4>${Icons.svg('sun', { size: 16 })} 太陽${positions[0].sign.name}（第${positions[0].house}宮）—— 核心自我</h4><p>${positions[0].sign.trait}生命重心落在${HOUSE_MEAN[positions[0].house - 1]}的領域。</p>
         <h4>${Icons.svg('moon', { size: 16 })} 月亮${positions[1].sign.name}（第${positions[1].house}宮）—— 內在情感</h4><p>${MOON_TRAIT[SIGNS.indexOf(positions[1].sign)]}內心層面在${HOUSE_MEAN[positions[1].house - 1]}的領域格外敏感、需要被滋養。</p>
@@ -337,8 +379,9 @@ ${positions.map(p => `${p.name}：${p.sign.name} ${degInSign(p.lon)}，第${p.ho
 上升：${ascSign.name} ${degInSign(pc.asc)}，天頂MC：${mcSign.name} ${degInSign(pc.mc)}
 宮首：${[1,2,3,4,5,6,7,8,9,10,11,12].map(h => `${h}宮${signOf(pc.cusps[h]).name}`).join('、')}
 主要相位：${aspList.map(x => `${x.a.name}${x.asp.name}${x.b.name}（容許度${x.orb}°）`).join('、') || '無'}
+相位格局：${patterns.map(pt => `${pt.type}${pt.sign ? '於' + pt.sign : ''}(${pt.planets.map(p => p.name).join('')})`).join('、') || '無明顯格局'}
 元素分布：火${elemCount.火} 土${elemCount.土} 風${elemCount.風} 水${elemCount.水}
-請分析：1) 太陽月亮上升三位一體人格 2) 行星落宮的生命領域重點 3) 水金火的溝通/感情/行動風格 4) 木土的機會與課題（含逆行課題）5) 重要相位影響 6) 適合的發展方向。`);
+請以現代心理占星取向分析：1) 太陽月亮上升三位一體人格 2) 行星落宮的生命領域重點 3) 水金火的溝通/感情/行動風格 4) 木土的機會與課題（含逆行課題）5) 重要相位與相位格局（大三角/T三角/大十字/星群）對人格整合的意義 6) 適合的發展方向。`);
     });
   }
 
@@ -346,7 +389,7 @@ ${positions.map(p => `${p.name}：${p.sign.name} ${degInSign(p.lon)}，第${p.ho
     id: 'astrology',
     icon: Icons.svg('astrology'),
     title: '西洋占星',
-    desc: 'Placidus 宮位制、SVG 星盤、十大行星逆行標示、相位逐條解讀、真太陽時。',
+    desc: 'Placidus 宮位制、SVG 星盤、逆行標示、相位逐條解讀＋相位格局（現代心理占星）、真太陽時。',
     render
   });
 })();
