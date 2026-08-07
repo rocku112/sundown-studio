@@ -130,81 +130,7 @@
   const signOf = (lon) => SIGNS[Math.floor(Astro.norm360(lon) / 30)];
   function degInSign(lon) { const x = Astro.norm360(lon) % 30; return `${Math.floor(x)}°${String(Math.floor((x % 1) * 60)).padStart(2, '0')}'`; }
 
-  // 黃道點：赤經 → 黃經
-  function raToLon(ra, eps) { return Astro.norm360(Math.atan2(Math.sin(ra * RAD), Math.cos(ra * RAD) * Math.cos(eps)) / RAD); }
-  function lonToDec(lon, eps) { return Math.asin(Math.sin(eps) * Math.sin(lon * RAD)); }
-
-  // 上升、天頂、恆星時
-  function angles(jdUT, latDeg, lonDeg) {
-    const T = (jdUT - 2451545.0) / 36525;
-    const gmst = 280.46061837 + 360.98564736629 * (jdUT - 2451545.0) + 0.000387933 * T * T;
-    const ramc = Astro.norm360(gmst + lonDeg);
-    const eps = (23.4392911 - 0.0130042 * T) * RAD;
-    const phi = latDeg * RAD;
-    const y = -Math.cos(ramc * RAD);
-    const x = Math.sin(ramc * RAD) * Math.cos(eps) + Math.tan(phi) * Math.sin(eps);
-    let asc = Astro.norm360(Math.atan2(y, x) / RAD);
-    const mc = raToLon(ramc, eps);
-    // 象限修正：上升點必在天頂後 0°~180° 的黃道半圈（否則得到的是下降點）
-    if (Astro.norm360(asc - mc) >= 180) asc = Astro.norm360(asc + 180);
-    return { asc, mc, ramc, eps, phi };
-  }
-
-  // Placidus 宮首（半弧迭代法；高緯 |φ|>66° 回退等宮制）
-  function placidusCusps(jdUT, latDeg, lonDeg) {
-    const { asc, mc, ramc, eps, phi } = angles(jdUT, latDeg, lonDeg);
-    const cusps = new Array(13).fill(0); // 1-12
-    cusps[1] = asc; cusps[10] = mc;
-    if (Math.abs(latDeg) > 66) {
-      for (let i = 0; i < 12; i++) cusps[i + 1] = Astro.norm360(asc + i * 30);
-      cusps[10] = Astro.norm360(asc + 270); // 等宮制的 MC 不再對齊子午圈
-      return { cusps, asc, mc, ramc, eps, system: '等宮制（高緯回退）' };
-    }
-    // [宮, 初始偏移, 弧比例, 是否晝弧]
-    const defs = [[11, 30, 1 / 3, true], [12, 60, 2 / 3, true], [2, 120, 2 / 3, false], [3, 150, 1 / 3, false]];
-    for (const [house, off, f, day] of defs) {
-      let ra = ramc + off;
-      for (let i = 0; i < 30; i++) {
-        const lam = raToLon(ra, eps);
-        const dec = lonToDec(lam, eps);
-        let x = Math.tan(dec) * Math.tan(phi);
-        x = Math.max(-1, Math.min(1, x));
-        const ad = Math.asin(x) / RAD; // 上升差
-        const raNew = day
-          ? ramc + (90 + ad) * f            // 晝半弧（11、12宮）
-          : ramc + 180 - (90 - ad) * f;     // 夜半弧（2、3宮）
-        if (Math.abs(Astro.norm360(raNew - ra + 180) - 180) < 1e-7) { ra = raNew; break; }
-        ra = raNew;
-      }
-      cusps[house] = raToLon(ra, eps);
-    }
-    for (const [a, b] of [[4, 10], [5, 11], [6, 12], [7, 1], [8, 2], [9, 3]]) {
-      cusps[a] = Astro.norm360(cusps[b] + 180);
-    }
-    return { cusps, asc, mc, ramc, eps, system: 'Placidus' };
-  }
-
-  // 行星落宮
-  function houseOf(lon, cusps) {
-    for (let h = 1; h <= 12; h++) {
-      const a = cusps[h], b = cusps[h % 12 + 1];
-      const span = Astro.norm360(b - a);
-      if (Astro.norm360(lon - a) < span) return h;
-    }
-    return 12;
-  }
-
-  // 均時差（分鐘）與真太陽時
-  function equationOfTime(jde) {
-    const T = (jde - 2451545.0) / 36525;
-    const L0 = Astro.norm360(280.46646 + 36000.76983 * T);
-    const eps = (23.4392911 - 0.0130042 * T) * RAD;
-    const lam = Astro.sunLongitude(jde);
-    const ra = Astro.norm360(Math.atan2(Math.sin(lam * RAD) * Math.cos(eps), Math.cos(lam * RAD)) / RAD);
-    let e = L0 - 0.0057183 - ra;
-    e = ((e % 360) + 360) % 360; if (e > 180) e -= 360;
-    return e * 4; // 分鐘
-  }
+  // 上升／天頂／Placidus 宮首／行星落宮／均時差：改用 Astro 共用引擎（Astro.ascMc/placidusHouses/houseOf/equationOfTime）
 
   // ---------- SVG 星盤 ----------
   function wheelSVG(positions, cusps, asc, mc) {
@@ -302,13 +228,13 @@
         const retro = p.id !== 'sun' && p.id !== 'moon' && Astro.norm360(lonNow - lonPrev) > 180;
         positions.push({ ...p, lon: lonNow, sign: signOf(lonNow), retro });
       }
-      // 宮位
-      const pc = placidusCusps(jdUT, lat, lon);
+      // 宮位（共用 Astro 引擎）
+      const pc = Astro.placidusHouses(jdUT, lat, lon);
       const ascSign = signOf(pc.asc), mcSign = signOf(pc.mc);
-      positions.forEach(p => { p.house = houseOf(p.lon, pc.cusps); });
+      positions.forEach(p => { p.house = Astro.houseOf(p.lon, pc.cusps); });
 
       // 真太陽時
-      const eot = equationOfTime(jde);
+      const eot = Astro.equationOfTime(jde);
       const meanOffsetMin = (lon - tz * 15) * 4; // 地方平時 − 標準時（分）
       const trueSolarMin = b.hh * 60 + b.mi + meanOffsetMin + eot;
       const tsH = Math.floor(((trueSolarMin / 60) % 24 + 24) % 24), tsM = Math.round(((trueSolarMin % 60) + 60) % 60) % 60;

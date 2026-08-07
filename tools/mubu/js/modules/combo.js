@@ -38,21 +38,7 @@
     return { good: null, text: '三盤在動靜之間分歧較大——代表你是個多面向、剛柔並存的人，不同情境會展現截然不同的樣貌，難以被單一標籤定義。' };
   }
 
-  function ascendant(jdUT, latDeg, lonDeg) {
-    const RAD = Math.PI / 180;
-    const T = (jdUT - 2451545.0) / 36525;
-    const gmst = 280.46061837 + 360.98564736629 * (jdUT - 2451545.0) + 0.000387933 * T * T;
-    const ramc = Astro.norm360(gmst + lonDeg) * RAD;
-    const eps = (23.4392911 - 0.0130042 * T) * RAD;
-    const phi = latDeg * RAD;
-    const y = -Math.cos(ramc);
-    const x = Math.sin(ramc) * Math.cos(eps) + Math.tan(phi) * Math.sin(eps);
-    let asc = Astro.norm360(Math.atan2(y, x) / RAD);
-    // 象限修正：上升點必在天頂後 0°~180° 半圈內
-    const mc = Astro.norm360(Math.atan2(Math.sin(ramc), Math.cos(ramc) * Math.cos(eps)) / RAD);
-    if (Astro.norm360(asc - mc) >= 180) asc = Astro.norm360(asc + 180);
-    return asc;
-  }
+  const ascendant = (jdUT, latDeg, lonDeg) => Astro.ascMc(jdUT, latDeg, lonDeg).asc; // 共用 Astro 引擎
 
   function render(el) {
     const bf = App.birthForm({ gender: true, time: true });

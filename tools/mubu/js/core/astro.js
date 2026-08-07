@@ -497,6 +497,13 @@ const Astro = (() => {
     const Lp = (218.3165 + 481267.8813 * T) * RAD;
     return -17.20 * Math.sin(Om) - 1.32 * Math.sin(2 * L) - 0.23 * Math.sin(2 * Lp) + 0.21 * Math.sin(2 * Om);
   }
+  // 章動 in 黃赤交角 Δε（Meeus Ch.22 主要項，角秒）
+  function nutationObl(T) {
+    const Om = (125.04452 - 1934.136261 * T) * RAD;
+    const L = (280.4665 + 36000.7698 * T) * RAD;
+    const Lp = (218.3165 + 481267.8813 * T) * RAD;
+    return 9.20 * Math.cos(Om) + 0.57 * Math.cos(2 * L) + 0.10 * Math.cos(2 * Lp) - 0.09 * Math.cos(2 * Om);
+  }
   function moonLongitude(jde) {
     const T = (jde - 2451545.0) / 36525;
     const Lp = 218.3164477 + 481267.88123421 * T - 0.0015786 * T * T + T * T * T / 538841 - T * T * T * T / 65194000;
@@ -519,12 +526,78 @@ const Astro = (() => {
     return norm360(Lp + sl / 1000000 + nutationLon(T) / 3600);
   }
 
+  // ---------- 占星宮位（上升、天頂、Placidus 宮首、均時差） ----------
+  const _raToLon = (ra, eps) => norm360(Math.atan2(Math.sin(ra * RAD), Math.cos(ra * RAD) * Math.cos(eps)) / RAD);
+  const _lonToDec = (lon, eps) => Math.asin(Math.sin(eps) * Math.sin(lon * RAD));
+  // 上升、天頂、恆星時（jdUT：UT 儒略日；latDeg 北緯正、lonDeg 東經正）
+  function ascMc(jdUT, latDeg, lonDeg) {
+    const T = (jdUT - 2451545.0) / 36525;
+    const gmst = 280.46061837 + 360.98564736629 * (jdUT - 2451545.0) + 0.000387933 * T * T;
+    const epsMean = 23.4392911 - 0.0130042 * T;
+    const eps = (epsMean + nutationObl(T) / 3600) * RAD;                        // 真黃赤交角（含章動）
+    const gast = gmst + nutationLon(T) * Math.cos(epsMean * RAD) / 3600;        // 視恆星時＝GMST＋分點方程
+    const ramc = norm360(gast + lonDeg);
+    const phi = latDeg * RAD;
+    const y = -Math.cos(ramc * RAD);
+    const x = Math.sin(ramc * RAD) * Math.cos(eps) + Math.tan(phi) * Math.sin(eps);
+    let asc = norm360(Math.atan2(y, x) / RAD);
+    const mc = _raToLon(ramc, eps);
+    if (norm360(asc - mc) >= 180) asc = norm360(asc + 180); // 象限修正：上升在天頂後半圈
+    return { asc, mc, ramc, eps, phi };
+  }
+  // Placidus 宮首（半弧迭代；高緯 |φ|>66° 回退等宮制）
+  function placidusHouses(jdUT, latDeg, lonDeg) {
+    const { asc, mc, ramc, eps, phi } = ascMc(jdUT, latDeg, lonDeg);
+    const cusps = new Array(13).fill(0);
+    cusps[1] = asc; cusps[10] = mc;
+    if (Math.abs(latDeg) > 66) {
+      for (let i = 0; i < 12; i++) cusps[i + 1] = norm360(asc + i * 30);
+      cusps[10] = norm360(asc + 270);
+      return { cusps, asc, mc, ramc, eps, system: '等宮制（高緯回退）' };
+    }
+    const defs = [[11, 30, 1 / 3, true], [12, 60, 2 / 3, true], [2, 120, 2 / 3, false], [3, 150, 1 / 3, false]];
+    for (const [house, off, f, day] of defs) {
+      let ra = ramc + off;
+      for (let i = 0; i < 30; i++) {
+        const dec = _lonToDec(_raToLon(ra, eps), eps);
+        let x = Math.max(-1, Math.min(1, Math.tan(dec) * Math.tan(phi)));
+        const ad = Math.asin(x) / RAD;
+        const raNew = day ? ramc + (90 + ad) * f : ramc + 180 - (90 - ad) * f;
+        if (Math.abs(norm360(raNew - ra + 180) - 180) < 1e-7) { ra = raNew; break; }
+        ra = raNew;
+      }
+      cusps[house] = _raToLon(ra, eps);
+    }
+    for (const [a, b] of [[4, 10], [5, 11], [6, 12], [7, 1], [8, 2], [9, 3]]) cusps[a] = norm360(cusps[b] + 180);
+    return { cusps, asc, mc, ramc, eps, system: 'Placidus' };
+  }
+  // 行星落宮
+  function houseOf(lon, cusps) {
+    for (let h = 1; h <= 12; h++) {
+      const span = norm360(cusps[h % 12 + 1] - cusps[h]);
+      if (norm360(lon - cusps[h]) < span) return h;
+    }
+    return 12;
+  }
+  // 均時差（分鐘）：視太陽時 − 平太陽時
+  function equationOfTime(jde) {
+    const T = (jde - 2451545.0) / 36525;
+    const L0 = norm360(280.46646 + 36000.76983 * T);
+    const eps = (23.4392911 - 0.0130042 * T) * RAD;
+    const lam = sunLongitude(jde);
+    const ra = norm360(Math.atan2(Math.sin(lam * RAD) * Math.cos(eps), Math.cos(lam * RAD)) / RAD);
+    let e = L0 - 0.0057183 - ra;
+    e = ((e % 360) + 360) % 360; if (e > 180) e -= 360;
+    return e * 4;
+  }
+
   return {
     toJD, fromJD, deltaT, ttToLocal, localToTT, localDayNum, norm360,
     sunLongitude, solarLongitudeTime, solarTerm, solarTermsOfYear, TERM_NAMES,
     newMoonTT, newMoonLocal, newMoonKBefore,
     toLunar, LUNAR_MONTH_NAMES, LUNAR_DAY_NAMES,
-    moonPhase, planetLongitude, moonLongitude
+    moonPhase, planetLongitude, moonLongitude,
+    ascMc, placidusHouses, houseOf, equationOfTime
   };
 })();
 if (typeof module !== 'undefined') module.exports = Astro;
