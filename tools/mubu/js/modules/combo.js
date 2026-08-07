@@ -38,6 +38,36 @@
     return { good: null, text: '三盤在動靜之間分歧較大——代表你是個多面向、剛柔並存的人，不同情境會展現截然不同的樣貌，難以被單一標籤定義。' };
   }
 
+  // ---------- 第二軸：人生節奏「安穩守成 ⇄ 開創起伏」——各取本門派格局判定 ----------
+  const BAZI_STABLE = new Set(['正官', '正印', '偏印', '正財', '食神', '建祿']);   // 順用守成之格
+  const BAZI_DYNAMIC = new Set(['七殺', '傷官', '偏財', '陽刃', '月劫']);          // 開創起伏之格
+  function baziRhythm(ge) {
+    if (ge.special) return { dir: '變', why: `${ge.name}（順勢從強／專旺，人生大開大闔）` };
+    if (BAZI_DYNAMIC.has(ge.key)) return { dir: '變', why: `${ge.name}·${ge.成敗}` };
+    if (BAZI_STABLE.has(ge.key)) return { dir: ge.成敗color === 'bad' ? '中' : '穩', why: `${ge.name}·${ge.成敗}` };
+    return { dir: '中', why: ge.name };
+  }
+  const ZW_STABLE_GE = ['機月同梁', '府相朝垣', '紫府同宮'];
+  function ziweiRhythm(geNames) {
+    if (geNames.includes('殺破狼')) return { dir: '變', why: '殺破狼·開創起伏' };
+    const s = geNames.find(n => ZW_STABLE_GE.includes(n));
+    if (s) return { dir: '穩', why: `${s}·安穩守成` };
+    return { dir: '中', why: geNames[0] || '無明顯正格' };
+  }
+  function astroRhythm(modeCount) {
+    const top = Object.entries(modeCount).sort((a, b) => b[1] - a[1])[0][0];
+    if (top === '固定') return { dir: '穩', why: '固定星座為主·穩定持久' };
+    if (top === '本位') return { dir: '變', why: '本位星座為主·開創行動' };
+    return { dir: '中', why: '變動星座為主·靈活適應' };
+  }
+  const RHYTHM_LABEL = { 穩: '安穩守成', 變: '開創起伏', 中: '動靜相濟' };
+  function rhythmVerdict(votes) {
+    const s = votes.filter(v => v.dir === '穩').length, c = votes.filter(v => v.dir === '變').length;
+    if (s >= 2 && c === 0) return { good: true, text: '三盤偏向<b>安穩守成</b>——人生節奏傾向穩健累積、按部就班，適合守成深耕、專精一業，最忌躁進求快。' };
+    if (c >= 2 && s === 0) return { good: true, text: '三盤偏向<b>開創起伏</b>——人生節奏大開大闔、於變動中求機會，適合主動出擊、掌握一技闖蕩，安穩反而綁住你。' };
+    return { good: null, text: '三盤在穩定與變動之間各有訊號——你兼具守成的耐力與開創的衝勁，關鍵在因時制宜、動靜有據，順勢者得利。' };
+  }
+
   const ascendant = (jdUT, latDeg, lonDeg) => Astro.ascMc(jdUT, latDeg, lonDeg).asc; // 共用 Astro 引擎
 
   function render(el) {
@@ -80,15 +110,36 @@
       const jde = jdUT + Astro.deltaT(b.y) / 86400;
       const sunSign = signOf(Astro.sunLongitude(jde));
       const moonSign = signOf(Astro.moonLongitude(jde));
-      const ascSign = signOf(ascendant(jdUT, cLat, cLon));
-      const venusSign = signOf(Astro.planetLongitude('venus', jde));
-      const marsSign = signOf(Astro.planetLongitude('mars', jde));
+      const ascLon = ascendant(jdUT, cLat, cLon);
+      const ascSign = signOf(ascLon);
+      const planetSign = { sun: sunSign, moon: moonSign };
+      for (const id of ['mercury', 'venus', 'mars', 'jupiter', 'saturn']) planetSign[id] = signOf(Astro.planetLongitude(id, jde));
+      const venusSign = planetSign.venus, marsSign = planetSign.mars;
 
-      // 三盤交叉印證（動靜軸）
+      // 三盤格局（各依本門派）：八字子平真詮／紫微中州派／占星傳統必然尊貴
       const str = Ganzhi.strength(p);
+      const ge = (window.BaziEngine ? BaziEngine.ziping(p) : null);                 // 八字格局
+      const zwGeNames = (window.ZiweiEngine && ZiweiEngine.ziweiGeju ? ZiweiEngine.ziweiGeju(zw) : []).map(g => g.name);
+      // 占星命主星（上升守護）＋其必然尊貴
+      const MODE_OF = (sign) => ['本位', '固定', '變動'][SIGNS.indexOf(sign) % 3];
+      const modeCount = { 本位: 0, 固定: 0, 變動: 0 };
+      ['sun', 'moon', 'mercury', 'venus', 'mars', 'jupiter', 'saturn'].forEach(id => modeCount[MODE_OF(planetSign[id])]++);
+      modeCount[MODE_OF(ascSign)]++; // 上升亦計入
+      const AT = window.AstroTools;
+      const rulerId = AT ? AT.SIGN_RULER[ascSign] : null;
+      const rulerSign = rulerId ? planetSign[rulerId] : null;
+      const rulerName = rulerId ? { sun: '太陽', moon: '月亮', mercury: '水星', venus: '金星', mars: '火星', jupiter: '木星', saturn: '土星' }[rulerId] : null;
+      const rulerDig = (AT && rulerId) ? AT.dignityOf(rulerId, rulerSign) : null;
+      const topMode = Object.entries(modeCount).sort((a, c) => c[1] - a[1])[0][0];
+
+      // 三盤交叉印證（軸一：動靜；軸二：節奏穩變）
       const mostWx = Object.entries(wx).sort((a, c) => c[1] - a[1])[0][0];
       const vB = baziVote(p, str, mostWx), vZ = ziweiVote(mingStars), vA = astroVote(sunSign);
       const verdict = crossVerdict([vB, vZ, vA]);
+      const rB = ge ? baziRhythm(ge) : { dir: '中', why: '—' };
+      const rZ = ziweiRhythm(zwGeNames);
+      const rA = astroRhythm(modeCount);
+      const rVerdict = rhythmVerdict([rB, rZ, rA]);
 
       const div = document.createElement('div');
       div.innerHTML = `<div class="panel result">
@@ -109,8 +160,23 @@
             金星${venusSign} · 火星${marsSign}</div>
         </div>
         <hr class="divider">
-        <h4>三盤性格印證 · 能量方向</h4>
-        <p class="muted" style="margin-top:-2px">以「外向主動 ⇄ 內向沉靜」為共同軸線，看八字、紫微、占星三套系統是否指向同一種底色——一致處最可信，分歧處就是內外反差。<b>（此為本站自訂的粗略對照指標，非任何傳統命理方法，僅供趣味參考）</b></p>
+        <h4>三盤格局並陳（各依本門派）</h4>
+        <p class="muted" style="margin-top:-2px">三套系統各以自己的門派語言，判定你這張命盤的「格局大方向」——八字依《子平真詮》取格論成敗、紫微依中州派命宮三方四正、占星依傳統必然尊貴看命主星旺弱。用詞無法直接互譯，但常在氣質上互相呼應，這正是 AI 跨系統印證的價值。</p>
+        <table class="chart">
+          <tr><th>系統</th><th>本命格局</th><th>喜忌／重點</th></tr>
+          <tr><td>${Icons.svg('bazi')} 八字<br><span class="muted" style="font-size:11px">子平真詮</span></td>
+              <td><b>${ge ? ge.name : '—'}</b>${ge ? (ge.special ? ' <span class="tag gold">特殊格</span>' : `・${ge.成敗}`) : ''}</td>
+              <td class="muted">${ge ? `喜 ${ge.喜五行.join('') || '—'}／忌 ${ge.忌五行.join('') || '—'}` : '—'}</td></tr>
+          <tr><td>${Icons.svg('ziwei')} 紫微<br><span class="muted" style="font-size:11px">中州派</span></td>
+              <td><b>${zwGeNames.join('、') || '無明顯正格'}</b></td>
+              <td class="muted">${zwGeNames.length ? '命宮三方四正成格' : '平常格局，依主星廟旺論'}</td></tr>
+          <tr><td>${Icons.svg('astrology')} 占星<br><span class="muted" style="font-size:11px">傳統尊貴</span></td>
+              <td>命主星 <b>${rulerName || '—'}</b>${rulerSign ? ` 於 ${rulerSign}` : ''}${rulerDig && rulerDig.key !== '平' ? ` <span class="tag ${rulerDig.good ? 'gold' : ''}" ${rulerDig.good === false ? 'style="color:var(--cinnabar)"' : ''}>${rulerDig.label}</span>` : ''}</td>
+              <td class="muted">主導模式 ${topMode}</td></tr>
+        </table>
+        <hr class="divider">
+        <h4>三盤性格印證 · 軸一：能量方向</h4>
+        <p class="muted" style="margin-top:-2px">以「外向主動 ⇄ 內向沉靜」為共同軸線，看八字、紫微、占星三套系統是否指向同一種底色——一致處最可信，分歧處就是內外反差。<b>（軸一、軸二為本站自訂的粗略跨系統對照，非任何單一傳統方法，僅供整合參考）</b></p>
         <table class="chart">
           <tr><th>系統</th><th>訊號</th><th>指向</th></tr>
           <tr><td>${Icons.svg('bazi')} 八字</td><td class="muted">${vB.why}</td><td><b style="color:${vB.dir === '動' ? 'var(--cinnabar)' : 'var(--navy)'}">${DIR_LABEL[vB.dir]}</b></td></tr>
@@ -118,6 +184,15 @@
           <tr><td>${Icons.svg('astrology')} 占星</td><td class="muted">${vA.why}</td><td><b style="color:${vA.dir === '動' ? 'var(--cinnabar)' : 'var(--navy)'}">${DIR_LABEL[vA.dir]}</b></td></tr>
         </table>
         <div class="aspect" style="margin-top:10px;border-left:3px solid ${verdict.good ? 'var(--gold-mid)' : 'var(--panel-border)'}"><p>${verdict.text}</p></div>
+        <h4 style="margin-top:16px">三盤性格印證 · 軸二：人生節奏</h4>
+        <p class="muted" style="margin-top:-2px">以「安穩守成 ⇄ 開創起伏」為軸線，各取本門派<b>格局</b>判定——八字看格局類型（如殺傷主變、官印主穩）、紫微看殺破狼／機月同梁、占星看星座三模式（本位開創、固定穩定、變動適應）。</p>
+        <table class="chart">
+          <tr><th>系統</th><th>格局訊號</th><th>指向</th></tr>
+          <tr><td>${Icons.svg('bazi')} 八字</td><td class="muted">${rB.why}</td><td><b style="color:${rB.dir === '變' ? 'var(--cinnabar)' : rB.dir === '穩' ? 'var(--navy)' : 'var(--ink-dim)'}">${RHYTHM_LABEL[rB.dir]}</b></td></tr>
+          <tr><td>${Icons.svg('ziwei')} 紫微</td><td class="muted">${rZ.why}</td><td><b style="color:${rZ.dir === '變' ? 'var(--cinnabar)' : rZ.dir === '穩' ? 'var(--navy)' : 'var(--ink-dim)'}">${RHYTHM_LABEL[rZ.dir]}</b></td></tr>
+          <tr><td>${Icons.svg('astrology')} 占星</td><td class="muted">${rA.why}</td><td><b style="color:${rA.dir === '變' ? 'var(--cinnabar)' : rA.dir === '穩' ? 'var(--navy)' : 'var(--ink-dim)'}">${RHYTHM_LABEL[rA.dir]}</b></td></tr>
+        </table>
+        <div class="aspect" style="margin-top:10px;border-left:3px solid ${rVerdict.good ? 'var(--gold-mid)' : 'var(--panel-border)'}"><p>${rVerdict.text}</p></div>
         <hr class="divider">
         <h4>三盤各看什麼</h4>
         <p>八字看的是<b>五行氣機與人生節奏</b>（日主 ${p.day.gan}${p.day.ganWx}），紫微看的是<b>人生劇本與舞台配置</b>（${mingStars.join('、') || '借對宮'}坐命），占星看的是<b>心理原型與天賦傾向</b>（太陽${sunSign}／月亮${moonSign}）。上方的能量方向只是最粗的一條軸線，事業、感情、財運等完整的三盤交叉印證，交給 AI 深度解讀。</p>
@@ -137,15 +212,24 @@
 生年四化：${Object.entries(zw.hua).map(([s, h]) => s + '化' + h).join('、')}
 
 【西洋占星】出生地${cityName}；太陽${sunSign}、月亮${moonSign}、上升${ascSign}、金星${venusSign}、火星${marsSign}
+命主星（上升守護）：${rulerName || '—'}${rulerSign ? '於' + rulerSign : ''}${rulerDig && rulerDig.key !== '平' ? '（' + rulerDig.label + '）' : ''}；星座模式以${topMode}為主
 
-【內建交叉印證·能量方向】八字${DIR_LABEL[vB.dir]}（${vB.why}）、紫微${DIR_LABEL[vZ.dir]}（${vZ.why}）、占星${DIR_LABEL[vA.dir]}（${vA.why}）——初判：${verdict.text.replace(/<[^>]+>/g, '')}
+【三盤本命格局（各依本門派，供跨系統印證）】
+· 八字（子平真詮）：${ge ? ge.name + (ge.special ? '·特殊格' : '·' + ge.成敗) + `，喜${ge.喜五行.join('') || '—'}忌${ge.忌五行.join('') || '—'}` : '—'}
+· 紫微（中州派）：${zwGeNames.join('、') || '無明顯正格（平常格局）'}
+· 占星（傳統尊貴）：命主星${rulerName || '—'}${rulerDig && rulerDig.key !== '平' ? '·' + rulerDig.label : ''}
+
+【內建交叉印證】
+· 軸一能量方向：八字${DIR_LABEL[vB.dir]}（${vB.why}）、紫微${DIR_LABEL[vZ.dir]}（${vZ.why}）、占星${DIR_LABEL[vA.dir]}（${vA.why}）——初判：${verdict.text.replace(/<[^>]+>/g, '')}
+· 軸二人生節奏：八字${RHYTHM_LABEL[rB.dir]}（${rB.why}）、紫微${RHYTHM_LABEL[rZ.dir]}（${rZ.why}）、占星${RHYTHM_LABEL[rA.dir]}（${rA.why}）——初判：${rVerdict.text.replace(/<[^>]+>/g, '')}
 
 請分析：
-1) 三盤共同指向的核心人格特質（重疊印證處，可延伸上方能量方向的初判）
+1) 三盤共同指向的核心人格特質（重疊印證處，延伸上方兩軸初判）
 2) 三盤分歧處代表的內外反差或潛在課題
-3) 事業財運方向（綜合三盤）
-4) 感情婚姻模式（綜合三盤）
-5) 給這個人的整體人生策略建議。`);
+3) 特別做「格局層級的跨系統印證」：八字格局、紫微格局、占星命主星旺弱三者是否在氣質上互相呼應或矛盾？彼此如何補充
+4) 事業財運方向（綜合三盤格局與喜用）
+5) 感情婚姻模式（綜合三盤）
+6) 給這個人的整體人生策略建議（呼應人生節奏是宜守成或宜開創）。`);
     });
   }
 

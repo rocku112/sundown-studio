@@ -366,6 +366,9 @@
     });
   }
 
+  // 供三合一綜合命盤共用格局引擎
+  window.BaziEngine = { ziping, dominantGods };
+
   App.register({
     id: 'bazi',
     icon: Icons.svg('bazi'),

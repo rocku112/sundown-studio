@@ -87,6 +87,39 @@
     大十字: '大十字（四星兩兩對分、環環四分）——四股能量互相拉扯，人生多挑戰考驗，但也賦予極強的韌性與行動力；學會平衡四個方向，正是這輩子的修煉。',
     星群: '星群（三顆以上行星聚於同一星座）——大量能量集中在該星座與其掌管的生命領域，使你在此處格外強烈、專注，也容易失衡；那是你人格的重心所在。'
   };
+  // ── 傳統七政必然尊貴（Ptolemaic essential dignity）：廟(domicile)／旺(exaltation)／陷(detriment)／弱(fall) ──
+  const DIGNITY = {
+    sun:     { 廟: ['獅子座'], 旺: '牡羊座', 陷: ['水瓶座'], 弱: '天秤座' },
+    moon:    { 廟: ['巨蟹座'], 旺: '金牛座', 陷: ['摩羯座'], 弱: '天蠍座' },
+    mercury: { 廟: ['雙子座', '處女座'], 旺: '處女座', 陷: ['射手座', '雙魚座'], 弱: '雙魚座' },
+    venus:   { 廟: ['金牛座', '天秤座'], 旺: '雙魚座', 陷: ['牡羊座', '天蠍座'], 弱: '處女座' },
+    mars:    { 廟: ['牡羊座', '天蠍座'], 旺: '摩羯座', 陷: ['天秤座', '金牛座'], 弱: '巨蟹座' },
+    jupiter: { 廟: ['射手座', '雙魚座'], 旺: '巨蟹座', 陷: ['雙子座', '處女座'], 弱: '摩羯座' },
+    saturn:  { 廟: ['摩羯座', '水瓶座'], 旺: '天秤座', 陷: ['巨蟹座', '獅子座'], 弱: '牡羊座' }
+  };
+  function dignityOf(id, signName) {
+    const d = DIGNITY[id];
+    if (!d) return null; // 天海冥為現代行星，不論傳統廟旺
+    if (d.廟.includes(signName)) return { key: '廟', label: '入廟', good: true, note: '落於自己守護的星座，力量純粹而強盛，此領域天賦充沛、施展自如，是本命的一大優勢。' };
+    if (d.旺 === signName) return { key: '旺', label: '曜升', good: true, note: '處於擢升（旺）星座，能量被抬升彰顯，表現亮眼、易受賞識，宜大方發揮。' };
+    if (d.陷.includes(signName)) return { key: '陷', label: '失勢', good: false, note: '落於守護的對宮（陷），力量受制、施展彆扭，此領域需後天刻意磨練方能轉為助力。' };
+    if (d.弱 === signName) return { key: '弱', label: '落陷', good: false, note: '處於擢升的對宮（弱），能量最受壓抑，是本命較費力的一環，宜正視並主動補強。' };
+    return { key: '平', label: '平勢', good: null, note: '於此星座無特殊尊貴或失格（平勢／peregrine），力量中性，端看相位與宮位如何引導。' };
+  }
+  // 上升守護＝命主星（傳統守護星；天蠍/水瓶/雙魚另註現代共治）
+  const SIGN_RULER = {
+    牡羊座: 'mars', 金牛座: 'venus', 雙子座: 'mercury', 巨蟹座: 'moon', 獅子座: 'sun', 處女座: 'mercury',
+    天秤座: 'venus', 天蠍座: 'mars', 射手座: 'jupiter', 摩羯座: 'saturn', 水瓶座: 'saturn', 雙魚座: 'jupiter'
+  };
+  const MODERN_CORULER = { 天蠍座: '冥王星', 水瓶座: '天王星', 雙魚座: '海王星' };
+  // 臨界度數（傳統關鍵度）：29°臨界（anaretic）、0°初度
+  function critDeg(lon) {
+    const x = Astro.norm360(lon) % 30;
+    if (x >= 29) return { tag: '臨界29°', note: '落於星座最後一度（29°臨界度），該星議題帶著「時不我待、必須了結」的急迫張力，是今生反覆打磨、無法迴避的焦點。' };
+    if (x < 1) return { tag: '初度0°', note: '落於星座起始度（0°），能量原始純粹、如白紙般直接坦率，帶有全新開展、尚未被馴化的特質。' };
+    return null;
+  }
+
   // 從相位清單與行星位置偵測相位格局（回傳 [{type, planets:[...], sign?}]）
   function detectPatterns(aspList, positions) {
     const rel = {};
@@ -258,6 +291,12 @@
       positions.forEach(p => elemCount[p.sign.elem]++);
       const domElem = Object.entries(elemCount).sort((x, y2) => y2[1] - x[1])[0][0];
 
+      // 七政必然尊貴＋命主星＋臨界度
+      const dignified = positions.map(p => ({ p, dig: dignityOf(p.id, p.sign.name) })).filter(x => x.dig && x.dig.key !== '平');
+      const rulerP = positions.find(p => p.id === SIGN_RULER[ascSign.name]);
+      const rulerDig = dignityOf(rulerP.id, rulerP.sign.name);
+      const crits = positions.map(p => ({ p, c: critDeg(p.lon) })).filter(x => x.c);
+
       const div = document.createElement('div');
       div.innerHTML = `<div class="panel result">
         <h3>本命星盤</h3>
@@ -271,7 +310,7 @@
         </div>
         <table class="chart astro-table">
           <tr><th>行星</th><th>星座</th><th>度數</th><th>宮位</th><th>意涵</th></tr>
-          ${positions.map(p => `<tr><td>${planetIcon(p)} ${p.name}${p.retro ? ' <b style="color:var(--cinnabar)">℞</b>' : ''}</td><td>${zodiacIcon(p.sign)} ${p.sign.name}</td><td>${degInSign(p.lon)}</td><td>第${p.house}宮<span class="muted">（${HOUSE_MEAN[p.house - 1]}）</span></td><td class="muted">${p.mean}</td></tr>`).join('')}
+          ${positions.map(p => { const d = dignityOf(p.id, p.sign.name); const dm = d && d.key !== '平' ? ` <small style="color:${d.good ? 'var(--gold-bright)' : 'var(--cinnabar)'}">${d.key}</small>` : ''; return `<tr><td>${planetIcon(p)} ${p.name}${p.retro ? ' <b style="color:var(--cinnabar)">℞</b>' : ''}</td><td>${zodiacIcon(p.sign)} ${p.sign.name}${dm}</td><td>${degInSign(p.lon)}</td><td>第${p.house}宮<span class="muted">（${HOUSE_MEAN[p.house - 1]}）</span></td><td class="muted">${p.mean}</td></tr>`; }).join('')}
           <tr><td>${Icons.svg('ascendant', { size: 14 })} 上升</td><td>${zodiacIcon(ascSign)} ${ascSign.name}</td><td>${degInSign(pc.asc)}</td><td>第1宮首</td><td class="muted">外在形象與人生舞台入口</td></tr>
           <tr><td>${Icons.svg('midheaven', { size: 14 })} MC 天頂</td><td>${zodiacIcon(mcSign)} ${mcSign.name}</td><td>${degInSign(pc.mc)}</td><td>第10宮首</td><td class="muted">事業志向與社會成就</td></tr>
         </table>
@@ -290,6 +329,16 @@
           <b>${pt.type}${pt.sign ? `於${pt.sign}` : ''}：${pt.planets.map(p => p.name).join('、')}</b>
           <p style="margin-top:3px">${PATTERN_INFO[pt.type]}</p></div>`).join('')}` : ''}
         <hr class="divider">
+        <h4>${Icons.svg('ascendant', { size: 16 })} 命主星與七政旺弱（傳統必然尊貴）</h4>
+        <div class="aspect" style="margin-top:6px;border-left:3px solid var(--gold-mid)">
+          <b>命主星（上升守護）：${planetIcon(rulerP)}${rulerP.name} 於 ${zodiacIcon(rulerP.sign)}${rulerP.sign.name} 第${rulerP.house}宮${rulerDig && rulerDig.key !== '平' ? `・${rulerDig.label}` : ''}</b>
+          <p style="margin-top:3px">上升${ascSign.name}的守護星是${rulerP.name}${MODERN_CORULER[ascSign.name] ? `（現代共治：${MODERN_CORULER[ascSign.name]}）` : ''}——它是整張星盤的總鑰匙。它落在的<b>${rulerP.sign.name}第${rulerP.house}宮（${HOUSE_MEAN[rulerP.house - 1]}）</b>，正是你今生最該用心經營、也最能定義你的舞台。${rulerDig ? rulerDig.note : ''}</p>
+        </div>
+        ${dignified.length ? `<p style="margin-top:8px">七政旺弱：${dignified.map(x => `<span class="tag ${x.dig.good ? 'gold' : ''}" ${x.dig.good === false ? 'style="color:var(--cinnabar)"' : ''}>${x.p.name}${x.p.sign.name} ${x.dig.label}</span>`).join('')}</p>
+        ${dignified.map(x => `<div class="aspect" style="margin-top:6px;border-left:3px solid ${x.dig.good ? 'var(--gold-mid)' : 'var(--cinnabar)'}"><b>${planetIcon(x.p)}${x.p.name}·${x.dig.label}（${x.p.sign.name}）</b><p style="margin-top:3px">${x.dig.note}</p></div>`).join('')}` : '<p class="muted" style="margin-top:6px">日月至土星七政均處平勢，無特別入廟或落陷，力量端看宮位與相位引導——這本身是一種均衡。</p>'}
+        ${crits.length ? `<p style="margin-top:8px">臨界度數：${crits.map(x => `<span class="tag">${x.p.name} ${x.c.tag}</span>`).join('')}</p>${crits.map(x => `<p class="muted" style="margin-top:2px;font-size:12.5px">${x.p.name}${x.c.note}</p>`).join('')}` : ''}
+        <p class="muted" style="font-size:11.5px;margin-top:4px">※ 旺弱依<b>傳統七政必然尊貴</b>（廟旺陷弱／Ptolemaic essential dignity），僅適用日月至土星七政；天王星、海王星、冥王星為現代行星，只列守護不論廟旺。</p>
+        <hr class="divider">
         <h4>${Icons.svg('sun', { size: 16 })} 太陽${positions[0].sign.name}（第${positions[0].house}宮）—— 核心自我</h4><p>${positions[0].sign.trait}生命重心落在${HOUSE_MEAN[positions[0].house - 1]}的領域。</p>
         <h4>${Icons.svg('moon', { size: 16 })} 月亮${positions[1].sign.name}（第${positions[1].house}宮）—— 內在情感</h4><p>${MOON_TRAIT[SIGNS.indexOf(positions[1].sign)]}內心層面在${HOUSE_MEAN[positions[1].house - 1]}的領域格外敏感、需要被滋養。</p>
         <h4>${Icons.svg('ascendant', { size: 16 })} 上升${ascSign.name} —— 外在形象</h4><p>${ASC_TRAIT[SIGNS.indexOf(ascSign)]}</p>
@@ -306,10 +355,15 @@ ${positions.map(p => `${p.name}：${p.sign.name} ${degInSign(p.lon)}，第${p.ho
 宮首：${[1,2,3,4,5,6,7,8,9,10,11,12].map(h => `${h}宮${signOf(pc.cusps[h]).name}`).join('、')}
 主要相位：${aspList.map(x => `${x.a.name}${x.asp.name}${x.b.name}（容許度${x.orb}°）`).join('、') || '無'}
 相位格局：${patterns.map(pt => `${pt.type}${pt.sign ? '於' + pt.sign : ''}(${pt.planets.map(p => p.name).join('')})`).join('、') || '無明顯格局'}
+命主星（上升守護）：${rulerP.name} 於 ${rulerP.sign.name} 第${rulerP.house}宮${rulerDig && rulerDig.key !== '平' ? '（' + rulerDig.label + '）' : ''}
+七政必然尊貴（傳統廟旺陷弱）：${dignified.length ? dignified.map(x => `${x.p.name}${x.dig.label}於${x.p.sign.name}`).join('、') : '七政皆平勢'}${crits.length ? `；臨界度：${crits.map(x => x.p.name + x.c.tag).join('、')}` : ''}
 元素分布：火${elemCount.火} 土${elemCount.土} 風${elemCount.風} 水${elemCount.水}
-請以現代心理占星取向分析：1) 太陽月亮上升三位一體人格 2) 行星落宮的生命領域重點 3) 水金火的溝通/感情/行動風格 4) 木土的機會與課題（含逆行課題）5) 重要相位與相位格局（大三角/T三角/大十字/星群）對人格整合的意義 6) 適合的發展方向。`);
+請以現代心理占星取向分析：1) 太陽月亮上升三位一體人格 2) 行星落宮的生命領域重點 3) 水金火的溝通/感情/行動風格 4) 木土的機會與課題（含逆行課題）5) 重要相位與相位格局（大三角/T三角/大十字/星群）對人格整合的意義 6) 特別解讀命主星的落點與七政旺弱（入廟曜升者為天賦強項、失勢落陷者為需磨練的課題）7) 適合的發展方向。`);
     });
   }
+
+  // 供三合一綜合命盤共用（傳統必然尊貴／命主星）
+  window.AstroTools = { dignityOf, SIGN_RULER, MODERN_CORULER, critDeg };
 
   App.register({
     id: 'astrology',
