@@ -4,3 +4,7 @@ sundown-calc/xm_data.js
 sundown-calc/xm_data_v8.js
 sundown-calc/*_backup*.js
 .claude/
+
+# 永續知幾 — Podcast 音檔改放 GitHub Release（tag: esg-audio-v1）
+# 189MB 留在倉庫會讓 Pages 站台脹到 233MB，部署一直卡在佇列逾時
+learn/esg/audio/*.m4a

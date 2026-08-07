@@ -5292,22 +5292,29 @@ document.addEventListener('DOMContentLoaded', _restoreFoldStates);
 // ════════════════════════════════════════════════
 //  PODCAST
 // ════════════════════════════════════════════════
+// 音檔放在 GitHub Release，不放在倉庫裡。
+// 五集共 189 MB，留在倉庫會讓 GitHub Pages 的站台脹到 233 MB，
+// 部署因此一直卡在佇列逾時。Release 一樣走 GitHub CDN，
+// 也支援 range request（拖曳進度條正常）。
+// 換音檔時：上傳到 Release 後改這裡的 AUDIO_BASE 標籤即可。
+const AUDIO_BASE = 'https://github.com/rocku112/sundown-studio/releases/download/esg-audio-v1/';
+
 const PODCAST_DATA = [
   { title:'EP01 第一章：永續基本概念',
     desc:'氣候變遷科學(IPCC)、國際氣候公約(UNFCCC/巴黎協定/COP)、歐盟防漂綠法規(SFDR/CSRD/EU Taxonomy/CBAM)與國內淨零政策',
-    url:'audio/ep01.m4a' },
+    url:AUDIO_BASE+'ep01.m4a' },
   { title:'EP02 第二章：永續資訊揭露',
     desc:'GRI、SASB、TCFD、IFRS S1/S2、TNFD 框架，溫室氣體盤查與第三方確信',
-    url:'audio/ep02.m4a' },
+    url:AUDIO_BASE+'ep02.m4a' },
   { title:'EP03 第三章：永續風險管理與治理',
     desc:'環境、社會、治理三大風險底層邏輯；TCFD 框架下的轉型風險與實體風險；情境分析與氣候風險財務曝險衡量',
-    url:'audio/ep03.m4a' },
+    url:AUDIO_BASE+'ep03.m4a' },
   { title:'EP04 第四章：永續金融',
     desc:'綠色金融行動方案、SFDR/EU Taxonomy 防漂綠、ESG 指數、永續投資策略、綠色債券/SLB 差異、赤道原則/綠色貸款/SLL、永續保險(PSI)',
-    url:'audio/ep04.m4a' },
+    url:AUDIO_BASE+'ep04.m4a' },
   { title:'EP05 第一至四章完整精華總複習',
     desc:'永續基本概念 × 資訊揭露 × 風險管理與治理 × 永續金融 — 全章節濃縮總整理',
-    url:'audio/ep05.m4a' },
+    url:AUDIO_BASE+'ep05.m4a' },
 ];
 
 // 章節對照表
