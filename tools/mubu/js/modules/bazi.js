@@ -56,6 +56,40 @@
     return Object.entries(Ganzhi.WX_SHENG).find(([, v]) => v === me)[0]; // 正印/偏印：生我
   }
   const _god = (dayGan, ganChar) => Ganzhi.tenGod(dayGan, Ganzhi.GAN.indexOf(ganChar));
+  // 特殊格局（從格／專旺格）——日主極弱棄命相從、或一行專旺順勢，須順其勢，用神喜忌與正格相反
+  const SPECIAL_GE = {
+    從財格: { 喜: ['正財', '偏財', '食神', '傷官'], 忌: ['比肩', '劫財', '正印', '偏印'],
+      論: '日主極弱無根、無印比可依，棄命順從滿盤旺財之勢。喜財星與食傷生財、行財運食傷運；最忌比劫爭財、印星生身逆勢反凶。主財富、善經商理財，個性隨和但易受環境牽引。' },
+    從殺格: { 喜: ['七殺', '正官', '正財', '偏財'], 忌: ['食神', '傷官', '正印', '偏印', '比肩', '劫財'],
+      論: '日主極弱，棄命順從旺盛官殺之勢。喜官殺、財來生殺；忌食傷制殺、印星化殺、比劫幫身逆勢。主貴、能任大責掌權柄，但壓力大、須借勢乘時而起。' },
+    從兒格: { 喜: ['食神', '傷官', '正財', '偏財'], 忌: ['正印', '偏印', '正官', '七殺'],
+      論: '日主順從滿盤旺盛食傷（我生者）之勢，「兒」即食傷。喜食傷吐秀、財星流通秀氣；忌印星奪食、官殺攻身。主聰明才華橫溢，以才藝、技術、創作揚名。' }
+  };
+  const ZHUANWANG_NAME = { 木: '曲直格', 火: '炎上格', 土: '稼穡格', 金: '從革格', 水: '潤下格' };
+  const ZHUANWANG_INFO = '全局一氣、比劫印星專旺成勢，順其旺不可逆。喜印比助旺、食傷洩其菁華而秀；最忌官殺剋制、財星引動反激旺神為禍。氣勢磅礡、專精一道，宜順勢乘旺、忌強逆其鋒。';
+  // 偵測特殊格（保守門檻，仍須地支成方成局全局確認）；回傳格物件或 null
+  function specialGe(p, str, wx) {
+    const me = p.day.ganWx;
+    const keMe = Object.entries(Ganzhi.WX_KE).find(([, v]) => v === me)[0];   // 剋我＝官殺
+    const shengMe = Object.entries(Ganzhi.WX_SHENG).find(([, v]) => v === me)[0]; // 生我＝印
+    const woSheng = Ganzhi.WX_SHENG[me];  // 我生＝食傷
+    const woKe = Ganzhi.WX_KE[me];        // 我剋＝財
+    const mk = (name, d) => ({ special: true, name, 成敗: '順勢成格（須全局確認）', 成敗color: 'good',
+      喜五行: [...new Set(d.喜.map(g => godWx(g, me)))], 忌五行: [...new Set(d.忌.map(g => godWx(g, me)))],
+      喜神十神: d.喜, rule: { 類: '特殊', 順逆: '順勢', 喜: d.喜, 破: d.忌, 救: [], 論: d.論 },
+      like: godWx(d.喜[0], me), avoid: godWx(d.忌[0], me) });
+    // 從格：日主極弱（幫身力 < 20%）且某敵勢極盛
+    if (str.ratio < 0.20) {
+      const cand = [['從財格', wx[woKe]], ['從殺格', wx[keMe]], ['從兒格', wx[woSheng]]].sort((a, b) => b[1] - a[1]);
+      if (cand[0][1] >= 4) return mk(cand[0][0], SPECIAL_GE[cand[0][0]]);
+    }
+    // 專旺格：日主極強（幫身力 > 78%）、無官殺剋制、比劫印星佔絕大
+    if (str.ratio > 0.78 && wx[keMe] === 0 && wx[me] + wx[shengMe] >= 6) {
+      const d = { 喜: ['正印', '偏印', '比肩', '劫財', '食神', '傷官'], 忌: ['正官', '七殺', '正財', '偏財'], 論: ZHUANWANG_INFO };
+      return mk(ZHUANWANG_NAME[me], d);
+    }
+    return null;
+  }
   // 命中主要十神的性格側寫
   const SHISHEN_CHAR = {
     比肩: '自我意識強、獨立自主、重朋友義氣，適合自立門戶或與人平等合作；但主觀不服輸，錢財上易與人有糾葛。',
@@ -72,6 +106,9 @@
   // 《子平真詮》取格＋成敗：月令取格（透干法）、四吉順用四凶逆用、相神成敗、喜忌五行
   function ziping(p) {
     const dayGan = p.day.ganIdx, me = p.day.ganWx;
+    const str = Ganzhi.strength(p), wx = Ganzhi.wuxingCount(p);
+    const sp = specialGe(p, str, wx);               // 先驗特殊格（從格／專旺格）
+    if (sp) return sp;
     const yang = Ganzhi.GAN_YINYANG[dayGan] === '陽';
     const cang = p.month.cang;                       // 月令藏干：本氣→中氣→餘氣
     const benGod = _god(dayGan, cang[0]);
@@ -112,6 +149,12 @@
       const 用現 = rule.喜.some(transHas);
       成敗 = 用現 ? '得財官食傷透出為用' : '比劫重而乏財官洩制';
       成敗color = 用現 ? 'good' : 'mid';
+    }
+    // 月令逢沖：月令為格局之根，逢沖則格根動搖（子平真詮所忌）
+    const 沖月 = ['year', 'day', 'hour'].some(k => (p[k].zhiIdx + 6) % 12 === p.month.zhiIdx);
+    if (沖月 && rule.類 !== '祿刃') {
+      if (成敗color === 'good') { 成敗 += '，惟月令逢沖·格根動搖'; 成敗color = 'mid'; }
+      else 成敗 += '，兼月令逢沖';
     }
 
     // 喜忌五行（從格局相神／所喜十神取，取代扶抑粗判）
@@ -253,7 +296,8 @@
         ${most[0]}最旺（${most[1]} 見）。扶抑粗判喜用<b>${fuyiLike}</b>（僅供對照，正式用神以下方格局為準）。</p>
         <hr class="divider">
         <h4>格局 · ${ge.name} <span class="fortune-level ${ge.成敗color}">${ge.成敗}</span></h4>
-        <p><span class="tag gold">《子平真詮》月令取格</span>${ge.rule.類 === '祿刃' ? '<span class="tag">祿刃格・另取財官為用</span>' : `<span class="tag">${ge.rule.順逆}（${ge.rule.類}神）</span>${ge.exposed ? '<span class="tag">格神透干</span>' : '<span class="tag">格神藏月令</span>'}`}</p>
+        <p>${ge.special ? '<span class="tag" style="color:var(--cinnabar)">特殊格局・順勢而論</span><span class="tag">須地支成方成局全局確認</span>'
+          : `<span class="tag gold">《子平真詮》月令取格</span>${ge.rule.類 === '祿刃' ? '<span class="tag">祿刃格・另取財官為用</span>' : `<span class="tag">${ge.rule.順逆}（${ge.rule.類}神）</span>${ge.exposed ? '<span class="tag">格神透干</span>' : '<span class="tag">格神藏月令</span>'}`}`}</p>
         <p style="margin-top:6px">${ge.rule.論}</p>
         <p style="margin-top:6px"><b>相神／所喜：</b>${ge.rule.喜.map(g => `<span class="tag ${ge.喜神十神.includes(g) ? 'gold' : ''}">${g}${ge.喜神十神.includes(g) ? '✓' : ''}</span>`).join('')}${ge.rule.破.length ? `　<b>忌：</b>${ge.rule.破.map(g => `<span class="tag" style="color:var(--cinnabar)">${g}</span>`).join('')}` : ''}</p>
         <p><b>格局喜用五行：</b><span style="color:var(--gold-bright)">${ge.喜五行.join('、')}</span>${ge.忌五行.length ? `　<b>忌：</b><span style="color:var(--cinnabar)">${ge.忌五行.join('、')}</span>` : ''}</p>
