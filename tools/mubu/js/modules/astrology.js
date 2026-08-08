@@ -120,6 +120,27 @@
     return null;
   }
 
+  // 兩經度最短角距
+  function angSep(l1, l2) { let d = Math.abs(Astro.norm360(l1 - l2)); return d > 180 ? 360 - d : d; }
+
+  // 月相人格（Rudhyar 月相週期八分法：以日月夾角 elongation 判出生月相原型）
+  const MOON_PHASES = [
+    { name: '新月', en: 'New Moon', trait: '出生於新月前後，人格帶著「開創、主觀、憑本能往前衝」的原型——如新芽破土，行動先於反省，一生不斷開啟新局，也需學會傾聽他人、看清方向。' },
+    { name: '眉月', en: 'Crescent', trait: '娥眉月人帶著「掙脫過去、確立自我」的動能——想突破舊有束縛、開闢自己的路，過程常有拉扯掙扎，衝勁十足但最需要的是堅持到底、不半途而廢。' },
+    { name: '上弦月', en: 'First Quarter', trait: '上弦月人是「行動的建造者」——充滿危機感與行動力，勇於打破現狀、當機立斷去建設，人生以「用行動解決問題、推倒重來也在所不惜」為主旋律。' },
+    { name: '盈凸月', en: 'Gibbous', trait: '盈凸月人追求「完善與意義」——分析力強、精益求精，渴望把事情做到最好並找到其中的意義，天生的完美主義者，容易對自己與他人要求過高。' },
+    { name: '滿月', en: 'Full Moon', trait: '滿月人帶著「覺察與關係」的原型——凡事需要在關係與對立中才看得清自己，客觀而富洞見，人生課題環繞著「與他人的映照、平衡」層層展開。' },
+    { name: '虧凸月', en: 'Disseminating', trait: '虧凸月（播種月）人是「理念的傳播者」——樂於分享、教導、把體悟傳遞出去，帶著使命感與說服力，透過影響他人、散播價值來實現自己。' },
+    { name: '下弦月', en: 'Last Quarter', trait: '下弦月人帶著「反思與轉向」——外表配合、內在卻常質疑既有體制，是承先啟後的轉型者，勇於為未來調整方向，帶點孤獨的先行者色彩。' },
+    { name: '殘月', en: 'Balsamic', trait: '殘月（消散月）人帶著「總結與超越」的原型——直覺敏銳、帶宿命感，像一個週期的收尾者，活在自己的世界裡醞釀下一輪的種子，適合幕後、療癒與靈性探索。' }
+  ];
+  function moonPhase(sunLon, moonLon) {
+    const elong = Astro.norm360(moonLon - sunLon);
+    const idx = Math.floor(elong / 45) % 8;
+    const illum = (1 - Math.cos(elong * RAD)) / 2; // 受照比例
+    return { ...MOON_PHASES[idx], elong, illum, waxing: elong < 180 };
+  }
+
   // 從相位清單與行星位置偵測相位格局（回傳 [{type, planets:[...], sign?}]）
   function detectPatterns(aspList, positions) {
     const rel = {};
@@ -258,8 +279,9 @@
         const calc = (t) => p.id === 'sun' ? Astro.sunLongitude(t) : p.id === 'moon' ? Astro.moonLongitude(t) : Astro.planetLongitude(p.id, t);
         const lonNow = calc(jde);
         const lonPrev = calc(jde - 0.5);
+        const lonNext = calc(jde + 0.05); // 用於入相位／出相位判定
         const retro = p.id !== 'sun' && p.id !== 'moon' && Astro.norm360(lonNow - lonPrev) > 180;
-        positions.push({ ...p, lon: lonNow, sign: signOf(lonNow), retro });
+        positions.push({ ...p, lon: lonNow, lonNext, sign: signOf(lonNow), retro });
       }
       // 宮位（共用 Astro 引擎）
       const pc = Astro.placidusHouses(jdUT, lat, lon);
@@ -280,7 +302,11 @@
           if (diff > 180) diff = 360 - diff;
           for (const a of ASPECTS) {
             if (Math.abs(diff - a.angle) <= a.orb) {
-              aspList.push({ a: positions[i], b: positions[j], asp: a, orb: Math.abs(diff - a.angle).toFixed(1) });
+              // 入相位／出相位：比較當下與稍後的容許度，逼近正相位＝入相位
+              const orbNow = Math.abs(angSep(positions[i].lon, positions[j].lon) - a.angle);
+              const orbNext = Math.abs(angSep(positions[i].lonNext, positions[j].lonNext) - a.angle);
+              const applying = orbNext < orbNow;
+              aspList.push({ a: positions[i], b: positions[j], asp: a, orb: Math.abs(diff - a.angle).toFixed(1), applying });
               break;
             }
           }
@@ -296,6 +322,18 @@
       const rulerP = positions.find(p => p.id === SIGN_RULER[ascSign.name]);
       const rulerDig = dignityOf(rulerP.id, rulerP.sign.name);
       const crits = positions.map(p => ({ p, c: critDeg(p.lon) })).filter(x => x.c);
+
+      // 月相人格（Rudhyar 月相週期）
+      const mphase = moonPhase(positions[0].lon, positions[1].lon);
+      // 宮主星飛宮：各宮宮首星座守護星落在哪一宮
+      const pById = {}; positions.forEach(p => { pById[p.id] = p; });
+      const houseRulers = [];
+      for (let h = 1; h <= 12; h++) {
+        const cuspSign = signOf(pc.cusps[h]);
+        const rid = SIGN_RULER[cuspSign.name];
+        const rp = pById[rid];
+        houseRulers.push({ house: h, cuspSign, rulerP: rp, inHouse: rp.house, coRuler: MODERN_CORULER[cuspSign.name] });
+      }
 
       const div = document.createElement('div');
       div.innerHTML = `<div class="panel result">
@@ -322,9 +360,9 @@
           const rank = (z) => (PERSONAL_PLANETS.has(z.a.id) ? 0 : 1) + (PERSONAL_PLANETS.has(z.b.id) ? 0 : 1);
           return rank(m) - rank(n) || (+m.orb) - (+n.orb);
         }).map(x => `<div class="aspect" style="margin-top:6px;border-left:3px solid ${x.asp.good === true ? 'var(--gold-mid)' : x.asp.good === false ? 'var(--cinnabar)' : 'var(--panel-border)'}">
-          <b>${planetIcon(x.a)}${x.a.name} ${aspectIcon(x.asp)} ${x.asp.name} ${planetIcon(x.b)}${x.b.name}</b>
-          <p style="margin-top:3px">${aspectText(x)}</p></div>`).join('')}
-        <p class="muted" style="font-size:11.5px;margin-top:4px">※ 相位角度為天文精算；意涵採<b>現代心理占星</b>取向——行星＝原型能量，相位描述兩股能量如何互動，硬相位（四分/對分）是成長張力而非命定凶兆。</p></div>` : ''}
+          <b>${planetIcon(x.a)}${x.a.name} ${aspectIcon(x.asp)} ${x.asp.name} ${planetIcon(x.b)}${x.b.name}</b> <span class="tag ${x.applying ? 'gold' : ''}">${x.applying ? '入相位' : '出相位'}</span>
+          <p style="margin-top:3px">${aspectText(x)}${x.applying ? '此相位為<b>入相位</b>（正逐漸逼近正相位、能量日益增強），作用更鮮明強烈、帶命定感。' : '此相位為<b>出相位</b>（已過正相位、能量漸緩釋放），作用較內化沉澱，像與生俱來的底蘊。'}</p></div>`).join('')}
+        <p class="muted" style="font-size:11.5px;margin-top:4px">※ 相位角度為天文精算；入相位／出相位依行星速度判定。意涵採<b>現代心理占星</b>取向——行星＝原型能量，相位描述兩股能量如何互動，硬相位（四分/對分）是成長張力而非命定凶兆。</p></div>` : ''}
         ${patterns.length ? `<h4>相位格局（現代心理占星）</h4>${patterns.map(pt => `<div class="aspect" style="margin-top:6px;border-left:3px solid ${pt.type === '大三角' ? 'var(--gold-mid)' : pt.type === '大十字' ? 'var(--cinnabar)' : 'var(--navy)'}">
           <b>${pt.type}${pt.sign ? `於${pt.sign}` : ''}：${pt.planets.map(p => p.name).join('、')}</b>
           <p style="margin-top:3px">${PATTERN_INFO[pt.type]}</p></div>`).join('')}` : ''}
@@ -338,6 +376,21 @@
         ${dignified.map(x => `<div class="aspect" style="margin-top:6px;border-left:3px solid ${x.dig.good ? 'var(--gold-mid)' : 'var(--cinnabar)'}"><b>${planetIcon(x.p)}${x.p.name}·${x.dig.label}（${x.p.sign.name}）</b><p style="margin-top:3px">${x.dig.note}</p></div>`).join('')}` : '<p class="muted" style="margin-top:6px">日月至土星七政均處平勢，無特別入廟或落陷，力量端看宮位與相位引導——這本身是一種均衡。</p>'}
         ${crits.length ? `<p style="margin-top:8px">臨界度數：${crits.map(x => `<span class="tag">${x.p.name} ${x.c.tag}</span>`).join('')}</p>${crits.map(x => `<p class="muted" style="margin-top:2px;font-size:12.5px">${x.p.name}${x.c.note}</p>`).join('')}` : ''}
         <p class="muted" style="font-size:11.5px;margin-top:4px">※ 旺弱依<b>傳統七政必然尊貴</b>（廟旺陷弱／Ptolemaic essential dignity），僅適用日月至土星七政；天王星、海王星、冥王星為現代行星，只列守護不論廟旺。</p>
+        <hr class="divider">
+        <h4>${Icons.svg('moon', { size: 16 })} 出生月相 · ${mphase.name}（Rudhyar 月相人格）</h4>
+        <div class="aspect" style="margin-top:6px;border-left:3px solid var(--navy)">
+          <b>${mphase.name}（${mphase.en}）· 日月相距 ${mphase.elong.toFixed(0)}°・受照 ${(mphase.illum * 100).toFixed(0)}%（${mphase.waxing ? '漸盈' : '漸虧'}）</b>
+          <p style="margin-top:3px">${mphase.trait}</p>
+        </div>
+        <p class="muted" style="font-size:11.5px;margin-top:4px">※ 月相人格依<b>Rudhyar 月相週期</b>八分法，以出生時太陽與月亮的夾角（elongation）判定，描繪你內在「情感（月）與意志（日）」的原型節奏。</p>
+        <hr class="divider">
+        <h4>${Icons.svg('ascendant', { size: 16 })} 宮主星飛宮（宮位連動）</h4>
+        <p class="muted" style="margin-top:-2px">每一宮宮首所落星座的守護星，實際坐落在哪一宮——代表該生命領域的能量最終「流向、連結」到哪個領域，是傳統占星看宮位互涉的關鍵鑰匙。</p>
+        <table class="chart astro-table">
+          <tr><th>宮位</th><th>宮首</th><th>宮主星</th><th>落宮</th><th>連動意涵</th></tr>
+          ${houseRulers.map(r => `<tr><td>${r.house}宮<span class="muted">（${HOUSE_MEAN[r.house - 1]}）</span></td><td>${zodiacIcon(r.cuspSign)}${r.cuspSign.name}</td><td>${planetIcon(r.rulerP)}${r.rulerP.name}${r.coRuler ? `<span class="muted">/${r.coRuler}</span>` : ''}</td><td>第${r.inHouse}宮</td><td class="muted">${r.house === r.inHouse ? '宮主坐本宮——該領域自主穩固、能量內守' : `「${HOUSE_MEAN[r.house - 1]}」牽動「${HOUSE_MEAN[r.inHouse - 1]}」`}</td></tr>`).join('')}
+        </table>
+        <p class="muted" style="font-size:11.5px;margin-top:4px">※ 守護星採傳統七政系統（天蠍/水瓶/雙魚另註現代共治星）。宮主落本宮主自主穩固，落對宮主拉扯外求，宜綜合全盤判讀。</p>
         <hr class="divider">
         <h4>${Icons.svg('sun', { size: 16 })} 太陽${positions[0].sign.name}（第${positions[0].house}宮）—— 核心自我</h4><p>${positions[0].sign.trait}生命重心落在${HOUSE_MEAN[positions[0].house - 1]}的領域。</p>
         <h4>${Icons.svg('moon', { size: 16 })} 月亮${positions[1].sign.name}（第${positions[1].house}宮）—— 內在情感</h4><p>${MOON_TRAIT[SIGNS.indexOf(positions[1].sign)]}內心層面在${HOUSE_MEAN[positions[1].house - 1]}的領域格外敏感、需要被滋養。</p>
@@ -353,12 +406,14 @@
 ${positions.map(p => `${p.name}：${p.sign.name} ${degInSign(p.lon)}，第${p.house}宮${p.retro ? '，逆行' : ''}`).join('\n')}
 上升：${ascSign.name} ${degInSign(pc.asc)}，天頂MC：${mcSign.name} ${degInSign(pc.mc)}
 宮首：${[1,2,3,4,5,6,7,8,9,10,11,12].map(h => `${h}宮${signOf(pc.cusps[h]).name}`).join('、')}
-主要相位：${aspList.map(x => `${x.a.name}${x.asp.name}${x.b.name}（容許度${x.orb}°）`).join('、') || '無'}
+主要相位：${aspList.map(x => `${x.a.name}${x.asp.name}${x.b.name}（容許度${x.orb}°，${x.applying ? '入相位' : '出相位'}）`).join('、') || '無'}
 相位格局：${patterns.map(pt => `${pt.type}${pt.sign ? '於' + pt.sign : ''}(${pt.planets.map(p => p.name).join('')})`).join('、') || '無明顯格局'}
 命主星（上升守護）：${rulerP.name} 於 ${rulerP.sign.name} 第${rulerP.house}宮${rulerDig && rulerDig.key !== '平' ? '（' + rulerDig.label + '）' : ''}
 七政必然尊貴（傳統廟旺陷弱）：${dignified.length ? dignified.map(x => `${x.p.name}${x.dig.label}於${x.p.sign.name}`).join('、') : '七政皆平勢'}${crits.length ? `；臨界度：${crits.map(x => x.p.name + x.c.tag).join('、')}` : ''}
+出生月相：${mphase.name}（${mphase.en}，日月相距${mphase.elong.toFixed(0)}°，${mphase.waxing ? '漸盈' : '漸虧'}）
+宮主星飛宮：${houseRulers.map(r => `${r.house}宮主${r.rulerP.name}落${r.inHouse}宮`).join('、')}
 元素分布：火${elemCount.火} 土${elemCount.土} 風${elemCount.風} 水${elemCount.水}
-請以現代心理占星取向分析：1) 太陽月亮上升三位一體人格 2) 行星落宮的生命領域重點 3) 水金火的溝通/感情/行動風格 4) 木土的機會與課題（含逆行課題）5) 重要相位與相位格局（大三角/T三角/大十字/星群）對人格整合的意義 6) 特別解讀命主星的落點與七政旺弱（入廟曜升者為天賦強項、失勢落陷者為需磨練的課題）7) 適合的發展方向。`);
+請以現代心理占星取向分析：1) 太陽月亮上升三位一體人格 2) 出生月相（Rudhyar 週期）反映的內在情感節奏與人生階段原型 3) 行星落宮的生命領域重點 4) 水金火的溝通/感情/行動風格 5) 木土的機會與課題（含逆行課題）6) 重要相位與相位格局——特別留意入相位（能量漸強、更關鍵）與出相位的差別 7) 命主星落點與七政旺弱（入廟曜升為天賦、失勢落陷為課題）8) 宮主星飛宮串起的宮位連動（哪些生命領域彼此牽引）9) 適合的發展方向。`);
     });
   }
 
