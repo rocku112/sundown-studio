@@ -488,7 +488,7 @@
         <p class="muted" style="font-size:11.5px;margin-top:4px">※ 行運星位為當前天文精算（更新至你開啟此頁的時刻）；相位取 2.5°～3° 緊容許度。行運描述「當前的人生天氣」，硬相位是階段課題而非厄運。</p>
         <hr class="divider">
         <h4>${Icons.svg('moon', { size: 16 })} 二次推運 · 內在演進（Secondary Progression，現年約 ${Math.floor(ageYears)} 歲）</h4>
-        <p class="muted" style="margin-top:-2px">「一日一年」法：出生後第 N 天的天象，對應你第 N 歲的<b>內在心理演進</b>。行運是外在的人生天氣，推運則是內心緩慢的成熟與轉season。</p>
+        <p class="muted" style="margin-top:-2px">「一日一年」法：出生後第 N 天的天象，對應你第 N 歲的<b>內在心理演進</b>。行運是外在的人生天氣，推運則是內心緩慢的成熟與季節流轉。</p>
         <div class="aspect" style="margin-top:6px;border-left:3px solid var(--navy)">
           <b>推運月亮在 ${zodiacIcon(progMoonSign)}${progMoonSign.name}——當前情緒季節</b>
           <p style="margin-top:3px">推運月亮約 2～3 年換一個星座，是內心「情緒季節」的指標。你目前這一季：${PROG_MOON_SEASON[SIGNS.indexOf(progMoonSign)]}<br>
