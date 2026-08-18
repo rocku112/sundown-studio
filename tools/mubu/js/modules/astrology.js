@@ -150,6 +150,24 @@
   const TRANSIT_ASPECT = { 合相: '正強烈啟動', 三分相: '順流加持', 六分相: '帶來機會', 四分相: '形成張力考驗', 對分相: '帶來對峙拉扯' };
   const TRANSIT_HOUSE = { jupiter: '正迎來擴張與機會，宜把握、順勢成長', saturn: '正經歷考驗與收斂，宜踏實負責、打好基礎' };
 
+  // 二次推運：推運月亮所行星座＝當前「情緒季節」（約 2~3 年一換）
+  const PROG_MOON_SEASON = [
+    '想開創、行動、獨立自主，情緒直接而易衝動，很適合啟動新計畫、爭取自己想要的。',
+    '渴望安定與踏實的安全感，會想放慢腳步、經營物質基礎與身體的舒適，重視穩定。',
+    '好奇心與社交慾旺盛，想學習、交流、嘗鮮，心思較活躍不定，資訊與人際往來頻繁。',
+    '情感需求回到家庭與親密關係，重視歸屬、照顧與被照顧，較念舊、易被回憶觸動。',
+    '想被看見、發光發熱，情緒澎湃而有戲，需要表現的舞台與他人的肯定溫暖。',
+    '想把生活整頓好，注重細節、健康與實務，默默付出，但也容易焦慮、求全求完美。',
+    '重心轉向關係與和諧，渴望陪伴、合作與美感的滋養，在意公平，難免優柔猶豫。',
+    '情感向內深化、進行斷捨離與蛻變，感受強烈而深刻，忌鑽牛角尖，是自我重生的季節。',
+    '想向外拓展、追尋意義與遠方，樂觀愛自由，很適合遠行、進修、開拓視野與信念。',
+    '目標感與責任心加重，務實築牆、埋首耕耘，情緒偏內斂克制，宜穩紮穩打累積成就。',
+    '想抽離、求突破與獨立，關注群體、理想與未來，情感較疏離而理性，喜歡做自己。',
+    '感受力與想像力最盛，容易共感、放空、追求心靈與情感的連結，宜藝術、療癒與靈修。'
+  ];
+  // 中點：兩經度連線之近側中點
+  function midpoint(a, b) { let d = Astro.norm360(b - a); if (d > 180) d -= 360; return Astro.norm360(a + d / 2); }
+
   // 從相位清單與行星位置偵測相位格局（回傳 [{type, planets:[...], sign?}]）
   function detectPatterns(aspList, positions) {
     const rel = {};
@@ -370,6 +388,34 @@
       const T_WEIGHT = { pluto: 0, uranus: 1, neptune: 1, saturn: 2, jupiter: 3 };
       tAspects.sort((m, n) => (T_WEIGHT[m.t.id] - T_WEIGHT[n.t.id]) || (+m.orb) - (+n.orb));
 
+      // 二次推運（Secondary Progression，一日一年）：出生後第 N 日的天象＝第 N 歲的內在演進
+      const ageYears = (tjdUT - jdUT) / 365.2422;
+      const pjde = jde + ageYears;               // 出生 JDE 往後推「年齡」天
+      const progSun = Astro.sunLongitude(pjde), progMoon = Astro.moonLongitude(pjde);
+      const progSunSign = signOf(progSun), progMoonSign = signOf(progMoon);
+      const progSunMoved = signOf(positions[0].lon) !== progSunSign;
+      // 推運月亮換座：往後逐日掃描下次進入新星座的時刻
+      let nextMoonSignJde = pjde, guard = 0;
+      while (signOf(Astro.moonLongitude(nextMoonSignJde)) === progMoonSign && guard++ < 4000) nextMoonSignJde += 0.02;
+      const yearsToNextSeason = nextMoonSignJde - pjde;   // 推運日＝實際年
+      const nextSeasonSign = signOf(Astro.moonLongitude(nextMoonSignJde));
+      const nextSeasonDate = new Date(tnow.getTime() + yearsToNextSeason * 365.2422 * 86400000);
+
+      // 中點（Ebertin 宇宙生物學）：核心三組整合點，並找出被本命行星啟動者（緊容許度 1.5°）
+      const MID_DEFS = [
+        { key: '日/月', a: positions[0].lon, b: positions[1].lon, mean: '意志與情感的整合點，代表你內在陰陽的匯流之處，也是親密關係與身心合一的核心議題。' },
+        { key: '金/火', a: pById.venus.lon, b: pById.mars.lon, mean: '愛與慾的整合點，代表你情感吸引力與行動熱情如何結合，是感情能量的引擎。' },
+        { key: 'ASC/MC', a: pc.asc, b: pc.mc, mean: '個人與世界的整合點，代表你如何把自我形象轉化為社會定位與人生成就。' }
+      ];
+      const midpoints = MID_DEFS.map(md => {
+        const lon = midpoint(md.a, md.b);
+        const hits = positions.filter(p => {
+          const d = angSep(p.lon, lon);
+          return d <= 1.5 || Math.abs(d - 90) <= 1.5 || Math.abs(d - 180) <= 1.5; // 硬相位軸（合/刑/沖）啟動
+        });
+        return { ...md, lon, sign: signOf(lon), house: Astro.houseOf(lon, pc.cusps), hits };
+      });
+
       const div = document.createElement('div');
       div.innerHTML = `<div class="panel result">
         <h3>本命星盤</h3>
@@ -440,6 +486,27 @@
           <b>行運${planetIcon(x.t)}${x.t.name} ${aspectIcon(x.asp)}${x.asp.name} 本命${x.nt.name}（差${x.orb}°）</b>
           <p style="margin-top:3px">行運${x.t.name}（${TRANSIT_MEAN[x.t.id]}）${TRANSIT_ASPECT[x.asp.name]}你本命的${x.nt.name}——${x.asp.good === false ? '這段期間此主題會遇到考驗或張力，是磨練與調整的時機，撐過去便是成長。' : x.asp.good === true ? '這段期間此主題順流開展、易得助力，宜主動把握。' : '這是一段強烈啟動此主題的時期，能量集中、轉折鮮明，好壞取決於如何運用。'}</p></div>`).join('')}` : '<p class="muted" style="margin-top:6px">當前木土天海冥對本命個人行星／軸點無緊密相位（容許度內），是相對平順、無重大行運壓力的階段。</p>'}
         <p class="muted" style="font-size:11.5px;margin-top:4px">※ 行運星位為當前天文精算（更新至你開啟此頁的時刻）；相位取 2.5°～3° 緊容許度。行運描述「當前的人生天氣」，硬相位是階段課題而非厄運。</p>
+        <hr class="divider">
+        <h4>${Icons.svg('moon', { size: 16 })} 二次推運 · 內在演進（Secondary Progression，現年約 ${Math.floor(ageYears)} 歲）</h4>
+        <p class="muted" style="margin-top:-2px">「一日一年」法：出生後第 N 天的天象，對應你第 N 歲的<b>內在心理演進</b>。行運是外在的人生天氣，推運則是內心緩慢的成熟與轉season。</p>
+        <div class="aspect" style="margin-top:6px;border-left:3px solid var(--navy)">
+          <b>推運月亮在 ${zodiacIcon(progMoonSign)}${progMoonSign.name}——當前情緒季節</b>
+          <p style="margin-top:3px">推運月亮約 2～3 年換一個星座，是內心「情緒季節」的指標。你目前這一季：${PROG_MOON_SEASON[SIGNS.indexOf(progMoonSign)]}<br>
+          <span class="muted">下一季將於約 <b>${nextSeasonDate.getFullYear()}/${nextSeasonDate.getMonth() + 1}</b>（約 ${yearsToNextSeason.toFixed(1)} 年後）轉入 ${nextSeasonSign.name}。</span></p>
+        </div>
+        <div class="aspect" style="margin-top:6px;border-left:3px solid var(--gold-mid)">
+          <b>推運太陽在 ${zodiacIcon(progSunSign)}${progSunSign.name}${progSunMoved ? `（已由本命${positions[0].sign.name}推進）` : '（尚在本命星座）'}</b>
+          <p style="margin-top:3px">推運太陽約 30 年換一座，代表自我認同的長期演化方向。${progSunMoved ? `你的核心自我已從${positions[0].sign.name}的原型，逐步吸納${progSunSign.name}的特質——${progSunSign.trait}` : `你的自我發展仍在本命${progSunSign.name}的主軸上深化，尚未跨入下一個階段。`}</p>
+        </div>
+        <p class="muted" style="font-size:11.5px;margin-top:4px">※ 二次推運採通行的<b>一日一年法</b>（Secondary Progression），推運星位為天文精算；換座時點為逐步掃描求得，誤差在數日內。</p>
+        <hr class="divider">
+        <h4>${Icons.svg('astrology', { size: 16 })} 中點整合（Midpoint · Ebertin 宇宙生物學）</h4>
+        <p class="muted" style="margin-top:-2px">中點是兩顆行星「連線的正中央」，代表兩股能量融合後的敏感點。當有行星恰好落在中點的合／刑／沖軸上，該整合議題就被強烈啟動——這是技術流占星最精微的一層。</p>
+        ${midpoints.map(md => `<div class="aspect" style="margin-top:6px;border-left:3px solid ${md.hits.length ? 'var(--gold-mid)' : 'var(--panel-border)'}">
+          <b>${md.key} 中點：${zodiacIcon(md.sign)}${md.sign.name} ${degInSign(md.lon)}（第${md.house}宮）</b>${md.hits.length ? ` <span class="tag gold">被${md.hits.map(h => h.name).join('、')}啟動</span>` : ''}
+          <p style="margin-top:3px">${md.mean}${md.hits.length ? `你的<b>${md.hits.map(h => h.name).join('、')}</b>正落在此中點軸上——代表這股行星能量直接介入了這個整合點，使該議題在你身上格外鮮明、反覆浮現，是人格中極具辨識度的一環。` : '此中點目前未被本命行星緊密啟動，議題以背景基調的方式運作，不特別突顯。'}</p>
+        </div>`).join('')}
+        <p class="muted" style="font-size:11.5px;margin-top:4px">※ 中點採 <b>Ebertin 宇宙生物學</b>取向，列日/月、金/火、ASC/MC 三組核心中點；啟動判定取 1.5° 緊容許度的合、刑、沖軸。</p>
       </div>`;
       resEl.appendChild(div);
 
@@ -459,7 +526,9 @@ ${positions.map(p => `${p.name}：${p.sign.name} ${degInSign(p.lon)}，第${p.ho
 元素分布：火${elemCount.火} 土${elemCount.土} 風${elemCount.風} 水${elemCount.水}
 【今日行運 Transit】(${tnow.getFullYear()}/${tnow.getMonth() + 1}/${tnow.getDate()})當前慢星：${transits.map(t => `${t.name}${t.sign.name}${t.retro ? '逆' : ''}(本命第${t.house}宮)`).join('、')}
 行運相位：${tAspects.length ? tAspects.map(x => `行運${x.t.name}${x.asp.name}本命${x.nt.name}(差${x.orb}°)`).join('、') : '無緊密相位'}
-請以現代心理占星取向分析：1) 太陽月亮上升三位一體人格 2) 出生月相（Rudhyar 週期）反映的內在情感節奏與人生階段原型 3) 行星落宮的生命領域重點 4) 水金火的溝通/感情/行動風格 5) 木土的機會與課題（含逆行課題）6) 重要相位與相位格局——特別留意入相位（能量漸強、更關鍵）與出相位的差別 7) 命主星落點與七政旺弱（入廟曜升為天賦、失勢落陷為課題）8) 宮主星飛宮串起的宮位連動（哪些生命領域彼此牽引）9) 今日行運：當前木土天海冥落本命宮位與對本命的相位，代表現階段的人生課題與機會（流年運勢重點）10) 綜合本命天賦與當前行運，給出適合的發展方向與近期建議。`);
+【二次推運 Secondary Progression】現年約${Math.floor(ageYears)}歲：推運太陽${progSunSign.name}${progSunMoved ? `（已由本命${positions[0].sign.name}推進）` : '（仍在本命座）'}、推運月亮${progMoonSign.name}（情緒季節，約${yearsToNextSeason.toFixed(1)}年後轉入${nextSeasonSign.name}）
+【中點 Midpoint · Ebertin】${midpoints.map(md => `${md.key}中點於${md.sign.name}${degInSign(md.lon)}第${md.house}宮${md.hits.length ? `（被${md.hits.map(h => h.name).join('、')}啟動）` : ''}`).join('；')}
+請以現代心理占星取向分析：1) 太陽月亮上升三位一體人格 2) 出生月相（Rudhyar 週期）反映的內在情感節奏與人生階段原型 3) 行星落宮的生命領域重點 4) 水金火的溝通/感情/行動風格 5) 木土的機會與課題（含逆行課題）6) 重要相位與相位格局——特別留意入相位（能量漸強、更關鍵）與出相位的差別 7) 命主星落點與七政旺弱（入廟曜升為天賦、失勢落陷為課題）8) 宮主星飛宮串起的宮位連動（哪些生命領域彼此牽引）9) 今日行運：當前木土天海冥落本命宮位與對本命的相位，代表現階段的人生課題與機會（流年運勢重點）10) 二次推運：推運太陽的自我演化階段、推運月亮的情緒季節（現在的內心狀態與下一季的轉變）——請對比「行運＝外在際遇」與「推運＝內在成熟」兩者是否同步 11) 中點整合（被行星啟動者尤其重要）12) 綜合本命天賦、當前行運與內在推運，給出適合的發展方向與近期建議。`);
     });
   }
 
