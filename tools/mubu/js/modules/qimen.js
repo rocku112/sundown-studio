@@ -57,6 +57,52 @@
   // 旬首 → 遁干
   const XUNSHOU_YI = { 0: '戊', 50: '己', 40: '庚', 30: '辛', 20: '壬', 10: '癸' };
 
+  // ── 格局判定：十干剋應（天盤干加地盤干）＋伏吟反吟＋五不遇時＋門迫 ──
+  // 十干剋應之經典六格（天盤干 + 地盤干）
+  const GEJU_10G = {
+    '丙戊': { name: '青龍返首', good: true, why: '天盤丙加地盤戊為「青龍返首」——大吉之格，主謀事有成、貴人相助、轉禍為福，是奇門第一等吉格。' },
+    '戊丙': { name: '飛鳥跌穴', good: true, why: '天盤戊加地盤丙為「飛鳥跌穴」——大吉之格，主機緣天成、意外之喜，所謀順遂如鳥投林。' },
+    '乙辛': { name: '青龍逃走', good: false, why: '天盤乙加地盤辛為「青龍逃走」——主人事逃亡、事物失散、下屬背離，所求之事多有走失落空之象。' },
+    '辛乙': { name: '白虎猖狂', good: false, why: '天盤辛加地盤乙為「白虎猖狂」——主凶災傷損、道路阻隔、人多爭鬥，出行謀事宜避此方。' },
+    '丁癸': { name: '螣蛇夭矯', good: false, why: '天盤丁加地盤癸為「螣蛇夭矯」——主文書失誤、驚恐怪異、事多虛詐反覆，宜謹慎驗證。' },
+    '癸丁': { name: '朱雀投江', good: false, why: '天盤癸加地盤丁為「朱雀投江」——主文書口舌遺失、消息中斷、訴訟不利，慎防信件契約出錯。' }
+  };
+  // 門五行（用於門迫：門剋宮為迫）
+  const DOOR_WX = { 休門: '水', 生門: '土', 傷門: '木', 杜門: '木', 景門: '火', 死門: '土', 驚門: '金', 開門: '金' };
+  const GONG_WX = { 1: '水', 2: '土', 3: '木', 4: '木', 5: '土', 6: '金', 7: '金', 8: '土', 9: '火' };
+  const WX_KE_Q = { 木: '土', 土: '水', 水: '火', 火: '金', 金: '木' };
+  const OPP_GONG = { 1: 9, 9: 1, 3: 7, 7: 3, 2: 8, 8: 2, 4: 6, 6: 4 };
+
+  function qimenGeju(q) {
+    const out = [];
+    // 1. 十干剋應（逐宮檢天盤干加地盤干）
+    for (const g of [1, 2, 3, 4, 6, 7, 8, 9]) {
+      const s = q.sky[g] && q.sky[g].yi, e = q.earth[g]; // 天盤干在 sky[g].yi
+      if (!s || !e) continue;
+      const hit = GEJU_10G[s + e];
+      if (hit) out.push({ ...hit, gong: g, detail: `${GONG_INFO[g].name}（${GONG_INFO[g].dir}方）天盤${s}加地盤${e}` });
+    }
+    // 2. 伏吟／反吟（以值符星落宮對其本宮論）
+    const fuOrig = +Object.keys(STARS_ORIG).find(k => STARS_ORIG[k] === q.fuStar);
+    if (fuOrig && q.targetGong === fuOrig) out.push({ name: '星伏吟', good: false, gong: q.targetGong, detail: `值符${q.fuStar}回落本宮${GONG_INFO[q.targetGong].name}`, why: '伏吟主靜止不動、事情停滯難有進展，宜守舊安常，凡事拖延反覆，不利求動求變。' });
+    else if (fuOrig && OPP_GONG[fuOrig] === q.targetGong) out.push({ name: '星反吟', good: false, gong: q.targetGong, detail: `值符${q.fuStar}落對宮${GONG_INFO[q.targetGong].name}`, why: '反吟主反覆顛倒、事與願違，計畫易生變卦、去而復返，宜再三斟酌不宜急進。' });
+    // 3. 五不遇時：時干剋日干且同陰陽（時干為日干之七殺）
+    const gi = (n) => n % 10;
+    const dG = gi(q.dp.n), hG = gi(q.hp.n);
+    const GW = ['木', '木', '火', '火', '土', '土', '金', '金', '水', '水'];
+    if (WX_KE_Q[GW[hG]] === GW[dG] && hG % 2 === dG % 2) {
+      out.push({ name: '五不遇時', good: false, gong: null, detail: `時干${Ganzhi.GAN[hG]}剋日干${Ganzhi.GAN[dG]}（同陰陽）`, why: '五不遇時為時家凶格——此時辰百事不宜、謀為多阻，縱有吉門吉星亦減力，宜改擇他時再行事。' });
+    }
+    // 4. 門迫：門五行剋所落宮五行（屬小格，逐宮合併為一條以免淹沒主格）
+    const po = [];
+    for (const g of [1, 2, 3, 4, 6, 7, 8, 9]) {
+      const dr = q.doors[g];
+      if (dr && WX_KE_Q[DOOR_WX[dr]] === GONG_WX[g]) po.push(`${dr}落${GONG_INFO[g].dir}方（${GONG_INFO[g].name}）`);
+    }
+    if (po.length) out.push({ name: '門迫', good: false, gong: null, minor: true, detail: po.join('、'), why: '門迫指八門五行剋所落宮位五行，主此方用事急躁強求、雖能成亦費力有損，宜緩圖不宜硬取。（門迫為小格，每局多有數處，僅作方位取捨參考，不掩主格吉凶。）' });
+    return out;
+  }
+
   function build(y, m, d, hh, mi) {
     const jd = Astro.toJD(y, m, d, hh, mi);
     // 找目前節氣
@@ -175,6 +221,7 @@
       }).join('');
 
       // 吉方建議
+      const geju = qimenGeju(q);
       const goodDirs = Object.entries(q.doors)
         .filter(([g, d]) => ['開門', '休門', '生門'].includes(d))
         .map(([g, d]) => `${GONG_INFO[g].dir}方（${d}，${DOOR_USE[d]}）`);
@@ -205,7 +252,13 @@
             <p class="muted" style="margin-top:2px;font-size:12.5px">${GOD_INFO[q.gods[g]] || ''}</p>
           </div>`).join('')}
         </div>
-        <p class="muted" style="margin-top:10px">※ 奇門格局繁複（十干剋應、星門伏反吟等），內建解讀已列盤面、吉門方位、值符值使與八神意涵，更深入的十干剋應與應期斷局請用 AI 解讀。</p>
+        <h4>格局判定（十干剋應・伏吟反吟・時格）</h4>
+        <p class="muted" style="margin-top:-2px">奇門斷局的核心語言：天盤干加地盤干成「十干剋應」之格，值符星落宮定伏吟反吟，另查五不遇時與門迫。格局定此時空的整體氣機吉凶。</p>
+        ${geju.length ? geju.map(x => `<div class="aspect" style="margin-top:6px;border-left:3px solid ${x.good ? 'var(--gold-mid)' : 'var(--cinnabar)'}">
+          <b style="color:${x.good ? 'var(--gold-bright)' : 'var(--cinnabar)'}">${x.name}</b>　<span class="muted">${x.detail}</span>
+          <p style="margin-top:3px">${x.why}</p></div>`).join('')
+          : '<p class="muted" style="margin-top:6px">此局未見經典十干剋應之格，亦無伏吟反吟與五不遇時——氣機平和無特殊偏向，宜依吉門方位與八神意涵論之。</p>'}
+        <p class="muted" style="margin-top:10px">※ 十干剋應取經典六格（青龍返首／飛鳥跌穴／青龍逃走／白虎猖狂／螣蛇夭矯／朱雀投江）；伏吟反吟以值符星落宮對其本宮論；五不遇時為時干剋日干且同陰陽；門迫為門五行剋宮五行。更細的十干剋應全表與應期斷局請用 AI 解讀。</p>
       </div>`;
       resEl.appendChild(div);
 
@@ -218,7 +271,8 @@
 九宮盤面（宮：八神/天盤星+天盤干/八門+地盤干）：
 ${GRID.filter(g => g !== 5).map(g => `${GONG_INFO[g].name}（${GONG_INFO[g].dir}）：${q.gods[g] || ''}／${q.sky[g] ? q.sky[g].star + q.sky[g].yi : ''}／${q.doors[g] || ''}＋${q.earth[g] || ''}`).join('\n')}
 中五宮地盤：${q.earth[5] || ''}（寄坤二）
-請分析：1) 值符值使所示的事體與趨勢 2) 用神落宮吉凶（依所問之事取用神）3) 天地盤干支組合的十干剋應 4) 具體行動建議與有利方位、時機。`);
+本站已判格局：${geju.length ? geju.map(x => `${x.name}（${x.detail}）`).join('；') : '未見經典十干剋應之格，亦無伏吟反吟與五不遇時'}
+請分析：1) 值符值使所示的事體與趨勢 2) 用神落宮吉凶（依所問之事取用神）3) 印證並延伸上列格局判定，補上其餘十干剋應（天地盤干組合）之吉凶 4) 若逢伏吟反吟或五不遇時，說明對此事的實際影響與化解之道 5) 具體行動建議與有利方位、時機。`);
     });
   }
 
