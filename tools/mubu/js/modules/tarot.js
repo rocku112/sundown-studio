@@ -11,6 +11,70 @@
     { id: 'celtic', name: '凱爾特十字（十張）', n: 10, slots: () => ['現況', '挑戰', '潛意識根基', '過去', '顯意識目標', '未來', '自身態度', '外在環境', '希望與恐懼', '最終結果'] }
   ];
 
+  // ── 牌陣結構分析（韋特體系實務解牌：先看整體組成，再看單張）──
+  const SUIT_DOMAIN = {
+    權杖: { elem: '火', mean: '行動、事業、熱情與創造力' },
+    聖杯: { elem: '水', mean: '情感、關係、直覺與內心感受' },
+    寶劍: { elem: '風', mean: '思緒、溝通、衝突與現實課題' },
+    錢幣: { elem: '土', mean: '物質、金錢、健康與務實層面' }
+  };
+  const COURT_PERSONA = {
+    page: { name: '侍者', mean: '學習者、訊息帶來者——代表新手上路的階段，或一位年輕／經驗尚淺的人，也可能是一則消息的到來。' },
+    knight: { name: '騎士', mean: '行動者、追求者——代表全力投入、快速推進的階段，或一位積極主動、卻可能衝動的人。' },
+    queen: { name: '皇后', mean: '滋養者、內在成熟——代表以理解與包容處理事情的方式，或一位善於體察、內在強大的人。' },
+    king: { name: '國王', mean: '掌權者、外在成熟——代表以權威與經驗主導局面，或一位居於決策位置、能拍板的人。' }
+  };
+  function spreadAnalysis(picked) {
+    const n = picked.length;
+    const major = picked.filter(p => p.card.arcana === 'major');
+    const rev = picked.filter(p => p.reversed);
+    const court = picked.filter(p => typeof p.card.rank === 'string');
+    const suits = {};
+    picked.filter(p => p.card.suitName).forEach(p => { suits[p.card.suitName] = (suits[p.card.suitName] || 0) + 1; });
+    const suitTop = Object.entries(suits).sort((a, b) => b[1] - a[1])[0];
+    const out = [];
+    // 大阿爾克那比例
+    const mr = major.length / n;
+    out.push({
+      title: `大阿爾克那 ${major.length}/${n}`,
+      good: null,
+      text: mr >= 0.6
+        ? `牌陣中大牌佔多數（${major.map(p => p.card.name).join('、')}）——這件事的層級<b>超出日常瑣事</b>，是人生階段性的重要課題，背後有較大的命運推力，往往不完全由你單方面掌控，宜順勢而非硬抗。`
+        : mr === 0
+          ? '牌陣全為小阿爾克那——這件事屬於<b>日常可掌控</b>的層面，變數多在細節與人為努力，只要調整具體做法就能影響結果，不必往命運層次去想。'
+          : `大小牌並見——這件事<b>既有大方向的必然，也有你能著力的細節</b>：大牌處是趨勢、需順應，小牌處是具體做法、可主動調整。`
+    });
+    // 花色分布
+    if (suitTop && suitTop[1] >= 2) {
+      const d = SUIT_DOMAIN[suitTop[0]];
+      out.push({
+        title: `${suitTop[0]}偏多（${suitTop[1]} 張・${d ? d.elem : ''}元素）`,
+        good: null,
+        text: `牌陣中${suitTop[0]}最多，代表這件事的核心落在<b>${d ? d.mean : suitTop[0]}</b>的層面——解讀時應把重心放在這個領域，其他面向多是配角。`
+      });
+    }
+    // 宮廷牌
+    if (court.length) {
+      out.push({
+        title: `宮廷牌 ${court.length} 張`,
+        good: null,
+        text: `出現${court.map(p => p.card.name).join('、')}——宮廷牌多主<b>「人」</b>：可能是牽涉其中的具體人物，也可能是你當下該採取的姿態。${court.map(p => `<br>・<b>${p.card.name}</b>：${COURT_PERSONA[p.card.rank] ? COURT_PERSONA[p.card.rank].mean : ''}`).join('')}`
+      });
+    }
+    // 逆位比例
+    const rr = rev.length / n;
+    out.push({
+      title: `逆位 ${rev.length}/${n}`,
+      good: null,
+      text: rr >= 0.6
+        ? '逆位過半——整體能量偏向<b>內在、受阻或尚未展開</b>：事情多半卡在內心糾結、時機未到或方向需要修正，此時宜向內檢視而非向外強求。'
+        : rr === 0
+          ? '全為正位——能量<b>順暢外顯</b>，事情走在明朗的軌道上，該做什麼相對清楚，可放心依牌義行動。'
+          : '正逆交錯——事情<b>有推進也有阻滯</b>：正位處是可施力的順風面，逆位處是需要先處理的內在功課或現實阻礙。'
+    });
+    return out;
+  }
+
   function draw(n) {
     const idx = [...Array(TAROT_DATA.length).keys()];
     const picked = [];
@@ -146,6 +210,13 @@
               <span class="fortune-level ${yes ? 'good' : 'bad'}">${strong ? '強烈傾向' : '傾向'}${yes ? '肯定' : '否定'}</span>
             </div>`;
           }
+          if (picked.length >= 3) {
+            const ana = spreadAnalysis(picked);
+            html += `<h4>牌陣結構分析</h4>
+              <p class="muted" style="margin-top:-2px">實務解牌先看整體組成再讀單張——大小牌比例定「事情的層級」，花色定「落在哪個領域」，宮廷牌指「牽涉的人」，逆位比例看「能量順逆」。</p>
+              ${ana.map(a => `<div class="aspect" style="margin-top:6px"><b>${a.title}</b><p style="margin-top:3px">${a.text}</p></div>`).join('')}
+              <hr class="divider">`;
+          }
           picked.forEach((p, i) => {
             const c = p.card;
             const meaning = p.reversed ? c.meaningRev : c.meaningUp;
@@ -159,7 +230,8 @@
 所問的問題：${question || '（未說明，做整體指引）'}
 牌陣：${spread.name}${spread.choice ? `（選項A：${optA}／選項B：${optB}）` : ''}
 ${picked.map((p, i) => `${i + 1}. ${slots[i]}：${p.card.name}（${p.card.nameEn}）${p.reversed ? '逆位' : '正位'}`).join('\n')}
-請將所有牌串連成一個完整的故事線來解讀（不要一張一張孤立解釋），特別注意牌與牌之間的呼應與轉折，最後給出具體可行的建議。${spread.choice ? '請針對兩個選項給出明確的比較與傾向建議。' : ''}`);
+${picked.length >= 3 ? `牌陣結構：大阿爾克那 ${picked.filter(p => p.card.arcana === 'major').length}/${picked.length}、逆位 ${picked.filter(p => p.reversed).length}/${picked.length}、宮廷牌 ${picked.filter(p => typeof p.card.rank === 'string').length} 張${(() => { const s = {}; picked.filter(p => p.card.suitName).forEach(p => { s[p.card.suitName] = (s[p.card.suitName] || 0) + 1; }); const e = Object.entries(s).sort((a, b) => b[1] - a[1]); return e.length ? `、花色分布 ${e.map(([k, v]) => k + v).join('/')}` : ''; })()}
+` : ''}請先從<b>牌陣整體結構</b>入手（大小阿爾克那比例＝事情層級與命運推力、花色分布＝核心落在哪個生命領域、宮廷牌＝牽涉的人物或該採取的姿態、逆位比例＝能量順逆），再將所有牌串連成一個完整的故事線來解讀（不要一張一張孤立解釋），特別注意牌與牌之間的呼應與轉折，最後給出具體可行的建議。${spread.choice ? '請針對兩個選項給出明確的比較與傾向建議。' : ''}`);
           readEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
       });
