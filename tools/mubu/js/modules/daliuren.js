@@ -178,10 +178,42 @@
 
     return {
       dp, hourIdx, yj, offset, isFuyin, isFanyin,
-      tian, diOf, jigong, dayGan, daySupport, courses, harms,
+      tian, diOf, jigong, dayGan, dayGanIdx, daySupport, courses, harms,
       chu, zhong, mo, method, gz, dayHours, tjOf, shun
     };
   }
+
+  // ── 斷課要素：三傳六親、用神取用、年命上神 ──
+  // 六親：以日干五行為我
+  function liuqinOf(dayGanWx, zhiWx) {
+    if (zhiWx === dayGanWx) return '兄弟';
+    if (SHENG[zhiWx] === dayGanWx) return '父母';
+    if (SHENG[dayGanWx] === zhiWx) return '子孫';
+    if (KE[zhiWx] === dayGanWx) return '官鬼';
+    return '妻財';
+  }
+  const LIUQIN_MEAN = {
+    父母: '主長輩、文書、契約、house宅舍與庇蔭，亦主辛勞操煩。',
+    兄弟: '主同輩、同事、競爭者與分奪，逢之多主耗財、口舌或需與人共分。',
+    子孫: '主福德、解憂、子女與晚輩，是解神——逢之憂疑可散、病訟得解，惟不利求官。',
+    妻財: '主錢財、妻妾、實質收穫與所求之物，求財問婚見之為吉。',
+    官鬼: '主官職、名位、丈夫，亦主疾病、訟事與壓力——求官見之吉，問病問訟見之凶。'
+  };
+  // 各問類之用神六親
+  const CAT_USE = {
+    綜合: null, 求財: '妻財', 事業官運: '官鬼', 婚姻感情: null,
+    疾病: '官鬼', 出行: '父母', 尋人失物: '妻財', 訴訟: '官鬼'
+  };
+  const CAT_USE_NOTE = {
+    求財: '求財以「妻財」為用神——財爻入傳且旺相則財可得，若不上三傳或受剋則求財費力。',
+    事業官運: '求官以「官鬼」為用神——官爻入傳且得生扶則名位可望，最忌子孫爻剋官。',
+    疾病: '問病以「官鬼」為病神、「子孫」為醫藥解神——官鬼旺而子孫不現則病重難癒，子孫入傳則有解。',
+    出行: '出行以「父母」為舟車道路——父母爻安穩則行程順，逢沖剋則多阻於途。',
+    尋人失物: '尋物以「妻財」為所失之物——財爻入傳且不落空亡則可尋，逢沖散則難覓。',
+    訴訟: '訴訟以「官鬼」為官府對頭、「子孫」為解神——官鬼旺則對方勢強，子孫入傳則訟可解。',
+    婚姻感情: '問婚男以「妻財」為妻、女以「官鬼」為夫，兼看六合、天后、青龍等吉將是否入傳。',
+    綜合: '綜合問事不專取一神，以三傳六親之整體流轉與神將吉凶合參。'
+  };
 
   const QCATS = [
     '綜合', '求財', '事業官運', '婚姻感情', '疾病', '出行', '尋人失物', '訴訟'
@@ -194,9 +226,10 @@
         <div class="form-grid" style="margin-bottom:10px">
           <div class="field" style="flex:1"><label>所問之事</label><input class="dl-q" placeholder="例：這件事能成嗎？" style="width:100%"></div>
           <div class="field"><label>問類</label><select class="dl-cat">${QCATS.map(c => `<option>${c}</option>`).join('')}</select></div>
+          <div class="field"><label>出生年（看年命・可留空）</label><input class="dl-by" type="number" placeholder="如 1989" style="width:110px"></div>
         </div>
         <button class="btn" id="dl-go">${Icons.svg('daliuren')} 以此刻起課</button>
-        <p class="muted" style="margin-top:10px">大六壬以「月將加時」布天地盤，立四課、發三傳、加十二天將。月將依中氣、時辰依此刻。</p>
+        <p class="muted" style="margin-top:10px">大六壬以「月將加時」布天地盤，立四課、發三傳、加十二天將。月將依中氣、時辰依此刻。填出生年可加看「年命上神」——年命為斷課的落點，關係到此事應在誰身上。</p>
       </div>
       <div id="dl-result"></div>`;
 
@@ -207,6 +240,25 @@
       const q = buildCourse(now.getFullYear(), now.getMonth() + 1, now.getDate(), now.getHours(), now.getMinutes());
       const question = el.querySelector('.dl-q').value.trim();
       const cat = el.querySelector('.dl-cat').value;
+
+      // ── 斷課：三傳六親、用神、年命上神 ──
+      const dayGanWx = GAN_WX[q.dayGanIdx]; // dayGan 為天干字元，索引須用 dayGanIdx
+      const chuanArr = [{ k: '初傳', z: q.chu }, { k: '中傳', z: q.zhong }, { k: '末傳', z: q.mo }];
+      const chuanLQ = chuanArr.map(c => ({ ...c, wx: ZHI_WX[c.z], lq: liuqinOf(dayGanWx, ZHI_WX[c.z]), tj: q.tjOf[c.z] }));
+      const useLQ = CAT_USE[cat];
+      const useIn = useLQ ? chuanLQ.filter(c => c.lq === useLQ) : [];
+      // 年命上神：本命年支在地盤，其上所乘之天盤神與天將
+      const byRaw = +el.querySelector('.dl-by').value;
+      let nianming = null;
+      if (byRaw >= 1900 && byRaw <= 2100) {
+        const nz = ((byRaw - 4) % 12 + 12) % 12;              // 本命年支
+        const shang = q.tian(nz);                              // 年命地盤上所乘天盤神（tian 為函式）
+        nianming = {
+          year: byRaw, nz, shang, tj: q.tjOf[shang],
+          lq: liuqinOf(dayGanWx, ZHI_WX[shang]),
+          inChuan: chuanArr.some(c => c.z === shang || c.z === nz)
+        };
+      }
 
       const shenName = (z) => `${ZHI[z]}<small class="muted">${JIANG[z]}</small>`;
       // 四課呈現（右到左：一二三四）
@@ -220,11 +272,12 @@
 
       // 三傳
       const chuan = [['初傳', q.chu], ['中傳', q.zhong], ['末傳', q.mo]].map(([n, z]) => `
-        <div class="aspect" style="text-align:center;flex:1">
+        <div class="aspect" style="text-align:center;flex:1${useLQ && liuqinOf(dayGanWx, ZHI_WX[z]) === useLQ ? ';border-color:rgba(240,194,104,.6)' : ''}">
           <b style="display:block">${n}</b>
           <div style="color:var(--cinnabar);font-size:12px">${q.tjOf[z]}</div>
           <div style="font-size:22px;color:var(--navy);font-weight:700">${ZHI[z]}</div>
           <div class="muted" style="font-size:12px">${JIANG[z]}・${ZHI_WX[z]}</div>
+          <div style="font-size:12.5px;color:var(--gold-deep);font-weight:600">${liuqinOf(dayGanWx, ZHI_WX[z])}</div>
         </div>`).join('');
 
       // 天地盤（12 宮環狀簡表：地盤固定，標天盤上神＋天將）
@@ -260,7 +313,26 @@
         <p style="margin-top:8px">初傳${ZHI[q.chu]}（${ZHI_WX[q.chu]}）與中傳${ZHI[q.zhong]}（${ZHI_WX[q.zhong]}）：${flow.r1}；中傳與末傳${ZHI[q.mo]}（${ZHI_WX[q.mo]}）：${flow.r2}。${flow.verdict}</p>
         <h4>天地盤（地盤十二支上之天盤神與天將）</h4>
         ${plate}
-        <p class="muted" style="margin-top:8px">※ 內建完成布盤、四課、三傳（賊剋/比用/涉害/遙剋/昴星、伏吟反吟）與十二天將，並附課體釋義與三傳生剋速斷；斷課取用神、年命入傳、神將吉凶等更精細層次，建議用 AI 深度解讀。</p>
+        <hr class="divider">
+        <h4>三傳六親與用神（以日干${q.dayGan}${dayGanWx}為我）</h4>
+        <p class="muted" style="margin-top:-2px">六親是斷課的語言：三傳各爻對日干（我）的關係，決定這件事牽動的是財、是官、是文書還是解神。</p>
+        ${chuanLQ.map(c => `<div class="aspect" style="margin-top:6px;border-left:3px solid ${useLQ && c.lq === useLQ ? 'var(--gold-bright)' : 'var(--panel-border)'}">
+          <b>${c.k} ${ZHI[c.z]}${c.wx} · <span style="color:var(--gold-deep)">${c.lq}</span>（乘${c.tj}）</b>${useLQ && c.lq === useLQ ? ' <span class="tag gold">用神入傳</span>' : ''}
+          <p style="margin-top:3px">${LIUQIN_MEAN[c.lq]}</p></div>`).join('')}
+        <div class="aspect" style="margin-top:8px;border-left:3px solid var(--gold-mid)">
+          <b>用神取用（問${cat}）</b>
+          <p style="margin-top:3px">${CAT_USE_NOTE[cat]}${useLQ ? (useIn.length
+            ? `<br><b style="color:var(--gold-bright)">本課用神「${useLQ}」入三傳</b>（${useIn.map(c => c.k).join('、')}），所問之事有著落、機緣已現，可依其所乘天將與生剋論成敗。`
+            : `<br><b style="color:var(--cinnabar)">本課用神「${useLQ}」不上三傳</b>，主所求之事機緣未顯、線索不明，宜另尋他途或待時再問。`) : ''}</p>
+        </div>
+        ${nianming ? `<hr class="divider">
+        <h4>年命上神（${nianming.year} 年生・年命${ZHI[nianming.nz]}）</h4>
+        <p class="muted" style="margin-top:-2px">年命是「這件事應在誰身上」的落點。年命所乘之天盤神與天將，直指當事人本身的處境。</p>
+        <div class="aspect" style="margin-top:6px;border-left:3px solid ${nianming.inChuan ? 'var(--gold-bright)' : 'var(--panel-border)'}">
+          <b>年命${ZHI[nianming.nz]}上乘 ${ZHI[nianming.shang]}${JIANG[nianming.shang]}（${nianming.tj}）· 六親屬${nianming.lq}</b>${nianming.inChuan ? ' <span class="tag gold">年命入傳</span>' : ''}
+          <p style="margin-top:3px">年命上神為<b>${ZHI[nianming.shang]}</b>，所乘天將<b>${nianming.tj}</b>，對日干而言屬<b>${nianming.lq}</b>——${LIUQIN_MEAN[nianming.lq]}${nianming.inChuan ? '<br><b style="color:var(--gold-bright)">年命入傳</b>：此事與你本人切身相關、必應在自己身上，吉凶感受最為直接強烈。' : '<br>年命不入三傳，此事對你而言較為外緣、間接，未必親身承受其衝擊。'}</p>
+        </div>` : '<p class="muted" style="margin-top:10px">※ 未填出生年，故未起「年命上神」。填入出生年可加看此事應在誰身上。</p>'}
+        <p class="muted" style="margin-top:8px">※ 內建完成布盤、四課、三傳（賊剋/比用/涉害/遙剋/昴星、伏吟反吟）、十二天將（貴人晝夜與順逆布將）、課體釋義、三傳生剋速斷、<b>三傳六親與用神取用、年命上神</b>；旬空、神煞與細部應期請用 AI 深度解讀。</p>
       </div>`;
       resEl.appendChild(div);
 
@@ -273,8 +345,11 @@
 四課（上神/下神，附天將）：
 ${q.courses.map((c, i) => `${c.label}：上${ZHI[c.u]}(${JIANG[c.u]}/${q.tjOf[c.u]}) 下${c.isGan ? q.dayGan : ZHI[c.d]}`).join('\n')}
 三傳：初${ZHI[q.chu]}(${JIANG[q.chu]}/${q.tjOf[q.chu]})、中${ZHI[q.zhong]}(${JIANG[q.zhong]}/${q.tjOf[q.zhong]})、末${ZHI[q.mo]}(${JIANG[q.mo]}/${q.tjOf[q.mo]})
-貴人在${ZHI[q.gz]}（${q.dayHours ? '晝' : '夜'}貴）
-請依課體、三傳生剋與神將，結合所問之事，判斷事情的起因、發展、結果與應期，並給出建議。`);
+貴人在${ZHI[q.gz]}（${q.dayHours ? '晝' : '夜'}貴），天將${q.shun ? '順' : '逆'}布
+三傳六親（以日干${q.dayGan}${dayGanWx}為我）：${chuanLQ.map(c => `${c.k}${ZHI[c.z]}${c.wx}屬${c.lq}乘${c.tj}`).join('、')}
+用神取用：問${cat}${useLQ ? `以「${useLQ}」為用神——${useIn.length ? `已入三傳（${useIn.map(c => c.k).join('、')}）` : '不上三傳'}` : '不專取一神，合參三傳六親'}
+${nianming ? `年命上神：${nianming.year}年生，年命${ZHI[nianming.nz]}，上乘${ZHI[nianming.shang]}${JIANG[nianming.shang]}（${nianming.tj}），六親屬${nianming.lq}，${nianming.inChuan ? '年命入傳（此事切身）' : '年命不入傳'}
+` : ''}請依課體、三傳六親與生剋、神將吉凶、用神是否入傳${nianming ? '、年命上神所示的當事人處境' : ''}，結合所問之事，判斷：1) 事情的起因（初傳）、發展（中傳）、結果（末傳）2) 用神所示的成敗關鍵 3) 神將所主的人事象意 4) 應期（以用神逢值、逢沖之月日推）5) 具體建議。`);
     });
   }
 
