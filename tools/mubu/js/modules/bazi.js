@@ -175,6 +175,18 @@
     for (const k of ['year', 'month', 'day', 'hour']) p[k].cang.forEach(bump);
     return Object.entries(count).sort((a, b) => b[1] - a[1]).slice(0, 2);
   }
+  // 歲運關係：現行大運干支 × 流年干支（子平常用之歲運並臨／天剋地沖／伏吟）
+  function suiYunRel(dy, fy) {
+    if (!dy) return [];
+    const tags = [];
+    const 沖 = (dy.zhiIdx + 6) % 12 === fy.zhiIdx;
+    const 剋 = Ganzhi.WX_KE[dy.ganWx] === fy.ganWx || Ganzhi.WX_KE[fy.ganWx] === dy.ganWx;
+    if (dy.ganIdx === fy.ganIdx && dy.zhiIdx === fy.zhiIdx) tags.push({ t: '歲運並臨', bad: true, why: '流年干支與大運干支相同，力量疊加集中，主此年變動特別劇烈、吉凶都被放大，古法視為需謹慎之年。' });
+    else if (沖 && 剋) tags.push({ t: '天剋地沖', bad: true, why: '流年與大運天干相剋、地支相沖（反吟），主環境動盪、人事變遷，是轉折衝擊之年，宜守成勿冒進。' });
+    else if (沖) tags.push({ t: '歲運相沖', bad: true, why: '流年地支沖大運地支，主奔波變動、環境轉換，宜順勢調整而非硬拚。' });
+    else if ((dy.zhiIdx + fy.zhiIdx) % 12 === 1) tags.push({ t: '歲運相合', bad: false, why: '流年與大運地支六合，主人事和順、易得助力，是相對安穩之年。' }); // 六合：子丑/寅亥/卯戌/辰酉/巳申/午未，支和恆≡1(mod 12)
+    return tags;
+  }
   // 大運喜忌：以用神(like)/忌神(avoid)評每步大運
   function daYunLuck(dw, like, avoid) {
     const sc = (wx) => wx === like ? 2 : (Ganzhi.WX_SHENG[wx] === like ? 1 : (avoid && wx === avoid ? -2 : (avoid && Ganzhi.WX_SHENG[wx] === avoid ? -1 : 0)));
@@ -263,12 +275,19 @@
       const nowYear = new Date().getFullYear();
       const flowYears = Ganzhi.yearlyFortune(nowYear, 10, p);
       const flowMonths = Ganzhi.monthlyFortune(nowYear, p);
+      // 現行大運（八字大運按實足年齡起運）
+      const _now = new Date();
+      const realAge = _now.getFullYear() - b.y - ((_now.getMonth() + 1 < b.m || (_now.getMonth() + 1 === b.m && _now.getDate() < b.d)) ? 1 : 0);
 
       const ge = ziping(p);         // 《子平真詮》格局＋成敗＋喜忌
       const doms = dominantGods(p);
       const like = ge.like;         // 格局用神（子平真詮，取代扶抑粗判）
       const avoid = ge.avoid;
       const fuyiLike = str.like;    // 扶抑粗判喜用，僅供五行分布欄對照
+      // 現行大運＋歲運關係
+      const curDy = luck.list.find(d => realAge >= d.age && realAge <= d.age + 9) || null;
+      const curDyLuck = curDy ? daYunLuck(curDy, like, avoid) : null;
+      const flowRel = flowYears.map(f => ({ f, tags: suiYunRel(curDy, f) }));
 
       const cols = ['year', 'month', 'day', 'hour'];
       const colName = { year: '年柱', month: '月柱', day: '日柱', hour: '時柱' };
@@ -311,11 +330,15 @@
         <hr class="divider">
         <h4>大運（${luck.startAge} 歲起運，${luck.forward ? '順' : '逆'}行）<span class="muted" style="font-weight:400">　依格局喜用${ge.喜五行.join('')}${ge.忌五行.length ? `／忌${ge.忌五行.join('')}` : ''}標吉凶</span></h4>
         <div style="display:flex;flex-wrap:wrap;gap:8px">
-          ${luck.list.map(d => { const dl = daYunLuck(d, like, avoid); return `<div class="aspect" style="min-width:88px;text-align:center;flex:1;${dl.cls === 'good' ? 'border-color:rgba(240,194,104,.5)' : dl.cls === 'bad' ? 'border-color:rgba(176,48,32,.35)' : ''}">
-            <b>${d.age}-${d.age + 9}歲</b><span style="font-size:18px;letter-spacing:.15em">${d.name}</span>
+          ${luck.list.map(d => { const dl = daYunLuck(d, like, avoid); const isNow = d === curDy; return `<div class="aspect" style="min-width:88px;text-align:center;flex:1;${isNow ? 'border-color:var(--gold-bright);box-shadow:0 0 0 1px var(--gold-mid) inset;' : dl.cls === 'good' ? 'border-color:rgba(240,194,104,.5)' : dl.cls === 'bad' ? 'border-color:rgba(176,48,32,.35)' : ''}">
+            <b>${d.age}-${d.age + 9}歲</b>${isNow ? '<span class="tag gold" style="display:block;margin:2px auto">現行</span>' : ''}<span style="font-size:18px;letter-spacing:.15em">${d.name}</span>
             <div class="muted" style="font-size:12px">${d.nayin}</div>
             <div style="font-size:12px;color:${dl.cls === 'good' ? 'var(--gold-deep)' : dl.cls === 'bad' ? 'var(--cinnabar)' : 'var(--ink-dim)'}">${dl.label}</div></div>`; }).join('')}
         </div>
+        ${curDy ? `<div class="aspect" style="margin-top:10px;border-left:3px solid ${curDyLuck.cls === 'good' ? 'var(--gold-mid)' : curDyLuck.cls === 'bad' ? 'var(--cinnabar)' : 'var(--panel-border)'}">
+          <b>現行大運：${curDy.name}（${curDy.age}-${curDy.age + 9}歲，實歲 ${realAge}）· ${curDyLuck.label}</b>
+          <p style="margin-top:3px">這十年行<b>${curDy.name}</b>運（${curDy.nayin}）。大運天干${curDy.gan}${curDy.ganWx}、地支${curDy.zhi}${curDy.zhiWx}，對照本命格局喜<b>${ge.喜五行.join('') || '—'}</b>忌<b>${ge.忌五行.join('') || '—'}</b>，判為<b>${curDyLuck.label}</b>運。${curDyLuck.cls === 'good' ? '此十年氣機相扶，宜積極進取、把握格局所喜之事。' : curDyLuck.cls === 'bad' ? '此十年忌神當令，宜守成蓄力、避免大幅擴張與冒進。' : '此十年吉凶參半，順喜用之事則吉，犯忌神之事則滯。'}</p>
+        </div>` : ''}
         <hr class="divider">
         <h4>神煞</h4>
         ${ss.length
@@ -330,21 +353,23 @@
         ${th ? `<h4>調候用神（窮通寶鑑）</h4>
         <p>${p.day.gan}${p.day.ganWx}日主生於${Ganzhi.ZHI[p.month.zhiIdx]}月，調候先取 <b style="color:var(--gold-bright)">${th.split('').join('、')}</b>。<span class="muted">調候重寒暖燥濕：得此數干（或大運流年補上）者，命局氣候中和、事半功倍。</span></p>` : ''}
         <hr class="divider">
-        <h4>流年運勢（${nowYear}－${nowYear + 9}）</h4>
+        <h4>流年運勢（${nowYear}－${nowYear + 9}）${curDy ? `<span class="muted" style="font-weight:400">　含與現行大運${curDy.name}之歲運關係</span>` : ''}</h4>
         <table class="chart">
-          <tr><th>年份</th><th>干支</th><th>十神</th><th>備註</th></tr>
-          ${flowYears.map(f => `<tr>
+          <tr><th>年份</th><th>干支</th><th>十神</th><th>備註</th><th>歲運關係</th></tr>
+          ${flowRel.map(({ f, tags }) => `<tr>
             <td>${f.year}</td><td>${f.name}<span class="muted">（${f.shengxiao}）</span></td>
             <td>${f.tenGod}</td>
-            <td class="muted" ${f.tags.length ? 'style="color:var(--cinnabar)"' : ''}>${f.tags.join('、') || '—'}</td></tr>`).join('')}
+            <td class="muted" ${f.tags.length ? 'style="color:var(--cinnabar)"' : ''}>${f.tags.join('、') || '—'}</td>
+            <td ${tags.length ? `style="color:${tags[0].bad ? 'var(--cinnabar)' : 'var(--gold-deep)'}"` : 'class="muted"'}>${tags.map(t => t.t).join('、') || '—'}</td></tr>`).join('')}
         </table>
+        ${flowRel.some(x => x.tags.length) ? flowRel.filter(x => x.tags.length).map(x => `<div class="aspect" style="margin-top:6px;border-left:3px solid ${x.tags[0].bad ? 'var(--cinnabar)' : 'var(--gold-mid)'}"><b>${x.f.year} ${x.f.name} · ${x.tags.map(t => t.t).join('、')}</b><p style="margin-top:3px">${x.tags.map(t => t.why).join('')}</p></div>`).join('') : ''}
         <h4>${nowYear} 流月（節氣月）</h4>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:6px">
           ${flowMonths.map(f => `<div class="aspect" style="text-align:center;padding:8px 4px">
             <b style="display:inline">${f.name}月</b><br><span class="muted" style="font-size:11.5px">${f.jie}起（約${f.approx}）</span><br>
             <span style="color:var(--gold-bright)">${f.tenGod}</span></div>`).join('')}
         </div>
-        <p class="muted" style="margin-top:10px">※ 流年十神以日主對流年天干論；「沖太歲／值太歲」以出生年支對流年支論。內建解讀為簡化規則判斷，詳細論命建議使用 AI 深度解讀。</p>
+        <p class="muted" style="margin-top:10px">※ 流年十神以日主對流年天干論；「沖太歲／值太歲」以出生年支對流年支論；「歲運關係」為流年干支對<b>現行大運</b>干支論（歲運並臨／天剋地沖／六沖／六合），大運起運歲數採實足年齡。內建解讀為簡化規則判斷，詳細論命建議使用 AI 深度解讀。</p>
       </div>`;
       const div = document.createElement('div');
       div.innerHTML = html;
@@ -361,8 +386,9 @@
 合沖刑害：${relations.map(r => r.text).join('；') || '無明顯'}
 調候用神（參考）：${th ? th.split('').join('、') : '無'}
 大運（已依用神${like}${avoid ? `／忌神${avoid}` : ''}標吉凶）：${luck.startAge}歲起${luck.forward ? '順' : '逆'}行，${luck.list.map(d => `${d.age}歲${d.name}(${daYunLuck(d, like, avoid).label})`).join('、')}
-未來十年流年：${flowYears.map(f => `${f.year}${f.name}(${f.tenGod}${f.tags.length ? '，' + f.tags.join('/') : ''})`).join('、')}
-請以《子平真詮》格局法為主軸分析：1) 格局成敗與高低（已定${ge.name}·${ge.成敗}，請據相神有無得力、有無破格救應深論）2) 喜用神與忌神（以格局喜用${ge.喜五行.join('、')}為主，結合調候與合沖刑害微調）3) 性格特質 4) 事業財運方向 5) 感情婚姻 6) 大運與未來十年流年走勢重點（特別標出吉凶轉折年份，呼應上方大運吉凶標記）7) 命中神煞對格局的加分或提醒。`);
+${curDy ? `現行大運：${curDy.name}（${curDy.age}-${curDy.age + 9}歲，今實歲${realAge}），依格局喜忌判為「${curDyLuck.label}」運。
+` : ''}未來十年流年：${flowRel.map(({ f, tags }) => `${f.year}${f.name}(${f.tenGod}${f.tags.length ? '，' + f.tags.join('/') : ''}${tags.length ? '，歲運' + tags.map(t => t.t).join('/') : ''})`).join('、')}
+請以《子平真詮》格局法為主軸分析：1) 格局成敗與高低（已定${ge.name}·${ge.成敗}，請據相神有無得力、有無破格救應深論）2) 喜用神與忌神（以格局喜用${ge.喜五行.join('、')}為主，結合調候與合沖刑害微調）3) 性格特質 4) 事業財運方向 5) 感情婚姻 6) 大運與未來十年流年走勢重點——先論<b>現行大運</b>這十年的主軸（大運干支與格局喜忌的生剋），再逐年看流年，特別留意標出「歲運並臨／天剋地沖／歲運相沖」之年（歲運交戰主變動）與吉凶轉折年份，呼應上方標記7) 命中神煞對格局的加分或提醒。`);
     });
   }
 
