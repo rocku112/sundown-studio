@@ -141,6 +141,15 @@
     return { ...MOON_PHASES[idx], elong, illum, waxing: elong < 180 };
   }
 
+  // 行運（Transit）：現在天上的行星對本命盤的觸動——聚焦木土天海冥（慢星，主題深遠）
+  const TRANSIT_ACTORS = ['jupiter', 'saturn', 'uranus', 'neptune', 'pluto'];
+  const TRANSIT_MEAN = {
+    jupiter: '擴張、機會與福氣', saturn: '考驗、責任與收斂沉澱',
+    uranus: '突變、覺醒與打破框架', neptune: '消融、靈感與理想（也易迷惘）', pluto: '深層蛻變、權力翻轉與重生'
+  };
+  const TRANSIT_ASPECT = { 合相: '正強烈啟動', 三分相: '順流加持', 六分相: '帶來機會', 四分相: '形成張力考驗', 對分相: '帶來對峙拉扯' };
+  const TRANSIT_HOUSE = { jupiter: '正迎來擴張與機會，宜把握、順勢成長', saturn: '正經歷考驗與收斂，宜踏實負責、打好基礎' };
+
   // 從相位清單與行星位置偵測相位格局（回傳 [{type, planets:[...], sign?}]）
   function detectPatterns(aspList, positions) {
     const rel = {};
@@ -335,6 +344,32 @@
         houseRulers.push({ house: h, cuspSign, rulerP: rp, inHouse: rp.house, coRuler: MODERN_CORULER[cuspSign.name] });
       }
 
+      // 今日行運（Transit）：當前慢星位置＋對本命盤的相位＋落本命宮
+      const tnow = new Date();
+      const tjdUT = Astro.toJD(tnow.getFullYear(), tnow.getMonth() + 1, tnow.getDate(), tnow.getHours(), tnow.getMinutes()) + tnow.getTimezoneOffset() / 1440;
+      const tjde = tjdUT + Astro.deltaT(tnow.getFullYear()) / 86400;
+      const transits = TRANSIT_ACTORS.map(id => {
+        const P = PLANETS.find(x => x.id === id);
+        const tl = Astro.planetLongitude(id, tjde);
+        const retro = Astro.norm360(tl - Astro.planetLongitude(id, tjde - 3)) > 180;
+        return { ...P, lon: tl, sign: signOf(tl), retro, house: Astro.houseOf(tl, pc.cusps) };
+      });
+      const natalTargets = [
+        ...positions.filter(p => ['sun', 'moon', 'mercury', 'venus', 'mars'].includes(p.id)).map(p => ({ name: p.name, id: p.id, lon: p.lon })),
+        { name: '上升', id: 'asc', lon: pc.asc }, { name: '天頂MC', id: 'mc', lon: pc.mc }
+      ];
+      const tAspects = [];
+      for (const t of transits) for (const nt of natalTargets) {
+        const diff = angSep(t.lon, nt.lon);
+        for (const a of ASPECTS) {
+          const orb = (a.angle === 0 || a.angle === 180) ? 3 : 2.5; // 行運取較緊容許度
+          if (Math.abs(diff - a.angle) <= orb) { tAspects.push({ t, nt, asp: a, orb: Math.abs(diff - a.angle).toFixed(1) }); break; }
+        }
+      }
+      // 依觸動深度排序：冥天土 > 木；再依容許度
+      const T_WEIGHT = { pluto: 0, uranus: 1, neptune: 1, saturn: 2, jupiter: 3 };
+      tAspects.sort((m, n) => (T_WEIGHT[m.t.id] - T_WEIGHT[n.t.id]) || (+m.orb) - (+n.orb));
+
       const div = document.createElement('div');
       div.innerHTML = `<div class="panel result">
         <h3>本命星盤</h3>
@@ -396,6 +431,15 @@
         <h4>${Icons.svg('moon', { size: 16 })} 月亮${positions[1].sign.name}（第${positions[1].house}宮）—— 內在情感</h4><p>${MOON_TRAIT[SIGNS.indexOf(positions[1].sign)]}內心層面在${HOUSE_MEAN[positions[1].house - 1]}的領域格外敏感、需要被滋養。</p>
         <h4>${Icons.svg('ascendant', { size: 16 })} 上升${ascSign.name} —— 外在形象</h4><p>${ASC_TRAIT[SIGNS.indexOf(ascSign)]}</p>
         <p style="margin-top:8px">星盤元素以<b style="color:var(--gold-bright)">${domElem}象</b>為主（火${elemCount.火}・土${elemCount.土}・風${elemCount.風}・水${elemCount.水}）。${positions.filter(p => p.retro).length ? `逆行行星：${positions.filter(p => p.retro).map(p => p.name).join('、')}——逆行處課題向內收斂，宜回顧再出發。` : ''}</p>
+        <hr class="divider">
+        <h4>${Icons.svg('astrology', { size: 16 })} 今日行運（Transit · ${tnow.getFullYear()}/${tnow.getMonth() + 1}/${tnow.getDate()} 當前天象對本命的觸動）</h4>
+        <p class="muted" style="margin-top:-2px">行運是「此刻天上的行星」與你「出生星盤」形成的相位，是占星看流年運勢的核心。以下聚焦移動慢、影響深遠的木土天海冥（日月水金火行運僅數日，從略）。</p>
+        <p>當前慢星：${transits.map(t => `<span class="tag">${planetIcon(t)}${t.name} ${zodiacIcon(t.sign, { size: 13 })}${t.sign.name}${t.retro ? '℞' : ''}（本命第${t.house}宮）</span>`).join('')}</p>
+        ${transits.filter(t => TRANSIT_HOUSE[t.id]).map(t => `<div class="aspect" style="margin-top:6px;border-left:3px solid ${t.id === 'jupiter' ? 'var(--gold-mid)' : 'var(--navy)'}"><b>行運${t.name}行至本命第${t.house}宮（${HOUSE_MEAN[t.house - 1]}）</b><p style="margin-top:3px">你人生的「${HOUSE_MEAN[t.house - 1]}」領域${TRANSIT_HOUSE[t.id]}。</p></div>`).join('')}
+        ${tAspects.length ? `<h4 style="margin-top:12px">行運相位（觸動本命）</h4>${tAspects.map(x => `<div class="aspect" style="margin-top:6px;border-left:3px solid ${x.asp.good === true ? 'var(--gold-mid)' : x.asp.good === false ? 'var(--cinnabar)' : 'var(--panel-border)'}">
+          <b>行運${planetIcon(x.t)}${x.t.name} ${aspectIcon(x.asp)}${x.asp.name} 本命${x.nt.name}（差${x.orb}°）</b>
+          <p style="margin-top:3px">行運${x.t.name}（${TRANSIT_MEAN[x.t.id]}）${TRANSIT_ASPECT[x.asp.name]}你本命的${x.nt.name}——${x.asp.good === false ? '這段期間此主題會遇到考驗或張力，是磨練與調整的時機，撐過去便是成長。' : x.asp.good === true ? '這段期間此主題順流開展、易得助力，宜主動把握。' : '這是一段強烈啟動此主題的時期，能量集中、轉折鮮明，好壞取決於如何運用。'}</p></div>`).join('')}` : '<p class="muted" style="margin-top:6px">當前木土天海冥對本命個人行星／軸點無緊密相位（容許度內），是相對平順、無重大行運壓力的階段。</p>'}
+        <p class="muted" style="font-size:11.5px;margin-top:4px">※ 行運星位為當前天文精算（更新至你開啟此頁的時刻）；相位取 2.5°～3° 緊容許度。行運描述「當前的人生天氣」，硬相位是階段課題而非厄運。</p>
       </div>`;
       resEl.appendChild(div);
 
@@ -413,7 +457,9 @@ ${positions.map(p => `${p.name}：${p.sign.name} ${degInSign(p.lon)}，第${p.ho
 出生月相：${mphase.name}（${mphase.en}，日月相距${mphase.elong.toFixed(0)}°，${mphase.waxing ? '漸盈' : '漸虧'}）
 宮主星飛宮：${houseRulers.map(r => `${r.house}宮主${r.rulerP.name}落${r.inHouse}宮`).join('、')}
 元素分布：火${elemCount.火} 土${elemCount.土} 風${elemCount.風} 水${elemCount.水}
-請以現代心理占星取向分析：1) 太陽月亮上升三位一體人格 2) 出生月相（Rudhyar 週期）反映的內在情感節奏與人生階段原型 3) 行星落宮的生命領域重點 4) 水金火的溝通/感情/行動風格 5) 木土的機會與課題（含逆行課題）6) 重要相位與相位格局——特別留意入相位（能量漸強、更關鍵）與出相位的差別 7) 命主星落點與七政旺弱（入廟曜升為天賦、失勢落陷為課題）8) 宮主星飛宮串起的宮位連動（哪些生命領域彼此牽引）9) 適合的發展方向。`);
+【今日行運 Transit】(${tnow.getFullYear()}/${tnow.getMonth() + 1}/${tnow.getDate()})當前慢星：${transits.map(t => `${t.name}${t.sign.name}${t.retro ? '逆' : ''}(本命第${t.house}宮)`).join('、')}
+行運相位：${tAspects.length ? tAspects.map(x => `行運${x.t.name}${x.asp.name}本命${x.nt.name}(差${x.orb}°)`).join('、') : '無緊密相位'}
+請以現代心理占星取向分析：1) 太陽月亮上升三位一體人格 2) 出生月相（Rudhyar 週期）反映的內在情感節奏與人生階段原型 3) 行星落宮的生命領域重點 4) 水金火的溝通/感情/行動風格 5) 木土的機會與課題（含逆行課題）6) 重要相位與相位格局——特別留意入相位（能量漸強、更關鍵）與出相位的差別 7) 命主星落點與七政旺弱（入廟曜升為天賦、失勢落陷為課題）8) 宮主星飛宮串起的宮位連動（哪些生命領域彼此牽引）9) 今日行運：當前木土天海冥落本命宮位與對本命的相位，代表現階段的人生課題與機會（流年運勢重點）10) 綜合本命天賦與當前行運，給出適合的發展方向與近期建議。`);
     });
   }
 
