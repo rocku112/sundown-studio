@@ -194,6 +194,31 @@
     };
   }
 
+  // ── 大限盤：判現行大限＋大限十二宮＋大限宮干四化（中州派運限核心技法）──
+  const DAXIAN_HUA_TIP = {
+    祿: '這十年此宮領域最能順遂得利、資源匯聚，是可主動經營發揮之處。',
+    權: '這十年此宮領域掌控力與企圖心增強，容易掌權任事，但也易強勢生執。',
+    科: '這十年此宮領域名聲、貴人與助力顯現，逢難有解，宜守正求名。',
+    忌: '這十年此宮領域是主要課題與牽掛所在，易生阻滯執著，宜放下多過強求。'
+  };
+  function daxianInfo(c, age) {
+    const cur = c.palaces.find(p => age >= p.daxian[0] && age <= p.daxian[1]);
+    if (!cur) return null;
+    // 大限十二宮：自大限命宮起逆佈（與本命盤同法）
+    const dNames = {};
+    for (let i = 0; i < 12; i++) dNames[((cur.zhi - i) % 12 + 12) % 12] = PALACE_NAMES[i];
+    // 大限四化：以大限命宮之宮干飛化
+    const dHua = {};
+    SIHUA[cur.gan].forEach((star, i) => { dHua[star] = HUA_NAME[i]; });
+    const dHuaLand = Object.entries(dHua).map(([star, h]) => {
+      const pal = c.palaces.find(p => p.main.includes(star) || p.minor.includes(star));
+      return { star, h, benName: pal ? pal.name : null, daName: pal ? dNames[pal.zhi] : null };
+    });
+    let mains = cur.main, borrow = false;
+    if (!mains.length) { mains = c.stars[(cur.zhi + 6) % 12].main; borrow = true; }
+    return { palace: cur, dNames, dHua, dHuaLand, mains, borrow, age };
+  }
+
   // ── 格局判定：依命宮＋三方四正（財帛、官祿、遷移）星曜組合斷通行格局 ──
   function ziweiGeju(c) {
     const M = c.mingIdx;
@@ -312,6 +337,10 @@
       const desc = mingStars.map(s => `<h4>${s}${c.hua[s] ? `（化${c.hua[s]}）` : ''}坐命${borrowed ? '（借對宮）' : ''}</h4><p>${STAR_DESC[s] || ''}</p>`).join('');
       const huaList = Object.entries(c.hua).map(([s, h]) => `${s}化${h}`).join('、');
 
+      // 現行大限（紫微用虛歲）
+      const xuAge = now.getFullYear() - b.y + 1;
+      const dx = daxianInfo(c, xuAge);
+
       // 命盤格局判定
       const geList = ziweiGeju(c);
       const geHTML = geList.length
@@ -362,6 +391,19 @@
         <p class="muted" style="margin-top:-2px">命宮以外的十一宮逐一簡述，完整交叉解讀（如夫妻宮看流年、事業與財帛互涉）建議用 AI 深度解讀。</p>
         ${otherPalacesHTML}
         <hr class="divider">
+        ${dx ? `<h4>${Icons.svg('ziwei')} 現行大限（虛歲 ${xuAge} 歲・${dx.palace.daxian[0]}-${dx.palace.daxian[1]} 歲運）</h4>
+        <p class="muted" style="margin-top:-2px">大限是紫微看十年運勢的主軸：大限命宮落在本命哪一宮，這十年的人生重心就偏向該領域；再以大限命宮的宮干飛出「大限四化」，看這十年的祿權科忌各落何處。</p>
+        <div class="aspect" style="margin-top:8px;border-left:3px solid var(--gold-mid)">
+          <b>大限命宮在${dx.palace.gan}${Ganzhi.ZHI[dx.palace.zhi]}——即本命「${dx.palace.name}宮」</b>
+          <p style="margin-top:4px">這十年（虛歲 ${dx.palace.daxian[0]}～${dx.palace.daxian[1]}）的人生重心落在<b style="color:var(--gold-bright)">${PALACE_DOMAIN[dx.palace.name]}</b>之上。大限命宮坐星：<b>${dx.mains.join('、') || '無主星'}</b>${dx.borrow ? '（借對宮）' : ''}${dx.mains.length ? `——${dx.mains.map(s => STAR_DESC[s] || '').join('')}` : '，本限無主星安坐，運勢起伏受對宮與三方牽引較大。'}</p>
+        </div>
+        <h4 style="margin-top:12px">大限四化（${dx.palace.gan}干飛化）</h4>
+        <p>${Object.entries(dx.dHua).map(([s, h]) => `<span class="tag ${h === '忌' ? '' : 'gold'}" ${h === '忌' ? 'style="color:var(--cinnabar)"' : ''}>${s}化${h}</span>`).join('')}</p>
+        ${dx.dHuaLand.map(x => `<div class="aspect" style="margin-top:6px;border-left:3px solid ${x.h === '忌' ? 'var(--cinnabar)' : 'var(--gold-mid)'}">
+          <b>${x.star}化${x.h}${x.benName ? ` → 落本命${x.benName}宮（大限${x.daName}宮）` : ''}</b>
+          <p style="margin-top:3px">${x.benName ? `本限的「${x.h}」能量流入你本命的<b>${x.benName}宮（${PALACE_DOMAIN[x.benName]}）</b>，於大限盤上則屬${x.daName}宮位。${DAXIAN_HUA_TIP[x.h]}` : `${x.star}不在本命盤十二宮的主輔星之列，此化作用較隱微。`}</p></div>`).join('')}
+        <p class="muted" style="font-size:11.5px;margin-top:4px">※ 大限起限歲＝${c.ju}（${c.juName}），${c.daxianForward ? '順' : '逆'}行；歲數採紫微慣用之<b>虛歲</b>。大限四化依中州派以大限命宮宮干飛化。</p>
+        <hr class="divider">` : ''}
         <h4>${Icons.svg('almanac')} 今日紫微流日</h4>
         <p class="muted" style="margin-top:-2px">${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}（${todayDp.name}日）行運至你命盤的<b style="color:var(--gold-bright)">${tp.palace.name}宮${tp.borrow ? '（借對宮星曜）' : ''}</b>——${PALACE_DOMAIN[tp.palace.name]}。</p>
         <div class="aspect">
@@ -382,14 +424,16 @@ ${b.gender === 'M' ? '男' : '女'}命，農曆${lunar.lunarYear}年${lunar.mont
 ${c.palaces.map(p => `${p.name}（${p.gan}${Ganzhi.ZHI[p.zhi]}，大限${p.daxian[0]}-${p.daxian[1]}歲）：主星[${p.main.map(s => s + (brightOf(s, p.zhi) || '')).join('、') || '無，借對宮'}] 輔星[${p.minor.join('、') || '無'}]`).join('\n')}
 生年四化：${huaList}
 本站已判命盤格局：${geList.map(g => g.name).join('、') || '無明顯正格（平常格局）'}。
-${c.nowYear}年流年命宮在${Ganzhi.ZHI[c.liunianZhi]}；流年（${c.liunianGan}年）四化飛星：${Object.entries(c.liuHua).map(([s, h]) => `${s}化${h}（落${(c.palaces.find(p => p.main.includes(s) || p.minor.includes(s)) || {}).name || '－'}宮）`).join('、')}。
+${dx ? `現行大限：虛歲${xuAge}歲，行${dx.palace.daxian[0]}-${dx.palace.daxian[1]}歲運，大限命宮在${dx.palace.gan}${Ganzhi.ZHI[dx.palace.zhi]}（即本命${dx.palace.name}宮），坐星[${dx.mains.join('、') || '無主星'}]${dx.borrow ? '（借對宮）' : ''}。
+大限四化（${dx.palace.gan}干飛化）：${dx.dHuaLand.map(x => `${x.star}化${x.h}${x.benName ? `落本命${x.benName}宮/大限${x.daName}宮` : '（不在盤上主輔星）'}`).join('、')}。
+` : ''}${c.nowYear}年流年命宮在${Ganzhi.ZHI[c.liunianZhi]}；流年（${c.liunianGan}年）四化飛星：${Object.entries(c.liuHua).map(([s, h]) => `${s}化${h}（落${(c.palaces.find(p => p.main.includes(s) || p.minor.includes(s)) || {}).name || '－'}宮）`).join('、')}。
 今日（${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}，${todayDp.name}日）流日行運至${tp.palace.name}宮${tp.huaHere.length ? `（命中生年${tp.huaHere.join('、')}）` : ''}。
-請分析：1) 命身宮與整體格局（印證上列本站已判格局是否成立、有無破格，並注意主星廟旺利陷的強弱） 2) 性格特質 3) 事業官祿 4) 財帛 5) 感情婚姻（夫妻宮）6) 目前所行大限與${c.nowYear}流年運勢——特別解讀流年四化飛入各宮的意義（年忌所落宮位是今年課題） 7) 需注意的宮位與化忌影響 8) 簡短點評今日流日行運至${tp.palace.name}宮對今天的提示，並給出人生建議。`);
+請分析：1) 命身宮與整體格局（印證上列本站已判格局是否成立、有無破格，並注意主星廟旺利陷的強弱） 2) 性格特質 3) 事業官祿 4) 財帛 5) 感情婚姻（夫妻宮）6) 目前所行大限這十年的運勢主軸——大限命宮落本命何宮代表這十年重心，並重點解讀<b>大限四化</b>落宮（限祿所落為十年得利處、限忌所落為十年課題），再論${c.nowYear}流年四化飛入各宮的意義（年忌所落宮位是今年課題），說明大限與流年的疊加作用 7) 需注意的宮位與化忌影響 8) 簡短點評今日流日行運至${tp.palace.name}宮對今天的提示，並給出人生建議。`);
     });
   }
 
   // 供三合一綜合命盤共用
-  window.ZiweiEngine = { buildChart, ziweiGeju, STAR_DESC, PALACE_NAMES };
+  window.ZiweiEngine = { buildChart, ziweiGeju, daxianInfo, STAR_DESC, PALACE_NAMES };
 
   App.register({
     id: 'ziwei',
