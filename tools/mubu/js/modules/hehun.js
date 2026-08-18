@@ -156,9 +156,43 @@
         crossTotal >= 0);
     }
 
+    // 9. 現行大運同步（兩人此刻各行什麼運、是否同頻）——合婚實務重視「運勢是否合拍」
+    const nowD = new Date();
+    const ageOf = (P) => nowD.getFullYear() - P.y - ((nowD.getMonth() + 1 < P.m || (nowD.getMonth() + 1 === P.m && nowD.getDate() < P.d)) ? 1 : 0);
+    const dyOf = (P, pil) => {
+      const lk = Ganzhi.luck(P.y, P.m, P.d, P.hh, P.gender, pil);
+      const age = ageOf(P);
+      const cur = lk.list.find(x => age >= x.age && age <= x.age + 9);
+      return cur ? { cur, age } : null;
+    };
+    const dyJudge = (cur, like) => {
+      let s = 0;
+      for (const w of [cur.ganWx, cur.zhiWx]) {
+        if (w === like) s += 2;
+        else if (Ganzhi.WX_SHENG[w] === like) s += 1;          // 生我喜用
+        else if (Ganzhi.WX_KE[w] === like) s -= 2;             // 剋我喜用
+      }
+      return s >= 2 ? { label: '行喜運', cls: 'good' } : s <= -2 ? { label: '行忌運', cls: 'bad' } : { label: '運平', cls: 'mid' };
+    };
+    const dA = dyOf(A, pa), dB = dyOf(B, pb);
+    if (dA && dB) {
+      const jA = dyJudge(dA.cur, likeA), jB = dyJudge(dB.cur, likeB);
+      const goodN = [jA, jB].filter(j => j.cls === 'good').length;
+      const badN = [jA, jB].filter(j => j.cls === 'bad').length;
+      let pts, txt;
+      if (goodN === 2) { pts = 8; txt = '兩人現階段<b>同行喜運</b>，運勢同頻向上——此時共同開展（結婚、置產、創業）阻力最小，是難得的順風期。'; }
+      else if (badN === 2) { pts = -6; txt = '兩人現階段<b>同行忌運</b>，各自都在辛苦期——此時容易彼此消耗、把外在壓力帶回關係中，宜多體諒、少在此時做重大決定。'; }
+      else if (goodN === 1 && badN === 1) { pts = 0; txt = '一方行喜運、一方行忌運——順的一方正好可以拉拔、支撐辛苦的一方，是考驗也是互補，關鍵在順的一方願不願意扶持。'; }
+      else if (goodN === 1) { pts = 4; txt = '一方行喜運、一方運勢平穩，整體氣機偏順，可由行運較旺者主導推進。'; }
+      else { pts = badN ? -2 : 1; txt = badN ? '一方行忌運、另一方平平，宜彼此體諒，避免在低潮期互相要求。' : '兩人現行大運皆屬平穩，關係以本命契合度為主，運勢面無特別助力或阻力。'; }
+      add(pts, `現行大運同步：甲方${dA.cur.name}（${jA.label}）・乙方${dB.cur.name}（${jB.label}）`,
+        `甲方現行 <b>${dA.cur.name}</b> 運（${dA.cur.age}-${dA.cur.age + 9}歲，今${dA.age}歲），對其喜用${likeA}判為<b>${jA.label}</b>；乙方現行 <b>${dB.cur.name}</b> 運（${dB.cur.age}-${dB.cur.age + 9}歲，今${dB.age}歲），對其喜用${likeB}判為<b>${jB.label}</b>。${txt}`,
+        pts >= 0);
+    }
+
     score = Math.max(5, Math.min(98, score));
     const grade = score >= 85 ? '天作之合' : score >= 72 ? '上等婚配' : score >= 58 ? '中上之配' : score >= 45 ? '中等・需磨合' : '多有考驗・重在經營';
-    return { pa, pb, items, score, grade, wa, wb };
+    return { pa, pb, items, score, grade, wa, wb, dA, dB };
   }
 
   App.register({
@@ -226,8 +260,9 @@
           `請做八字合婚深度分析。
 甲方（${A.gender === 'M' ? '男' : '女'}）：${A.y}/${A.m}/${A.d} ${A.hh}時生，四柱：${r.pa.year.name} ${r.pa.month.name} ${r.pa.day.name} ${r.pa.hour.name}，五行：${Object.entries(r.wa).map(([k, v]) => k + v).join(' ')}
 乙方（${B.gender === 'M' ? '男' : '女'}）：${B.y}/${B.m}/${B.d} ${B.hh}時生，四柱：${r.pb.year.name} ${r.pb.month.name} ${r.pb.day.name} ${r.pb.hour.name}，五行：${Object.entries(r.wb).map(([k, v]) => k + v).join(' ')}
-初步比對：${r.items.map(it => `${it.title}${it.pts >= 0 ? '+' : ''}${it.pts}`).join('；')}，總分 ${r.score}（${r.grade}）${nameForAI}
-請深入分析：1) 雙方日主強弱與喜用神是否互補（已知甲喜${likeOf(r.pa)}、乙喜${likeOf(r.pb)}，請結合合沖刑害精確判斷，可修正粗判）2) 彼此在對方命中扮演的十神角色（正緣程度，已知甲於乙為「${Ganzhi.tenGod(r.pb.day.ganIdx, r.pa.day.ganIdx)}」、乙於甲為「${Ganzhi.tenGod(r.pa.day.ganIdx, r.pb.day.ganIdx)}」）3) 性格與相處模式 4) 婚後家庭與財務互動 5) 需要注意的年份（沖夫妻宮之流年）6) 給這對組合的相處建議${nameForAI ? '，並可順帶一提姓名數理合參是否呼應八字結論（但以八字為主）' : ''}。`);
+${r.dA && r.dB ? `現行大運：甲方 ${r.dA.cur.name}（${r.dA.cur.age}-${r.dA.cur.age + 9}歲，今${r.dA.age}歲）、乙方 ${r.dB.cur.name}（${r.dB.cur.age}-${r.dB.cur.age + 9}歲，今${r.dB.age}歲）
+` : ''}初步比對：${r.items.map(it => `${it.title}${it.pts >= 0 ? '+' : ''}${it.pts}`).join('；')}，總分 ${r.score}（${r.grade}）${nameForAI}
+請深入分析：1) 雙方日主強弱與喜用神是否互補（已知甲喜${likeOf(r.pa)}、乙喜${likeOf(r.pb)}，請結合合沖刑害精確判斷，可修正粗判）2) 彼此在對方命中扮演的十神角色（正緣程度，已知甲於乙為「${Ganzhi.tenGod(r.pb.day.ganIdx, r.pa.day.ganIdx)}」、乙於甲為「${Ganzhi.tenGod(r.pa.day.ganIdx, r.pb.day.ganIdx)}」）3) 性格與相處模式 4) 婚後家庭與財務互動 5) 需要注意的年份（沖夫妻宮之流年）6) <b>兩人現行大運的同步性</b>——各自這十年行喜運或忌運、運勢是否合拍，以及現階段適不適合推進重大決定（結婚、生育、置產）7) 給這對組合的相處建議${nameForAI ? '，並可順帶一提姓名數理合參是否呼應八字結論（但以八字為主）' : ''}。`);
       });
     }
   });
