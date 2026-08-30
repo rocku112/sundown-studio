@@ -152,6 +152,10 @@ function pdfSt(){document.getElementById('ps1').textContent=pS.files.length;docu
 
 // ── Folder batch (File System Access API, Chromium): convert every PDF in a picked
 //    folder tree to JPG and write the images back into each PDF's own folder (in place) ──
+// When the tab is hidden, background tabs throttle setTimeout to >=1s (and eventually freeze
+// it), which stalls the batch. So yield WITHOUT a timer while hidden — pdf.js render + file
+// writes are worker/IO-driven and aren't visibility-throttled, so the batch keeps running.
+const batchYield=()=>document.hidden?Promise.resolve():new Promise(r=>setTimeout(r,0));
 async function pdfCollectPdfs(dirHandle){
   const out=[];
   async function walk(dh){
@@ -170,7 +174,7 @@ async function pdfRenderToJpgs(ab,base,scale,qual){
     cv.width=vp.width;cv.height=vp.height;
     await pg.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
     out.push({name:single?`${base}.jpg`:`${base}_p${String(pn).padStart(3,'0')}.jpg`,blob:await new Promise(r=>cv.toBlob(r,'image/jpeg',qual))});
-    await tick();
+    await batchYield();
   }
   if(pdf.destroy)pdf.destroy();
   return out;
@@ -197,7 +201,7 @@ async function pdfBatchFolder(){
           pS.imgs++;
         }
       }catch(e){}
-      pS.done++;pdfProg(i+1,pdfs.length);await tick();
+      pS.done++;pdfProg(i+1,pdfs.length);await batchYield();
     }
     toast(`批次完成：${pS.done} 個 PDF，就地輸出 ${pS.imgs} 張 JPG`);
   }catch(e){toast('批次失敗：'+(e.message||e),true);}
