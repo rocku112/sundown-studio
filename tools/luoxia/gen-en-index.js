@@ -51,7 +51,7 @@ const D=[
  ['tc-tag">PDF 轉換</div>','tc-tag">PDF convert</div>'],
  ['tc-desc">批量將 PDF 每頁輸出為 JPG，支援自訂 DPI 與品質。</p>','tc-desc">Export every PDF page as JPG with custom DPI and quality.</p>'],
  ['tc-tag">照片轉換</div>','tc-tag">Photo convert</div>'],
- ['tc-desc">批量轉換 iPhone 拍的 HEIC 照片，ZIP 打包或逐一下載。</p>','tc-desc">Batch-convert iPhone HEIC photos, ZIP or one by one.</p>'],
+ ['tc-desc">批量轉換 iPhone 拍的 HEIC 照片，或把 JFIF 無損改回 JPG。ZIP 打包或逐一下載。</p>','tc-desc">Batch-convert iPhone HEIC photos, or losslessly rename JFIF back to JPG. ZIP or one by one.</p>'],
  ['tc-tag">圖片壓縮</div>','tc-tag">Image compress</div>'],
  ['tc-name">圖片壓縮</div>','tc-name">Compress Image</div>'],
  ['tc-desc">JPG、PNG、WebP 批量壓縮，品質或目標大小模式。</p>','tc-desc">Batch-compress JPG, PNG, WebP by quality or target size.</p>'],

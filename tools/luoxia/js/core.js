@@ -221,29 +221,39 @@ if(window.showDirectoryPicker){const _b=document.getElementById('pdfBatch');if(_
   await new Promise((r,j)=>{s.onload=r;s.onerror=j;});
 })().catch(()=>hLog('⚠ 無法載入 heic2any，請確認網路連線','err'));
 let hFiles=[],hConv=false;
+const H_EXT=/\.(heic|heif|jfif|jpe|jif)$/i, H_JFIF=/\.(jfif|jpe|jif)$/i;   // JFIF/JPE/JIF are just JPEG in a different extension
 const hDZ=document.getElementById('hDZ'),hFI=document.getElementById('hFI'),hCvt=document.getElementById('hCvt'),hAdd=document.getElementById('hAdd'),hClr=document.getElementById('hClr');
 document.getElementById('hQual').oninput=()=>document.getElementById('hQualV').textContent=document.getElementById('hQual').value+'%';
 hDZ.onclick=()=>hFI.click();hAdd.onclick=()=>hFI.click();
 hDZ.ondragover=e=>{e.preventDefault();hDZ.classList.add('dragover');};hDZ.ondragleave=()=>hDZ.classList.remove('dragover');
 hDZ.ondrop=e=>{e.preventDefault();hDZ.classList.remove('dragover');hAddF([...e.dataTransfer.files]);};
 hFI.onchange=()=>{hAddF([...hFI.files]);hFI.value='';};
-function hAddF(fs){const v=fs.filter(f=>/\.(heic|heif)$/i.test(f.name));const sk=fs.length-v.length;if(sk)hLog(`跳過 ${sk} 個非 HEIC 檔案`,'info');v.forEach(f=>{if(!hFiles.find(x=>x.file.name===f.name&&x.file.size===f.size))hFiles.push({file:f,name:f.name,status:'pending',blob:null});});hRL();hUB();if(v.length)hLog(`已加入 ${v.length} 個`,'info');}
+function hAddF(fs){const v=fs.filter(f=>H_EXT.test(f.name));const sk=fs.length-v.length;if(sk)hLog(`跳過 ${sk} 個非 HEIC / JFIF 檔案`,'info');v.forEach(f=>{if(!hFiles.find(x=>x.file.name===f.name&&x.file.size===f.size))hFiles.push({file:f,name:f.name,status:'pending',blob:null});});hRL();hUB();if(v.length)hLog(`已加入 ${v.length} 個`,'info');}
 function hRL(){const el=document.getElementById('hRows');if(!hFiles.length){el.innerHTML='<div style="font-size:13px;color:var(--muted);font-weight:600;text-align:center;padding:10px;">尚未選取任何檔案</div>';return;}el.innerHTML=hFiles.map((f,i)=>`<div class="frow ${f.status}" id="hr${i}"><span class="fidx">${String(i+1).padStart(2,'0')}</span><span class="fname">${f.name}</span><span class="fsize">${fmtSz(f.file.size)}</span><span class="fst ${f.status}" id="hs${i}">${hSL(f.status)}</span></div>`).join('');}
 function hSL(s){return{pending:'PENDING',converting:'⟳ 轉換中',done:'完成',error:'失敗'}[s]||s;}
 function hUR(i){const f=hFiles[i],r=document.getElementById('hr'+i),s=document.getElementById('hs'+i);if(!r||!s)return;r.className='frow '+f.status;s.className='fst '+f.status;if(f.status==='converting')s.innerHTML='<span class="spinning">⟳</span> 轉換中';else s.textContent=hSL(f.status);}
 hCvt.onclick=async()=>{
-  if(hConv||!hFiles.length)return;if(typeof heic2any==='undefined'){hLog('heic2any 未載入','err');return;}
+  if(hConv||!hFiles.length)return;
+  const needsHeic=hFiles.some(f=>f.status!=='done'&&!H_JFIF.test(f.name));   // JFIF needs no library — only block if real HEIC is queued
+  if(needsHeic&&typeof heic2any==='undefined'){hLog('heic2any 未載入','err');return;}
   hConv=true;const quality=+document.getElementById('hQual').value/100,dl=document.querySelector('input[name="hDL"]:checked').value;
   hCvt.disabled=true;hClr.disabled=true;document.getElementById('hPW').style.display='block';document.getElementById('hLog').style.display='block';document.getElementById('hSt').classList.remove('show');
   try{
   let done=0,fail=0,bytes=0;const t0=Date.now(),pending=hFiles.filter(f=>f.status!=='done');
   for(let i=0;i<hFiles.length;i++){const f=hFiles[i];if(f.status==='done')continue;f.status='converting';hUR(i);document.getElementById('hPC').textContent=`${done}/${pending.length}`;
-    try{const blob=await heic2any({blob:f.file,toType:'image/jpeg',quality});f.blob=Array.isArray(blob)?blob[0]:blob;f.status='done';bytes+=f.blob.size;done++;hLog(`✓ ${f.name} → ${f.name.replace(/\.(heic|heif)$/i,'.jpg')} (${fmtSz(f.blob.size)})`,'ok');}
+    try{let blob;
+      if(H_JFIF.test(f.name)){
+        // JFIF is literally a JPEG stream — lossless passthrough (just fix the extension). Canvas fallback for anything not a real JPEG.
+        const ab=await f.file.arrayBuffer(),u=new Uint8Array(ab,0,3);
+        if(u[0]===0xFF&&u[1]===0xD8&&u[2]===0xFF){blob=new Blob([ab],{type:'image/jpeg'});}
+        else{const img=await loadImg(f.file);const cv=imgToCanvas(img,img.naturalWidth,img.naturalHeight,'image/jpeg');blob=await new Promise(r=>cv.toBlob(r,'image/jpeg',quality));}
+      }else{const b=await heic2any({blob:f.file,toType:'image/jpeg',quality});blob=Array.isArray(b)?b[0]:b;}
+      f.blob=blob;f.status='done';bytes+=f.blob.size;done++;hLog(`✓ ${f.name} → ${f.name.replace(H_EXT,'.jpg')} (${fmtSz(f.blob.size)})${H_JFIF.test(f.name)?' · 無損保留':''}`,'ok');}
     catch(e){f.status='error';fail++;hLog(`${f.name}: ${e.message||'轉換失敗'}`,'err');}
     hUR(i);const p=done+fail;document.getElementById('hPF').style.width=(p/pending.length*100)+'%';document.getElementById('hPC').textContent=`${p}/${pending.length}`;await tick();}
   const el=((Date.now()-t0)/1000).toFixed(1);hLog(`── 完成 ${done} 成功 · ${fail} 失敗 · ${el}s ──`,'info');
   document.getElementById('hs1').textContent=done;document.getElementById('hs2').textContent=fail;document.getElementById('hs3').textContent=el;document.getElementById('hs4').textContent=fmtSz(bytes);document.getElementById('hSt').classList.add('show');
-  if(done>0){if(dl==='zip'){hLog('打包 ZIP…','info');const zip=new JSZip();hFiles.filter(f=>f.status==='done'&&f.blob).forEach(f=>zip.file(f.name.replace(/\.(heic|heif)$/i,'.jpg'),f.blob));const zb=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:1}});saveAs(zb,`heic2jpg_${Date.now()}.zip`);hLog('⬇ ZIP 完成','ok');}else{for(const f of hFiles.filter(f=>f.status==='done'&&f.blob)){saveAs(f.blob,f.name.replace(/\.(heic|heif)$/i,'.jpg'));await new Promise(r=>setTimeout(r,200));}}}
+  if(done>0){if(dl==='zip'){hLog('打包 ZIP…','info');const zip=new JSZip();hFiles.filter(f=>f.status==='done'&&f.blob).forEach(f=>zip.file(f.name.replace(H_EXT,'.jpg'),f.blob));const zb=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:1}});saveAs(zb,`heic2jpg_${Date.now()}.zip`);hLog('⬇ ZIP 完成','ok');}else{for(const f of hFiles.filter(f=>f.status==='done'&&f.blob)){saveAs(f.blob,f.name.replace(H_EXT,'.jpg'));await new Promise(r=>setTimeout(r,200));}}}
   toast(`已轉換 ${done} 張`);showChain('heic');
   }catch(e){hLog('處理失敗：'+(e.message||e),'err');toast('處理失敗',true);}
   finally{hConv=false;hCvt.disabled=false;hClr.disabled=false;}

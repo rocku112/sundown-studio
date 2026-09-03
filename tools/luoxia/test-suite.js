@@ -118,6 +118,27 @@ test('officeimg: extract embedded image from .docx',async()=>{
   assert(ofItems[0].ok&&ofItems[0].converted,'png converted to jpg');
 });
 
+test('heic tool: JFIF → JPG is lossless passthrough (bytes unchanged)',async()=>{
+  switchTab('heic');
+  const cv=document.createElement('canvas');cv.width=32;cv.height=20;const g=cv.getContext('2d');g.fillStyle='#2a7';g.fillRect(0,0,32,20);
+  const jpgBlob=await new Promise(r=>cv.toBlob(r,'image/jpeg',0.9));
+  const orig=new Uint8Array(await jpgBlob.arrayBuffer());
+  const file=new File([orig],'photo.jfif',{type:''});
+  hClr.onclick();
+  hAddF([file]);
+  eq(hFiles.length,1,'jfif accepted by filter');
+  document.querySelector('input[name="hDL"][value="ind"]').checked=true;
+  const saved=[],os=window.saveAs;window.saveAs=(b,n)=>saved.push({b,n});
+  try{await document.getElementById('hCvt').onclick();}finally{window.saveAs=os;}
+  const f=hFiles[0];
+  assert(f.status==='done'&&f.blob,'converted');
+  eq(f.blob.type,'image/jpeg','output is jpeg');
+  const out=new Uint8Array(await f.blob.arrayBuffer());
+  eq(out.length,orig.length,'byte length identical (no re-encode)');
+  assert(out[0]===0xFF&&out[1]===0xD8&&out[2]===0xFF,'still a JPEG stream');
+  assert(saved.some(s=>s.n==='photo.jpg'),'downloaded as .jpg');
+});
+
 test('pdf folder-batch: recurse + write JPGs back into each source folder',async()=>{
   const writes=[];
   const mkFile=(name)=>({kind:'file',name,getFile:async()=>new File([new Uint8Array([1])],name)});
