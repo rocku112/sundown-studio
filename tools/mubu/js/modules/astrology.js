@@ -214,7 +214,7 @@
   // 上升／天頂／Placidus 宮首／行星落宮／均時差：改用 Astro 共用引擎（Astro.ascMc/placidusHouses/houseOf/equationOfTime）
 
   // ---------- SVG 星盤 ----------
-  function wheelSVG(positions, cusps, asc, mc) {
+  function wheelSVG(positions, cusps, asc, mc, noHouses) {
     const CX = 210, CY = 210, R_SIGN = 200, R_SIGN_IN = 170, R_PLANET = 140, R_HOUSE = 108, R_INNER = 78;
     const A = (lon) => (180 - (lon - asc)) * RAD; // 上升點固定在左側
     const pt = (lon, r) => [CX + r * Math.cos(A(lon)), CY + r * Math.sin(A(lon))];
@@ -236,8 +236,8 @@
       const [x1, y1] = pt(d, R_SIGN_IN), [x2, y2] = pt(d, R_SIGN_IN - 5);
       s += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#C9B98A" stroke-width=".7"/>`;
     }
-    // 宮首線與宮號
-    for (let h = 1; h <= 12; h++) {
+    // 宮首線與宮號（未知出生時間則不繪）
+    for (let h = 1; !noHouses && h <= 12; h++) {
       const bold = h === 1 || h === 10 || h === 4 || h === 7;
       const [x1, y1] = pt(cusps[h], R_INNER), [x2, y2] = pt(cusps[h], R_SIGN_IN);
       s += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${bold ? '#B03020' : '#B8AE9C'}" stroke-width="${bold ? 1.6 : .8}"/>`;
@@ -245,11 +245,13 @@
       const [nx, ny] = pt(mid, (R_HOUSE + R_INNER) / 2);
       s += `<text x="${nx}" y="${ny}" font-size="10" text-anchor="middle" dominant-baseline="central" fill="#8A96A8">${h}</text>`;
     }
-    // ASC / MC 標籤
+    // ASC / MC 標籤（未知出生時間則不繪）
+    if (!noHouses) {
     const [ax, ay] = pt(asc, R_SIGN + 1); // 左緣
     s += `<text x="${ax + 4}" y="${ay - 6}" font-size="11" fill="#B03020" font-weight="bold">ASC</text>`;
     const [mx, my] = pt(mc, R_SIGN_IN - 12);
     s += `<text x="${mx}" y="${my}" font-size="11" text-anchor="middle" fill="#B03020" font-weight="bold">MC</text>`;
+    }
     // 行星（重疊時分層）
     const sorted = [...positions].sort((a, b) => a.lon - b.lon);
     let lastLon = -99, layer = 0;
@@ -281,6 +283,9 @@
           <div class="field as-custom" style="display:none"><label>經度</label><input class="as-lon" type="number" step="0.01" value="121.51" style="width:90px"></div>
           <div class="field as-custom" style="display:none"><label>時區(UTC+)</label><input class="as-tz" type="number" step="0.5" value="8" style="width:80px"></div>
         </div>
+        <label class="field" style="display:flex;align-items:center;gap:6px;margin-top:10px;cursor:pointer">
+          <input type="checkbox" id="as-notime" style="width:auto;margin:0"> <span>不知道出生時間（將略過上升、宮位等需要精確時間的部分）</span>
+        </label>
         <button class="btn" id="as-go" style="margin-top:14px">${Icons.svg('astrology')} 排星盤</button>
         <p class="muted" style="margin-top:8px">宮位採 Placidus 制；海外城市請留意：時間請填出生地當地時間（未含日光節約時間，若出生於夏令期間請自行減 1 小時）。</p>
       </div>
@@ -292,6 +297,8 @@
 
     el.querySelector('#as-go').addEventListener('click', () => {
       const b = bf.read(el);
+      const noTime = el.querySelector('#as-notime').checked;
+      if (noTime) { b.hh = 12; b.mi = 0; }   // 未知時間統一以正午計算行星（上升宮位等一律不顯示）
       const ci = +el.querySelector('.as-city').value;
       const [cityName, lat, lon, tz] = ci >= 0 ? CITIES[ci]
         : ['自訂', +el.querySelector('.as-lat').value, +el.querySelector('.as-lon').value, +el.querySelector('.as-tz').value];
@@ -374,7 +381,7 @@
       });
       const natalTargets = [
         ...positions.filter(p => ['sun', 'moon', 'mercury', 'venus', 'mars'].includes(p.id)).map(p => ({ name: p.name, id: p.id, lon: p.lon })),
-        { name: '上升', id: 'asc', lon: pc.asc }, { name: '天頂MC', id: 'mc', lon: pc.mc }
+        ...(noTime ? [] : [{ name: '上升', id: 'asc', lon: pc.asc }, { name: '天頂MC', id: 'mc', lon: pc.mc }])
       ];
       const tAspects = [];
       for (const t of transits) for (const nt of natalTargets) {
@@ -405,7 +412,7 @@
       const MID_DEFS = [
         { key: '日/月', a: positions[0].lon, b: positions[1].lon, mean: '意志與情感的整合點，代表你內在陰陽的匯流之處，也是親密關係與身心合一的核心議題。' },
         { key: '金/火', a: pById.venus.lon, b: pById.mars.lon, mean: '愛與慾的整合點，代表你情感吸引力與行動熱情如何結合，是感情能量的引擎。' },
-        { key: 'ASC/MC', a: pc.asc, b: pc.mc, mean: '個人與世界的整合點，代表你如何把自我形象轉化為社會定位與人生成就。' }
+        ...(noTime ? [] : [{ key: 'ASC/MC', a: pc.asc, b: pc.mc, mean: '個人與世界的整合點，代表你如何把自我形象轉化為社會定位與人生成就。' }])
       ];
       const midpoints = MID_DEFS.map(md => {
         const lon = midpoint(md.a, md.b);
@@ -420,21 +427,22 @@
       div.innerHTML = `<div class="panel result">
         <h3>本命星盤</h3>
         <div class="muted" style="text-align:center">${b.y}/${b.m}/${b.d} ${String(b.hh).padStart(2, '0')}:${String(b.mi).padStart(2, '0')}（UTC${tz >= 0 ? '+' : ''}${tz}）· ${cityName}（${lat.toFixed(2)}°, ${lon.toFixed(2)}°）<br>
-        真太陽時 ${String(tsH).padStart(2, '0')}:${String(tsM).padStart(2, '0')}（均時差 ${eot >= 0 ? '+' : ''}${eot.toFixed(1)} 分）· 宮位制：${pc.system}</div>
-        ${wheelSVG(positions, pc.cusps, pc.asc, pc.mc)}
+        ${noTime ? '<b style="color:var(--cinnabar)">未提供出生時間</b>——行星星座與相位照常計算，但上升、天頂、宮位、真太陽時等需要精確時刻者一律不列。' : `真太陽時 ${String(tsH).padStart(2, '0')}:${String(tsM).padStart(2, '0')}（均時差 ${eot >= 0 ? '+' : ''}${eot.toFixed(1)} 分）· 宮位制：${pc.system}`}</div>
+        ${noTime ? '<div class="aspect" style="border-left:3px solid var(--cinnabar);margin:8px 0"><b>為什麼略過這些？</b><p style="margin-top:3px">上升點每 4 分鐘就移動約 1.34°、每小時約 19.5°——不知道出生時間的話，上升可能落在十二星座中的任何一個，算出來只是亂猜。故本站直接不顯示，而非給你一個看似完整卻不可信的盤。<br><b>另請注意</b>：月亮每小時移動約 0.55°，此盤以正午 12:00 計算，月亮位置最大可能偏差 ±6.7°，且約有 44% 的日子月亮會在當天換星座——下方月亮相關內容請斟酌參考。</p></div>' : ''}
+        ${wheelSVG(positions, pc.cusps, noTime ? 0 : pc.asc, pc.mc, noTime)}
         <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin:12px 0">
           <div class="aspect" style="text-align:center;min-width:130px"><b>${Icons.svg('sun', { size: 16 })} 太陽星座</b><span style="font-size:22px">${zodiacIcon(positions[0].sign, { size: 22 })} ${positions[0].sign.name}</span></div>
-          <div class="aspect" style="text-align:center;min-width:130px"><b>${Icons.svg('moon', { size: 16 })} 月亮星座</b><span style="font-size:22px">${zodiacIcon(positions[1].sign, { size: 22 })} ${positions[1].sign.name}</span></div>
-          <div class="aspect" style="text-align:center;min-width:130px"><b>${Icons.svg('ascendant', { size: 16 })} 上升星座</b><span style="font-size:22px">${zodiacIcon(ascSign, { size: 22 })} ${ascSign.name}</span></div>
+          <div class="aspect" style="text-align:center;min-width:130px"><b>${Icons.svg('moon', { size: 16 })} 月亮星座</b><span style="font-size:22px">${zodiacIcon(positions[1].sign, { size: 22 })} ${positions[1].sign.name}</span>${noTime ? '<br><small style="color:var(--cinnabar)">※ 未知時間，可能有誤</small>' : ''}</div>
+          ${noTime ? '' : `<div class="aspect" style="text-align:center;min-width:130px"><b>${Icons.svg('ascendant', { size: 16 })} 上升星座</b><span style="font-size:22px">${zodiacIcon(ascSign, { size: 22 })} ${ascSign.name}</span></div>`}
         </div>
         <table class="chart astro-table">
           <tr><th>行星</th><th>星座</th><th>度數</th><th>宮位</th><th>意涵</th></tr>
-          ${positions.map(p => { const d = dignityOf(p.id, p.sign.name); const dm = d && d.key !== '平' ? ` <small style="color:${d.good ? 'var(--gold-bright)' : 'var(--cinnabar)'}">${d.key}</small>` : ''; return `<tr><td>${planetIcon(p)} ${p.name}${p.retro ? ' <b style="color:var(--cinnabar)">℞</b>' : ''}</td><td>${zodiacIcon(p.sign)} ${p.sign.name}${dm}</td><td>${degInSign(p.lon)}</td><td>第${p.house}宮<span class="muted">（${HOUSE_MEAN[p.house - 1]}）</span></td><td class="muted">${p.mean}</td></tr>`; }).join('')}
-          <tr><td>${Icons.svg('ascendant', { size: 14 })} 上升</td><td>${zodiacIcon(ascSign)} ${ascSign.name}</td><td>${degInSign(pc.asc)}</td><td>第1宮首</td><td class="muted">外在形象與人生舞台入口</td></tr>
-          <tr><td>${Icons.svg('midheaven', { size: 14 })} MC 天頂</td><td>${zodiacIcon(mcSign)} ${mcSign.name}</td><td>${degInSign(pc.mc)}</td><td>第10宮首</td><td class="muted">事業志向與社會成就</td></tr>
+          ${positions.map(p => { const d = dignityOf(p.id, p.sign.name); const dm = d && d.key !== '平' ? ` <small style="color:${d.good ? 'var(--gold-bright)' : 'var(--cinnabar)'}">${d.key}</small>` : ''; return `<tr><td>${planetIcon(p)} ${p.name}${p.retro ? ' <b style="color:var(--cinnabar)">℞</b>' : ''}</td><td>${zodiacIcon(p.sign)} ${p.sign.name}${dm}</td><td>${degInSign(p.lon)}</td><td>${noTime ? '<span class="muted">—</span>' : `第${p.house}宮<span class="muted">（${HOUSE_MEAN[p.house - 1]}）</span>`}</td><td class="muted">${p.mean}</td></tr>`; }).join('')}
+          ${noTime ? '' : `<tr><td>${Icons.svg('ascendant', { size: 14 })} 上升</td><td>${zodiacIcon(ascSign)} ${ascSign.name}</td><td>${degInSign(pc.asc)}</td><td>第1宮首</td><td class="muted">外在形象與人生舞台入口</td></tr>`}
+          ${noTime ? '' : `<tr><td>${Icons.svg('midheaven', { size: 14 })} MC 天頂</td><td>${zodiacIcon(mcSign)} ${mcSign.name}</td><td>${degInSign(pc.mc)}</td><td>第10宮首</td><td class="muted">事業志向與社會成就</td></tr>`}
         </table>
-        <h4>宮首一覽（${pc.system}）</h4>
-        <p>${[1,2,3,4,5,6,7,8,9,10,11,12].map(h => `<span class="tag">${h}宮 ${zodiacIcon(signOf(pc.cusps[h]), { size: 14 })}${degInSign(pc.cusps[h])}</span>`).join('')}</p>
+        ${noTime ? '' : `<h4>宮首一覽（${pc.system}）</h4>
+        <p>${[1,2,3,4,5,6,7,8,9,10,11,12].map(h => `<span class="tag">${h}宮 ${zodiacIcon(signOf(pc.cusps[h]), { size: 14 })}${degInSign(pc.cusps[h])}</span>`).join('')}</p>`}
         <h4>主要相位</h4>
         <p>${aspList.length ? aspList.map(x => `<span class="tag ${x.asp.good === true ? 'gold' : ''}" ${x.asp.good === false ? 'style="color:var(--cinnabar)"' : ''}>${planetIcon(x.a)}${x.a.name} ${aspectIcon(x.asp)} ${planetIcon(x.b)}${x.b.name}（差${x.orb}°）</span>`).join('') : '無明顯主要相位'}</p>
         ${aspList.length ? `<div style="margin-top:6px">${[...aspList].sort((m, n) => {
@@ -448,11 +456,11 @@
           <b>${pt.type}${pt.sign ? `於${pt.sign}` : ''}：${pt.planets.map(p => p.name).join('、')}</b>
           <p style="margin-top:3px">${PATTERN_INFO[pt.type]}</p></div>`).join('')}` : ''}
         <hr class="divider">
-        <h4>${Icons.svg('ascendant', { size: 16 })} 命主星與七政旺弱（傳統必然尊貴）</h4>
-        <div class="aspect" style="margin-top:6px;border-left:3px solid var(--gold-mid)">
+        <h4>${Icons.svg('ascendant', { size: 16 })} ${noTime ? '' : '命主星與'}七政旺弱（傳統必然尊貴）</h4>
+        ${noTime ? '<p class="muted" style="margin-top:6px">※ 命主星需由上升星座決定，未知出生時間故不列。以下七政旺弱僅依星座判定，不受出生時間影響，可安心參考。</p>' : `<div class="aspect" style="margin-top:6px;border-left:3px solid var(--gold-mid)">
           <b>命主星（上升守護）：${planetIcon(rulerP)}${rulerP.name} 於 ${zodiacIcon(rulerP.sign)}${rulerP.sign.name} 第${rulerP.house}宮${rulerDig && rulerDig.key !== '平' ? `・${rulerDig.label}` : ''}</b>
           <p style="margin-top:3px">上升${ascSign.name}的守護星是${rulerP.name}${MODERN_CORULER[ascSign.name] ? `（現代共治：${MODERN_CORULER[ascSign.name]}）` : ''}——它是整張星盤的總鑰匙。它落在的<b>${rulerP.sign.name}第${rulerP.house}宮（${HOUSE_MEAN[rulerP.house - 1]}）</b>，正是你今生最該用心經營、也最能定義你的舞台。${rulerDig ? rulerDig.note : ''}</p>
-        </div>
+        </div>`}
         ${dignified.length ? `<p style="margin-top:8px">七政旺弱：${dignified.map(x => `<span class="tag ${x.dig.good ? 'gold' : ''}" ${x.dig.good === false ? 'style="color:var(--cinnabar)"' : ''}>${x.p.name}${x.p.sign.name} ${x.dig.label}</span>`).join('')}</p>
         ${dignified.map(x => `<div class="aspect" style="margin-top:6px;border-left:3px solid ${x.dig.good ? 'var(--gold-mid)' : 'var(--cinnabar)'}"><b>${planetIcon(x.p)}${x.p.name}·${x.dig.label}（${x.p.sign.name}）</b><p style="margin-top:3px">${x.dig.note}</p></div>`).join('')}` : '<p class="muted" style="margin-top:6px">日月至土星七政均處平勢，無特別入廟或落陷，力量端看宮位與相位引導——這本身是一種均衡。</p>'}
         ${crits.length ? `<p style="margin-top:8px">臨界度數：${crits.map(x => `<span class="tag">${x.p.name} ${x.c.tag}</span>`).join('')}</p>${crits.map(x => `<p class="muted" style="margin-top:2px;font-size:12.5px">${x.p.name}${x.c.note}</p>`).join('')}` : ''}
@@ -463,25 +471,26 @@
           <b>${mphase.name}（${mphase.en}）· 日月相距 ${mphase.elong.toFixed(0)}°・受照 ${(mphase.illum * 100).toFixed(0)}%（${mphase.waxing ? '漸盈' : '漸虧'}）</b>
           <p style="margin-top:3px">${mphase.trait}</p>
         </div>
+        ${noTime ? '<p class="muted" style="color:var(--cinnabar);margin-top:4px">※ 月相由日月夾角決定，未知出生時間時此夾角最大可差 ±6.7°，若你的月相接近分界則可能判錯，僅供參考。</p>' : ''}
         <p class="muted" style="font-size:11.5px;margin-top:4px">※ 月相人格依<b>Rudhyar 月相週期</b>八分法，以出生時太陽與月亮的夾角（elongation）判定，描繪你內在「情感（月）與意志（日）」的原型節奏。</p>
-        <hr class="divider">
+        ${noTime ? '' : `<hr class="divider">
         <h4>${Icons.svg('ascendant', { size: 16 })} 宮主星飛宮（宮位連動）</h4>
         <p class="muted" style="margin-top:-2px">每一宮宮首所落星座的守護星，實際坐落在哪一宮——代表該生命領域的能量最終「流向、連結」到哪個領域，是傳統占星看宮位互涉的關鍵鑰匙。</p>
         <table class="chart astro-table">
           <tr><th>宮位</th><th>宮首</th><th>宮主星</th><th>落宮</th><th>連動意涵</th></tr>
           ${houseRulers.map(r => `<tr><td>${r.house}宮<span class="muted">（${HOUSE_MEAN[r.house - 1]}）</span></td><td>${zodiacIcon(r.cuspSign)}${r.cuspSign.name}</td><td>${planetIcon(r.rulerP)}${r.rulerP.name}${r.coRuler ? `<span class="muted">/${r.coRuler}</span>` : ''}</td><td>第${r.inHouse}宮</td><td class="muted">${r.house === r.inHouse ? '宮主坐本宮——該領域自主穩固、能量內守' : `「${HOUSE_MEAN[r.house - 1]}」牽動「${HOUSE_MEAN[r.inHouse - 1]}」`}</td></tr>`).join('')}
         </table>
-        <p class="muted" style="font-size:11.5px;margin-top:4px">※ 守護星採傳統七政系統（天蠍/水瓶/雙魚另註現代共治星）。宮主落本宮主自主穩固，落對宮主拉扯外求，宜綜合全盤判讀。</p>
+        <p class="muted" style="font-size:11.5px;margin-top:4px">※ 守護星採傳統七政系統（天蠍/水瓶/雙魚另註現代共治星）。宮主落本宮主自主穩固，落對宮主拉扯外求，宜綜合全盤判讀。</p>`}
         <hr class="divider">
-        <h4>${Icons.svg('sun', { size: 16 })} 太陽${positions[0].sign.name}（第${positions[0].house}宮）—— 核心自我</h4><p>${positions[0].sign.trait}生命重心落在${HOUSE_MEAN[positions[0].house - 1]}的領域。</p>
-        <h4>${Icons.svg('moon', { size: 16 })} 月亮${positions[1].sign.name}（第${positions[1].house}宮）—— 內在情感</h4><p>${MOON_TRAIT[SIGNS.indexOf(positions[1].sign)]}內心層面在${HOUSE_MEAN[positions[1].house - 1]}的領域格外敏感、需要被滋養。</p>
-        <h4>${Icons.svg('ascendant', { size: 16 })} 上升${ascSign.name} —— 外在形象</h4><p>${ASC_TRAIT[SIGNS.indexOf(ascSign)]}</p>
+        <h4>${Icons.svg('sun', { size: 16 })} 太陽${positions[0].sign.name}${noTime ? ' ' : `（第${positions[0].house}宮）`}—— 核心自我</h4><p>${positions[0].sign.trait}${noTime ? '' : `生命重心落在${HOUSE_MEAN[positions[0].house - 1]}的領域。`}</p>
+        <h4>${Icons.svg('moon', { size: 16 })} 月亮${positions[1].sign.name}${noTime ? ' ' : `（第${positions[1].house}宮）`}—— 內在情感</h4><p>${MOON_TRAIT[SIGNS.indexOf(positions[1].sign)]}${noTime ? '（未知出生時間，月亮位置可能有誤差，請斟酌參考。）' : `內心層面在${HOUSE_MEAN[positions[1].house - 1]}的領域格外敏感、需要被滋養。`}</p>
+        ${noTime ? '' : `<h4>${Icons.svg('ascendant', { size: 16 })} 上升${ascSign.name} —— 外在形象</h4><p>${ASC_TRAIT[SIGNS.indexOf(ascSign)]}</p>`}
         <p style="margin-top:8px">星盤元素以<b style="color:var(--gold-bright)">${domElem}象</b>為主（火${elemCount.火}・土${elemCount.土}・風${elemCount.風}・水${elemCount.水}）。${positions.filter(p => p.retro).length ? `逆行行星：${positions.filter(p => p.retro).map(p => p.name).join('、')}——逆行處課題向內收斂，宜回顧再出發。` : ''}</p>
         <hr class="divider">
         <h4>${Icons.svg('astrology', { size: 16 })} 今日行運（Transit · ${tnow.getFullYear()}/${tnow.getMonth() + 1}/${tnow.getDate()} 當前天象對本命的觸動）</h4>
         <p class="muted" style="margin-top:-2px">行運是「此刻天上的行星」與你「出生星盤」形成的相位，是占星看流年運勢的核心。以下聚焦移動慢、影響深遠的木土天海冥（日月水金火行運僅數日，從略）。</p>
-        <p>當前慢星：${transits.map(t => `<span class="tag">${planetIcon(t)}${t.name} ${zodiacIcon(t.sign, { size: 13 })}${t.sign.name}${t.retro ? '℞' : ''}（本命第${t.house}宮）</span>`).join('')}</p>
-        ${transits.filter(t => TRANSIT_HOUSE[t.id]).map(t => `<div class="aspect" style="margin-top:6px;border-left:3px solid ${t.id === 'jupiter' ? 'var(--gold-mid)' : 'var(--navy)'}"><b>行運${t.name}行至本命第${t.house}宮（${HOUSE_MEAN[t.house - 1]}）</b><p style="margin-top:3px">你人生的「${HOUSE_MEAN[t.house - 1]}」領域${TRANSIT_HOUSE[t.id]}。</p></div>`).join('')}
+        <p>當前慢星：${transits.map(t => `<span class="tag">${planetIcon(t)}${t.name} ${zodiacIcon(t.sign, { size: 13 })}${t.sign.name}${t.retro ? '℞' : ''}${noTime ? '' : `（本命第${t.house}宮）`}</span>`).join('')}</p>
+        ${noTime ? '' : transits.filter(t => TRANSIT_HOUSE[t.id]).map(t => `<div class="aspect" style="margin-top:6px;border-left:3px solid ${t.id === 'jupiter' ? 'var(--gold-mid)' : 'var(--navy)'}"><b>行運${t.name}行至本命第${t.house}宮（${HOUSE_MEAN[t.house - 1]}）</b><p style="margin-top:3px">你人生的「${HOUSE_MEAN[t.house - 1]}」領域${TRANSIT_HOUSE[t.id]}。</p></div>`).join('')}
         ${tAspects.length ? `<h4 style="margin-top:12px">行運相位（觸動本命）</h4>${tAspects.map(x => `<div class="aspect" style="margin-top:6px;border-left:3px solid ${x.asp.good === true ? 'var(--gold-mid)' : x.asp.good === false ? 'var(--cinnabar)' : 'var(--panel-border)'}">
           <b>行運${planetIcon(x.t)}${x.t.name} ${aspectIcon(x.asp)}${x.asp.name} 本命${x.nt.name}（差${x.orb}°）</b>
           <p style="margin-top:3px">行運${x.t.name}（${TRANSIT_MEAN[x.t.id]}）${TRANSIT_ASPECT[x.asp.name]}你本命的${x.nt.name}——${x.asp.good === false ? '這段期間此主題會遇到考驗或張力，是磨練與調整的時機，撐過去便是成長。' : x.asp.good === true ? '這段期間此主題順流開展、易得助力，宜主動把握。' : '這是一段強烈啟動此主題的時期，能量集中、轉折鮮明，好壞取決於如何運用。'}</p></div>`).join('')}` : '<p class="muted" style="margin-top:6px">當前木土天海冥對本命個人行星／軸點無緊密相位（容許度內），是相對平順、無重大行運壓力的階段。</p>'}
@@ -503,7 +512,7 @@
         <h4>${Icons.svg('astrology', { size: 16 })} 中點整合（Midpoint · Ebertin 宇宙生物學）</h4>
         <p class="muted" style="margin-top:-2px">中點是兩顆行星「連線的正中央」，代表兩股能量融合後的敏感點。當有行星恰好落在中點的合／刑／沖軸上，該整合議題就被強烈啟動——這是技術流占星最精微的一層。</p>
         ${midpoints.map(md => `<div class="aspect" style="margin-top:6px;border-left:3px solid ${md.hits.length ? 'var(--gold-mid)' : 'var(--panel-border)'}">
-          <b>${md.key} 中點：${zodiacIcon(md.sign)}${md.sign.name} ${degInSign(md.lon)}（第${md.house}宮）</b>${md.hits.length ? ` <span class="tag gold">被${md.hits.map(h => h.name).join('、')}啟動</span>` : ''}
+          <b>${md.key} 中點：${zodiacIcon(md.sign)}${md.sign.name} ${degInSign(md.lon)}${noTime ? '' : `（第${md.house}宮）`}</b>${md.hits.length ? ` <span class="tag gold">被${md.hits.map(h => h.name).join('、')}啟動</span>` : ''}
           <p style="margin-top:3px">${md.mean}${md.hits.length ? `你的<b>${md.hits.map(h => h.name).join('、')}</b>正落在此中點軸上——代表這股行星能量直接介入了這個整合點，使該議題在你身上格外鮮明、反覆浮現，是人格中極具辨識度的一環。` : '此中點目前未被本命行星緊密啟動，議題以背景基調的方式運作，不特別突顯。'}</p>
         </div>`).join('')}
         <p class="muted" style="font-size:11.5px;margin-top:4px">※ 中點採 <b>Ebertin 宇宙生物學</b>取向，列日/月、金/火、ASC/MC 三組核心中點；啟動判定取 1.5° 緊容許度的合、刑、沖軸。</p>
@@ -512,23 +521,24 @@
 
       AI.attach(div.querySelector('.panel'), () =>
         `請為以下西洋占星本命盤做深度解讀。
-出生：${b.y}/${b.m}/${b.d} ${b.hh}:${String(b.mi).padStart(2, '0')}（UTC${tz >= 0 ? '+' : ''}${tz}），${cityName}（${lat}°, ${lon}°），宮位制：${pc.system}
+出生：${b.y}/${b.m}/${b.d} ${noTime ? '（出生時間未知）' : `${b.hh}:${String(b.mi).padStart(2, '0')}`}（UTC${tz >= 0 ? '+' : ''}${tz}），${cityName}（${lat}°, ${lon}°）${noTime ? '' : `，宮位制：${pc.system}`}
+${noTime ? '【重要】本次未提供出生時間，行星位置以正午 12:00 推算。因此：上升、天頂、宮位、宮主星、命主星一律無法判定，請「絕對不要」臆測或提及上升星座與任何宮位落點；月亮位置最大可能偏差 ±6.7°（約 44% 的日子月亮當天會換座），論及月亮時請主動提醒此不確定性。請只就行星星座、相位、相位格局、七政旺弱與推運等不受時間影響的部分作答。' : ''}
 行星位置（含宮位與逆行）：
-${positions.map(p => `${p.name}：${p.sign.name} ${degInSign(p.lon)}，第${p.house}宮${p.retro ? '，逆行' : ''}`).join('\n')}
-上升：${ascSign.name} ${degInSign(pc.asc)}，天頂MC：${mcSign.name} ${degInSign(pc.mc)}
-宮首：${[1,2,3,4,5,6,7,8,9,10,11,12].map(h => `${h}宮${signOf(pc.cusps[h]).name}`).join('、')}
+${positions.map(p => `${p.name}：${p.sign.name} ${degInSign(p.lon)}${noTime ? '' : `，第${p.house}宮`}${p.retro ? '，逆行' : ''}`).join('\n')}
+${noTime ? '（上升、天頂、宮首：因出生時間未知，不予計算）' : `上升：${ascSign.name} ${degInSign(pc.asc)}，天頂MC：${mcSign.name} ${degInSign(pc.mc)}
+宮首：${[1,2,3,4,5,6,7,8,9,10,11,12].map(h => `${h}宮${signOf(pc.cusps[h]).name}`).join('、')}`}
 主要相位：${aspList.map(x => `${x.a.name}${x.asp.name}${x.b.name}（容許度${x.orb}°，${x.applying ? '入相位' : '出相位'}）`).join('、') || '無'}
 相位格局：${patterns.map(pt => `${pt.type}${pt.sign ? '於' + pt.sign : ''}(${pt.planets.map(p => p.name).join('')})`).join('、') || '無明顯格局'}
-命主星（上升守護）：${rulerP.name} 於 ${rulerP.sign.name} 第${rulerP.house}宮${rulerDig && rulerDig.key !== '平' ? '（' + rulerDig.label + '）' : ''}
+${noTime ? '' : `命主星（上升守護）：${rulerP.name} 於 ${rulerP.sign.name} 第${rulerP.house}宮${rulerDig && rulerDig.key !== '平' ? '（' + rulerDig.label + '）' : ''}`}
 七政必然尊貴（傳統廟旺陷弱）：${dignified.length ? dignified.map(x => `${x.p.name}${x.dig.label}於${x.p.sign.name}`).join('、') : '七政皆平勢'}${crits.length ? `；臨界度：${crits.map(x => x.p.name + x.c.tag).join('、')}` : ''}
 出生月相：${mphase.name}（${mphase.en}，日月相距${mphase.elong.toFixed(0)}°，${mphase.waxing ? '漸盈' : '漸虧'}）
-宮主星飛宮：${houseRulers.map(r => `${r.house}宮主${r.rulerP.name}落${r.inHouse}宮`).join('、')}
+${noTime ? '' : `宮主星飛宮：${houseRulers.map(r => `${r.house}宮主${r.rulerP.name}落${r.inHouse}宮`).join('、')}`}
 元素分布：火${elemCount.火} 土${elemCount.土} 風${elemCount.風} 水${elemCount.水}
-【今日行運 Transit】(${tnow.getFullYear()}/${tnow.getMonth() + 1}/${tnow.getDate()})當前慢星：${transits.map(t => `${t.name}${t.sign.name}${t.retro ? '逆' : ''}(本命第${t.house}宮)`).join('、')}
+【今日行運 Transit】(${tnow.getFullYear()}/${tnow.getMonth() + 1}/${tnow.getDate()})當前慢星：${transits.map(t => `${t.name}${t.sign.name}${t.retro ? '逆' : ''}${noTime ? '' : `(本命第${t.house}宮)`}`).join('、')}
 行運相位：${tAspects.length ? tAspects.map(x => `行運${x.t.name}${x.asp.name}本命${x.nt.name}(差${x.orb}°)`).join('、') : '無緊密相位'}
 【二次推運 Secondary Progression】現年約${Math.floor(ageYears)}歲：推運太陽${progSunSign.name}${progSunMoved ? `（已由本命${positions[0].sign.name}推進）` : '（仍在本命座）'}、推運月亮${progMoonSign.name}（情緒季節，約${yearsToNextSeason.toFixed(1)}年後轉入${nextSeasonSign.name}）
-【中點 Midpoint · Ebertin】${midpoints.map(md => `${md.key}中點於${md.sign.name}${degInSign(md.lon)}第${md.house}宮${md.hits.length ? `（被${md.hits.map(h => h.name).join('、')}啟動）` : ''}`).join('；')}
-請以現代心理占星取向分析：1) 太陽月亮上升三位一體人格 2) 出生月相（Rudhyar 週期）反映的內在情感節奏與人生階段原型 3) 行星落宮的生命領域重點 4) 水金火的溝通/感情/行動風格 5) 木土的機會與課題（含逆行課題）6) 重要相位與相位格局——特別留意入相位（能量漸強、更關鍵）與出相位的差別 7) 命主星落點與七政旺弱（入廟曜升為天賦、失勢落陷為課題）8) 宮主星飛宮串起的宮位連動（哪些生命領域彼此牽引）9) 今日行運：當前木土天海冥落本命宮位與對本命的相位，代表現階段的人生課題與機會（流年運勢重點）10) 二次推運：推運太陽的自我演化階段、推運月亮的情緒季節（現在的內心狀態與下一季的轉變）——請對比「行運＝外在際遇」與「推運＝內在成熟」兩者是否同步 11) 中點整合（被行星啟動者尤其重要）12) 綜合本命天賦、當前行運與內在推運，給出適合的發展方向與近期建議。`);
+【中點 Midpoint · Ebertin】${midpoints.map(md => `${md.key}中點於${md.sign.name}${degInSign(md.lon)}${noTime ? '' : `第${md.house}宮`}${md.hits.length ? `（被${md.hits.map(h => h.name).join('、')}啟動）` : ''}`).join('；')}
+${noTime ? '請以現代心理占星取向分析（跳過所有需要上升與宮位的項目）：' : '請以現代心理占星取向分析：'}1) ${noTime ? '太陽與月亮的人格組合（不談上升）' : '太陽月亮上升三位一體人格'} 2) 出生月相（Rudhyar 週期）反映的內在情感節奏與人生階段原型${noTime ? '' : ' 3) 行星落宮的生命領域重點'} 4) 水金火的溝通/感情/行動風格 5) 木土的機會與課題（含逆行課題）6) 重要相位與相位格局——特別留意入相位（能量漸強、更關鍵）與出相位的差別 7) ${noTime ? '七政旺弱（入廟曜升為天賦、失勢落陷為課題；此項不受出生時間影響）' : '命主星落點與七政旺弱（入廟曜升為天賦、失勢落陷為課題）'}${noTime ? '' : ' 8) 宮主星飛宮串起的宮位連動（哪些生命領域彼此牽引）'} 9) 今日行運：當前木土天海冥${noTime ? '' : '落本命宮位與'}對本命的相位，代表現階段的人生課題與機會（流年運勢重點）10) 二次推運：推運太陽的自我演化階段、推運月亮的情緒季節（現在的內心狀態與下一季的轉變）——請對比「行運＝外在際遇」與「推運＝內在成熟」兩者是否同步 11) 中點整合（被行星啟動者尤其重要）12) 綜合本命天賦、當前行運與內在推運，給出適合的發展方向與近期建議。`);
     });
   }
 

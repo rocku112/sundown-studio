@@ -71,17 +71,22 @@
       <div class="field"><label>月</label><input type="number" class="sy-m" value="1" min="1" max="12" style="width:64px"></div>
       <div class="field"><label>日</label><input type="number" class="sy-d" value="1" min="1" max="31" style="width:64px"></div>
       <div class="field"><label>時</label><input type="number" class="sy-h" value="12" min="0" max="23" style="width:64px"></div>
-      <div class="field"><label>分</label><input type="number" class="sy-mi" value="0" min="0" max="59" style="width:64px"></div>
+      <div class="field"><label>分<span class="muted" style="font-weight:400">（選填）</span></label><input type="number" class="sy-mi" value="0" min="0" max="59" style="width:64px"></div>
       <div class="field"><label>出生地（定時區）</label><select class="sy-city" style="width:118px">${MUBU_CITIES.map((c, i) => `<option value="${i}"${c[0] === "台北" ? " selected" : ""}>${c[0]}</option>`).join("")}</select></div>
-    </div>`;
+    </div>
+    <label style="display:flex;align-items:center;gap:6px;margin-top:6px;cursor:pointer;font-size:13px">
+      <input type="checkbox" class="sy-notime" style="width:auto;margin:0"> <span class="muted">不知道出生時間（以 12:00 計算，月亮可能有誤）</span>
+    </label>`;
   }
   const readP = (root) => {
     const ci = +root.querySelector('.sy-city').value;
     const city = MUBU_CITIES[ci] || MUBU_CITIES[0];
     return {
       y: +root.querySelector('.sy-y').value, m: +root.querySelector('.sy-m').value,
-      d: +root.querySelector('.sy-d').value, hh: +root.querySelector('.sy-h').value,
-      mi: +root.querySelector('.sy-mi').value || 0,
+      d: +root.querySelector('.sy-d').value,
+      hh: root.querySelector('.sy-notime').checked ? 12 : +root.querySelector('.sy-h').value,
+      mi: root.querySelector('.sy-notime').checked ? 0 : (+root.querySelector('.sy-mi').value || 0),
+      noTime: root.querySelector('.sy-notime').checked,
       cityName: city[0], tz: city[3]
     };
   };
@@ -154,7 +159,7 @@
             <div class="sy-b" style="flex:1;min-width:280px"><h4 style="margin-top:0">對方</h4>${personForm()}</div>
           </div>
           <button class="btn" id="sy-go" style="margin-top:14px">${Icons.svg('synastry')} 合 盤</button>
-          <p class="muted" style="margin-top:8px">分析七大行星的交互相位（Synastry）。<b>出生地用於換算時區</b>——非台灣出生者務必選對，否則整張盤會時間錯位；本工具不取上升與宮位，故只需時區、不需精確經緯度。時間不確定填 12 時即可（月亮一小時約走 0.55°，全天誤差最大約 ±7°）。</p>
+          <p class="muted" style="margin-top:8px">分析七大行星的交互相位（Synastry）。<b>出生地用於換算時區</b>——非台灣出生者務必選對，否則整張盤會時間錯位；本工具不取上升與宮位，故只需時區、不需精確經緯度。不知道時間可勾選「不知道出生時間」，將以 12:00 計算——本工具不取上升宮位，故其他行星幾乎不受影響，<b>只有月亮</b>最大可能偏差 ±6.7°（約 44% 的日子月亮當天會換座）。「分」僅微幅影響月亮（每分鐘 0.009°），不確定可留 0。</p>
         </div>
         <div id="sy-result"></div>`;
 
@@ -177,7 +182,7 @@
         const div = document.createElement('div');
         div.innerHTML = `<div class="panel result">
           <div style="text-align:center">
-            <div class="muted">你 ${A.y}/${A.m}/${A.d} ${A.hh}:${String(A.mi).padStart(2, "0")}·${A.cityName}（${Icons.svg('sun', { size: 14 })}${signOf(r.ca[0].lon)} ${Icons.svg('moon', { size: 14 })}${signOf(r.ca[1].lon)}）× 對方 ${B.y}/${B.m}/${B.d} ${B.hh}:${String(B.mi).padStart(2, "0")}·${B.cityName}（${Icons.svg('sun', { size: 14 })}${signOf(r.cb[0].lon)} ${Icons.svg('moon', { size: 14 })}${signOf(r.cb[1].lon)}）</div>
+            <div class="muted">你 ${A.y}/${A.m}/${A.d} ${A.noTime ? "<span style='color:var(--cinnabar)'>時間未知</span>" : `${A.hh}:${String(A.mi).padStart(2, "0")}`}·${A.cityName}（${Icons.svg('sun', { size: 14 })}${signOf(r.ca[0].lon)} ${Icons.svg('moon', { size: 14 })}${signOf(r.ca[1].lon)}）× 對方 ${B.y}/${B.m}/${B.d} ${B.noTime ? "<span style='color:var(--cinnabar)'>時間未知</span>" : `${B.hh}:${String(B.mi).padStart(2, "0")}`}·${B.cityName}（${Icons.svg('sun', { size: 14 })}${signOf(r.cb[0].lon)} ${Icons.svg('moon', { size: 14 })}${signOf(r.cb[1].lon)}）</div>
             <div style="font-size:56px;font-weight:700;color:${color};line-height:1.4">${r.score}<span style="font-size:20px">分</span></div>
             <span class="fortune-level ${r.score >= 72 ? 'good' : r.score >= 45 ? 'mid' : 'bad'}">${r.grade}</span>
             <div style="margin-top:6px"><span class="tag gold">${r.relType.name}</span><span class="tag">你主${r.domA}象 × 對方主${r.domB}象（${r.elemGood ? '相容' : '互異'}）</span><span class="tag">你${r.modeA}／對方${r.modeB}</span><span class="tag">${r.inter.length} 組交互相位</span></div>
@@ -189,17 +194,18 @@
           ${goods.length ? `<h4>${Icons.svg('star-filled', { color: 'var(--gold-mid)' })} 和諧相位（${goods.length}）</h4>${goods.map(row).join('')}` : ''}
           ${hards.length ? `<h4 style="margin-top:16px">${Icons.svg('bolt')} 張力相位（${hards.length}）</h4>${hards.map(row).join('')}` : ''}
           ${!r.inter.length ? '<p class="muted">兩人主要行星無明顯交互相位——像平行線，需要刻意創造交集。</p>' : ''}
+          ${(A.noTime || B.noTime) ? `<p class="muted" style="margin-top:10px;color:var(--cinnabar)">※ ${A.noTime && B.noTime ? '雙方' : A.noTime ? '你' : '對方'}未提供出生時間，已以 12:00 計算。太陽與水金火木土幾乎不受影響，但<b>月亮最大可能偏差 ±6.7°</b>——凡涉及月亮的相位與評分請斟酌參考。</p>` : ''}
           <p class="muted" style="margin-top:12px">※ 張力相位不等於不合——沒有張力的關係往往也沒有火花；四分相是最容易「來電」的相位之一。</p>
         </div>`;
         resEl.appendChild(div);
 
         AI.attach(div.querySelector('.panel'), () =>
           `請做占星合盤（Synastry）深度分析。
-你：${A.y}/${A.m}/${A.d} ${A.hh}:${String(A.mi).padStart(2, "0")}（${A.cityName}，UTC${A.tz >= 0 ? "+" : ""}${A.tz}），行星：${r.ca.map(p => `${p.name}${signOf(p.lon)}${Math.floor(Astro.norm360(p.lon) % 30)}°`).join('、')}
-對方：${B.y}/${B.m}/${B.d} ${B.hh}:${String(B.mi).padStart(2, "0")}（${B.cityName}，UTC${B.tz >= 0 ? "+" : ""}${B.tz}），行星：${r.cb.map(p => `${p.name}${signOf(p.lon)}${Math.floor(Astro.norm360(p.lon) % 30)}°`).join('、')}
+你：${A.y}/${A.m}/${A.d} ${A.noTime ? "（出生時間未知，以12:00推算）" : `${A.hh}:${String(A.mi).padStart(2, "0")}`}（${A.cityName}，UTC${A.tz >= 0 ? "+" : ""}${A.tz}），行星：${r.ca.map(p => `${p.name}${signOf(p.lon)}${Math.floor(Astro.norm360(p.lon) % 30)}°`).join('、')}
+對方：${B.y}/${B.m}/${B.d} ${B.noTime ? "（出生時間未知，以12:00推算）" : `${B.hh}:${String(B.mi).padStart(2, "0")}`}（${B.cityName}，UTC${B.tz >= 0 ? "+" : ""}${B.tz}），行星：${r.cb.map(p => `${p.name}${signOf(p.lon)}${Math.floor(Astro.norm360(p.lon) % 30)}°`).join('、')}
 交互相位：${r.inter.map(x => `你的${x.pa.name}${x.asp.name}對方的${x.pb.name}（差${x.orb}°）`).join('；') || '無主要相位'}
 綜合評分：${r.score}（${r.grade}），元素：你主${r.domA}象、對方主${r.domB}象；步調模式：你${r.modeA}、對方${r.modeB}；關係主要調性：${r.relType.name}
-請分析：1) 兩人吸引力的來源（哪些相位在放電）2) 情感需求是否互相滿足（月亮與金星互動）3) 溝通與價值觀（水星、太陽）4) 長期關係的挑戰點（土星與硬相位的課題）5) 相處建議與最佳互動模式。`);
+${(A.noTime || B.noTime) ? "【重要】其中一方或雙方出生時間未知，月亮位置最大可能偏差 ±6.7°（約44%的日子月亮當天會換座）。論及月亮相關內容時請主動說明此不確定性，並勿臆測上升星座或宮位（本盤本就不含）。\n" : ""}請分析：1) 兩人吸引力的來源（哪些相位在放電）2) 情感需求是否互相滿足（月亮與金星互動）3) 溝通與價值觀（水星、太陽）4) 長期關係的挑戰點（土星與硬相位的課題）5) 相處建議與最佳互動模式。`);
       });
     }
   });
