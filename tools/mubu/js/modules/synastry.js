@@ -57,7 +57,8 @@
   }
 
   function chartOf(b) {
-    const jde = Astro.toJD(b.y, b.m, b.d, b.hh) - 8 / 24 + Astro.deltaT(b.y) / 86400;
+    const tz = (typeof b.tz === "number") ? b.tz : 8;   // 出生地時區（未填則沿用 UTC+8）
+    const jde = Astro.toJD(b.y, b.m, b.d, b.hh, b.mi || 0) - tz / 24 + Astro.deltaT(b.y) / 86400;
     return PLANETS.map(p => ({
       ...p,
       lon: p.id === 'sun' ? Astro.sunLongitude(jde) : p.id === 'moon' ? Astro.moonLongitude(jde) : Astro.planetLongitude(p.id, jde)
@@ -70,9 +71,20 @@
       <div class="field"><label>月</label><input type="number" class="sy-m" value="1" min="1" max="12" style="width:64px"></div>
       <div class="field"><label>日</label><input type="number" class="sy-d" value="1" min="1" max="31" style="width:64px"></div>
       <div class="field"><label>時</label><input type="number" class="sy-h" value="12" min="0" max="23" style="width:64px"></div>
+      <div class="field"><label>分</label><input type="number" class="sy-mi" value="0" min="0" max="59" style="width:64px"></div>
+      <div class="field"><label>出生地（定時區）</label><select class="sy-city" style="width:118px">${MUBU_CITIES.map((c, i) => `<option value="${i}"${c[0] === "台北" ? " selected" : ""}>${c[0]}</option>`).join("")}</select></div>
     </div>`;
   }
-  const readP = (root) => ({ y: +root.querySelector('.sy-y').value, m: +root.querySelector('.sy-m').value, d: +root.querySelector('.sy-d').value, hh: +root.querySelector('.sy-h').value });
+  const readP = (root) => {
+    const ci = +root.querySelector('.sy-city').value;
+    const city = MUBU_CITIES[ci] || MUBU_CITIES[0];
+    return {
+      y: +root.querySelector('.sy-y').value, m: +root.querySelector('.sy-m').value,
+      d: +root.querySelector('.sy-d').value, hh: +root.querySelector('.sy-h').value,
+      mi: +root.querySelector('.sy-mi').value || 0,
+      cityName: city[0], tz: city[3]
+    };
+  };
 
   function synastry(A, B) {
     const ca = chartOf(A), cb = chartOf(B);
@@ -142,7 +154,7 @@
             <div class="sy-b" style="flex:1;min-width:280px"><h4 style="margin-top:0">對方</h4>${personForm()}</div>
           </div>
           <button class="btn" id="sy-go" style="margin-top:14px">${Icons.svg('synastry')} 合 盤</button>
-          <p class="muted" style="margin-top:8px">分析七大行星的交互相位（Synastry）；時間不確定填 12 時即可（月亮誤差最大約 ±7°）。</p>
+          <p class="muted" style="margin-top:8px">分析七大行星的交互相位（Synastry）。<b>出生地用於換算時區</b>——非台灣出生者務必選對，否則整張盤會時間錯位；本工具不取上升與宮位，故只需時區、不需精確經緯度。時間不確定填 12 時即可（月亮一小時約走 0.55°，全天誤差最大約 ±7°）。</p>
         </div>
         <div id="sy-result"></div>`;
 
@@ -165,7 +177,7 @@
         const div = document.createElement('div');
         div.innerHTML = `<div class="panel result">
           <div style="text-align:center">
-            <div class="muted">你 ${A.y}/${A.m}/${A.d}（${Icons.svg('sun', { size: 14 })}${signOf(r.ca[0].lon)} ${Icons.svg('moon', { size: 14 })}${signOf(r.ca[1].lon)}）× 對方 ${B.y}/${B.m}/${B.d}（${Icons.svg('sun', { size: 14 })}${signOf(r.cb[0].lon)} ${Icons.svg('moon', { size: 14 })}${signOf(r.cb[1].lon)}）</div>
+            <div class="muted">你 ${A.y}/${A.m}/${A.d} ${A.hh}:${String(A.mi).padStart(2, "0")}·${A.cityName}（${Icons.svg('sun', { size: 14 })}${signOf(r.ca[0].lon)} ${Icons.svg('moon', { size: 14 })}${signOf(r.ca[1].lon)}）× 對方 ${B.y}/${B.m}/${B.d} ${B.hh}:${String(B.mi).padStart(2, "0")}·${B.cityName}（${Icons.svg('sun', { size: 14 })}${signOf(r.cb[0].lon)} ${Icons.svg('moon', { size: 14 })}${signOf(r.cb[1].lon)}）</div>
             <div style="font-size:56px;font-weight:700;color:${color};line-height:1.4">${r.score}<span style="font-size:20px">分</span></div>
             <span class="fortune-level ${r.score >= 72 ? 'good' : r.score >= 45 ? 'mid' : 'bad'}">${r.grade}</span>
             <div style="margin-top:6px"><span class="tag gold">${r.relType.name}</span><span class="tag">你主${r.domA}象 × 對方主${r.domB}象（${r.elemGood ? '相容' : '互異'}）</span><span class="tag">你${r.modeA}／對方${r.modeB}</span><span class="tag">${r.inter.length} 組交互相位</span></div>
@@ -183,8 +195,8 @@
 
         AI.attach(div.querySelector('.panel'), () =>
           `請做占星合盤（Synastry）深度分析。
-你：${A.y}/${A.m}/${A.d} ${A.hh}時（UTC+8），行星：${r.ca.map(p => `${p.name}${signOf(p.lon)}${Math.floor(Astro.norm360(p.lon) % 30)}°`).join('、')}
-對方：${B.y}/${B.m}/${B.d} ${B.hh}時（UTC+8），行星：${r.cb.map(p => `${p.name}${signOf(p.lon)}${Math.floor(Astro.norm360(p.lon) % 30)}°`).join('、')}
+你：${A.y}/${A.m}/${A.d} ${A.hh}:${String(A.mi).padStart(2, "0")}（${A.cityName}，UTC${A.tz >= 0 ? "+" : ""}${A.tz}），行星：${r.ca.map(p => `${p.name}${signOf(p.lon)}${Math.floor(Astro.norm360(p.lon) % 30)}°`).join('、')}
+對方：${B.y}/${B.m}/${B.d} ${B.hh}:${String(B.mi).padStart(2, "0")}（${B.cityName}，UTC${B.tz >= 0 ? "+" : ""}${B.tz}），行星：${r.cb.map(p => `${p.name}${signOf(p.lon)}${Math.floor(Astro.norm360(p.lon) % 30)}°`).join('、')}
 交互相位：${r.inter.map(x => `你的${x.pa.name}${x.asp.name}對方的${x.pb.name}（差${x.orb}°）`).join('；') || '無主要相位'}
 綜合評分：${r.score}（${r.grade}），元素：你主${r.domA}象、對方主${r.domB}象；步調模式：你${r.modeA}、對方${r.modeB}；關係主要調性：${r.relType.name}
 請分析：1) 兩人吸引力的來源（哪些相位在放電）2) 情感需求是否互相滿足（月亮與金星互動）3) 溝通與價值觀（水星、太陽）4) 長期關係的挑戰點（土星與硬相位的課題）5) 相處建議與最佳互動模式。`);
