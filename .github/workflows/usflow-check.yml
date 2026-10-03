@@ -59,6 +59,15 @@ jobs:
         working-directory: usflow
         run: python -X utf8 scripts/sec_coverage.py
 
+      # 覆蓋率報告裡有疑問的公司，印出原始申報列（暫時性除錯，查清楚後可移除）
+      - name: 基本面原始資料抽查
+        if: hashFiles('usflow/data/fundamentals.json') != ''
+        continue-on-error: true
+        working-directory: usflow
+        env:
+          SEC_USER_AGENT: ${{ vars.SEC_USER_AGENT }}
+        run: python -X utf8 scripts/sec_debug.py KO V SO NVDA XOM WMT
+
       - name: 產出前端資料
         working-directory: usflow
         run: |
