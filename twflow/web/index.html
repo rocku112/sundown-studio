@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>twflow — 台股板塊資金流</title>
+<title>twflow — 台美股資金流</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0F1413">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -91,7 +91,7 @@ header{display:flex;align-items:center;gap:12px;padding:9px 14px;
 .segs{display:flex;gap:4px;margin-left:auto}
 .segs button{padding:5px 11px;font-size:12px;border-radius:7px;color:var(--s9)}
 .segs button.on{background:var(--card);color:var(--s10);border:1px solid var(--line)}
-.ritem{display:grid;grid-template-columns:26px 1fr auto;gap:11px;align-items:center;
+.ritem{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:11px;align-items:center;
   padding:11px 12px;border-bottom:1px solid var(--line);cursor:pointer}
 .ritem:hover{background:var(--card)}
 .rk{color:var(--s8);font-size:13px;font-variant-numeric:tabular-nums;text-align:center}
@@ -212,8 +212,42 @@ header{display:flex;align-items:center;gap:12px;padding:9px 14px;
   width:9px;height:9px;border-radius:50%}
 .ch-nodes{font-size:11px;color:var(--s8);margin-top:2px;line-height:1.5}
 
+/* ── 台股／美股切換 ─────────────────────────────────── */
+.mkt{display:flex;gap:2px;background:var(--card);border:1px solid var(--line);
+  border-radius:9px;padding:2px;flex-shrink:0}
+.mkt button{padding:4px 11px;border-radius:7px;font-size:12.5px;color:var(--s9)}
+.mkt button.on{background:var(--gold);color:#1A2120;font-weight:700}
+.mk{display:inline-block;font-size:9.5px;padding:0 4px;border-radius:3px;margin-right:5px;
+  border:1px solid var(--line);color:var(--s8);font-weight:600;vertical-align:1px;
+  font-style:normal}
+.idx{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.idx>div{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 11px}
+.idx .l{font-size:11.5px;color:var(--s9)}
+.idx .n{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.3}
+.idx .c{font-size:12px;font-variant-numeric:tabular-nums}
+.heat{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:6px}
+.heat button{border-radius:9px;padding:9px 8px;text-align:left;border:1px solid var(--line)}
+.heat b{display:block;font-size:13px}
+.heat span{font-size:12px;font-variant-numeric:tabular-nums}
+.heat small{display:block;font-size:10.5px;color:var(--s9);margin-top:2px}
+.note{color:var(--s8);font-size:11.5px;line-height:1.7}
+.calc{display:flex;gap:8px;align-items:center;padding:9px 16px;font-size:13px;
+  border-bottom:1px solid var(--line)}
+.calc input{width:90px;padding:5px 8px;border-radius:7px;background:var(--card);
+  border:1px solid var(--line);color:var(--s10);font:inherit}
+.qt{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
+.qt th,.qt td{padding:7px 16px;text-align:right;border-bottom:1px solid var(--line)}
+.qt th{color:var(--s8);font-weight:400}
+.qt td:first-child,.qt th:first-child{text-align:left;color:var(--s9)}
+.lk{background:var(--card);border:1px solid var(--line);border-radius:13px;
+  padding:13px 15px;margin-bottom:10px}
+.lk-top{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;margin-bottom:9px;cursor:pointer}
+.lk-top h3{font-size:15px}
+.lk .chips .chip small{color:var(--s8);margin-left:4px}
+
 .nav{display:none}
 @media (max-width:720px){
+  .mkt button{padding:4px 8px}
   header{gap:8px;padding:8px 11px}
   .brand span,.tabs{display:none}
   .stats{top:auto;bottom:8px;left:8px;right:8px;justify-content:space-between;gap:5px}
@@ -230,25 +264,26 @@ header{display:flex;align-items:center;gap:12px;padding:9px 14px;
   .side{width:100%;max-width:100%}
   .search input:focus{width:150px}
 }
+@media (max-width:430px){
+  .brand,#d-lab{display:none}
+  .meta{font-size:11.5px}
+  .search input,.search input:focus{width:104px}
+  .sresult{position:fixed;top:50px;left:8px;right:8px;width:auto}
+}
 </style>
 </head>
 <body>
 
 <header>
-  <div class="brand">twflow<span>台股板塊資金流</span></div>
-  <div class="meta"><b id="d-date">—</b>　大盤 <b id="d-mkt">—</b></div>
+  <div class="brand">twflow<span>台美股資金流</span></div>
+  <div class="mkt" id="mkt"><button data-m="tw" class="on">台股</button><button data-m="us">美股</button></div>
+  <div class="meta"><b id="d-date">—</b>　<span id="d-lab">大盤</span> <b id="d-mkt">—</b></div>
   <div class="spacer"></div>
   <div class="search">
-    <input id="q" placeholder="搜尋代號/名稱" autocomplete="off">
+    <input id="q" placeholder="搜尋台美股" autocomplete="off">
     <div class="sresult" id="qr"></div>
   </div>
-  <div class="tabs" id="tabs">
-    <button data-v="chart" class="on">泡泡圖</button>
-    <button data-v="rank">排行榜</button>
-    <button data-v="today">今日</button>
-    <button data-v="chain">供應鏈</button>
-    <button data-v="watch">自選</button>
-  </div>
+  <div class="tabs" id="tabs"></div>
   <button class="icon" id="install" title="安裝到主畫面" style="display:none">⬇</button>
   <button class="icon" id="theme" title="切換主題">◐</button>
 </header>
@@ -263,15 +298,13 @@ header{display:flex;align-items:center;gap:12px;padding:9px 14px;
   <section class="view" id="v-today"><div class="wrap" id="today"></div></section>
   <section class="view" id="v-chain"><div class="wrap" id="chain"></div></section>
   <section class="view" id="v-watch"><div class="wrap" id="watch"></div></section>
+  <section class="view" id="v-us-today"><div class="wrap" id="us-today"></div></section>
+  <section class="view" id="v-us-sector"><div class="wrap" id="us-sector"></div></section>
+  <section class="view" id="v-us-rank"><div class="wrap" id="us-rank"></div></section>
+  <section class="view" id="v-link"><div class="wrap" id="link"></div></section>
 </div>
 
-<nav class="nav" id="nav">
-  <button data-v="chart" class="on"><em>◎</em>泡泡圖</button>
-  <button data-v="rank"><em>☰</em>排行榜</button>
-  <button data-v="today"><em>★</em>今日</button>
-  <button data-v="chain"><em>⇄</em>供應鏈</button>
-  <button data-v="watch"><em>☆</em>自選</button>
-</nav>
+<nav class="nav" id="nav"></nav>
 
 <div class="ov" id="ov"></div>
 
@@ -307,6 +340,7 @@ const slog=(v,T)=>Math.sign(v)*Math.log10(1+Math.abs(v)/T);
 const slogInv=(u,T)=>Math.sign(u)*(Math.pow(10,Math.abs(u))-1)*T;
 
 let D=null,H=null,SEARCH=null,sectors=[],filter=null,layout=null;
+let USD=null,USH=null,CROSS=null;
 let view={k:1,x:0,y:0},rankMode='buy',rankWin='5d';
 
 const $=id=>document.getElementById(id);
@@ -316,14 +350,18 @@ const col=v=>v==null?'var(--s9)':(v>=0?'var(--up)':'var(--down)');
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 /* ══ 載入 ══════════════════════════════════════════════════════ */
+// 美股與台美連動是第二條管線產的，可能還沒跑過、或當天失敗——
+// 抓不到就當 null，台股照常運作，美股頁顯示「尚無資料」。
+const usLatest=fetch('data/us/latest.json?'+Date.now()).then(r=>r.json()).catch(()=>null);
+const crossLatest=fetch('data/cross.json?'+Date.now()).then(r=>r.json()).catch(()=>null);
 Promise.all([
   fetch('data/latest.json?'+Date.now()).then(r=>r.json()),
   fetch('data/search.json').then(r=>r.json()),
-]).then(([d,s])=>{
-  D=d; SEARCH=s; sectors=d.sectors;
-  $('d-date').textContent=d.date;
-  const m=$('d-mkt'); m.textContent=pct(d.market_chg_1d); m.style.color=col(d.market_chg_1d);
-  buildStats(); render(); buildRank(); buildToday(); buildWatch();
+  usLatest, crossLatest,
+]).then(([d,s,u,x])=>{
+  D=d; SEARCH=s; sectors=d.sectors; USD=u; CROSS=x;
+  buildStats(); buildRank(); buildToday();
+  setMarket(MARKET);
   evReady().then(()=>{updateBadge(); if(watchTab==='feed') buildWatch();});
 });
 // 走勢圖資料 1.3MB，開個股頁才需要——延後載入，不擋首屏
@@ -622,6 +660,7 @@ function openSector(s){
 
 /* ══ 個股面板 ══════════════════════════════════════════════════ */
 function openStock(code){
+  if(String(code).startsWith('US:')) return openUS(code.slice(3));
   const d=D.stock_data[code]; if(!d) return;
   $('kp-name').innerHTML=`${esc(d.name)} <span style="color:var(--s8);font-size:13px">${code}</span>`
     +(d.anomaly?`<span class="badge">${d.anomaly}</span>`:'');
@@ -641,10 +680,12 @@ function openStock(code){
     <div class="kv"><span>力道　今日是平常的幾倍</span><b>${d.power!=null?d.power+' 倍':'—'}</b></div>
     <div class="kv"><span>價格位階　近 60 日高低區間</span><b>${d.position!=null?d.position+'%':'—'}</b></div>
     ${secs.length?`<div class="stitle">所屬板塊</div><div class="sect">
-      ${secs.map(n=>`<button class="chip" data-sec="${esc(n)}">${esc(n)}</button>`).join('')}</div>`:''}`;
+      ${secs.map(n=>`<button class="chip" data-sec="${esc(n)}">${esc(n)}</button>`).join('')}</div>`:''}
+    ${twCross(code)}`;
   $('kp-body').onclick=e=>{const b=e.target.closest('[data-sec]');
-    if(b) openSector(sectors.find(s=>s.name===b.dataset.sec));};
-  $('kp-star').dataset.code=code; refreshStars();
+    if(b) openSector(sectors.find(s=>s.name===b.dataset.sec));
+    const u=e.target.closest('[data-code]'); if(u) openStock(u.dataset.code);};
+  $('kp-star').dataset.code=code; $('kp-star').style.display=''; refreshStars();
   show('stk-panel');
   histReady().then(h=>drawStockChart(code,h));
   function kv(k,v,u){return `<div class="kv"><span>${k}</span>
@@ -653,10 +694,14 @@ function openStock(code){
 
 // 近 30 日：收盤線 + 月線(MA20，虛線) + 法人買賣超柱
 function drawStockChart(code,h){
-  const s=h.stocks[code], el=$('kchart'); if(!s||!el) return;
+  drawChart($('kchart'),h.dates,h.stocks[code],'近 30 日收盤與法人買賣超（億）');
+}
+// s={c:收盤, m:MA20, n:下方柱（正紅負綠）}。台股柱＝法人買賣超；美股柱＝成交量，依當日漲跌上色
+function drawChart(el,ds,s,caption){
+  if(!s||!el) return;
   const W=el.clientWidth||340, HC=140, HB=48, PAD={l:6,r:44,t:8,b:4};
   const iW=W-PAD.l-PAD.r;
-  const c=s.c,m=s.m,n=s.n,ds=h.dates;
+  const c=s.c,m=s.m,n=s.n;
   const vals=c.filter(x=>x!=null).concat(m.filter(x=>x!=null));
   if(!vals.length){el.innerHTML='<div class="rsub" style="text-align:center;padding:24px">無走勢資料</div>';return;}
   const lo=Math.min(...vals),hi=Math.max(...vals),sp=(hi-lo)||1;
@@ -686,7 +731,7 @@ function drawStockChart(code,h){
       <span>${ds[ds.length-1]}</span></div>
     <svg width="100%" viewBox="0 0 ${W} ${HB}" style="display:block">
       <line x1="0" y1="${HB/2}" x2="${W}" y2="${HB/2}" stroke="var(--line)"/>${bars}</svg>
-    <div class="rsub" style="text-align:center;padding:2px 0 4px">近 30 日收盤與法人買賣超（億）</div>`;
+    <div class="rsub" style="text-align:center;padding:2px 0 4px">${caption}</div>`;
 }
 
 
@@ -782,16 +827,31 @@ function buildWatch(){
 
   const body=$('wl-body');
   if(watchTab==='list'){
-    const rows=WATCH.map(c=>({c,...(sd[c]||{})}))
+    // 台美混合：美股存成 "US:代號"，台股維持原本的純代號（舊清單不用遷移）。
+    // 兩市場分段列、不混排——台股依法人買賣超、美股依漲跌，排序依據不同。
+    const tw=WATCH.filter(c=>!c.startsWith('US:')).map(c=>({c,...(sd[c]||{})}))
       .sort((a,b)=>(b.net_5d_yi??-1e9)-(a.net_5d_yi??-1e9));
-    body.innerHTML=rows.map(r=>`<div class="ritem" data-code="${r.c}">
+    const us=WATCH.filter(c=>c.startsWith('US:'))
+      .map(c=>({c,sym:c.slice(3),...((USD&&USD.stock_data[c.slice(3)])||{})}))
+      .sort((a,b)=>(b.chg_1d??-1e9)-(a.chg_1d??-1e9));
+    const twHtml=tw.length?`<div class="stitle">台股　依近 5 日法人買賣超・${D?D.date:''}</div>`+
+      tw.map(r=>`<div class="ritem" data-code="${r.c}">
       <button class="star ${inWatch(r.c)?'on':''}" data-star="${r.c}">★</button>
       <div><div class="rname">${esc(r.name||r.c)}
         <span style="color:var(--s8);font-weight:400">${r.c}</span>
         ${r.anomaly?`<span class="badge">${r.anomaly}</span>`:''}</div>
         <div class="rsub">${r.price??'—'}　${(D.stock_sectors[r.c]||[]).slice(0,2).map(esc).join('、')||'未分類'}</div></div>
       <div class="rval" style="color:${col(r.net_5d_yi)}">${yi(r.net_5d_yi)}
-        <small style="color:${col(r.chg_1d)}">${pct(r.chg_1d)}</small></div></div>`).join('');
+        <small style="color:${col(r.chg_1d)}">${pct(r.chg_1d)}</small></div></div>`).join(''):'';
+    const usHtml=us.length?`<div class="stitle">美股　依當日漲跌・${USD?USD.date:'尚無資料'}</div>`+
+      us.map(r=>`<div class="ritem" data-code="${r.c}">
+      <button class="star on" data-star="${r.c}">★</button>
+      <div><div class="rname">${esc(r.name||r.sym)}
+        <span style="color:var(--s8);font-weight:400">${esc(r.sym)}</span></div>
+        <div class="rsub">${usd(r.price)}　${esc(r.sector||'')}${r.pe!=null?'　本益比 '+r.pe:''}</div></div>
+      <div class="rval" style="color:${col(r.chg_1d)}">${pct(r.chg_1d)}
+        <small style="color:${col(r.chg_5d)}">5日 ${pct(r.chg_5d)}</small></div></div>`).join(''):'';
+    body.innerHTML=MARKET==='us'?usHtml+twHtml:twHtml+usHtml;
   } else {
     if(!EV){ body.innerHTML='<div class="empty">載入中…</div>'; evReady().then(buildWatch); return; }
     if(!evs.length){ body.innerHTML=
@@ -875,6 +935,239 @@ function buildChain(){
   }
 }
 
+/* ══ 美股 ══════════════════════════════════════════════════════
+   資料由 usflow 管線產生（data/us/）。美股沒有法人買賣超，所有「資金」
+   類的數字都是由價量推出的代理指標，一律叫「成交熱度」——同一個詞在
+   兩個市場必須是同一件事，不能讓人以為美股也有官方的買超數字。 */
+const usd=v=>v==null?'—':'US$'+(v>=1000?v.toLocaleString('en-US',{maximumFractionDigits:0}):v.toFixed(2));
+const big=v=>v==null?'—':Math.abs(v)>=1e9?(v/1e8).toFixed(0)+' 億':(v/1e6).toFixed(0)+' 百萬';
+const NOUS=`<div class="empty">美股資料尚未產生。<br>美股管線每個交易日台灣時間清晨 06:30 更新。</div>`;
+const IDXFMT={'^TNX':d=>[d.price.toFixed(3)+'%',`${d.diff_1d>=0?'+':''}${(d.diff_1d*100).toFixed(1)} 基點`,d.diff_1d],
+  'TWD=X':d=>[d.price.toFixed(3),pct(d.chg_1d),d.chg_1d]};
+const histUS=()=>USH?Promise.resolve(USH)
+  :fetch('data/us/history.json').then(r=>r.json()).then(j=>(USH=j));
+
+function usLink(sym,txt){return `<span data-code="US:${esc(sym)}" style="cursor:pointer">${txt}</span>`;}
+
+function buildUSToday(){
+  const el=$('us-today'); if(!USD){el.innerHTML=NOUS;return;}
+  const sd=USD.stock_data, [adv,tot]=USD.breadth;
+  const tsm=CROSS&&CROSS.adr.find(a=>a.us==='TSM');
+  // 「昨晚美股 → 今天台股」：取美股端漲跌最大的 3 組關聯（漲跌都算）
+  const hot=CROSS?[...CROSS.links].filter(l=>l.chg_1d!=null)
+    .sort((a,b)=>Math.abs(b.chg_1d)-Math.abs(a.chg_1d)).slice(0,3):[];
+  const mv=(list,lab)=>`<div><div class="rsub" style="margin-bottom:7px">${lab}</div>${list.map(s=>{const d=sd[s];
+    return `<div class="krow" data-code="US:${s}" style="cursor:pointer"><span>${esc(d.name)} <small style="color:var(--s8)">${s}</small></span>
+      <b style="color:${col(d.chg_1d)}">${pct(d.chg_1d)}${lab==='爆量'?`　<span style="color:var(--s9)">${d.vol_ratio} 倍量</span>`:''}</b></div>`;}).join('')||'<div class="rsub">今日無</div>'}</div>`;
+  $('us-today').innerHTML=`
+    <div class="card"><h3>美股收盤・${USD.date}（美東）</h3>
+      <div class="idx">${USD.indices.map(s=>{const d=sd[s]; if(d.price==null) return '';
+        const [v,c,cv]=(IDXFMT[s]||(d=>[d.price.toLocaleString('en-US',{maximumFractionDigits:2}),pct(d.chg_1d),d.chg_1d]))(d);
+        return `<div><div class="l">${esc(d.name)}</div><div class="n">${v}</div>
+          <div class="c" style="color:${s==='^VIX'?'var(--s9)':col(cv)}">${c}</div></div>`;}).join('')}</div>
+      <div class="krow" style="margin-top:10px"><span>股票池上漲 / 下跌</span>
+        <b><span style="color:var(--up)">${adv}</span> / <span style="color:var(--down)">${tot-adv}</span></b></div>
+    </div>
+    ${CROSS?`<div class="card"><h3>台美連動・美股 ${CROSS.us_date} → 台股 ${CROSS.tw_date} 收盤</h3>
+      ${tsm&&tsm.premium!=null?`<div class="krow" data-code="US:TSM" style="cursor:pointer"><span>台積電 ADR 溢價</span>
+        <b style="color:var(--gold)">${pct(tsm.premium)}<span style="color:var(--s8);font-weight:400">　近月平均 ${pct(tsm.premium_avg)}</span></b></div>`:''}
+      ${hot.map(l=>`<div class="krow" data-v-link style="cursor:pointer"><span>${esc(l.name)} ${pct(l.chg_1d)}　<small style="color:var(--s8)">${esc(l.theme)}</small></span>
+        <b style="font-weight:400;color:var(--s9);text-align:right">${l.tw.slice(0,3).map(t=>esc(t.name)).join('、')}</b></div>`).join('')}
+      <div style="margin-top:10px"><button class="btn" data-v-link>看全部台美連動 →</button></div></div>`:''}
+    <div class="card"><h3>板塊・當日等權平均漲跌</h3>${heatGrid('chg_1d')}</div>
+    <div class="card"><div style="display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))">
+      ${mv(USD.movers.up,'漲幅前 10')}${mv(USD.movers.down,'跌幅前 10')}</div></div>
+    ${USD.movers.surge.length?`<div class="card"><h3>爆量・成交量達 20 日均量 2 倍以上</h3>${mv(USD.movers.surge,'爆量')}</div>`:''}
+    <div class="card note">
+      美股價量來自 Yahoo Finance／Stooq 公開日線，基本面來自美國 SEC EDGAR 申報資料；股票池為約 140 檔大型股、ADR 與 ETF，非全市場。
+      美股沒有官方的法人買賣超資料，本頁「成交熱度」是成交值相對 20 日均值的倍數，屬價量推估，不代表實際資金流向。
+      本服務僅就公開資訊進行彙整與統計呈現，非證券投資顧問事業，不構成任何投資建議；投資人應自行判斷並自負盈虧。</div>`;
+  $('us-today').onclick=usClick;
+}
+function usClick(e){
+  if(e.target.closest('[data-v-link]')) return setView('link');
+  const c=e.target.closest('[data-code]'); if(c&&!e.target.closest('[data-star]')) return openStock(c.dataset.code);
+  const s=e.target.closest('[data-usec]'); if(s) openUSSector(s.dataset.usec);
+}
+function heatGrid(k){
+  return `<div class="heat">${USD.sectors.map(s=>{const v=s[k];
+    // 色塊透明度隨漲跌幅放大，±3% 封頂；不用連續色階，紅綠語意要一眼看懂
+    const a=Math.min(1,Math.abs(v||0)/3)*.45+.06, c=v>=0?'216,90,48':'29,158,117';
+    return `<button data-usec="${esc(s.name)}" style="background:rgba(${c},${a})">
+      <b>${esc(s.name)}</b><span style="color:${col(v)}">${pct(v)}</span>
+      <small>${s.breadth[0]}/${s.breadth[1]} 檔漲・熱度 ${s.heat??'—'}x</small></button>`;}).join('')}</div>`;
+}
+
+let usSecWin='chg_1d';
+function buildUSSector(){
+  const el=$('us-sector'); if(!USD){el.innerHTML=NOUS;return;}
+  const W=[['chg_1d','當日'],['chg_5d','5 日'],['chg_20d','20 日']];
+  const rows=[...USD.sectors].sort((a,b)=>(b[usSecWin]??-1e9)-(a[usSecWin]??-1e9));
+  el.innerHTML=`<div class="rtabs"><span class="segs" style="margin-left:0">${W.map(([k,l])=>
+      `<button data-w="${k}" class="${k===usSecWin?'on':''}">${l}</button>`).join('')}</span></div>
+    <div class="card" style="padding:12px 14px">${heatGrid(usSecWin)}</div>
+    ${rows.map((s,i)=>`<div class="ritem" data-usec="${esc(s.name)}"><div class="rk">${i+1}</div>
+      <div><div class="rname">${esc(s.name)} <span style="color:var(--s8);font-weight:400">${s.etf||''}</span></div>
+        <div class="rsub">${s.breadth[0]}/${s.breadth[1]} 檔上漲　成交熱度 ${s.heat??'—'}x　漲跌最大 ${esc(USD.stock_data[s.top].name)} ${pct(USD.stock_data[s.top].chg_1d)}</div></div>
+      <div class="rval" style="color:${col(s[usSecWin])}">${pct(s[usSecWin])}
+        <small style="color:${col(s.etf_chg_1d)}">ETF ${pct(s.etf_chg_1d)}</small></div></div>`).join('')}
+    <div class="card note" style="margin-top:12px">板塊漲跌＝股票池內成分股等權平均；「ETF」為對應的 SPDR 類股 ETF 當日漲跌，市值加權，兩者差距大時代表大型股與中小型股走勢分歧。
+      成交熱度＝板塊成交值 ÷ 20 日平均成交值。</div>`;
+  el.querySelectorAll('[data-w]').forEach(b=>b.onclick=()=>{usSecWin=b.dataset.w;buildUSSector();});
+  el.onclick=e=>{if(!e.target.closest('[data-w]')) usClick(e);};
+}
+function openUSSector(name){
+  const s=USD.sectors.find(x=>x.name===name); if(!s) return;
+  const sd=USD.stock_data;
+  $('sp-name').innerHTML=esc(name)+`<span class="badge">美股</span>`;
+  $('sp-sub').innerHTML=`當日 <b style="color:${col(s.chg_1d)}">${pct(s.chg_1d)}</b>　5 日 <b style="color:${col(s.chg_5d)}">${pct(s.chg_5d)}</b>　`+
+    `20 日 <b style="color:${col(s.chg_20d)}">${pct(s.chg_20d)}</b><br>${s.stocks.length} 檔・${s.breadth[0]} 檔上漲・成交熱度 ${s.heat??'—'}x`;
+  $('sp-list').innerHTML=`<div class="stitle">成分股　依 20 日平均成交值排序</div>`+
+    s.stocks.map(c=>{const d=sd[c]; return `<div class="row" data-code="US:${c}">
+      <div class="nm"><button class="star" data-star="US:${c}">☆</button><i>${c}</i>${esc(d.name)}</div>
+      <div class="v" style="color:${col(d.chg_5d)}">${pct(d.chg_5d)}</div>
+      <div class="v" style="color:${col(d.chg_1d)}">${pct(d.chg_1d)}</div></div>`;}).join('');
+  $('sp-list').onclick=e=>{ if(e.target.closest('[data-star]')) return;
+    const r=e.target.closest('[data-code]'); if(r) openStock(r.dataset.code);};
+  refreshStars(); show('sec-panel');
+}
+
+// 排行只給「事實排序」，不做評分或推薦
+const USRANKS=[['up','漲幅',1],['down','跌幅',1],['surge','爆量'],['yield','殖利率'],['high','近 60 日高檔']];
+let usRank='up',usRankWin='chg_1d';
+function buildUSRank(){
+  const el=$('us-rank'); if(!USD){el.innerHTML=NOUS;return;}
+  const sd=USD.stock_data, seg=USRANKS.find(r=>r[0]===usRank)[2];
+  const eq=Object.entries(sd).filter(([,d])=>d.type==='stock'||d.type==='adr');
+  let rows, val, sub;
+  if(usRank==='up'||usRank==='down'){
+    const k=usRankWin, sg=usRank==='up'?1:-1;
+    rows=eq.filter(([,d])=>d[k]!=null&&d[k]*sg>0).sort((a,b)=>sg*(b[1][k]-a[1][k]));
+    val=d=>[pct(d[k]),d[k]]; sub=d=>`${usd(d.price)}　${esc(d.sector||'')}　成交量 ${d.vol_ratio??'—'} 倍`;
+  } else if(usRank==='surge'){
+    rows=eq.filter(([,d])=>d.vol_ratio!=null).sort((a,b)=>b[1].vol_ratio-a[1].vol_ratio);
+    val=d=>[d.vol_ratio+' 倍',d.chg_1d]; sub=d=>`當日 ${pct(d.chg_1d)}　成交值 ${big((d.dollar_m||0)*1e6)} 美元`;
+  } else if(usRank==='yield'){
+    rows=eq.filter(([,d])=>d.yield_net!=null).sort((a,b)=>b[1].yield_net-a[1].yield_net);
+    val=d=>[d.yield_net.toFixed(2)+'%',null];
+    sub=d=>`稅前 ${d.yield.toFixed(2)}%　年股利 US$${d.dps_ttm.toFixed(2)}　${esc(d.sector||'')}`;
+  } else {
+    rows=eq.filter(([,d])=>d.position!=null).sort((a,b)=>b[1].position-a[1].position);
+    val=d=>[d.position+'%',d.chg_20d]; sub=d=>`20 日 ${pct(d.chg_20d)}　${d.ma20!=null?(d.price>=d.ma20?'站上':'跌破')+'月線':''}`;
+  }
+  el.innerHTML=`<div class="rtabs">${USRANKS.map(([k,n])=>`<button data-k="${k}" class="${k===usRank?'on':''}">${n}</button>`).join('')}
+    ${seg?`<span class="segs">${[['chg_1d','當日'],['chg_5d','5 日'],['chg_20d','20 日']].map(([w,l])=>
+      `<button data-w="${w}" class="${w===usRankWin?'on':''}">${l}</button>`).join('')}</span>`:''}</div>
+    ${usRank==='yield'?`<div class="card note" style="padding:10px 13px">殖利率已扣除 30% 美國股利預扣稅（台灣居民適用，台美無租稅協定）；括號內為稅前。以近四季每股股利計。</div>`:''}
+    ${rows.slice(0,40).map(([c,d],i)=>{const [v,cv]=val(d); return `<div class="ritem" data-code="US:${c}">
+      <div class="rk">${i+1}</div>
+      <div><div class="rname">${esc(d.name)} <span style="color:var(--s8);font-weight:400">${c}</span></div><div class="rsub">${sub(d)}</div></div>
+      <div class="rval" style="color:${cv==null?'var(--s10)':col(cv)}">${v}</div></div>`;}).join('')||'<div class="empty">今日無資料</div>'}`;
+  el.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{usRank=b.dataset.k;buildUSRank();});
+  el.querySelectorAll('[data-w]').forEach(b=>b.onclick=()=>{usRankWin=b.dataset.w;buildUSRank();});
+  el.onclick=e=>{if(!e.target.closest('[data-k],[data-w]')) usClick(e);};
+}
+
+/* ══ 美股個股面板 ══════════════════════════════════════════════ */
+function openUS(sym){
+  if(!USD) return; const d=USD.stock_data[sym]; if(!d) return;
+  const key='US:'+sym, isIdx=d.type==='index';
+  $('kp-name').innerHTML=`${esc(d.name)} <span style="color:var(--s8);font-size:13px">${esc(sym)}</span><span class="badge">美股</span>`;
+  $('kp-sub').innerHTML=`<b style="font-size:17px;color:var(--s10)">${isIdx?d.price:usd(d.price)}</b>　`+
+    `<b style="color:${col(d.chg_1d)}">${pct(d.chg_1d)}</b>　<span style="color:var(--s8)">${esc(d.sector||'')}${d.stale?'　最後資料 '+d.stale:''}　${USD.date}</span>`;
+  const kv=(k,v,c)=>`<div class="kv"><span>${k}</span><b${c!=null?` style="color:${col(c)}"`:''}>${v}</b></div>`;
+  const q=d.quarters||[];
+  const adr=CROSS&&CROSS.adr.find(a=>a.us===sym);
+  const lk=CROSS&&CROSS.links.find(l=>l.us===sym);
+  const fx=CROSS&&CROSS.fx;
+  $('kp-body').innerHTML=`
+    <div id="kchart" style="padding:14px 12px 4px"><div class="rsub" style="text-align:center;padding:30px">載入走勢…</div></div>
+    <div class="stitle">價格</div>
+    ${kv('近 5 日',pct(d.chg_5d),d.chg_5d)}${kv('近 20 日',pct(d.chg_20d),d.chg_20d)}
+    ${d.ma20!=null?kv('月線（MA20）',(isIdx?d.ma20:usd(d.ma20))+'　'+(d.price>=d.ma20?'站上':'跌破'),d.price-d.ma20):''}
+    ${d.position!=null?kv('價格位階　近 60 日高低區間',d.position+'%'):''}
+    ${d.vol_ratio!=null?kv('成交量　20 日均量的幾倍',d.vol_ratio+' 倍'):''}
+    ${adr?`<div class="stitle">ADR 換算</div>
+      ${kv(`1 股 ADR ＝ ${adr.ratio} 股 ${adr.tw}`,`換算 NT$${(adr.us_price*fx/adr.ratio).toFixed(1)}　台股 NT$${adr.tw_price}`)}
+      ${kv('溢價（以 '+(fx?fx.toFixed(2):'—')+' 匯率）',pct(adr.premium))}
+      ${kv('近月平均溢價',pct(adr.premium_avg))}
+      <div class="sect"><button class="chip" data-code="${adr.tw}">看台股 ${esc(adr.name)} ${adr.tw} →</button></div>`:''}
+    ${d.eps_ttm!=null||q.length?`<div class="stitle">基本面　SEC 申報・近四季</div>
+      ${kv('每股盈餘 EPS（近四季）',d.eps_ttm!=null?'US$'+d.eps_ttm:'—')}
+      ${kv('本益比',d.pe!=null?d.pe+' 倍':(d.eps_ttm!=null&&d.eps_ttm<=0?'虧損':'—'))}
+      ${d.gm_ttm!=null?kv('毛利率',d.gm_ttm+'%'):''}
+      ${q.length?`<table class="qt"><tr><th>季度（截止日）</th><th>營收（美元）</th><th>EPS</th></tr>
+        ${q.map(x=>`<tr><td>${x.end}</td><td>${big(x.rev)}</td><td>${x.eps??'—'}</td></tr>`).join('')}</table>`:''}`:''}
+    ${d.dps_ttm?`<div class="stitle">股利　台灣投資人實拿</div>
+      ${kv('近四季每股股利','US$'+d.dps_ttm.toFixed(2))}
+      ${kv('殖利率　稅前 → 扣 30% 預扣稅',d.yield+'% → '+d.yield_net+'%')}
+      <div class="calc"><span>持有</span><input id="kp-sh" type="number" min="0" value="100"><span>股，一年約實拿</span>
+        <b id="kp-div" style="margin-left:auto"></b></div>`:''}
+    ${lk&&lk.tw.length?`<div class="stitle">相關台股・${esc(lk.theme)}　人工整理，僅供參考</div>
+      <div class="sect">${lk.tw.map(t=>`<button class="chip" data-code="${t.code}">${esc(t.name)}
+        <small style="color:var(--s8)">${esc(t.role)}</small> <b style="color:${col(t.chg_1d)}">${pct(t.chg_1d)}</b></button>`).join('')}</div>`:''}`;
+  const sh=$('kp-sh');
+  if(sh){ const f=()=>{const n=+sh.value||0, v=n*d.dps_ttm*(1-USD.withhold);
+    $('kp-div').textContent=`US$${v.toFixed(2)}`+(fx?`（約 NT$${Math.round(v*fx).toLocaleString()}）`:'');};
+    sh.oninput=f; f(); }
+  $('kp-body').onclick=e=>{const c=e.target.closest('[data-code]'); if(c) openStock(c.dataset.code);};
+  $('kp-star').dataset.code=key; $('kp-star').style.display=isIdx?'none':''; refreshStars();
+  show('stk-panel');
+  histUS().then(h=>{const s=h.stocks[sym]; if(!s) return;
+    // 成交量柱依當日收漲收跌上色：正值畫紅、負值畫綠
+    const n=s.v.map((v,i)=>v==null||i===0||s.c[i]==null||s.c[i-1]==null?null:(s.c[i]>=s.c[i-1]?v:-v));
+    drawChart($('kchart'),h.dates,{c:s.c,m:s.m,n:isIdx?s.c.map(()=>null):n},
+      isIdx?'近 30 日收盤':'近 30 日收盤與成交量（紅＝收漲、綠＝收跌）');});
+}
+
+/* 台股個股頁的「台美」區塊：有 ADR 的顯示溢價；被列在哪些美股的關聯裡 */
+function twCross(code){
+  if(!CROSS) return '';
+  const a=CROSS.adr.find(x=>x.tw===code);
+  const ls=CROSS.links.filter(l=>l.tw.some(t=>t.code===code)&&l.us!=='TSM');
+  if(!a&&!ls.length) return '';
+  return `<div class="stitle">台美連動・美股 ${CROSS.us_date}</div>
+    ${a?`<div class="kv" data-code="US:${a.us}" style="cursor:pointer"><span>${a.us} ADR 溢價</span>
+      <b style="color:var(--gold)">${pct(a.premium)}<span style="color:var(--s8);font-weight:400">　ADR ${pct(a.us_chg_1d)}</span></b></div>`:''}
+    ${ls.length?`<div class="sect">${ls.map(l=>`<button class="chip" data-code="US:${l.us}">${esc(l.name)}
+      <small style="color:var(--s8)">${esc(l.tw.find(t=>t.code===code).role)}</small> <b style="color:${col(l.chg_1d)}">${pct(l.chg_1d)}</b></button>`).join('')}</div>`:''}`;
+}
+
+/* ══ 台美連動頁 ════════════════════════════════════════════════ */
+function spark(series){
+  if(series.length<2) return '';
+  const W=260,H=36,v=series.map(x=>x[1]),lo=Math.min(...v),hi=Math.max(...v),sp=(hi-lo)||1;
+  const d=v.map((y,i)=>(i?'L':'M')+(i/(v.length-1)*W).toFixed(1)+' '+(2+(1-(y-lo)/sp)*(H-4)).toFixed(1)).join(' ');
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none" style="display:block;margin-top:6px">
+    <path d="${d}" fill="none" stroke="var(--gold)" stroke-width="1.5" vector-effect="non-scaling-stroke"/></svg>
+    <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--s8)">
+      <span>${series[0][0]}</span><span>區間 ${lo.toFixed(1)}%～${hi.toFixed(1)}%</span><span>${series[series.length-1][0]}</span></div>`;
+}
+function buildLink(){
+  const el=$('link');
+  if(!CROSS){el.innerHTML=`<div class="empty">台美連動需要美股資料，尚未產生。<br>美股管線每個交易日台灣時間清晨 06:30 更新。</div>`;return;}
+  const links=[...CROSS.links].sort((a,b)=>Math.abs(b.chg_1d??0)-Math.abs(a.chg_1d??0));
+  el.innerHTML=`<div class="wl-head"><h2>台美連動</h2>
+      <span class="cnt">美股 ${CROSS.us_date}・台股 ${CROSS.tw_date}${CROSS.fx?'・匯率 '+CROSS.fx.toFixed(3):''}</span></div>
+    <div class="card"><h3>ADR 溢價・ADR 換算台幣後相對台股收盤</h3>
+      ${CROSS.adr.map(a=>`<div style="padding:8px 0;border-bottom:1px solid var(--line);cursor:pointer" data-code="US:${a.us}">
+        <div class="krow" style="border:0;padding:0"><span>${esc(a.name)} <small style="color:var(--s8)">${a.us} ↔ ${a.tw}</small></span>
+          <b style="color:var(--gold)">${pct(a.premium)}</b></div>
+        <div class="rsub">ADR ${usd(a.us_price)} ${pct(a.us_chg_1d)}　台股 NT$${a.tw_price??'—'} ${pct(a.tw_chg_1d)}　近月平均 ${pct(a.premium_avg)}</div>
+        ${spark(a.series)}</div>`).join('')}
+      <div class="note" style="margin-top:8px">溢價＝ADR 價格 × 匯率 ÷ 換算股數 ÷ 台股收盤 − 1。台股收盤比美股早約 15 小時，溢價會受這段時間的消息影響。</div></div>
+    <div class="card note" style="padding:11px 14px">下列關聯為人工整理自公開報導常見的供應鏈關係，未逐條查核財報；「同業」代表同產業而非供應關係。
+      只呈現兩邊各自的最新表現，不代表因果，也不構成任何投資建議。依美股當日漲跌幅度排序。</div>
+    ${links.map(l=>`<div class="lk"><div class="lk-top" data-code="US:${l.us}">
+        <h3>${esc(l.name)} <span style="color:var(--s8);font-weight:400;font-size:12px">${esc(l.us)}</span></h3>
+        <span class="ch-tag" style="background:var(--panel);color:var(--s9)">${esc(l.theme)}</span>
+        <span class="ch-mag"><b style="color:${col(l.chg_1d)}">${pct(l.chg_1d)}</b>　5日 <span style="color:${col(l.chg_5d)}">${pct(l.chg_5d)}</span></span></div>
+      <div class="chips">${l.tw.map(t=>`<button class="chip" data-code="${t.code}" title="${esc(t.role)}">${esc(t.name)}<small>${esc(t.role)}</small>
+        <b style="color:${col(t.chg_1d)};margin-left:5px">${pct(t.chg_1d)}</b>
+        <small style="color:${col(t.net_5d_yi)}">法人5日 ${yi(t.net_5d_yi)}</small></button>`).join('')}</div></div>`).join('')}`;
+  el.onclick=e=>{const c=e.target.closest('[data-code]'); if(c) openStock(c.dataset.code);};
+}
+
 /* ══ 面板開關 ══════════════════════════════════════════════════ */
 function show(id){
   document.querySelectorAll('.side').forEach(s=>s.classList.toggle('on',s.id===id));
@@ -890,29 +1183,85 @@ addEventListener('keydown',e=>{
 });
 
 /* ══ 視圖切換 ══════════════════════════════════════════════════ */
+// 「台美」與「自選」兩個市場共用，其餘各市場自己一套
+const TABS={
+  tw:[['chart','◎','泡泡圖'],['rank','☰','排行榜'],['today','★','今日'],
+      ['chain','⇄','供應鏈'],['link','⇆','台美'],['watch','☆','自選']],
+  us:[['us-today','☀','晨報'],['us-sector','▦','板塊'],['us-rank','☰','排行'],
+      ['link','⇆','台美'],['watch','☆','自選']],
+};
+let curView='chart';
 function setView(v){
+  curView=v;
   document.querySelectorAll('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));
   document.querySelectorAll('#tabs button,#nav button').forEach(b=>
     b.classList.toggle('on',b.dataset.v===v));
   if(v==='chart') requestRender(true);
   if(v==='chain') chReady().then(buildChain);
+  if(v==='us-today') buildUSToday();
+  if(v==='us-sector') buildUSSector();
+  if(v==='us-rank') buildUSRank();
+  if(v==='link') buildLink();
   if(v==='watch'){ buildWatch();
     evReady().then(()=>{ if(watchTab==='feed'){
       const e=myEvents()[0]; if(e){markSeen(e.date);} } updateBadge(); buildWatch(); }); }
 }
-document.querySelectorAll('#tabs button,#nav button').forEach(b=>
-  b.onclick=()=>setView(b.dataset.v));
+
+/* ══ 市場切換 ══════════════════════════════════════════════════
+   沒手動選過時依台灣時間：清晨到開盤前（05:00–09:00）美股剛收盤，預設美股；
+   其餘時段預設台股。手動切換只記在這個分頁（sessionStorage）——
+   記成永久的話，早上切過一次美股，晚上打開就看不到台股盤後了。 */
+function defaultMarket(){
+  try{ const m=sessionStorage.getItem('twflow_market'); if(m) return m; }catch(_){}
+  const h=new Date(Date.now()+8*3600e3).getUTCHours();
+  return h>=5&&h<9?'us':'tw';
+}
+let MARKET=defaultMarket();
+function setMarket(m){
+  MARKET=m;
+  try{ sessionStorage.setItem('twflow_market',m); }catch(_){}
+  document.querySelectorAll('#mkt button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
+  const t=TABS[m];
+  $('tabs').innerHTML=t.map(([v,,l])=>`<button data-v="${v}">${l}</button>`).join('');
+  $('nav').innerHTML=t.map(([v,e,l])=>`<button data-v="${v}"><em>${e}</em>${l}</button>`).join('');
+  document.querySelectorAll('#tabs button,#nav button').forEach(b=>
+    b.onclick=()=>setView(b.dataset.v));
+  // 共用的頁面切市場時留在原頁，其他頁回到該市場第一頁
+  setView(t.some(x=>x[0]===curView)?curView:t[0][0]);
+  updateMeta(); updateBadge();
+}
+const shortDate=d=>innerWidth<=430?d.slice(5):d;
+function updateMeta(){
+  const m=$('d-mkt');
+  if(MARKET==='us'){
+    const g=USD&&USD.stock_data['^GSPC'];
+    $('d-date').textContent=USD?shortDate(USD.date):'—'; $('d-lab').textContent='標普';
+    m.textContent=g?pct(g.chg_1d):'—'; m.style.color=col(g&&g.chg_1d);
+  } else if(D){
+    $('d-date').textContent=shortDate(D.date); $('d-lab').textContent='大盤';
+    m.textContent=pct(D.market_chg_1d); m.style.color=col(D.market_chg_1d);
+  }
+}
+$('mkt').onclick=e=>{const b=e.target.closest('[data-m]'); if(b&&b.dataset.m!==MARKET) setMarket(b.dataset.m);};
 
 /* ══ 搜尋 ══════════════════════════════════════════════════════ */
 let selIdx=-1;
 $('q').oninput=()=>{
   const q=$('q').value.trim().toLowerCase(); const box=$('qr');
   if(!q||!SEARCH){box.classList.remove('on');return;}
-  const hits=Object.entries(SEARCH)
-    .filter(([c,n])=>c.startsWith(q)||n.toLowerCase().includes(q)).slice(0,20);
+  const tw=Object.entries(SEARCH)
+    .filter(([c,n])=>c.startsWith(q)||n.toLowerCase().includes(q))
+    .map(([c,n])=>[c,c,n,'台']);
+  // 美股：代號完全相符排最前（搜 "t" 要先看到 AT&T 的 T，不是一串 T 開頭的）
+  const us=USD?Object.entries(USD.stock_data)
+    .filter(([c,d])=>d.type!=='index'&&(c.toLowerCase().startsWith(q)||d.name.toLowerCase().includes(q)))
+    .sort((a,b)=>(b[0].toLowerCase()===q)-(a[0].toLowerCase()===q))
+    .map(([c,d])=>['US:'+c,c,d.name,'美']):[];
+  // 純數字一定是台股；含英文字母時美股優先
+  const hits=(/^\d/.test(q)?[...tw,...us]:MARKET==='us'||/[a-z]/.test(q)?[...us,...tw]:[...tw,...us]).slice(0,20);
   selIdx=-1;
-  box.innerHTML=hits.length?hits.map(([c,n],i)=>
-    `<div data-code="${c}"><i>${c}</i><span>${esc(n)}</span></div>`).join('')
+  box.innerHTML=hits.length?hits.map(([k,c,n,m])=>
+    `<div data-code="${k}"><i><em class="mk">${m}</em>${esc(c)}</i><span>${esc(n)}</span></div>`).join('')
     :'<div style="color:var(--s8)">查無此股</div>';
   box.classList.toggle('on',true);
 };

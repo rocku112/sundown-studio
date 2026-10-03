@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "twflow 台股板塊資金流",
+  "name": "twflow 台美股資金流",
   "short_name": "twflow",
-  "description": "盤後彙整三大法人買賣超，看資金流向哪些產業板塊。",
+  "description": "台股三大法人板塊資金流＋美股晨報與台美連動。",
   "start_url": "./",
   "scope": "./",
   "lang": "zh-Hant-TW",

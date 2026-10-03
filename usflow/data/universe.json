@@ -1,0 +1,893 @@
+{
+ "_note": "美股股票池。sym 為 Yahoo 代號；stooq 欄位缺省時由 sym 推導（小寫＋.us），null 表示 Stooq 無此代號。ratio＝1 股 ADR 代表幾股台股普通股。",
+ "sectors": [
+  "科技",
+  "通訊服務",
+  "非必需消費",
+  "必需消費",
+  "醫療保健",
+  "金融",
+  "工業",
+  "能源",
+  "原物料",
+  "公用事業",
+  "房地產"
+ ],
+ "sector_etf": {
+  "科技": "XLK",
+  "通訊服務": "XLC",
+  "非必需消費": "XLY",
+  "必需消費": "XLP",
+  "醫療保健": "XLV",
+  "金融": "XLF",
+  "工業": "XLI",
+  "能源": "XLE",
+  "原物料": "XLB",
+  "公用事業": "XLU",
+  "房地產": "XLRE"
+ },
+ "symbols": [
+  {
+   "sym": "AAPL",
+   "name": "蘋果",
+   "type": "stock",
+   "sector": "科技"
+  },
+  {
+   "sym": "MSFT",
+   "name": "微軟",
+   "type": "stock",
+   "sector": "科技"
+  },
+  {
+   "sym": "NVDA",
+   "name": "輝達",
+   "type": "stock",
+   "sector": "科技"
+  },
+  {
+   "sym": "AVGO",
+   "name": "博通",
+   "type": "stock",
+   "sector": "科技"
+  },
+  {
+   "sym": "AMD",
+   "name": "超微",
+   "type": "stock",
+   "sector": "科技"
+  },
+  {
+   "sym": "INTC",
+   "name": "英特爾",
+   "type": "stock",
+   "sector": "科技"
+  },
+  {
+   "sym": "QCOM",
+   "name": "高通",
+   "type": "stock",
+   "sector": "科技"
+  },
+  {
+   "sym": "TXN",
+   "name": "德州儀器",
+   "type": "stock",
+   "sector": "科技"
+  },
+  {
+   "sym": "MU",
+   "name": "美光",
+   "type": "stock",
+   "sector": "科技"
+  },
+  {
+   "sym": "AMAT",
+   "name": "應用材料",
+   "type": "stock",
+   "sector": "科技"
+  },
+  {
+   "sym": "LRCX",
+   "name": "科林研發",
+   "type": "stock",
+   "sector": "科技"
+  },
+  {
+   "sym": "KLAC",
+   "name": "科磊",
+   "type": "stock",
+   "sector": "科技"
+  },
+  {
+   "sym": "ADI",
+   "name": "亞德諾",
+   "type": "stock",
+   "sector": "科技"
+  },
+  {
+   "sym": "MRVL",
+   "name": "邁威爾",
+   "type": "stock",
+   "sector": "科技"
+  },
+  {
+   "sym": "ARM",
+   "name": "安謀",
+   "type": "stock",
+   "sector": "科技"
+  },
+  {
+   "sym": "ON",
+   "name": "安森美",
+   "type": "stock",
+   "sector": "科技"
+  },
+  {
+   "sym": "NXPI",
+   "name": "恩智浦",
+   "type": "stock",
+   "sector": "科技"
+  },
+  {
+   "sym": "MCHP",
+   "name": "微芯",
+   "type": "stock",
+   "sector": "科技"
+  },
+  {
+   "sym": "SMCI",
+   "name": "美超微",
+   "type": "stock",
+   "sector": "科技"
+  },
+  {
+   "sym": "DELL",
+   "name": "戴爾",
+   "type": "stock",
+   "sector": "科技"
+  },
+  {
+   "sym": "HPE",
+   "name": "慧與",
+   "type": "stock",
+   "sector": "科技"
+  },
+  {
+   "sym": "ANET",
+   "name": "Arista",
+   "type": "stock",
+   "sector": "科技"
+  },
+  {
+   "sym": "CSCO",
+   "name": "思科",
+   "type": "stock",
+   "sector": "科技"
+  },
+  {
+   "sym": "ORCL",
+   "name": "甲骨文",
+   "type": "stock",
+   "sector": "科技"
+  },
+  {
+   "sym": "CRM",
+   "name": "Salesforce",
+   "type": "stock",
+   "sector": "科技"
+  },
+  {
+   "sym": "ADBE",
+   "name": "Adobe",
+   "type": "stock",
+   "sector": "科技"
+  },
+  {
+   "sym": "NOW",
+   "name": "ServiceNow",
+   "type": "stock",
+   "sector": "科技"
+  },
+  {
+   "sym": "PLTR",
+   "name": "Palantir",
+   "type": "stock",
+   "sector": "科技"
+  },
+  {
+   "sym": "CRWD",
+   "name": "CrowdStrike",
+   "type": "stock",
+   "sector": "科技"
+  },
+  {
+   "sym": "PANW",
+   "name": "Palo Alto",
+   "type": "stock",
+   "sector": "科技"
+  },
+  {
+   "sym": "IBM",
+   "name": "IBM",
+   "type": "stock",
+   "sector": "科技"
+  },
+  {
+   "sym": "INTU",
+   "name": "Intuit",
+   "type": "stock",
+   "sector": "科技"
+  },
+  {
+   "sym": "SNPS",
+   "name": "新思科技",
+   "type": "stock",
+   "sector": "科技"
+  },
+  {
+   "sym": "CDNS",
+   "name": "益華電腦",
+   "type": "stock",
+   "sector": "科技"
+  },
+  {
+   "sym": "GOOGL",
+   "name": "谷歌",
+   "type": "stock",
+   "sector": "通訊服務"
+  },
+  {
+   "sym": "META",
+   "name": "Meta",
+   "type": "stock",
+   "sector": "通訊服務"
+  },
+  {
+   "sym": "NFLX",
+   "name": "網飛",
+   "type": "stock",
+   "sector": "通訊服務"
+  },
+  {
+   "sym": "DIS",
+   "name": "迪士尼",
+   "type": "stock",
+   "sector": "通訊服務"
+  },
+  {
+   "sym": "TMUS",
+   "name": "T-Mobile",
+   "type": "stock",
+   "sector": "通訊服務"
+  },
+  {
+   "sym": "VZ",
+   "name": "Verizon",
+   "type": "stock",
+   "sector": "通訊服務"
+  },
+  {
+   "sym": "T",
+   "name": "AT&T",
+   "type": "stock",
+   "sector": "通訊服務"
+  },
+  {
+   "sym": "CMCSA",
+   "name": "康卡斯特",
+   "type": "stock",
+   "sector": "通訊服務"
+  },
+  {
+   "sym": "AMZN",
+   "name": "亞馬遜",
+   "type": "stock",
+   "sector": "非必需消費"
+  },
+  {
+   "sym": "TSLA",
+   "name": "特斯拉",
+   "type": "stock",
+   "sector": "非必需消費"
+  },
+  {
+   "sym": "HD",
+   "name": "家得寶",
+   "type": "stock",
+   "sector": "非必需消費"
+  },
+  {
+   "sym": "MCD",
+   "name": "麥當勞",
+   "type": "stock",
+   "sector": "非必需消費"
+  },
+  {
+   "sym": "NKE",
+   "name": "Nike",
+   "type": "stock",
+   "sector": "非必需消費"
+  },
+  {
+   "sym": "SBUX",
+   "name": "星巴克",
+   "type": "stock",
+   "sector": "非必需消費"
+  },
+  {
+   "sym": "LOW",
+   "name": "勞氏",
+   "type": "stock",
+   "sector": "非必需消費"
+  },
+  {
+   "sym": "BKNG",
+   "name": "Booking",
+   "type": "stock",
+   "sector": "非必需消費"
+  },
+  {
+   "sym": "UBER",
+   "name": "Uber",
+   "type": "stock",
+   "sector": "非必需消費"
+  },
+  {
+   "sym": "TJX",
+   "name": "TJX",
+   "type": "stock",
+   "sector": "非必需消費"
+  },
+  {
+   "sym": "COST",
+   "name": "好市多",
+   "type": "stock",
+   "sector": "必需消費"
+  },
+  {
+   "sym": "WMT",
+   "name": "沃爾瑪",
+   "type": "stock",
+   "sector": "必需消費"
+  },
+  {
+   "sym": "PG",
+   "name": "寶僑",
+   "type": "stock",
+   "sector": "必需消費"
+  },
+  {
+   "sym": "KO",
+   "name": "可口可樂",
+   "type": "stock",
+   "sector": "必需消費"
+  },
+  {
+   "sym": "PEP",
+   "name": "百事",
+   "type": "stock",
+   "sector": "必需消費"
+  },
+  {
+   "sym": "PM",
+   "name": "菲利普莫里斯",
+   "type": "stock",
+   "sector": "必需消費"
+  },
+  {
+   "sym": "MDLZ",
+   "name": "億滋",
+   "type": "stock",
+   "sector": "必需消費"
+  },
+  {
+   "sym": "LLY",
+   "name": "禮來",
+   "type": "stock",
+   "sector": "醫療保健"
+  },
+  {
+   "sym": "UNH",
+   "name": "聯合健康",
+   "type": "stock",
+   "sector": "醫療保健"
+  },
+  {
+   "sym": "JNJ",
+   "name": "嬌生",
+   "type": "stock",
+   "sector": "醫療保健"
+  },
+  {
+   "sym": "ABBV",
+   "name": "艾伯維",
+   "type": "stock",
+   "sector": "醫療保健"
+  },
+  {
+   "sym": "MRK",
+   "name": "默克",
+   "type": "stock",
+   "sector": "醫療保健"
+  },
+  {
+   "sym": "PFE",
+   "name": "輝瑞",
+   "type": "stock",
+   "sector": "醫療保健"
+  },
+  {
+   "sym": "TMO",
+   "name": "賽默飛",
+   "type": "stock",
+   "sector": "醫療保健"
+  },
+  {
+   "sym": "ISRG",
+   "name": "直覺手術",
+   "type": "stock",
+   "sector": "醫療保健"
+  },
+  {
+   "sym": "ABT",
+   "name": "亞培",
+   "type": "stock",
+   "sector": "醫療保健"
+  },
+  {
+   "sym": "AMGN",
+   "name": "安進",
+   "type": "stock",
+   "sector": "醫療保健"
+  },
+  {
+   "sym": "NVO",
+   "name": "諾和諾德",
+   "type": "stock",
+   "sector": "醫療保健"
+  },
+  {
+   "sym": "BRK-B",
+   "name": "波克夏",
+   "type": "stock",
+   "sector": "金融"
+  },
+  {
+   "sym": "JPM",
+   "name": "摩根大通",
+   "type": "stock",
+   "sector": "金融"
+  },
+  {
+   "sym": "V",
+   "name": "Visa",
+   "type": "stock",
+   "sector": "金融"
+  },
+  {
+   "sym": "MA",
+   "name": "萬事達",
+   "type": "stock",
+   "sector": "金融"
+  },
+  {
+   "sym": "BAC",
+   "name": "美國銀行",
+   "type": "stock",
+   "sector": "金融"
+  },
+  {
+   "sym": "WFC",
+   "name": "富國銀行",
+   "type": "stock",
+   "sector": "金融"
+  },
+  {
+   "sym": "GS",
+   "name": "高盛",
+   "type": "stock",
+   "sector": "金融"
+  },
+  {
+   "sym": "MS",
+   "name": "摩根士丹利",
+   "type": "stock",
+   "sector": "金融"
+  },
+  {
+   "sym": "AXP",
+   "name": "美國運通",
+   "type": "stock",
+   "sector": "金融"
+  },
+  {
+   "sym": "BLK",
+   "name": "貝萊德",
+   "type": "stock",
+   "sector": "金融"
+  },
+  {
+   "sym": "COIN",
+   "name": "Coinbase",
+   "type": "stock",
+   "sector": "金融"
+  },
+  {
+   "sym": "GE",
+   "name": "奇異航太",
+   "type": "stock",
+   "sector": "工業"
+  },
+  {
+   "sym": "CAT",
+   "name": "開拓重工",
+   "type": "stock",
+   "sector": "工業"
+  },
+  {
+   "sym": "BA",
+   "name": "波音",
+   "type": "stock",
+   "sector": "工業"
+  },
+  {
+   "sym": "RTX",
+   "name": "RTX",
+   "type": "stock",
+   "sector": "工業"
+  },
+  {
+   "sym": "HON",
+   "name": "漢威聯合",
+   "type": "stock",
+   "sector": "工業"
+  },
+  {
+   "sym": "UNP",
+   "name": "聯合太平洋",
+   "type": "stock",
+   "sector": "工業"
+  },
+  {
+   "sym": "DE",
+   "name": "迪爾",
+   "type": "stock",
+   "sector": "工業"
+  },
+  {
+   "sym": "LMT",
+   "name": "洛克希德馬丁",
+   "type": "stock",
+   "sector": "工業"
+  },
+  {
+   "sym": "UPS",
+   "name": "優比速",
+   "type": "stock",
+   "sector": "工業"
+  },
+  {
+   "sym": "ETN",
+   "name": "伊頓",
+   "type": "stock",
+   "sector": "工業"
+  },
+  {
+   "sym": "VRT",
+   "name": "Vertiv",
+   "type": "stock",
+   "sector": "工業"
+  },
+  {
+   "sym": "XOM",
+   "name": "埃克森美孚",
+   "type": "stock",
+   "sector": "能源"
+  },
+  {
+   "sym": "CVX",
+   "name": "雪佛龍",
+   "type": "stock",
+   "sector": "能源"
+  },
+  {
+   "sym": "COP",
+   "name": "康菲石油",
+   "type": "stock",
+   "sector": "能源"
+  },
+  {
+   "sym": "LIN",
+   "name": "林德",
+   "type": "stock",
+   "sector": "原物料"
+  },
+  {
+   "sym": "FCX",
+   "name": "自由港",
+   "type": "stock",
+   "sector": "原物料"
+  },
+  {
+   "sym": "NEM",
+   "name": "紐蒙特",
+   "type": "stock",
+   "sector": "原物料"
+  },
+  {
+   "sym": "NEE",
+   "name": "NextEra",
+   "type": "stock",
+   "sector": "公用事業"
+  },
+  {
+   "sym": "SO",
+   "name": "南方電力",
+   "type": "stock",
+   "sector": "公用事業"
+  },
+  {
+   "sym": "DUK",
+   "name": "杜克能源",
+   "type": "stock",
+   "sector": "公用事業"
+  },
+  {
+   "sym": "CEG",
+   "name": "Constellation",
+   "type": "stock",
+   "sector": "公用事業"
+  },
+  {
+   "sym": "PLD",
+   "name": "安博",
+   "type": "stock",
+   "sector": "房地產"
+  },
+  {
+   "sym": "AMT",
+   "name": "美國電塔",
+   "type": "stock",
+   "sector": "房地產"
+  },
+  {
+   "sym": "EQIX",
+   "name": "Equinix",
+   "type": "stock",
+   "sector": "房地產"
+  },
+  {
+   "sym": "TSM",
+   "name": "台積電 ADR",
+   "type": "adr",
+   "sector": "科技",
+   "tw": "2330",
+   "ratio": 5
+  },
+  {
+   "sym": "ASX",
+   "name": "日月光 ADR",
+   "type": "adr",
+   "sector": "科技",
+   "tw": "3711",
+   "ratio": 2
+  },
+  {
+   "sym": "UMC",
+   "name": "聯電 ADR",
+   "type": "adr",
+   "sector": "科技",
+   "tw": "2303",
+   "ratio": 5
+  },
+  {
+   "sym": "CHT",
+   "name": "中華電 ADR",
+   "type": "adr",
+   "sector": "通訊服務",
+   "tw": "2412",
+   "ratio": 10
+  },
+  {
+   "sym": "ASML",
+   "name": "艾司摩爾",
+   "type": "adr",
+   "sector": "科技"
+  },
+  {
+   "sym": "BABA",
+   "name": "阿里巴巴",
+   "type": "adr",
+   "sector": "非必需消費"
+  },
+  {
+   "sym": "PDD",
+   "name": "拼多多",
+   "type": "adr",
+   "sector": "非必需消費"
+  },
+  {
+   "sym": "JD",
+   "name": "京東",
+   "type": "adr",
+   "sector": "非必需消費"
+  },
+  {
+   "sym": "SPY",
+   "name": "標普500 ETF",
+   "type": "etf",
+   "sector": null
+  },
+  {
+   "sym": "QQQ",
+   "name": "那斯達克100 ETF",
+   "type": "etf",
+   "sector": null
+  },
+  {
+   "sym": "DIA",
+   "name": "道瓊 ETF",
+   "type": "etf",
+   "sector": null
+  },
+  {
+   "sym": "IWM",
+   "name": "羅素2000 ETF",
+   "type": "etf",
+   "sector": null
+  },
+  {
+   "sym": "SOXX",
+   "name": "費城半導體 ETF",
+   "type": "etf",
+   "sector": null
+  },
+  {
+   "sym": "SMH",
+   "name": "半導體 ETF",
+   "type": "etf",
+   "sector": null
+  },
+  {
+   "sym": "EWT",
+   "name": "台灣 ETF",
+   "type": "etf",
+   "sector": null
+  },
+  {
+   "sym": "TLT",
+   "name": "20年美債 ETF",
+   "type": "etf",
+   "sector": null
+  },
+  {
+   "sym": "GLD",
+   "name": "黃金 ETF",
+   "type": "etf",
+   "sector": null
+  },
+  {
+   "sym": "XLK",
+   "name": "科技類股 ETF",
+   "type": "sector_etf",
+   "sector": "科技"
+  },
+  {
+   "sym": "XLC",
+   "name": "通訊服務類股 ETF",
+   "type": "sector_etf",
+   "sector": "通訊服務"
+  },
+  {
+   "sym": "XLY",
+   "name": "非必需消費類股 ETF",
+   "type": "sector_etf",
+   "sector": "非必需消費"
+  },
+  {
+   "sym": "XLP",
+   "name": "必需消費類股 ETF",
+   "type": "sector_etf",
+   "sector": "必需消費"
+  },
+  {
+   "sym": "XLV",
+   "name": "醫療保健類股 ETF",
+   "type": "sector_etf",
+   "sector": "醫療保健"
+  },
+  {
+   "sym": "XLF",
+   "name": "金融類股 ETF",
+   "type": "sector_etf",
+   "sector": "金融"
+  },
+  {
+   "sym": "XLI",
+   "name": "工業類股 ETF",
+   "type": "sector_etf",
+   "sector": "工業"
+  },
+  {
+   "sym": "XLE",
+   "name": "能源類股 ETF",
+   "type": "sector_etf",
+   "sector": "能源"
+  },
+  {
+   "sym": "XLB",
+   "name": "原物料類股 ETF",
+   "type": "sector_etf",
+   "sector": "原物料"
+  },
+  {
+   "sym": "XLU",
+   "name": "公用事業類股 ETF",
+   "type": "sector_etf",
+   "sector": "公用事業"
+  },
+  {
+   "sym": "XLRE",
+   "name": "房地產類股 ETF",
+   "type": "sector_etf",
+   "sector": "房地產"
+  },
+  {
+   "sym": "^GSPC",
+   "name": "標普500",
+   "type": "index",
+   "sector": null,
+   "stooq": "^spx"
+  },
+  {
+   "sym": "^IXIC",
+   "name": "那斯達克",
+   "type": "index",
+   "sector": null,
+   "stooq": "^ndq"
+  },
+  {
+   "sym": "^DJI",
+   "name": "道瓊工業",
+   "type": "index",
+   "sector": null,
+   "stooq": "^dji"
+  },
+  {
+   "sym": "^SOX",
+   "name": "費城半導體",
+   "type": "index",
+   "sector": null,
+   "stooq": null
+  },
+  {
+   "sym": "^VIX",
+   "name": "VIX 恐慌指數",
+   "type": "index",
+   "sector": null,
+   "stooq": null
+  },
+  {
+   "sym": "^TNX",
+   "name": "10年美債殖利率",
+   "type": "index",
+   "sector": null,
+   "stooq": null
+  },
+  {
+   "sym": "DX-Y.NYB",
+   "name": "美元指數",
+   "type": "index",
+   "sector": null,
+   "stooq": null
+  },
+  {
+   "sym": "TWD=X",
+   "name": "美元兌台幣",
+   "type": "index",
+   "sector": null,
+   "stooq": "usdtwd"
+  }
+ ]
+}

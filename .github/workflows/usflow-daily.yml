@@ -1,0 +1,76 @@
+name: usflow 美股每日盤後更新
+
+# 美股收盤是美東 16:00＝台灣 04:00（夏令）／05:00（冬令），日線來源約半小時後到齊。
+# 22:30 UTC＝台灣 06:30，兩種時制都有足夠緩衝。週一到週五 UTC＝台灣週二到週六清晨。
+on:
+  schedule:
+    - cron: "30 22 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      sec:
+        description: "強制重抓 SEC 基本面"
+        type: boolean
+        default: false
+
+concurrency:
+  group: usflow-daily
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - run: pip install -r usflow/requirements.txt
+
+      - name: 抓美股日線
+        working-directory: usflow
+        run: python -X utf8 scripts/fetch_us.py
+
+      # SEC 一季才有新財報，每週（台灣週六清晨）抓一次就夠；檔案不存在時（第一次跑）也抓。
+      # 失敗不擋每日價量——基本面晚幾天更新，比整天沒有美股資料好。
+      - name: 抓 SEC 基本面（每週）
+        working-directory: usflow
+        continue-on-error: true
+        env:
+          SEC_USER_AGENT: ${{ vars.SEC_USER_AGENT }}
+        run: |
+          if [ ! -f data/fundamentals.json ] || [ "$(date -u +%u)" = "5" ] || [ "${{ inputs.sec }}" = "true" ]; then
+            python -X utf8 scripts/fetch_sec.py
+          else
+            echo "非每週更新日，沿用既有基本面"
+          fi
+
+      - name: 產出前端資料
+        working-directory: usflow
+        run: |
+          python -X utf8 scripts/build_us.py
+          python -X utf8 scripts/build_cross.py
+          python -X utf8 ../twflow/scripts/snapshot.py
+
+      - name: 檢查資料是否合理
+        working-directory: usflow
+        run: python -X utf8 scripts/sanity_check.py
+
+      - name: 提交
+        run: |
+          git config user.name  "usflow-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add usflow/data twflow/web/data/us twflow/web/data/cross.json twflow/web/snapshot.html
+          if git diff --staged --quiet; then
+            echo "沒有變動（美股休市或來源尚未更新）"
+          else
+            git commit -m "data: $(date -u -d '+8 hours' +%Y-%m-%d) 美股盤後更新"
+            # 台股管線也會推同一個分支；先 rebase 再推，避免偶發的 non-fast-forward
+            git pull --rebase origin "${GITHUB_REF_NAME}"
+            git push
+          fi

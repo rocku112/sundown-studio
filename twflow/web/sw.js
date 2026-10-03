@@ -1,6 +1,6 @@
 // twflow Service Worker
 // 改快取策略或靜態資源時把版本號 +1，強制所有裝置換新快取。
-const VERSION = 1;
+const VERSION = 2;
 const CACHE = `twflow-v${VERSION}`;
 
 const PRECACHE = ['./', './manifest.json', './icons/icon-192.svg'];

@@ -29,7 +29,13 @@ RULES = [
     (r"fetch\('data/history\.json'\)\.then\(r=>r\.json\(\)\)", "history.json"),
     (r"fetch\('data/events\.json'\)\.then\(r=>r\.json\(\)\)", "events.json"),
     (r"fetch\('data/chains\.json'\)\.then\(r=>r\.json\(\)\)", "chains.json"),
+    # 美股與台美連動（usflow 管線產生）。檔案還不存在時內嵌 null，前端會顯示「尚無資料」
+    (r"fetch\('data/us/latest\.json\?'\+Date\.now\(\)\)\.then\(r=>r\.json\(\)\)",
+     "us/latest.json"),
+    (r"fetch\('data/cross\.json\?'\+Date\.now\(\)\)\.then\(r=>r\.json\(\)\)", "cross.json"),
+    (r"fetch\('data/us/history\.json'\)\.then\(r=>r\.json\(\)\)", "us/history.json"),
 ]
+OPTIONAL = {"us/latest.json", "cross.json", "us/history.json"}
 
 
 def inline(payload):
@@ -44,7 +50,8 @@ def main():
     # 前端還有哪些 fetch 沒被規則涵蓋？有的話就是漏了，直接失敗。
     found = set(re.findall(r"fetch\('([^']+)'", html))
     covered = {"data/latest.json?", "data/search.json", "data/history.json",
-               "data/events.json", "data/chains.json"}
+               "data/events.json", "data/chains.json",
+               "data/us/latest.json?", "data/cross.json?", "data/us/history.json"}
     missed = {f for f in found if f.rstrip("?") not in
               {c.rstrip("?") for c in covered}}
     if missed:
@@ -53,7 +60,11 @@ def main():
 
     date = None
     for pat, fn in RULES:
-        data = json.load(open(os.path.join(WEB, "data", fn), encoding="utf-8"))
+        path = os.path.join(WEB, "data", fn)
+        if fn in OPTIONAL and not os.path.exists(path):
+            data = None
+        else:
+            data = json.load(open(path, encoding="utf-8"))
         if fn == "latest.json":
             date = data["date"]
         html, n = re.subn(pat, f"Promise.resolve({inline(data)})", html, count=1)
