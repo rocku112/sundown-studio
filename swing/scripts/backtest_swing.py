@@ -30,6 +30,8 @@ from datetime import date, datetime, timedelta, timezone
 
 import numpy as np
 
+from portfolio_strats import run_portfolio
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 REPO = os.path.dirname(ROOT)
@@ -314,7 +316,7 @@ def main():
                        and cs["cagr"] > pb["cagr"])
         step = max(1, len(curve) // 120)
         out_s.append({
-            "key": k, "name": meta[k]["name"], "desc": meta[k]["desc"],
+            "key": k, "kind": "trade", "name": meta[k]["name"], "desc": meta[k]["desc"],
             "is": si, "oos": so, "random": rb, "random_is": rb_is,
             "hold": round(float(np.mean([t["days"] for t in oos_t])), 1) if oos_t else None,
             "portfolio": {**cs, "trades": taken,
@@ -324,6 +326,8 @@ def main():
         })
         print(f"{meta[k]['name']:<10} 樣本內 {si} 隨機 {rb_is}\n           樣本外 {so} 隨機 {rb}\n"
               f"           組合 {cs}  股票池等權 {pb}  → {'有效' if verdict else '無效'}  今日 {len(today.get(k, []))} 檔")
+
+    out_s += run_portfolio(src, eligible, all_dates, split_date, BENCH)
 
     doc = {
         "generated_at": datetime.now(timezone(timedelta(hours=8))).isoformat(timespec="seconds"),
