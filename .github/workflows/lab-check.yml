@@ -1,0 +1,29 @@
+name: 實驗功能檢查（ETF／波段）
+
+# 非 main 分支改到 ETF 或波段策略相關檔案時，實際抓資料跑一次，不提交。
+on:
+  push:
+    branches-ignore: [main]
+    paths:
+      - "twflow/scripts/probe_etf.py"
+      - "twflow/scripts/fetch_etf.py"
+      - "swing/**"
+      - ".github/workflows/lab-check.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r twflow/requirements.txt
+      - name: 探測 ETF 與長期日線來源
+        working-directory: twflow
+        run: python -X utf8 scripts/probe_etf.py 20261002
