@@ -217,6 +217,35 @@ header{display:flex;align-items:center;gap:12px;padding:10px 16px;
 .rrow .nm i{color:var(--s8);font-style:normal;font-size:11px;margin-left:5px}
 .add{width:26px;height:26px;border-radius:8px;border:1px solid var(--line);color:var(--s9);font-size:15px;line-height:1}
 .add:hover{border-color:var(--gold);color:var(--gold)}
+.more{display:none}
+@media (max-width:720px){
+  .more.on{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;position:fixed;left:10px;right:10px;
+    bottom:calc(var(--nav) + 10px);background:var(--card2);border:1px solid var(--line);border-radius:16px;
+    padding:10px;z-index:46;box-shadow:var(--shadow);animation:vin .18s}
+  .more button{display:grid;place-items:center;gap:3px;padding:10px 4px;border-radius:12px;font-size:12px;color:var(--s9)}
+  .more button em{font-style:normal;font-size:18px}
+  .more button:hover{background:var(--card)}
+}
+@media (min-width:721px) and (max-width:1279px){
+  .tabs{overflow-x:auto;max-width:46vw;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+}
+.ov5{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.ov5>div{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.ov5 .l{font-size:11.5px;color:var(--s9)}
+.ov5 .n{font-size:20px;font-weight:700;font-family:var(--num);line-height:1.35}
+.ov5 .s{font-size:11px;color:var(--s8);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.thermo{height:10px;border-radius:5px;position:relative;margin:10px 0 4px;
+  background:linear-gradient(90deg,var(--down),var(--card2) 50%,var(--up))}
+.thermo i{position:absolute;top:-4px;width:4px;height:18px;border-radius:2px;background:var(--s10);
+  transform:translateX(-50%);box-shadow:0 0 0 2px var(--card)}
+.vbadge{display:inline-block;font-size:11px;padding:2px 9px;border-radius:999px;font-weight:700;margin-left:8px}
+.vbadge.ok{background:var(--up-bg);color:var(--up)}
+.vbadge.no{background:var(--card2);color:var(--s9);border:1px solid var(--line)}
+.st{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:10px}
+.st th,.st td{padding:7px 8px;text-align:right;border-bottom:1px solid var(--line);font-family:var(--num);font-variant-numeric:tabular-nums}
+.st th{color:var(--s8);font-weight:500;font-family:inherit}
+.st td:first-child,.st th:first-child{text-align:left;color:var(--s9);font-family:inherit}
 .gwrap{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
 .dg{border-color:color-mix(in srgb,var(--gold) 35%,var(--line))}
 a.btn{text-decoration:none;color:inherit;display:inline-block}
@@ -385,11 +414,14 @@ a.btn{text-decoration:none;color:inherit;display:inline-block}
   <section class="view" id="v-us-sector"><div class="wrap" id="us-sector"></div></section>
   <section class="view" id="v-us-rank"><div class="wrap" id="us-rank"></div></section>
   <section class="view" id="v-link"><div class="wrap" id="link"></div></section>
+  <section class="view" id="v-etf"><div class="wrap" id="etf"></div></section>
+  <section class="view" id="v-swing"><div class="wrap" id="swing"></div></section>
 </div>
 
 <aside class="rail" id="rail"></aside>
 
 <nav class="nav" id="nav"></nav>
+<div class="more" id="more"></div>
 
 <div class="ov" id="ov"></div>
 
@@ -847,6 +879,7 @@ function openSector(s){
 /* ══ 個股面板 ══════════════════════════════════════════════════ */
 function openStock(code){
   if(String(code).startsWith('US:')) return openUS(code.slice(3));
+  if(String(code).startsWith('ETF:')) return openETF(code.slice(4));
   const d=D.stock_data[code]; if(!d) return;
   $('kp-name').innerHTML=`${esc(d.name)} <span style="color:var(--s8);font-size:13px">${code}</span>`
     +(d.anomaly?`<span class="badge">${d.anomaly}</span>`:'');
@@ -982,7 +1015,9 @@ function toggleWatch(c){
 function buildRail(){
   const el=$('rail'); if(!el||!D||innerWidth<1280) return;
   const sd=D.stock_data, us=USD?USD.stock_data:{};
-  const info=c=>c.startsWith('US:')?{k:c,code:c.slice(3),...(us[c.slice(3)]||{}),mk:'美'}:{k:c,code:c,...(sd[c]||{}),mk:'台'};
+  const info=c=>c.startsWith('US:')?{k:c,code:c.slice(3),...(us[c.slice(3)]||{}),mk:'美'}
+    :c.startsWith('ETF:')?(e=>({k:c,code:c.slice(4),name:e?.name,chg_1d:null,mk:'ETF'}))(ETFD&&ETFD.etfs.find(x=>x.code===c.slice(4)))
+    :{k:c,code:c,...(sd[c]||{}),mk:'台'};
   const row=(x,btn)=>`<div class="rrow" data-code="${x.k}">${btn}
     <div class="nm">${esc(x.name||x.code)}<i>${esc(x.code)}</i></div>${pill(x.chg_1d)}</div>`;
   const mine=WATCH.map(info);
@@ -1082,7 +1117,8 @@ function buildWatch(){
   if(watchTab==='list'){
     // 台美混合：美股存成 "US:代號"，台股維持原本的純代號（舊清單不用遷移）。
     // 兩市場分段列、不混排——台股依法人買賣超、美股依漲跌，排序依據不同。
-    const tw=WATCH.filter(c=>!c.startsWith('US:')).map(c=>({c,...(sd[c]||{})}))
+    const etfw=WATCH.filter(c=>c.startsWith('ETF:'));
+    const tw=WATCH.filter(c=>!c.startsWith('US:')&&!c.startsWith('ETF:')).map(c=>({c,...(sd[c]||{})}))
       .sort((a,b)=>(b.net_5d_yi??-1e9)-(a.net_5d_yi??-1e9));
     const us=WATCH.filter(c=>c.startsWith('US:'))
       .map(c=>({c,sym:c.slice(3),...((USD&&USD.stock_data[c.slice(3)])||{})}))
@@ -1104,7 +1140,14 @@ function buildWatch(){
         <div class="rsub">${usd(r.price)}　${esc(r.sector||'')}${r.pe!=null?'　本益比 '+r.pe:''}</div></div>
       <div class="rval">${pill(r.chg_1d)}
         <small style="color:${col(r.chg_5d)}">5日 ${pct(r.chg_5d)}</small></div></div>`).join(''):'';
-    body.innerHTML=MARKET==='us'?usHtml+twHtml:twHtml+usHtml;
+    const etfHtml=etfw.length?`<div class="stitle">ETF　折溢價${ETFD?'・'+ETFD.date:''}</div>`+
+      etfw.map(c=>{const e=ETFD&&ETFD.etfs.find(x=>x.code===c.slice(4))||{};
+        return `<div class="ritem" data-code="${c}"><button class="star on" data-star="${c}">★</button>
+        <div><div class="rname">${esc(e.name||c.slice(4))} <span style="color:var(--s8);font-weight:400">${c.slice(4)}</span></div>
+          <div class="rsub">市價 ${e.price??'—'}　淨值 ${e.nav??'—'}</div></div>
+        <div class="rval">${pill(e.prem)}<small style="color:var(--s8)">折溢價</small></div></div>`;}).join(''):'';
+    if(etfw.length&&!ETFD) etfReady().then(d=>d&&buildWatch());
+    body.innerHTML=(MARKET==='us'?usHtml+twHtml:twHtml+usHtml)+etfHtml;
   } else {
     if(!EV){ body.innerHTML='<div class="empty">載入中…</div>'; evReady().then(buildWatch); return; }
     if(!evs.length){ body.innerHTML=
@@ -1439,6 +1482,144 @@ function buildLink(){
   el.onclick=e=>{const c=e.target.closest('[data-code]'); if(c) openStock(c.dataset.code);};
 }
 
+/* ══ ETF 折溢價 ═════════════════════════════════════════════════
+   市價高於淨值＝溢價，等於買貴了；低於淨值＝折價。另外看申購贖回：
+   已發行單位數增加代表有資金透過申購流入這檔 ETF。 */
+let ETFD=null, etfCat='全部', etfSort='aum';
+const etfReady=()=>ETFD?Promise.resolve(ETFD)
+  :Promise.resolve(null).then(j=>(ETFD=j)).catch(()=>null);
+const ETFCATS=['全部','股票型','高股息','主動式','海外','債券','槓桿','反向','自選'];
+const ETFSORT=[['aum','規模'],['prem','溢價高'],['disc','折價深'],['flow','申購流入'],['out','贖回流出']];
+const yi1=v=>v==null?'—':(v>=0?'+':'')+v.toFixed(1)+' 億';
+function buildETF(){
+  const el=$('etf');
+  if(!ETFD){ el.innerHTML='<div class="empty">載入中…</div>';
+    etfReady().then(d=>{ if(d) buildETF(); else el.innerHTML='<div class="empty">ETF 資料尚未產生。每個交易日盤後約 18:40 更新。</div>'; }); return; }
+  const S=ETFD.summary, by=c=>ETFD.etfs.find(e=>e.code===c);
+  const mx=by(S.max), mn=by(S.min);
+  let list=ETFD.etfs.filter(e=>etfCat==='全部'||(etfCat==='自選'?inWatch('ETF:'+e.code):e.cat===etfCat));
+  const key={aum:e=>-e.aum,prem:e=>-e.prem,disc:e=>e.prem,flow:e=>-e.flow,out:e=>e.flow}[etfSort];
+  list=[...list].sort((a,b)=>key(a)-key(b));
+  const pos=Math.max(3,Math.min(97,50+S.avg_prem*50));   // ±1% 對應溫度計兩端
+  el.innerHTML=`
+    <div class="card"><h3>ETF 市場總覽・${ETFD.date} 收盤</h3>
+      <div class="ov5">
+        <div><div class="l">股票類 ETF</div><div class="n">${S.n}</div><div class="s">不含債券、期貨</div></div>
+        <div><div class="l">溢價 &gt; 0.1%</div><div class="n" style="color:var(--up)">${S.premium}</div><div class="s">市價比淨值貴</div></div>
+        <div><div class="l">折價 &lt; -0.1%</div><div class="n" style="color:var(--down)">${S.discount}</div><div class="s">市價比淨值便宜</div></div>
+        <div><div class="l">接近平價</div><div class="n">${S.par}</div><div class="s">±0.1% 以內</div></div>
+        <div data-etf="${mx?.code}" style="cursor:pointer"><div class="l">最大溢價</div><div class="n" style="color:var(--up)">${pct(mx?.prem)}</div><div class="s">${esc(mx?.name||'')}</div></div>
+        <div data-etf="${mn?.code}" style="cursor:pointer"><div class="l">最大折價</div><div class="n" style="color:var(--down)">${pct(mn?.prem)}</div><div class="s">${esc(mn?.name||'')}</div></div>
+        <div><div class="l">申購贖回淨流入</div><div class="n" style="color:${col(S.flow)}">${yi1(S.flow)}</div><div class="s">全部 ETF 當日合計</div></div>
+      </div>
+      <div style="margin-top:14px" class="rsub">市場溫度　股票類 ETF 平均折溢價 <b style="color:${col(S.avg_prem)}">${pct(S.avg_prem)}</b></div>
+      <div class="thermo"><i style="left:${pos}%"></i></div>
+      <div class="mood-l"><span>普遍折價 -1%</span><span>平價</span><span>普遍溢價 +1%</span></div></div>
+    <div class="rtabs">${ETFCATS.map(c=>`<button data-c="${c}" class="${c===etfCat?'on':''}">${c}</button>`).join('')}</div>
+    <div class="rtabs"><span class="segs" style="margin-left:0">${ETFSORT.map(([k,l])=>`<button data-s="${k}" class="${k===etfSort?'on':''}">${l}</button>`).join('')}</span></div>
+    ${list.slice(0,80).map((e,i)=>`<div class="ritem" data-etf="${e.code}">
+      <button class="star ${inWatch('ETF:'+e.code)?'on':''}" data-star="ETF:${e.code}">${inWatch('ETF:'+e.code)?'★':'☆'}</button>
+      <div><div class="rname">${esc(e.name)} <span style="color:var(--s8);font-weight:400">${e.code}</span></div>
+        <div class="rsub">${e.cat}　市價 ${e.price}　淨值 ${e.nav}　規模 ${e.aum.toLocaleString()} 億　申購贖回 <span style="color:${col(e.flow)}">${yi1(e.flow)}</span></div></div>
+      <div class="rval">${pill(e.prem)}<small style="color:var(--s8)">折溢價</small></div></div>`).join('')
+      ||'<div class="empty">這個分類沒有 ETF</div>'}
+    <div class="card note" style="margin-top:12px">折溢價＝市價 ÷ 預估淨值 − 1，以證交所基本市況報導網收盤後的最後一筆估值計算；預估淨值由各投信提供，與隔日公告的正式淨值可能略有差異。
+      溢價時買進等於多付錢，溢價大的 ETF 之後常會回到淨值附近。本頁僅彙整公開資料，不構成投資建議。</div>`;
+  el.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{etfCat=b.dataset.c;buildETF();});
+  el.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{etfSort=b.dataset.s;buildETF();});
+  el.onclick=e=>{ if(e.target.closest('[data-star],[data-c],[data-s]')) return;
+    const r=e.target.closest('[data-etf]'); if(r) openETF(r.dataset.etf); };
+}
+function openETF(code){
+  const e=ETFD&&ETFD.etfs.find(x=>x.code===code);
+  if(!e){ etfReady().then(d=>d&&d.etfs.some(x=>x.code===code)&&openETF(code)); return; }
+  $('kp-name').innerHTML=`${esc(e.name)} <span style="color:var(--s8);font-size:13px">${e.code}</span><span class="badge">ETF</span>`;
+  $('kp-sub').innerHTML=`<b style="font-size:17px;color:var(--s10)">${e.price}</b>　淨值 <b>${e.nav}</b>　${pill(e.prem)}　<span style="color:var(--s8)">${e.cat}・${ETFD.date}</span>`;
+  const h=e.hist||[];
+  const kv=(k,v,c)=>`<div class="kv"><span>${k}</span><b${c!=null?` style="color:${col(c)}"`:''}>${v}</b></div>`;
+  $('kp-body').innerHTML=`
+    <div style="padding:14px 16px 4px">${h.length>=3?`<div class="rsub">近 ${h.length} 個交易日折溢價</div>${spark(h)}`
+      :'<div class="rsub">折溢價走勢需要累積幾個交易日的資料，之後每天盤後會自動補上。</div>'}</div>
+    <div class="stitle">折溢價</div>
+    ${kv('今日折溢價',pct(e.prem),e.prem)}
+    ${h.length>=3?kv(`近 ${h.length} 日平均`,pct(h.reduce((a,x)=>a+x[1],0)/h.length)):''}
+    <div class="stitle">規模與資金流</div>
+    ${kv('基金規模（估）',e.aum.toLocaleString()+' 億')}
+    ${kv('已發行單位數',e.units?(e.units/1e4).toLocaleString(undefined,{maximumFractionDigits:0})+' 萬':'—')}
+    ${kv('今日申購贖回',yi1(e.flow),e.flow)}
+    ${kv('近 5 日申購贖回',yi1(e.flow5),e.flow5)}
+    <div class="note" style="padding:12px 16px">申購贖回金額＝已發行單位數增減 × 淨值。正值代表有資金透過申購進入這檔 ETF，負值代表贖回流出。</div>`;
+  $('kp-body').onclick=null;
+  $('kp-star').dataset.code='ETF:'+code; $('kp-star').style.display=''; refreshStars();
+  show('stk-panel');
+}
+
+/* ══ 波段實驗室 ══════════════════════════════════════════════════
+   把常見的短線波段策略放到五年真實資料上，計入成本、分樣本內外、對照隨機進場。
+   結果是什麼就顯示什麼——包括「沒有用」。 */
+let SW=null;
+const swReady=()=>SW?Promise.resolve(SW)
+  :Promise.resolve(null).then(j=>(SW=j)).catch(()=>null);
+function eqCurve(curve){
+  if(!curve||curve.length<2) return '';
+  const W=600,H=120,P=6, v=curve.map(x=>x[1]), lo=Math.min(1,...v), hi=Math.max(1,...v), sp=(hi-lo)||1;
+  const X=i=>P+i/(curve.length-1)*(W-2*P), Y=y=>P+(1-(y-lo)/sp)*(H-2*P);
+  const d=v.map((y,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(y).toFixed(1)).join(' ');
+  const tone=v[v.length-1]>=1?'var(--up)':'var(--down)';
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none" style="display:block;margin-top:8px">
+    <line x1="${P}" x2="${W-P}" y1="${Y(1)}" y2="${Y(1)}" stroke="var(--line)" stroke-width="1" vector-effect="non-scaling-stroke"/>
+    <path d="${d}" fill="none" stroke="${tone}" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>
+    <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--s8)"><span>${curve[0][0]}</span>
+      <span>組合淨值（起點 1.00，已實現）</span><span>${curve[curve.length-1][0]}</span></div>`;
+}
+function buildSwing(){
+  const el=$('swing');
+  if(!SW){ el.innerHTML='<div class="empty">載入中…</div>';
+    swReady().then(d=>{ if(d) buildSwing(); else el.innerHTML='<div class="empty">波段回測資料尚未產生。每個交易日盤後更新。</div>'; }); return; }
+  const ok=SW.strategies.filter(s=>s.verdict).length, b=SW.bench||{};
+  const f=x=>x==null?'—':(x>=0?'+':'')+x.toFixed(2)+'%';
+  const row=(lab,a,b_)=>`<tr><td>${lab}</td><td>${a}</td><td>${b_}</td></tr>`;
+  el.innerHTML=`
+    <div class="card"><h3>波段實驗室・${SW.period[0]} ～ ${SW.period[1]}</h3>
+      <div class="big" style="font-size:20px">${ok?`${SW.strategies.length} 個策略中 ${ok} 個在樣本外通過檢驗`:`${SW.strategies.length} 個常見短線策略，扣掉成本後都沒有通過檢驗`}</div>
+      <p class="note" style="margin-top:8px;font-size:12.5px;color:var(--s9)">
+        用台股 ${SW.universe} 檔（含主要 ETF）過去五年日線回測，每天只交易「當時」近 60 日成交值前 ${SW.pool} 名——
+        避免用今天才知道的熱門股回頭找贏家。規則事先固定、不針對這份資料調參數；
+        <b style="color:var(--s10)">只採計 ${SW.split} 之後的「樣本外」期間</b>。訊號在收盤後出現、隔天開盤才進出場，
+        每筆交易扣除手續費 ${(SW.costs.fee*100).toFixed(4)}%×2、證交稅（股票 ${SW.costs.tax_stock*100}%、ETF ${SW.costs.tax_etf*100}%）與雙邊各 ${SW.costs.slip*100}% 滑價。</p>
+      <p class="note" style="margin-top:8px;font-size:12.5px;color:var(--s9)">要判定「有效」必須同時通過四關：
+        ① 樣本外至少 30 筆交易且 t 值 ≥ 2（不是運氣）② 樣本外平均每筆報酬高於「同一股票池隨機進場」的第 95 百分位
+        ③ 樣本內也贏過隨機進場（只在某段行情有效的不算）④ 資金分 ${SW.slots} 份的組合年化報酬贏過同一股票池等權買進持有（${f(SW.pool_bench?.cagr)}／年）。
+        另列同期 ${b.code||'0050'} 買進持有 ${f(b.cagr)}／年（未含配息）供參考。</p>
+      <p class="note" style="margin-top:8px;font-size:12.5px;color:var(--s9)">殘留限制：已下市的股票抓不到歷史資料，回測仍略微偏樂觀；樣本外期間只有約兩年，碰上的行情（多頭或空頭）會大幅影響結果。</p></div>
+    ${SW.strategies.map(s=>`<div class="card">
+      <h3>${esc(s.name)}<span class="vbadge ${s.verdict?'ok':'no'}">${s.verdict?'樣本外有效':'樣本外無效'}</span></h3>
+      <p style="font-size:13px;color:var(--s9);line-height:1.75">${esc(s.desc)}</p>
+      <table class="st"><tr><th></th><th>樣本內</th><th>樣本外</th></tr>
+        ${row('交易筆數',s.is.n,s.oos.n)}
+        ${row('勝率',s.is.win!=null?s.is.win+'%':'—',s.oos.win!=null?s.oos.win+'%':'—')}
+        ${row('平均每筆淨報酬',`<span style="color:${col(s.is.avg)}">${f(s.is.avg)}</span>`,`<span style="color:${col(s.oos.avg)}">${f(s.oos.avg)}</span>`)}
+        ${row('獲利因子',s.is.pf??'—',s.oos.pf??'—')}
+        ${row('t 值',s.is.t??'—',s.oos.t??'—')}</table>
+      <div class="krow" style="margin-top:8px"><span>同池隨機進場・樣本內平均</span><b>${s.random_is?f(s.random_is.mean):'—'}</b></div>
+      <div class="krow"><span>同池隨機進場・樣本外平均／第95百分位</span><b>${s.random?f(s.random.mean)+'　'+f(s.random.p95):'—'}</b></div>
+      <div class="krow"><span>策略組合 年化／最大回落（樣本外）</span><b><span style="color:${col(s.portfolio.cagr)}">${f(s.portfolio.cagr)}</span>　${f(s.portfolio.mdd)}</b></div>
+      <div class="krow"><span>同池等權買進持有 年化／最大回落</span><b><span style="color:${col(SW.pool_bench?.cagr)}">${f(SW.pool_bench?.cagr)}</span>　${f(SW.pool_bench?.mdd)}</b></div>
+      <div class="krow"><span>${b.code||'0050'} 買進持有 年化／最大回落</span><b><span style="color:${col(b.cagr)}">${f(b.cagr)}</span>　${f(b.mdd)}</b></div>
+      ${eqCurve(s.portfolio.curve)}
+      <div class="rsub" style="margin:14px 0 6px">最新交易日符合進場條件（${s.today.length} 檔）・條件符合不等於推薦${s.verdict?'':'，且此策略樣本外無效'}</div>
+      <div class="chips">${s.today.map(t=>`<button class="chip" data-code="${t.kind==='etf'?'ETF:':''}${t.code}">${esc(t.name)} <small style="color:var(--s8)">${t.code}</small></button>`).join('')||'<span class="rsub">今日無</span>'}</div>
+    </div>`).join('')}
+    <div class="card"><h3>為什麼沒有「無腦賺」的程式</h3>
+      <p style="font-size:13px;line-height:1.85;color:var(--s9)">
+        一個公開、簡單、人人都能用的規則，如果真的穩定賺錢，買的人一多，價格就會提前反映，優勢隨之消失。
+        短線交易次數多，每來回一趟約 0.6% 的成本，一年交易 50 次就是 30% 的成本要先賺回來。
+        這也是為什麼這一頁只做一件事：把常見策略放到真實資料上，誠實告訴你它們過去扣掉成本後還剩多少。
+        長期而言，低成本的市值型 ETF 定期定額，是多數人最難被打敗的對照組。</p>
+      <div class="note" style="margin-top:8px">回測不代表未來報酬。本頁僅為歷史資料的統計呈現，非證券投資顧問事業，不構成任何投資建議；投資人應自行判斷並自負盈虧。</div></div>`;
+  el.onclick=e=>{const c=e.target.closest('[data-code]'); if(c) openStock(c.dataset.code);};
+}
+
 /* ══ 面板開關 ══════════════════════════════════════════════════ */
 function show(id){
   document.querySelectorAll('.side').forEach(s=>s.classList.toggle('on',s.id===id));
@@ -1456,12 +1637,12 @@ addEventListener('keydown',e=>{
 /* ══ 視圖切換 ══════════════════════════════════════════════════ */
 // 「台美」與「自選」兩個市場共用，其餘各市場自己一套
 const TABS={
-  tw:[['chart','◎','泡泡圖'],['rank','☰','排行榜'],['today','★','今日'],
-      ['chain','⇄','供應鏈'],['link','⇆','台美'],['watch','☆','自選']],
+  tw:[['today','★','今日'],['chart','◎','泡泡圖'],['etf','◈','ETF'],['swing','↗','波段'],
+      ['rank','☰','排行榜'],['chain','⇄','供應鏈'],['link','⇆','台美'],['watch','☆','自選']],
   us:[['us-today','☀','晨報'],['us-sector','▦','板塊'],['us-rank','☰','排行'],
       ['link','⇆','台美'],['watch','☆','自選']],
 };
-let curView='chart';
+let curView='today';
 function setView(v){
   curView=v;
   document.querySelectorAll('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));
@@ -1473,6 +1654,11 @@ function setView(v){
   if(v==='us-sector') buildUSSector();
   if(v==='us-rank') buildUSRank();
   if(v==='link') buildLink();
+  if(v==='etf') buildETF();
+  if(v==='swing') buildSwing();
+  // 手機導航：目前頁在「更多」裡時，讓「更多」亮起來
+  const nb=$('nav').querySelector('[data-more]'); if(nb) nb.classList.toggle('on',!$('nav').querySelector(`[data-v="${v}"]`));
+  $('more').classList.remove('on');
   if(v==='watch'){ buildWatch();
     evReady().then(()=>{ if(watchTab==='feed'){
       const e=myEvents()[0]; if(e){markSeen(e.date);} } updateBadge(); buildWatch(); }); }
@@ -1494,9 +1680,14 @@ function setMarket(m){
   document.querySelectorAll('#mkt button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
   const t=TABS[m];
   $('tabs').innerHTML=t.map(([v,,l])=>`<button data-v="${v}">${l}</button>`).join('');
-  $('nav').innerHTML=t.map(([v,e,l])=>`<button data-v="${v}"><em>${e}</em>${l}</button>`).join('');
-  document.querySelectorAll('#tabs button,#nav button').forEach(b=>
+  // 手機底部最多放 5 格：超過時放前 4 個＋「更多」
+  const main=t.length>5?t.slice(0,4):t, rest=t.length>5?t.slice(4):[];
+  $('nav').innerHTML=main.map(([v,e,l])=>`<button data-v="${v}"><em>${e}</em>${l}</button>`).join('')+
+    (rest.length?`<button data-more><em>⋯</em>更多</button>`:'');
+  $('more').innerHTML=rest.map(([v,e,l])=>`<button data-v="${v}"><em>${e}</em>${l}</button>`).join('');
+  document.querySelectorAll('#tabs button,#nav button[data-v],#more button').forEach(b=>
     b.onclick=()=>setView(b.dataset.v));
+  const mb=$('nav').querySelector('[data-more]'); if(mb) mb.onclick=e=>{e.stopPropagation();$('more').classList.toggle('on');};
   // 共用的頁面切市場時留在原頁，其他頁回到該市場第一頁
   setView(t.some(x=>x[0]===curView)?curView:t[0][0]);
   updateMeta(); updateBadge(); buildRail();
@@ -1552,6 +1743,7 @@ $('q').onkeydown=e=>{
 };
 document.addEventListener('click',e=>{
   if(!e.target.closest('.search')) $('qr').classList.remove('on');
+  if(!e.target.closest('#more')) $('more').classList.remove('on');
 });
 
 /* ══ 設定 ══════════════════════════════════════════════════════

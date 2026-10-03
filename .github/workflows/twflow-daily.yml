@@ -51,6 +51,11 @@ jobs:
           python -X utf8 ../usflow/scripts/build_cross.py || echo "::warning::台美連動重算失敗"
           # 訊號成效回測：結果直接給前端「訊號成效」卡片。失敗不擋盤後更新
           python -X utf8 scripts/backtest.py || echo "::warning::訊號回測失敗"
+          # ETF 折溢價（證交所 17:00 後的收盤估值快照）
+          python -X utf8 scripts/fetch_etf.py || echo "::warning::ETF 折溢價抓取失敗"
+          # 波段實驗室：五年日線回測（約 3 分鐘）
+          ( cd .. && python -X utf8 swing/scripts/fetch_hist.py && python -X utf8 swing/scripts/backtest_swing.py ) \
+            || echo "::warning::波段回測失敗"
           python -X utf8 scripts/snapshot.py
 
       - name: 檢查資料是否合理
@@ -61,7 +66,7 @@ jobs:
         run: |
           git config user.name  "twflow-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add twflow/data/market/days twflow/data/market/stock_meta.json \
+          git add twflow/data/market/days twflow/data/market/stock_meta.json $(ls -d twflow/data/etf 2>/dev/null) \
                   twflow/data/market/market.json twflow/web/data \
                   twflow/web/snapshot.html
           if git diff --staged --quiet; then
