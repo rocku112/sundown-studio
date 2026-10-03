@@ -60,8 +60,8 @@ def rsi(C, n=14):
     for t in range(1, C.shape[1]):
         u, v = up[:, t], dn[:, t]
         if t == n:
-            au = np.nanmean(up[:, 1:n + 1], axis=1)
-            ad = np.nanmean(dn[:, 1:n + 1], axis=1)
+            au = quiet_nanmean(up[:, 1:n + 1], axis=1)
+            ad = quiet_nanmean(dn[:, 1:n + 1], axis=1)
         elif t > n:
             au = np.where(np.isnan(u), au, (au * (n - 1) + u) / n)
             ad = np.where(np.isnan(v), ad, (ad * (n - 1) + v) / n)

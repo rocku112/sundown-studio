@@ -257,6 +257,7 @@ header{display:flex;align-items:center;gap:12px;padding:10px 16px;
 .estats{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:6px;font-size:12px;color:var(--s9)}
 .estats b{color:var(--s10);font-variant-numeric:tabular-nums}
 .ecat{margin:18px 0 4px;font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.5px}
+.vbadge.rev{background:var(--card2);color:var(--down);border:1px solid var(--line)}
 .vbadge.mid{background:var(--card2);color:var(--gold);border:1px solid var(--line)}
 .st{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:10px}
 .st th,.st td{padding:7px 8px;text-align:right;border-bottom:1px solid var(--line);font-family:var(--num);font-variant-numeric:tabular-nums}
@@ -943,7 +944,7 @@ function stockEvi(code){
     if(!today.length&&!keys.length){ box.innerHTML=''; return; }
     const f=x=>(x>=0?'+':'')+x.toFixed(2)+'%';
     box.innerHTML=`<div class="stitle">短線指標・本檔</div>
-      ${today.length?`<div class="rsub" style="padding:0 16px 6px">最近一次符合條件（${s.date}）</div>
+      ${today.length?`<div class="rsub" style="padding:0 16px 6px">最近一次符合條件（技術指標為 ${s.date}；排序與月營收為最近一次換股／公布日）</div>
         ${today.map(k=>`<div class="kv"><span>${esc(by[k].name)}</span><b><span class="vbadge ${VC(by[k].verdict)}" style="margin:0">全體：${by[k].verdict}</span></b></div>`).join('')}`:''}
       ${keys.length?`<div class="rsub" style="padding:10px 16px 4px">這檔過去五年觸發後的表現（隔天開盤買、扣成本）</div>
         <div style="padding:0 16px"><table class="st" style="margin-top:2px"><tr><th>指標</th><th>次數</th><th>平均</th><th>勝率</th></tr>
@@ -1663,7 +1664,7 @@ function oddsCard(){
 let EVI=null;
 const eviReady=()=>EVI?Promise.resolve(EVI)
   :fetch('data/evidence.json').then(r=>r.json()).then(j=>(EVI=j)).catch(()=>null);
-const VC=v=>v==='成立且扣成本後可交易'?'ok':v==='成立但不夠付成本'||v.startsWith('有跡象')?'mid':'no';
+const VC=v=>v==='成立且扣成本後可交易'?'ok':v==='成立但不夠付成本'||v.startsWith('有跡象')?'mid':v.startsWith('反向')||v.includes('相反')?'rev':'no';
 let eviOpen=null;
 function eviCard(){
   if(!EVI) return '';

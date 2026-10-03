@@ -424,6 +424,7 @@ def holm(tests):
                         else "成立但不夠付成本" if x["significant"]
                         else "顯著但方向相反" if i in passed and ti < 0 and to < 0
                         else "有跡象（未過多重比較校正）" if x["p_oos"] < 0.05 and ti > 0 and to > 0
+                        else "反向跡象（未過多重比較校正）" if x["p_oos"] < 0.05 and ti < 0 and to < 0
                         else "證據不足")
     return tests
 
