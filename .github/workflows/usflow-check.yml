@@ -1,0 +1,91 @@
+name: usflow 管線檢查
+
+# 改到美股管線或前端時，實際對外抓一次資料、跑完整條管線與檢查，但不提交。
+# 開發環境多半連不到這些來源，這是唯一能在合併前確認來源可用的地方。
+on:
+  push:
+    branches-ignore: [main]
+    paths:
+      - "usflow/**"
+      - "twflow/web/index.html"
+      - "twflow/scripts/snapshot.py"
+      - ".github/workflows/usflow-*.yml"
+  pull_request:
+    paths:
+      - "usflow/**"
+      - "twflow/web/index.html"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - run: pip install -r usflow/requirements.txt
+
+      - name: 兩個價量來源各自測試
+        working-directory: usflow
+        run: |
+          for p in yahoo stooq; do
+            echo "::group::$p"
+            python -X utf8 scripts/fetch_us.py --provider $p --only SPY,NVDA,TSM,BRK-B,^GSPC,^TNX,TWD=X || true
+            rm -f data/market/prices.json
+            echo "::endgroup::"
+          done
+
+      - name: 抓美股日線
+        working-directory: usflow
+        run: python -X utf8 scripts/fetch_us.py
+
+      - name: 抓 SEC 基本面
+        working-directory: usflow
+        env:
+          SEC_USER_AGENT: ${{ vars.SEC_USER_AGENT }}
+        run: python -X utf8 scripts/fetch_sec.py
+
+      - name: 產出前端資料
+        working-directory: usflow
+        run: |
+          python -X utf8 scripts/build_us.py
+          python -X utf8 scripts/build_cross.py
+          python -X utf8 ../twflow/scripts/snapshot.py
+
+      - name: 檢查資料是否合理
+        working-directory: usflow
+        run: python -X utf8 scripts/sanity_check.py
+
+      - name: 摘要
+        run: |
+          python - <<'PY'
+          import json
+          u = json.load(open("twflow/web/data/us/latest.json"))
+          c = json.load(open("twflow/web/data/cross.json"))
+          log = json.load(open("usflow/data/market/fetch_log.json"))
+          f = json.load(open("usflow/data/fundamentals.json"))
+          src = {}
+          for v in log["ok"].values(): src[v["src"]] = src.get(v["src"], 0) + 1
+          print("美股日期", u["date"], "來源", src, "失敗", log["failed"])
+          for s in ("^GSPC", "NVDA", "AAPL", "JPM", "KO", "TWD=X"):
+              d = u["stock_data"].get(s, {})
+              print(s, d.get("price"), d.get("chg_1d"), "EPS", d.get("eps_ttm"), "PE", d.get("pe"), "殖利率", d.get("yield"))
+          print("SEC 失敗", f["failed"])
+          for a in c["adr"]:
+              print("ADR", a["us"], a["us_price"], "台股", a["tw_price"], "溢價", a["premium"])
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: usflow-output
+          path: |
+            twflow/web/data/us
+            twflow/web/data/cross.json
+            usflow/data
