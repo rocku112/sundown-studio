@@ -17,6 +17,7 @@
 import json
 import os
 import sys
+import time
 from datetime import datetime, timedelta, timezone
 
 import numpy as np
@@ -32,8 +33,11 @@ HORIZONS = [(5, "1 週"), (21, "1 個月"), (63, "3 個月"), (126, "半年"), (
 
 
 def fetch(code):
+    # ⚠️ 不能用 range=max：Yahoo 對 max 會悄悄改回「月線」，持有「5 個交易日」就變成 5 個月，
+    #    第一版就這樣算出「持有一週中位數 +5.8%」的荒謬結果。改給明確的起訖時間才會是日線。
     r = requests.get(f"https://query1.finance.yahoo.com/v8/finance/chart/{code}.TW",
-                     params={"range": "max", "interval": "1d", "events": "div,split"},
+                     params={"period1": 0, "period2": int(time.time()), "interval": "1d",
+                             "events": "div,split"},
                      headers=UA, timeout=30)
     r.raise_for_status()
     res = r.json()["chart"]["result"][0]
@@ -44,7 +48,20 @@ def fetch(code):
     off = res["meta"].get("gmtoffset", 0)
     rows = [(datetime.fromtimestamp(t + off, tz=timezone.utc).date().isoformat(), p)
             for t, p in zip(ts, px) if p]
+    check(code, rows)
     return rows, bool(adj)
+
+
+def check(code, rows):
+    """資料合理性：必須是日線、不能有未還原的分割（單日 ±25% 以上幾乎一定是資料錯）。"""
+    from datetime import date as _d
+    gaps = sorted((_d.fromisoformat(b[0]) - _d.fromisoformat(a[0])).days for a, b in zip(rows, rows[1:]))
+    if not gaps or gaps[len(gaps) // 2] > 3:
+        raise RuntimeError(f"{code} 不是日線資料（日期間隔中位數 {gaps[len(gaps)//2] if gaps else '—'} 天）")
+    jumps = [(b[0], round((b[1] / a[1] - 1) * 100, 1)) for a, b in zip(rows, rows[1:])
+             if abs(b[1] / a[1] - 1) > 0.25]
+    if jumps:
+        raise RuntimeError(f"{code} 有疑似未還原分割的單日跳動：{jumps[:5]}")
 
 
 def horizon_stats(p, n, years):
