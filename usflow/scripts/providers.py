@@ -5,7 +5,7 @@
 
     [(date_str 'YYYY-MM-DD', close: float, volume: float|None), ...]  依日期遞增
 
-為什麼要兩個來源：美股沒有像證交所那樣免費、官方、穩定的日線端點。
+為什麼要多個來源：美股沒有像證交所那樣免費、官方、穩定的日線端點。
 Yahoo 與 Stooq 都是非官方用法，隨時可能改版或對 CI 機房 IP 限流。
 fetch_us.py 依序嘗試，第一個成功的就用——任一來源掛掉，管線不會整個停。
 
@@ -48,10 +48,10 @@ def _get(url, params=None, retries=3, timeout=20):
     raise ProviderError(f"{url} → {last}")
 
 
-def yahoo(sym, days=200):
+def yahoo(sym, days=200, host="query1"):
     """Yahoo chart API v8。sym 用 Yahoo 代號（BRK-B、^GSPC、TWD=X）。"""
     rng = "1y" if days > 180 else "6mo"
-    r = _get(f"https://query1.finance.yahoo.com/v8/finance/chart/{sym}",
+    r = _get(f"https://{host}.finance.yahoo.com/v8/finance/chart/{sym}",
              params={"range": rng, "interval": "1d", "includePrePost": "false"})
     try:
         res = r.json()["chart"]["result"][0]
@@ -115,8 +115,12 @@ def _stooq_item(item, days):
     return stooq(code, days)
 
 
+# 2026-10 在 GitHub Actions 實測：Yahoo query1 141/141 成功；Stooq 對 CI 機房 IP
+# 一律回 HTML（疑似要驗證碼或 API key），目前形同無效，先留著以防它恢復。
+# query2 是 Yahoo 的另一組主機，限流是分開計的，query1 被擋時常常還能用。
 PROVIDERS = [
     ("yahoo", lambda it, days: yahoo(it["sym"], days)),
+    ("yahoo2", lambda it, days: yahoo(it["sym"], days, host="query2")),
     ("stooq", _stooq_item),
 ]
 

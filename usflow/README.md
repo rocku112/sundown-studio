@@ -29,7 +29,8 @@
 | 用途 | 來源 | 備註 |
 |---|---|---|
 | 日線（主）| Yahoo Finance chart API | 非官方用法，可能限流或改版 |
-| 日線（備）| Stooq CSV | 主來源失敗的代號自動改用這個 |
+| 日線（備）| Yahoo query2 主機 | 限流與 query1 分開計 |
+| 日線（備）| Stooq CSV | 2026-10 實測對 CI 回 HTML，目前無效，保留以防恢復 |
 | 基本面 | SEC EDGAR XBRL companyfacts | 官方、免費；需 User-Agent |
 | 匯率 | Yahoo `TWD=X`／Stooq `usdtwd` | ADR 溢價、台幣換算用 |
 | 台股端 | `twflow/web/data/*.json` | 不重抓，直接讀 twflow 產出 |

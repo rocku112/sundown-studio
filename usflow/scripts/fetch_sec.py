@@ -158,7 +158,12 @@ def main():
         want = set(args.only.split(","))
         uni = [u for u in uni if u["sym"] in want]
 
-    tickers = get("https://www.sec.gov/files/company_tickers.json")
+    try:
+        tickers = get("https://www.sec.gov/files/company_tickers.json")
+    except RuntimeError as e:
+        # 2026-10 實測：不帶 email 的 User-Agent 會被 SEC 回 403
+        sys.exit(f"{e}\nSEC 拒絕請求——請在 repo Variables 設定 SEC_USER_AGENT"
+                 f"（格式：「名稱 email」），目前用的是：{UA!r}")
     cik = {v["ticker"].upper(): v["cik_str"] for v in tickers.values()}
 
     try:

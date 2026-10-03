@@ -35,7 +35,7 @@ jobs:
       - name: 兩個價量來源各自測試
         working-directory: usflow
         run: |
-          for p in yahoo stooq; do
+          for p in yahoo yahoo2 stooq; do
             echo "::group::$p"
             python -X utf8 scripts/fetch_us.py --provider $p --only SPY,NVDA,TSM,BRK-B,^GSPC,^TNX,TWD=X || true
             rm -f data/market/prices.json
@@ -46,8 +46,10 @@ jobs:
         working-directory: usflow
         run: python -X utf8 scripts/fetch_us.py
 
+      # 沒設 SEC_USER_AGENT 時 SEC 會回 403；基本面缺漏不該擋住後面價量與台美連動的檢查
       - name: 抓 SEC 基本面
         working-directory: usflow
+        continue-on-error: true
         env:
           SEC_USER_AGENT: ${{ vars.SEC_USER_AGENT }}
         run: python -X utf8 scripts/fetch_sec.py
@@ -70,7 +72,10 @@ jobs:
           u = json.load(open("twflow/web/data/us/latest.json"))
           c = json.load(open("twflow/web/data/cross.json"))
           log = json.load(open("usflow/data/market/fetch_log.json"))
-          f = json.load(open("usflow/data/fundamentals.json"))
+          try:
+              f = json.load(open("usflow/data/fundamentals.json"))
+          except FileNotFoundError:
+              f = {"failed": "未抓取（SEC 步驟失敗）"}
           src = {}
           for v in log["ok"].values(): src[v["src"]] = src.get(v["src"], 0) + 1
           print("美股日期", u["date"], "來源", src, "失敗", log["failed"])
