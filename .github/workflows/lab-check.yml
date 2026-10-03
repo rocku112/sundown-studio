@@ -5,7 +5,6 @@ on:
   push:
     branches-ignore: [main]
     paths:
-      - "twflow/scripts/probe_etf.py"
       - "twflow/scripts/fetch_etf.py"
       - "swing/**"
       - ".github/workflows/lab-check.yml"
@@ -24,6 +23,20 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: pip install -r twflow/requirements.txt
-      - name: 探測 ETF 與長期日線來源
+
+      - name: ETF 折溢價
         working-directory: twflow
-        run: python -X utf8 scripts/probe_etf.py 20261002
+        run: python -X utf8 scripts/fetch_etf.py
+
+      - name: 波段：抓五年日線
+        run: python -X utf8 swing/scripts/fetch_hist.py
+
+      - name: 波段：回測
+        run: python -X utf8 swing/scripts/backtest_swing.py
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lab-output
+          path: |
+            twflow/web/data/etf.json
+            twflow/web/data/swing.json
