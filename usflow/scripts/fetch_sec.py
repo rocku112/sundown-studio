@@ -120,13 +120,43 @@ def quarters(rows):
     return q, a
 
 
+def ttm_ytd(rows):
+    """近四季合計的標準算法：今年累計 ＋ 去年全年 − 去年同期累計。
+
+    季度相加算不出來時才用（某季沒單獨申報，例如沃爾瑪一次在 Q1 宣告全年股利，
+    後幾季只有累計數字）。回傳 (截止日, 數值)；湊不齊三段就回 None，不硬估。"""
+    if not rows:
+        return None
+    latest = max(r["end"] for r in rows)
+    cur = [r for r in rows if r["end"] == latest]
+    fy = [r for r in cur if 350 <= days(r["start"], r["end"]) <= 380]
+    if fy:                                  # 最新一期就是全年報
+        return latest, max(fy, key=lambda r: r.get("filed", ""))["val"]
+    ytd = max(cur, key=lambda r: (days(r["start"], r["end"]), r.get("filed", "")))
+    n = days(ytd["start"], ytd["end"])
+    # 去年全年：截止在今年累計起點的前一週內
+    prev = [r for r in rows if 350 <= days(r["start"], r["end"]) <= 380
+            and 0 < days(r["end"], ytd["start"]) <= 7]
+    if not prev:
+        return None
+    fy = max(prev, key=lambda r: r.get("filed", ""))
+    # 去年同期累計：同樣從去年年度起點開始、長度相差不到 10 天
+    same = [r for r in rows if abs(days(fy["start"], r["start"])) <= 7
+            and abs(days(r["start"], r["end"]) - n) <= 10 and r["end"] < ytd["start"]]
+    if not same:
+        return None
+    py = max(same, key=lambda r: r.get("filed", ""))
+    return latest, ytd["val"] + fy["val"] - py["val"]
+
+
 def extract(facts):
-    out, annual, used = {}, {}, {}
+    out, annual, used, raw = {}, {}, {}, {}
     for k, tags in TAGS.items():
+        raw[k] = series(facts, tags)
         # 逐科目各自算季度（Q4 推算要在同一科目內做），再依優先順序合併：
         # 同一季兩個科目都有時用優先的，只有其中一個有就用那個
         q, a, u = {}, {}, []
-        for t, rows in series(facts, tags):
+        for t, rows in raw[k]:
             tq, ta = quarters(rows)
             new = [e for e in tq if e not in q]
             if new:
@@ -160,11 +190,17 @@ def extract(facts):
     if len(last4) == 4 and all("eps" in q for q in last4) and \
             days(last4[0]["end"], last4[-1]["end"]) <= 300:
         res["eps_ttm"] = round(sum(q["eps"] for q in last4), 4)
+    else:
+        v = ttm_fallback(raw["eps"], last4)
+        if v is not None:
+            res["eps_ttm"] = v
     # 股利：四季都有才加總；很多公司只在 10-K 揭露全年每股股利，
     # 那就退回用最近一個（結束在末季前後 100 天內的）會計年度數字。
     # 少一季硬加會讓殖利率低估 25%，比不顯示更糟。
     if len(last4) == 4 and all("dps" in q for q in last4):
         res["dps_ttm"] = round(sum(q["dps"] for q in last4), 4)
+    elif (v := ttm_fallback(raw["dps"], last4)) is not None:
+        res["dps_ttm"] = v
     elif annual.get("dps") and last4:
         fy_end = max(annual["dps"])
         if abs(days(fy_end, last4[-1]["end"])) <= 100:
@@ -173,6 +209,17 @@ def extract(facts):
         res["gm_ttm"] = round(sum(q["gp"] for q in last4) /
                               sum(q["rev"] for q in last4) * 100, 2)
     return res
+
+
+def ttm_fallback(tag_rows, last4):
+    """依科目優先順序試 ttm_ytd；截止日必須就是最新一季，避免拿到停更科目的舊數字。"""
+    if not last4:
+        return None
+    for _, rows in tag_rows:
+        r = ttm_ytd(rows)
+        if r and abs(days(r[0], last4[-1]["end"])) <= 7:
+            return round(r[1], 4)
+    return None
 
 
 def cik_map():
