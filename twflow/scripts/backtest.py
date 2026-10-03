@@ -38,6 +38,10 @@ WARMUP = 21          # 訊號要 20 日基準
 FWD = 5              # 前瞻報酬天數
 N_RANDOM = 200       # 隨機對照組次數
 
+# 結果同時寫成 web/data/backtest.json，前端「訊號成效」卡片照實顯示——
+# 包括「沒有預測力」這個結論。不能只在終端機印給開發者看，使用者也該知道。
+OUT = {"signals": [], "quadrants": [], "anomalies": []}
+
 
 def arr(v, T):
     return np.array([np.nan if x is None else float(x) for x in v], dtype=float) \
@@ -63,6 +67,8 @@ def summarize(ics, label, rand_ics=None):
         z = m / se if se > 1e-12 else 0.0
         extra = f"　vs 隨機 z={z:+.1f}"
     print(f"  {label:<22} IC={m:+.3f}  t={t:+.2f}  勝率={hit:.0f}%  n={len(ics)}{extra}")
+    OUT["signals"].append({"label": label, "ic": round(float(m), 4), "t": round(float(t), 2),
+                           "hit": round(float(hit), 1), "n": int(len(ics))})
     return m, t
 
 
@@ -158,6 +164,8 @@ def main():
             print(f"  {q:<6} 樣本不足"); continue
         t_ = v.mean() / (v.std(ddof=1) / np.sqrt(len(v)))
         print(f"  {q:<6} 平均超額 {v.mean():+.2f}%  t={t_:+.2f}  n={len(v)}")
+        OUT["quadrants"].append({"label": q, "excess": round(float(v.mean()), 3),
+                                 "t": round(float(t_), 2), "n": int(len(v))})
 
     # ── 個股異常大買 ──────────────────────────────────────────
     print("\n═══ 個股：異常大買 / 大賣之後 5 日超額報酬 ═══")
@@ -187,6 +195,8 @@ def main():
             print(f"  {k:<6} 樣本不足"); continue
         t_ = v.mean() / (v.std(ddof=1) / np.sqrt(len(v)))
         print(f"  {k:<6} 平均超額 {v.mean():+.2f}%  t={t_:+.2f}  n={len(v)}")
+        OUT["anomalies"].append({"label": k, "excess": round(float(v.mean()), 3),
+                                 "t": round(float(t_), 2), "n": int(len(v))})
 
     # ── 對照組：改用 Tide 的分類重跑 ──────────────────────────────
     # 我們的板塊是用**整整 60 天（含前瞻期）**跑剪枝與聚類挑出來的，
@@ -224,12 +234,24 @@ def main():
                 ics.append(ic)
         print(f"\n═══ 對照組：改用 Tide 的 {len(tnames)} 個板塊"
               f"（分類獨立於我們的資料）═══")
+        before = len(OUT["signals"])
         summarize(ics, "近5日淨額（億）", rand)
+        if len(OUT["signals"]) > before:
+            OUT["signals"][-1]["label"] = "對照組：外部分類・近5日淨額"
 
     print("\n" + "─" * 66)
     print("讀法：|t| < 2 一律當作「與雜訊無法區分」。")
     print(f"本測試只有 {T - WARMUP - FWD} 個觀察日且 5 日窗重疊，")
     print("t 值本身已被高估。這是方向性參考，不是統計證據。")
+
+    OUT.update({"dates": [dates[WARMUP], dates[T - FWD - 1]], "obs": int(T - WARMUP - FWD),
+                "fwd": FWD,
+                # |t|≥2 才算「與雜訊可區分」；全部都沒過就是「目前看不出預測力」
+                "any_significant": any(abs(x["t"]) >= 2 for k in ("signals", "quadrants", "anomalies")
+                                       for x in OUT[k])})
+    with open(os.path.join(WEB, "backtest.json"), "w", encoding="utf-8") as f:
+        json.dump(OUT, f, ensure_ascii=False, separators=(",", ":"))
+    print(f"→ {os.path.join(WEB, 'backtest.json')}")
 
 
 if __name__ == "__main__":

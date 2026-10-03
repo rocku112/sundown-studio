@@ -49,6 +49,8 @@ jobs:
           # 台美連動用到台股最新收盤（ADR 溢價、關聯股漲跌），台股更新後也要重算。
           # 這步失敗只影響台美頁，不能擋住台股盤後更新
           python -X utf8 ../usflow/scripts/build_cross.py || echo "::warning::台美連動重算失敗"
+          # 訊號成效回測：結果直接給前端「訊號成效」卡片。失敗不擋盤後更新
+          python -X utf8 scripts/backtest.py || echo "::warning::訊號回測失敗"
           python -X utf8 scripts/snapshot.py
 
       - name: 檢查資料是否合理

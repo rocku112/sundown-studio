@@ -303,10 +303,12 @@ def main():
                     help="panel 最多保留幾個交易日（約兩年），避免無限膨脹")
     ap.add_argument("--force", action="store_true",
                     help="忽略既有 panel 與快取，整段重抓")
+    ap.add_argument("--offline", action="store_true",
+                    help="不連來源站，只用已落檔的逐日檔重建 panel（回測、本機開發用）")
     args = ap.parse_args()
 
     os.makedirs(DATA, exist_ok=True)
-    days = trading_days(args.days, force=args.force)
+    days = [] if args.offline else trading_days(args.days, force=args.force)
 
     # ── 累積式儲存：一天一個檔，append-only ─────────────────────
     # 為什麼不是把 panel.json 直接進版控：它 7MB 且每天整份改寫，天天 commit
