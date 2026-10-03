@@ -49,9 +49,12 @@ KEEP_Q = 8
 
 TAGS = {
     "rev": ["Revenues", "RevenueFromContractWithCustomerExcludingAssessedTax",
+            "RevenueFromContractWithCustomerIncludingAssessedTax",
             "SalesRevenueNet", "RevenuesNetOfInterestExpense"],
     "gp": ["GrossProfit"],
     "ni": ["NetIncomeLoss"],
+    # 只用來在沒有 GrossProfit 時推算毛利（營收 − 營業成本），不輸出
+    "cost": ["CostOfRevenue", "CostOfGoodsAndServicesSold", "CostOfGoodsSold"],
     "eps": ["EarningsPerShareDiluted", "EarningsPerShareBasicAndDiluted"],
     "dps": ["CommonStockDividendsPerShareDeclared",
             "CommonStockDividendsPerShareCashPaid"],
@@ -77,16 +80,23 @@ def days(a, b):
 
 
 def series(facts, tags):
-    """回傳 (tag, [{start,end,val,fy,form,filed}])：取第一個有資料的科目。"""
+    """回傳 [(tag, rows)]：所有候選科目中有資料的，依優先順序。
+
+    ⚠️ 不能只取「第一個有資料的科目」：很多公司換過科目名稱（例如 2018 年 ASC 606
+       之後營收從 Revenues 改報 RevenueFromContractWithCustomer...），舊科目仍留著
+       多年前的資料。只取第一個，就會拿到停在幾年前的序列，近幾季營收全空——
+       2026-10 實測蘋果、微軟的毛利率就是這樣消失的。"""
     g = facts.get("facts", {}).get("us-gaap", {})
+    out = []
     for t in tags:
         units = g.get(t, {}).get("units", {})
         for u in ("USD", "USD/shares"):
-            rows = units.get(u)
+            rows = [r for r in units.get(u) or [] if r.get("start") and r.get("form") in
+                    ("10-Q", "10-K", "10-Q/A", "10-K/A")]
             if rows:
-                return t, [r for r in rows if r.get("start") and r.get("form") in
-                           ("10-Q", "10-K", "10-Q/A", "10-K/A")]
-    return None, []
+                out.append((t, rows))
+                break
+    return out
 
 
 def quarters(rows):
@@ -113,15 +123,33 @@ def quarters(rows):
 def extract(facts):
     out, annual, used = {}, {}, {}
     for k, tags in TAGS.items():
-        t, rows = series(facts, tags)
-        if t:
-            used[k] = t
-            out[k], annual[k] = quarters(rows)
+        # 逐科目各自算季度（Q4 推算要在同一科目內做），再依優先順序合併：
+        # 同一季兩個科目都有時用優先的，只有其中一個有就用那個
+        q, a, u = {}, {}, []
+        for t, rows in series(facts, tags):
+            tq, ta = quarters(rows)
+            new = [e for e in tq if e not in q]
+            if new:
+                u.append(t)
+            for e in new:
+                q[e] = tq[e]
+            for e, v in ta.items():
+                a.setdefault(e, v)
+        if q or a:
+            out[k], annual[k], used[k] = q, a, u
+    # 不申報 GrossProfit、但有營業成本的公司：毛利＝營收−成本（同一季兩者都有才算）
+    gp, rev, cost = out.setdefault("gp", {}), out.get("rev", {}), out.pop("cost", {})
+    derived = [e for e in rev if e in cost and e not in gp]
+    for e in derived:
+        gp[e] = (rev[e][0], rev[e][1] - cost[e][1])
+    if derived:
+        used["gp"] = used.get("gp", []) + ["營收−成本"]
+    used.pop("cost", None)
     ends = sorted(set(out.get("rev", {})) | set(out.get("eps", {})))[-KEEP_Q:]
     qs = []
     for e in ends:
         row = {"end": e}
-        for k in TAGS:
+        for k in ("rev", "gp", "ni", "eps", "dps"):
             v = out.get(k, {}).get(e)
             if v is not None:
                 row[k] = round(v[1], 4) if k in ("eps", "dps") else v[1]
