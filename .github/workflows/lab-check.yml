@@ -54,3 +54,4 @@ jobs:
             twflow/web/data/etf.json
             twflow/web/data/swing.json
             twflow/web/data/evidence.json
+            twflow/web/data/evidence_stocks.json
