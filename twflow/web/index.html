@@ -217,6 +217,16 @@ header{display:flex;align-items:center;gap:12px;padding:10px 16px;
 .rrow .nm i{color:var(--s8);font-style:normal;font-size:11px;margin-left:5px}
 .add{width:26px;height:26px;border-radius:8px;border:1px solid var(--line);color:var(--s9);font-size:15px;line-height:1}
 .add:hover{border-color:var(--gold);color:var(--gold)}
+.hform{display:grid;grid-template-columns:2fr 1fr 1fr 1.2fr auto;gap:8px}
+.hform input{padding:9px 11px;border-radius:10px;border:1px solid var(--line);background:var(--panel);
+  color:var(--s10);font:inherit;font-size:13px;min-width:0}
+.hform input:focus{outline:none;border-color:var(--gold)}
+@media (max-width:720px){.hform{grid-template-columns:1fr 1fr}.hform #h-code{grid-column:1/-1}}
+.hbar{display:grid;grid-template-columns:minmax(90px,30%) 1fr 54px;gap:10px;align-items:center;padding:5px 0;font-size:12.5px}
+.hbar span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--s9)}
+.hbar div{height:10px;background:var(--panel);border-radius:5px;overflow:hidden}
+.hbar i{display:block;height:100%;background:var(--gold);border-radius:5px}
+.hbar b{text-align:right}
 .more{display:none}
 @media (max-width:720px){
   .more.on{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;position:fixed;left:10px;right:10px;
@@ -233,7 +243,7 @@ header{display:flex;align-items:center;gap:12px;padding:10px 16px;
 .ov5{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
 .ov5>div{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
 .ov5 .l{font-size:11.5px;color:var(--s9)}
-.ov5 .n{font-size:20px;font-weight:700;font-family:var(--num);line-height:1.35}
+.ov5 .n{font-size:clamp(15px,4.4vw,20px);font-weight:700;font-family:var(--num);line-height:1.35;white-space:nowrap}
 .ov5 .s{font-size:11px;color:var(--s8);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .thermo{height:10px;border-radius:5px;position:relative;margin:10px 0 4px;
   background:linear-gradient(90deg,var(--down),var(--card2) 50%,var(--up))}
@@ -416,6 +426,7 @@ a.btn{text-decoration:none;color:inherit;display:inline-block}
   <section class="view" id="v-link"><div class="wrap" id="link"></div></section>
   <section class="view" id="v-etf"><div class="wrap" id="etf"></div></section>
   <section class="view" id="v-swing"><div class="wrap" id="swing"></div></section>
+  <section class="view" id="v-hold"><div class="wrap" id="hold"></div></section>
 </div>
 
 <aside class="rail" id="rail"></aside>
@@ -1643,6 +1654,151 @@ function buildSwing(){
   el.onclick=e=>{const c=e.target.closest('[data-code]'); if(c) openStock(c.dataset.code);};
 }
 
+/* ══ 持股健檢 ════════════════════════════════════════════════════
+   全部在瀏覽器裡算、存在這台裝置（localStorage），不會上傳。
+   目的不是告訴你買什麼，而是讓你看清楚：現在賺賠多少、扣掉稅費實拿多少、
+   風險是不是集中在一兩檔、跟「當初直接買 0050」比起來是贏是輸。 */
+const HKEY='twflow_holdings';
+let HOLD=[]; try{ HOLD=JSON.parse(localStorage.getItem(HKEY)||'[]'); }catch(_){ HOLD=[]; }
+const saveHold=()=>{ try{localStorage.setItem(HKEY,JSON.stringify(HOLD))}catch(_){} };
+let BENCH=null;
+const benchReady=()=>BENCH?Promise.resolve(BENCH)
+  :fetch('data/bench.json').then(r=>r.json()).then(j=>(BENCH=j)).catch(()=>null);
+// 賣出成本：台股手續費 0.1425%＋證交稅（股票 0.3%、ETF 0.1%）；複委託手續費各家不同，以 0.25% 估
+const SELLCOST={tw:0.001425+0.003, etf:0.001425+0.001, us:0.0025};
+const fxNow=()=>(CROSS&&CROSS.fx)||(USD&&USD.stock_data['TWD=X']?.price)||null;
+const ntd=v=>v==null?'—':(v<0?'-':'')+'NT$'+Math.round(Math.abs(v)).toLocaleString();
+
+function resolveCode(raw){
+  const q=String(raw||'').trim().toUpperCase().replace(/^(US:|ETF:)/,'');
+  if(!q) return null;
+  if(D&&D.stock_data[q]) return {key:q,mkt:'tw'};
+  if(ETFD&&ETFD.etfs.some(e=>e.code===q)) return {key:'ETF:'+q,mkt:'etf'};
+  if(USD&&USD.stock_data[q]&&USD.stock_data[q].type!=='index') return {key:'US:'+q,mkt:'us'};
+  return null;
+}
+function holdInfo(h){
+  const fx=fxNow();
+  if(h.key.startsWith('US:')){ const d=USD&&USD.stock_data[h.key.slice(3)];
+    return d&&{name:d.name,code:h.key.slice(3),mkt:'us',price:d.price,cur:'USD',fx,
+      group:'美股・'+(d.sector||'其他'),chg:d.chg_1d,yieldNet:d.yield_net}; }
+  if(h.key.startsWith('ETF:')){ const e=ETFD&&ETFD.etfs.find(x=>x.code===h.key.slice(4));
+    return e&&{name:e.name,code:e.code,mkt:'etf',price:e.price,cur:'TWD',fx:1,
+      group:'ETF・'+e.cat,prem:e.prem,cat:e.cat}; }
+  const d=D&&D.stock_data[h.key];
+  return d&&{name:d.name,code:h.key,mkt:'tw',price:d.price,cur:'TWD',fx:1,chg:d.chg_1d,
+    group:'台股・'+String((D.stock_sectors[h.key]||['未分類'])[0]).replace(/^[^・]+・/,'')};
+}
+function benchRet(date){
+  const b=BENCH&&BENCH['0050']; if(!b||!date) return null;
+  const i=b.d.findIndex(x=>x>=date); if(i<0) return null;
+  return b.c[b.c.length-1]/b.c[i]-1;
+}
+
+function buildHold(){
+  const el=$('hold');
+  // 解析代號需要 ETF 與美股資料，第一次進來先載入
+  if(!ETFD||!BENCH){ Promise.all([etfReady(),benchReady()]).then(()=>{ if(curView==='hold') buildHold(); }); }
+  const rows=HOLD.map(h=>{const i=holdInfo(h); if(!i||!i.price||!i.fx) return {h,i:null};
+    const val=i.price*h.shares*i.fx, cost=h.cost*h.shares*i.fx;
+    const net=val*(1-SELLCOST[i.mkt]);
+    const br=benchRet(h.date);
+    return {h,i,val,cost,pnl:val-cost,netPnl:net-cost,ret:(val/cost-1)*100,
+      bench:br==null?null:cost*(1+br), benchRet:br==null?null:br*100};});
+  const ok=rows.filter(r=>r.i);
+  const tv=ok.reduce((a,r)=>a+r.val,0), tc=ok.reduce((a,r)=>a+r.cost,0);
+  const tn=ok.reduce((a,r)=>a+r.netPnl,0);
+  ok.forEach(r=>r.w=tv?r.val/tv:0);
+  const ws=ok.map(r=>r.w).sort((a,b)=>b-a);
+  const effN=ws.length?1/ws.reduce((a,w)=>a+w*w,0):0;
+  const grp={}; ok.forEach(r=>grp[r.i.group]=(grp[r.i.group]||0)+r.w);
+  const mk={台股:0,ETF:0,美股:0}; ok.forEach(r=>mk[{tw:'台股',etf:'ETF',us:'美股'}[r.i.mkt]]+=r.w);
+  const withB=ok.filter(r=>r.bench!=null), bv=withB.reduce((a,r)=>a+r.bench,0), av=withB.reduce((a,r)=>a+r.val,0);
+  // 風險提醒：只陳述事實與常識，不給買賣指示
+  const warn=[];
+  ok.forEach(r=>{
+    if(r.w>.3) warn.push(`${r.i.name} 占總資產 ${(r.w*100).toFixed(0)}%，單一持股過重，這檔大跌時整體會跟著重傷。`);
+    if(r.i.cat==='槓桿'||r.i.cat==='反向') warn.push(`${r.i.name} 是${r.i.cat}型 ETF，每日重設倍數，長期持有會因波動耗損，報酬可能和指數差很多。`);
+    if(r.i.prem!=null&&r.i.prem>1) warn.push(`${r.i.name} 目前溢價 ${r.i.prem.toFixed(2)}%，市價比淨值貴，加碼等於多付錢。`);
+  });
+  if(ok.length>=2&&effN<3) warn.push(`有效持股數只有 ${effN.toFixed(1)} 檔，分散程度低。`);
+  const unk=rows.filter(r=>!r.i);
+
+  el.innerHTML=`
+    <div class="card"><h3>持股健檢</h3>
+      <p class="note" style="font-size:12.5px;margin-bottom:12px">資料只存在這台裝置的瀏覽器，不會上傳。成本請填「含手續費的平均成本」（每股，原幣別）。</p>
+      <div class="hform">
+        <input id="h-code" placeholder="代號 例 2330、0050、AAPL" autocomplete="off">
+        <input id="h-sh" type="number" min="0" step="any" placeholder="股數">
+        <input id="h-cost" type="number" min="0" step="any" placeholder="平均成本">
+        <input id="h-date" type="date" title="買進日期（選填，用來跟 0050 比較）">
+        <button class="btn pri" id="h-add">加入</button></div>
+      <div class="rsub" id="h-msg" style="margin-top:6px"></div></div>
+    ${ok.length?`
+    <div class="card"><h3>總覽・${ok.length} 檔</h3>
+      <div class="ov5">
+        <div><div class="l">目前市值</div><div class="n">${ntd(tv)}</div><div class="s">美股以匯率 ${fxNow()?.toFixed(2)??'—'} 換算</div></div>
+        <div><div class="l">投入成本</div><div class="n">${ntd(tc)}</div></div>
+        <div><div class="l">未實現損益</div><div class="n" style="color:${col(tv-tc)}">${ntd(tv-tc)}</div><div class="s">${pct(tc?(tv/tc-1)*100:null)}</div></div>
+        <div><div class="l">現在全賣實拿損益</div><div class="n" style="color:${col(tn)}">${ntd(tn)}</div><div class="s">已扣手續費與證交稅</div></div>
+        <div><div class="l">有效持股數</div><div class="n">${effN.toFixed(1)}</div><div class="s">最大一檔 ${(ws[0]*100).toFixed(0)}%</div></div>
+        <div><div class="l">大盤跌 20% 時</div><div class="n" style="color:var(--down)">${ntd(-tv*.2)}</div><div class="s">粗估，假設與大盤同步</div></div>
+      </div>
+      ${withB.length?`<div class="rsub" style="margin-top:14px">同樣的錢當初都買 0050（${withB.length} 檔有填買進日期）</div>
+        <div class="ov5" style="margin-top:6px">
+          <div><div class="l">如果都買 0050</div><div class="n">${ntd(bv)}</div></div>
+          <div><div class="l">你的實際市值</div><div class="n">${ntd(av)}</div></div>
+          <div><div class="l">你${av>=bv?'贏':'輸'} 0050</div><div class="n" style="color:${col(av-bv)}">${ntd(Math.abs(av-bv))}</div></div></div>
+        <div class="note">0050 以收盤價計、未含配息，實際 0050 報酬會再高一些；美股成本以今日匯率換算，比較為近似值。</div>`:''}
+    </div>
+    ${warn.length?`<div class="card" style="border-color:color-mix(in srgb,var(--gold) 45%,var(--line))"><h3>需要注意</h3>
+      ${warn.map(w=>`<div class="krow"><span>⚠ ${esc(w)}</span></div>`).join('')}</div>`:''}
+    <div class="card"><h3>配置</h3>
+      ${Object.entries(mk).filter(([,w])=>w>0).map(([k,w])=>bar(k,w)).join('')}
+      <div class="rsub" style="margin:12px 0 6px">產業／類別</div>
+      ${Object.entries(grp).sort((a,b)=>b[1]-a[1]).map(([k,w])=>bar(k,w)).join('')}</div>`:''}
+    ${rows.length?`<div class="card"><h3>持股明細</h3>${rows.map(r=>r.i?`
+      <div class="ritem" data-code="${r.h.key}" style="grid-template-columns:minmax(0,1fr) auto auto">
+        <div><div class="rname">${esc(r.i.name)} <span style="color:var(--s8);font-weight:400">${esc(r.i.code)}</span></div>
+          <div class="rsub" style="white-space:normal">${r.h.shares.toLocaleString()} 股　成本 ${r.h.cost}　現價 ${r.i.price}${r.i.cur==='USD'?' 美元':''}　占 ${(r.w*100).toFixed(1)}%
+            ${r.benchRet!=null?`　同期 0050 ${pct(r.benchRet)}`:''}</div></div>
+        <div class="rval">${pill(r.ret)}<small style="color:${col(r.pnl)}">${ntd(r.pnl)}</small></div>
+        <button class="icon" data-del="${r.h.id}" title="刪除">✕</button></div>`
+      :`<div class="ritem" style="grid-template-columns:minmax(0,1fr) auto"><div><div class="rname">${esc(r.h.key)}</div>
+        <div class="rsub">找不到這檔的最新價格（可能資料還在載入，或不在本站涵蓋範圍）</div></div>
+        <button class="icon" data-del="${r.h.id}">✕</button></div>`).join('')}
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <button class="btn" id="h-exp">匯出備份</button>
+        <label class="btn" style="cursor:pointer">匯入備份<input id="h-imp" type="file" accept="application/json" hidden></label>
+        <button class="btn" id="h-clear">全部清除</button></div></div>`
+    :`<div class="empty">還沒有持股。輸入代號、股數與平均成本後按「加入」。<br>台股、ETF、美股都可以，美股會自動用匯率換算成台幣。</div>`}
+    <div class="card note">損益與實拿金額為依最新收盤價的估算；賣出成本以台股手續費 0.1425% ＋ 證交稅（股票 0.3%、ETF 0.1%）、複委託 0.25% 估算，實際依券商費率。
+      本頁只計算你自己輸入的資料，不構成投資建議。</div>`;
+  function bar(k,w){ return `<div class="hbar"><span>${esc(k)}</span><div><i style="width:${(w*100).toFixed(1)}%"></i></div><b>${(w*100).toFixed(1)}%</b></div>`; }
+
+  const msg=t=>{ $('h-msg').textContent=t; };
+  $('h-add').onclick=()=>{
+    const r=resolveCode($('h-code').value), sh=+$('h-sh').value, cost=+$('h-cost').value, date=$('h-date').value||null;
+    if(!r) return msg('找不到這個代號。台股、ETF、美股（本站涵蓋的約 140 檔）都可以。');
+    if(!(sh>0)||!(cost>0)) return msg('請填股數與平均成本（都要大於 0）。');
+    HOLD.push({id:Date.now().toString(36),key:r.key,shares:sh,cost,date}); saveHold(); buildHold();
+  };
+  el.onclick=e=>{
+    const d=e.target.closest('[data-del]');
+    if(d){ HOLD=HOLD.filter(h=>h.id!==d.dataset.del); saveHold(); buildHold(); return; }
+    const c=e.target.closest('.ritem[data-code]'); if(c&&!e.target.closest('button')) openStock(c.dataset.code);
+  };
+  const exp=$('h-exp'); if(exp) exp.onclick=()=>{
+    const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(HOLD,null,1)],{type:'application/json'}));
+    a.download='twflow-持股備份.json'; a.click(); };
+  const imp=$('h-imp'); if(imp) imp.onchange=async()=>{
+    try{ const j=JSON.parse(await imp.files[0].text());
+      if(!Array.isArray(j)||!j.every(h=>h&&h.key&&h.shares>0&&h.cost>0)) throw 0;
+      HOLD=j; saveHold(); buildHold(); toast('已匯入 '+j.length+' 筆持股');
+    }catch(_){ toast('檔案格式不對，請用本站匯出的備份檔'); } };
+  const clr=$('h-clear'); if(clr) clr.onclick=()=>{ if(confirm('確定清除全部持股？')){ HOLD=[]; saveHold(); buildHold(); } };
+}
+
 /* ══ 面板開關 ══════════════════════════════════════════════════ */
 function show(id){
   document.querySelectorAll('.side').forEach(s=>s.classList.toggle('on',s.id===id));
@@ -1658,12 +1814,12 @@ addEventListener('keydown',e=>{
 });
 
 /* ══ 視圖切換 ══════════════════════════════════════════════════ */
-// 「台美」與「自選」兩個市場共用，其餘各市場自己一套
+// 「台美」「持股」「自選」兩個市場共用，其餘各市場自己一套
 const TABS={
   tw:[['today','★','今日'],['chart','◎','泡泡圖'],['etf','◈','ETF'],['swing','↗','波段'],
-      ['rank','☰','排行榜'],['chain','⇄','供應鏈'],['link','⇆','台美'],['watch','☆','自選']],
+      ['hold','◉','持股'],['rank','☰','排行榜'],['chain','⇄','供應鏈'],['link','⇆','台美'],['watch','☆','自選']],
   us:[['us-today','☀','晨報'],['us-sector','▦','板塊'],['us-rank','☰','排行'],
-      ['link','⇆','台美'],['watch','☆','自選']],
+      ['link','⇆','台美'],['hold','◉','持股'],['watch','☆','自選']],
 };
 let curView='today';
 function setView(v){
@@ -1679,6 +1835,7 @@ function setView(v){
   if(v==='link') buildLink();
   if(v==='etf') buildETF();
   if(v==='swing') buildSwing();
+  if(v==='hold') buildHold();
   // 手機導航：目前頁在「更多」裡時，讓「更多」亮起來
   const nb=$('nav').querySelector('[data-more]'); if(nb) nb.classList.toggle('on',!$('nav').querySelector(`[data-v="${v}"]`));
   $('more').classList.remove('on');
