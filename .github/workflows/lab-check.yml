@@ -41,9 +41,13 @@ jobs:
       - name: 持有期勝率
         run: python -X utf8 swing/scripts/holding_odds.py
 
+      - name: 短線證據檢驗
+        run: python -X utf8 swing/scripts/evidence.py
+
       - uses: actions/upload-artifact@v4
         with:
           name: lab-output
           path: |
             twflow/web/data/etf.json
             twflow/web/data/swing.json
+            twflow/web/data/evidence.json
