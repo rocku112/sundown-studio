@@ -25,6 +25,9 @@ jobs:
           cache: pip
       - run: pip install -r twflow/requirements.txt
 
+      - name: 月營收（公開資訊觀測站）
+        run: python -X utf8 swing/scripts/fetch_revenue.py
+
       - name: ETF 折溢價
         working-directory: twflow
         run: python -X utf8 scripts/fetch_etf.py
