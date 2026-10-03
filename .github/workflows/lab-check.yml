@@ -34,6 +34,9 @@ jobs:
       - name: 波段：回測
         run: python -X utf8 swing/scripts/backtest_swing.py
 
+      - name: 持股健檢比較基準
+        run: python -X utf8 swing/scripts/build_bench.py
+
       - uses: actions/upload-artifact@v4
         with:
           name: lab-output

@@ -54,7 +54,8 @@ jobs:
           # ETF 折溢價（證交所 17:00 後的收盤估值快照）
           python -X utf8 scripts/fetch_etf.py || echo "::warning::ETF 折溢價抓取失敗"
           # 波段實驗室：五年日線回測（約 3 分鐘）
-          ( cd .. && python -X utf8 swing/scripts/fetch_hist.py && python -X utf8 swing/scripts/backtest_swing.py ) \
+          ( cd .. && python -X utf8 swing/scripts/fetch_hist.py && python -X utf8 swing/scripts/backtest_swing.py \
+              && python -X utf8 swing/scripts/build_bench.py ) \
             || echo "::warning::波段回測失敗"
           python -X utf8 scripts/snapshot.py
 
