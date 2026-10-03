@@ -7,6 +7,7 @@ on:
     paths:
       - "twflow/scripts/fetch_etf.py"
       - "swing/**"
+      - "twflow/web/index.html"
       - ".github/workflows/lab-check.yml"
   workflow_dispatch:
 
@@ -36,6 +37,9 @@ jobs:
 
       - name: 持股健檢比較基準
         run: python -X utf8 swing/scripts/build_bench.py
+
+      - name: 持有期勝率
+        run: python -X utf8 swing/scripts/holding_odds.py
 
       - uses: actions/upload-artifact@v4
         with:

@@ -1605,14 +1605,39 @@ function portCard(s,f){
     <div class="chips">${s.today.map(t=>`<button class="chip" data-code="${t.kind==='etf'?'ETF:':''}${t.code}">${esc(t.name)} <small style="color:var(--s8)">${t.code}</small></button>`).join('')||'<span class="rsub">—</span>'}</div>
   </div>`;
 }
+// 「勝率」的真相：持有越久，賺錢機率越高；短線策略勝率高不代表賺錢
+let ODDS=null, oddsSel='0050';
+const oddsReady=()=>ODDS?Promise.resolve(ODDS)
+  :fetch('data/odds.json').then(r=>r.json()).then(j=>(ODDS=j)).catch(()=>null);
+function oddsCard(){
+  if(!ODDS) return '';
+  const e=ODDS.etfs.find(x=>x.code===oddsSel)||ODDS.etfs[0]; if(!e) return '';
+  const f=x=>x==null?'—':(x>=0?'+':'')+x.toFixed(1)+'%';
+  const tr=SW?SW.strategies.filter(s=>s.kind!=='portfolio'):[];
+  const d=e.dca;
+  return `<div class="card dg"><h3>想要高勝率？先看持有時間</h3>
+    <p style="font-size:13px;color:var(--s9);line-height:1.8">把 ${esc(e.name)} 從 ${e.since.slice(0,4)} 年到今天的<b style="color:var(--s10)">每一個交易日都當成一次進場</b>，
+      持有固定時間後是賺是賠${e.adjusted?'（含配息）':''}：</p>
+    <div class="rtabs" style="margin-top:8px">${ODDS.etfs.map(x=>`<button data-odds="${x.code}" class="${x.code===e.code?'on':''}">${esc(x.name)}</button>`).join('')}</div>
+    <table class="st"><tr><th>持有</th><th>賺錢機率</th><th>中位數</th><th>最差 5%</th><th>最差</th></tr>
+      ${e.horizons.map(h=>`<tr><td>${h.label}</td><td><b style="color:${h.win>=80?'var(--up)':h.win>=60?'var(--gold)':'var(--s9)'}">${h.win}%</b></td>
+        <td style="color:${col(h.med)}">${f(h.med)}</td><td style="color:${col(h.p5)}">${f(h.p5)}</td><td style="color:${col(h.worst)}">${f(h.worst)}</td></tr>`).join('')}</table>
+    ${d?`<div class="krow" style="margin-top:10px"><span>每月定期定額、扣滿 ${d.min_months/12} 年以上（${d.starts} 個起始月）</span>
+      <b>賺錢機率 <span style="color:var(--up)">${d.win}%</span>　中位 ${f(d.med)}　最差 ${f(d.worst)}（${d.worst_start} 起扣）</b></div>`:''}
+    ${tr.length?`<div class="rsub" style="margin:14px 0 6px">對照：短線策略的勝率（樣本外）</div>
+      ${tr.map(s=>`<div class="krow"><span>${esc(s.name)}</span><b>勝率 ${s.oos.win??'—'}%　每筆平均 <span style="color:${col(s.oos.avg)}">${f(s.oos.avg)}</span>　組合年化 <span style="color:${col(s.portfolio.cagr)}">${f(s.portfolio.cagr)}</span></b></div>`).join('')}`:''}
+    <p class="note" style="margin-top:10px;font-size:12.5px">讀法：短線（一週、一個月）的賺錢機率接近擲硬幣；持有時間拉長，勝率才明顯上升，但短期最差情況可能虧損三到五成，抱不住就拿不到長期勝率。
+      勝率高也不等於賺錢——要同時看「贏的時候賺多少、輸的時候賠多少」。歷史不代表未來，台股過去二十年整體向上，停滯的市場不會有同樣結果。</p></div>`;
+}
 function buildSwing(){
   const el=$('swing');
+  if(!ODDS){ oddsReady().then(o=>{ if(o&&curView==='swing') buildSwing(); }); }
   if(!SW){ el.innerHTML='<div class="empty">載入中…</div>';
     swReady().then(d=>{ if(d) buildSwing(); else el.innerHTML='<div class="empty">波段回測資料尚未產生。每個交易日盤後更新。</div>'; }); return; }
   const ok=SW.strategies.filter(s=>s.verdict).length, b=SW.bench||{};
   const f=x=>x==null?'—':(x>=0?'+':'')+x.toFixed(2)+'%';
   const row=(lab,a,b_)=>`<tr><td>${lab}</td><td>${a}</td><td>${b_}</td></tr>`;
-  el.innerHTML=`
+  el.innerHTML=`${oddsCard()}
     <div class="card"><h3>波段實驗室・${SW.period[0]} ～ ${SW.period[1]}</h3>
       <div class="big" style="font-size:20px">${ok?`${SW.strategies.length} 個策略中 ${ok} 個在樣本外通過檢驗`:`${SW.strategies.length} 個策略扣掉成本後，都沒有穩定贏過基準`}</div>
       ${SW.strategies.length>3?`<p class="note" style="margin-top:6px;font-size:12px">同時測的策略越多，靠運氣「看起來有效」的機會越大；${SW.strategies.length} 個策略裡出現 1 個 t≈2 的結果，本身就可能只是巧合。</p>`:''}
@@ -1651,7 +1676,8 @@ function buildSwing(){
         這也是為什麼這一頁只做一件事：把常見策略放到真實資料上，誠實告訴你它們過去扣掉成本後還剩多少。
         長期而言，低成本的市值型 ETF 定期定額，是多數人最難被打敗的對照組。</p>
       <div class="note" style="margin-top:8px">回測不代表未來報酬。本頁僅為歷史資料的統計呈現，非證券投資顧問事業，不構成任何投資建議；投資人應自行判斷並自負盈虧。</div></div>`;
-  el.onclick=e=>{const c=e.target.closest('[data-code]'); if(c) openStock(c.dataset.code);};
+  el.onclick=e=>{const o=e.target.closest('[data-odds]'); if(o){oddsSel=o.dataset.odds;buildSwing();return;}
+    const c=e.target.closest('[data-code]'); if(c) openStock(c.dataset.code);};
 }
 
 /* ══ 持股健檢 ════════════════════════════════════════════════════
