@@ -18,6 +18,7 @@
 
 import json
 import math
+import warnings
 import os
 import time
 from datetime import date, datetime, timedelta, timezone
@@ -85,6 +86,7 @@ def calendar_tests(rows):
     adj = np.array([r[3] for r in rows])
     o = np.array([r[1] for r in rows])
     c = np.array([r[2] for r in rows])
+    o = np.where(o > 0, o, np.nan)          # Yahoo 早年部分日子開盤價缺漏記為 0
     ret = np.full(len(rows), np.nan)
     ret[1:] = adj[1:] / adj[:-1] - 1
     split = d[len(d) // 2]
@@ -210,7 +212,9 @@ def stock_tests(src):
     # 7 爆量長紅：量 > 20 日均量 3 倍且當日漲 > 5%，之後 5 日相對池內平均
     ev_d, ev_v = [], []
     for t in range(21, len(dates) - 6):
-        v20 = np.nanmean(V[:, t - 20:t], axis=1)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            v20 = np.nanmean(V[:, t - 20:t], axis=1)
         r1 = C[:, t] / C[:, t - 1] - 1
         fwd = C[:, t + 6] / C[:, t + 1] - 1         # 隔天收盤進場，避免用到當天收盤才知道的訊號
         pool = E[:, t] & np.isfinite(fwd)
