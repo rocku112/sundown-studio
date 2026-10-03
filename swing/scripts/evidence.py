@@ -1,19 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-短線證據檢驗：事先登記的 8 個假說，看它們在台股是否真的存在、扣成本後還剩多少。
+短線證據檢驗：常見的短線指標、量價型態、排序選股、月營收與日曆效應，
+放到真實資料上看它們是否存在、扣成本後還剩多少。
 
 規則（在看結果之前就固定，不准事後修改條件）：
-  · 每個假說只檢驗一種寫法，不掃參數
-  · 前半段（樣本內）與後半段（樣本外）分開算；「成立」要兩段同方向且樣本外顯著
-  · 同時檢驗 8 個假說，用 Holm 校正多重比較：最小的 p 值要 < 0.05/8 才算數
-  · 可交易性：扣掉一次來回成本（股票約 0.585%、ETF 約 0.385%）後是否還為正
+  · 每個說法只檢驗一種寫法，參數用看盤軟體預設值，不掃參數
+  · 前半段（樣本內）與後半段（樣本外）分開算；「成立」要兩段都為正且樣本外顯著
+  · 同時檢驗約 30 個說法，用 Holm 校正多重比較（最小的 p 值要 < 0.05/30 才算數）
+  · 個股事件以「月」彙總後做 t 檢定：同一個月的訊號受同一段行情影響，不能當獨立樣本
+  · 個股一律在訊號日收盤後才知道，隔天開盤進場、持有 h 天後收盤出場，每筆扣一次來回成本
+  · 可交易性：樣本外相對股票池的超額報酬，要大於一次來回成本（股票約 0.69%：手續費 0.1425%×2＋證交稅 0.3%＋滑價 0.1%）
 
 資料：
   · 個股：swing/.cache/ohlcv.json（流動性前 400 檔五年日線，時點正確的前 150 名股票池）
+  · 月營收：swing/data/revenue.json（公開資訊觀測站；一律假設次月 10 日後才知道）
   · 大盤：0050 自上市以來日線（Yahoo，含開盤價），用於日曆效應與大盤事件
 
-輸出：twflow/web/data/evidence.json
+輸出：twflow/web/data/evidence.json（各說法統計）、evidence_stocks.json（個股自己的歷史與今日觸發）
 """
 
 import json
@@ -26,10 +30,14 @@ from datetime import date, datetime, timedelta, timezone
 import numpy as np
 import requests
 
+import indicators as I
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 REPO = os.path.dirname(ROOT)
 SRC = os.path.join(ROOT, ".cache", "ohlcv.json")
+REV = os.path.join(ROOT, "data", "revenue.json")
+OUT_STOCKS = os.path.join(REPO, "twflow", "web", "data", "evidence_stocks.json")
 OUT = os.path.join(REPO, "twflow", "web", "data", "evidence.json")
 UA = {"User-Agent": "Mozilla/5.0 (compatible; twflow-research/0.1)"}
 COST_STOCK = 0.001425 * 2 + 0.003 + 0.001       # 來回：手續費×2＋證交稅＋滑價
@@ -170,66 +178,232 @@ def tradeable(s, cost):
     return None if m is None else bool(m / 100 > cost)
 
 
-def stock_tests(src):
-    """個股層級：時點正確股票池內的短期反轉／動能、爆量長紅。"""
-    from backtest_swing import eligibility
-    dates = sorted({r[0] for s in src.values() for r in s["rows"]})
-    eligible = eligibility(src, dates)
-    idx = {x: i for i, x in enumerate(dates)}
-    codes = [c for c in src if src[c]["kind"] == "stock"]
-    C = np.full((len(codes), len(dates)), np.nan)
-    V = np.full_like(C, np.nan)
-    for k, c in enumerate(codes):
-        for r in src[c]["rows"]:
-            C[k, idx[r[0]]], V[k, idx[r[0]]] = r[4], r[5]
-    E = np.array([[x in eligible[c] for x in dates] for c in codes])
-    split = dates[len(dates) // 2]
+class Lab:
+    """個股檢驗共用：時點正確股票池、進出場（訊號日 t 收盤後才知道 → t+1 開盤進、t+h 收盤出）、
+    相對同日股票池平均的超額報酬、以「月」彙總後做 t 檢定（同月多筆事件高度相關，不能當獨立樣本）。"""
+
+    def __init__(self, src):
+        from backtest_swing import eligibility
+        self.src = src
+        self.dates = sorted({r[0] for s in src.values() for r in s["rows"]})
+        T = len(self.dates)
+        idx = {x: i for i, x in enumerate(self.dates)}
+        self.codes = [c for c in src if src[c]["kind"] == "stock"]
+        N = len(self.codes)
+        self.O, self.H, self.L, self.C, self.V = (np.full((N, T), np.nan) for _ in range(5))
+        for k, c in enumerate(self.codes):
+            for r in src[c]["rows"]:
+                t = idx[r[0]]
+                self.O[k, t], self.H[k, t], self.L[k, t], self.C[k, t], self.V[k, t] = r[1:6]
+        el = eligibility(src, self.dates)
+        self.E = np.array([[x in el[c] for x in self.dates] for c in self.codes])
+        self.split = self.dates[T // 2]
+        self.R, self.mu = {}, {}
+        for h in (5, 20):
+            R = np.full((N, T), np.nan)
+            R[:, :T - h] = self.C[:, h:] / self.O[:, 1:T - h + 1] - 1
+            R[:, :T - h] -= COST_STOCK          # 每筆都扣一次來回成本
+            self.R[h] = R
+            m = np.where(self.E & np.isfinite(R), R, np.nan)
+            self.mu[h] = I.quiet_nanmean(m, axis=0)
+        self.hist = {}          # 個股自己的歷史：{code: {key: [次數, 平均淨報酬%, 勝率%]}}
+        self.today = {}         # 最新交易日觸發：{code: [key, ...]}
+
+    def _name(self, k):
+        return self.src[self.codes[k]]["name"]
+
+    def event(self, cat, key, name, claim, M, h=5, sign=1, note="", today_t=None):
+        """事件型：條件成立的那天收盤後得知。sign=-1 表示說法是「之後表現較差」。"""
+        T = len(self.dates)
+        tt = T - 1 if today_t is None else today_t
+        last = self.E[:, tt] & np.nan_to_num(M[:, tt]).astype(bool)
+        today = [{"code": self.codes[k], "name": self._name(k)} for k in np.where(last)[0]][:40]
+        for t_ in today:
+            self.today.setdefault(t_["code"], []).append(key)
+        M = M & self.E & np.isfinite(self.R[h])
+        ks, ts = np.where(M)
+        raw = self.R[h][ks, ts]
+        ex = (raw - self.mu[h][ts]) * sign
+        by_m = {}
+        for t, e in zip(ts, ex):
+            by_m.setdefault(self.dates[t][:7], []).append(e)
+        md = [m + "-15" for m in sorted(by_m)]
+        s = split_stats(md, [float(np.mean(by_m[m[:7]])) for m in md], self.split)
+        oos = np.array([self.dates[t] >= self.split for t in ts], bool)
+        s["events"] = {"is": int((~oos).sum()), "oos": int(oos.sum())}
+        s["win"] = round(float((raw[oos] > 0).mean() * 100), 1) if oos.any() else None
+        s["raw"] = round(float(raw[oos].mean() * 100), 3) if oos.any() else None
+        for k in set(ks.tolist()):
+            sel = ks == k
+            r = raw[sel]
+            self.hist.setdefault(self.codes[k], {})[key] = [int(sel.sum()), round(float(r.mean() * 100), 2),
+                                                            round(float((r > 0).mean() * 100))]
+        return {"cat": cat, "key": key, "name": name, "claim": claim, "hold": h, "sign": sign,
+                "unit": f"每次事件・持有 {h} 天相對股票池超額（以月彙總）", **s,
+                "tradeable": tradeable(s, COST_STOCK), "note": note, "today": today,
+                "today_date": self.dates[tt]}
+
+    def rank(self, cat, key, name, claim, score, h, times, pick="top", sign=1, note=""):
+        """排序型：在 times 這些日子收盤後，挑分數最高（或最低）的 TOPN 檔，持有 h 天，與股票池平均比。"""
+        vd, vv, raws, wins, last = [], [], [], [], None
+        for t in times:
+            ok = self.E[:, t] & np.isfinite(score[:, t])
+            if ok.sum() < 60:
+                continue
+            ix = np.where(ok)[0]
+            order = ix[np.argsort(score[ix, t])]
+            grp = order[-TOPN:] if pick == "top" else order[:TOPN]
+            last = (t, grp)
+            fin = np.isfinite(self.R[h][:, t])
+            g = grp[fin[grp]]
+            if len(g) < TOPN // 2 or (ok & fin).sum() < 60:
+                continue
+            gr = self.R[h][g, t].mean()
+            v = (gr - self.R[h][ok & fin, t].mean()) * sign
+            vd.append(self.dates[t]); vv.append(v)
+            if self.dates[t] >= self.split:
+                raws.append(gr); wins.append(v > 0)
+        s = split_stats(vd, vv, self.split)
+        s["events"] = {"is": sum(d < self.split for d in vd), "oos": sum(d >= self.split for d in vd)}
+        s["win"] = round(float(np.mean(wins) * 100), 1) if wins else None
+        s["raw"] = round(float(np.mean(raws) * 100), 3) if raws else None
+        today = []
+        if last:
+            t, grp = last
+            today = [{"code": self.codes[k], "name": self._name(k)} for k in grp[::-1 if pick == "top" else 1]]
+            for x in today:
+                self.today.setdefault(x["code"], []).append(key)
+        return {"cat": cat, "key": key, "name": name, "claim": claim, "hold": h, "sign": sign,
+                "unit": f"每期（{TOPN} 檔等權・持有 {h} 天）相對股票池超額", **s,
+                "tradeable": tradeable(s, COST_STOCK), "note": note, "today": today,
+                "today_date": self.dates[last[0]] if last else None}
+
+
+def stock_tests(lab, revenue):
+    O, H, L, C, V = lab.O, lab.H, lab.L, lab.C, lab.V
+    T = len(lab.dates)
+    pv = I.prev
+    r1 = C / pv(C) - 1
+    ma5, ma20, ma60 = I.sma(C, 5), I.sma(C, 20), I.sma(C, 60)
+    vma20 = pv(I.sma(V, 20))                    # 不含當天的 20 日均量
+    rs = I.rsi(C)
+    K, D = I.kd(H, L, C)
+    dif, sig = I.macd(C)
+    mid, sd = ma20, I.rstd(C, 20)
+    hi250 = pv(I.rmax(C, 250))
     out = []
+    with np.errstate(invalid="ignore", divide="ignore"):
+        T_ = "技術指標"
+        out.append(lab.event(T_, "rsi_os", "RSI 超賣", "RSI(14) 跌破 30 之後 5 天反彈、表現優於股票池",
+                             I.cross_up(-rs, -30)))
+        out.append(lab.event(T_, "rsi_ob", "RSI 強勢", "RSI(14) 突破 70 之後 5 天續強",
+                             I.cross_up(rs, 70)))
+        out.append(lab.event(T_, "kd_gold", "KD 低檔黃金交叉", "K 值在 20 以下時 K 向上穿過 D，之後 5 天上漲",
+                             I.cross_up(K, D) & (pv(K) < 20)))
+        out.append(lab.event(T_, "macd_gold", "MACD 零軸下黃金交叉", "DIF 在 0 以下向上穿過訊號線，之後 5 天上漲",
+                             I.cross_up(dif, sig) & (dif < 0)))
+        out.append(lab.event(T_, "boll_low", "跌破布林下軌", "收盤跌破布林通道下軌（20 日 −2 倍標準差）後 5 天反彈",
+                             I.cross_up(mid - 2 * sd, C)))
+        out.append(lab.event(T_, "boll_up", "突破布林上軌", "收盤突破布林通道上軌後 5 天續強",
+                             I.cross_up(C, mid + 2 * sd)))
+        A = (C > ma5) & (ma5 > ma20) & (ma20 > ma60)
+        out.append(lab.event(T_, "ma_bull", "均線多頭排列成形", "收盤＞5 日＞20 日＞60 日均線剛成立，之後 5 天續漲",
+                             A & ~(pv(A.astype(float)) > 0)))
+        nh = C > hi250
+        recent = I.rmax(pv(nh.astype(float)), 20) > 0
+        out.append(lab.event(T_, "high52", "創 52 週新高", "收盤創近 250 日新高（前 20 日沒創過），之後 5 天續強",
+                             nh & ~recent))
 
-    # 1、2 每週（每 5 個交易日）依前 5 日報酬排序，看接下來 5 日相對池內平均
-    rev_d, rev_v, mom_v = [], [], []
-    for t in range(25, len(dates) - 5, 5):
-        past = C[:, t] / C[:, t - 5] - 1
-        fwd = C[:, t + 5] / C[:, t] - 1
-        ok = E[:, t] & np.isfinite(past) & np.isfinite(fwd)
-        ix = np.where(ok)[0]
-        if len(ix) < 60:
-            continue
-        mu = fwd[ix].mean()
-        order = ix[np.argsort(past[ix])]
-        rev_d.append(dates[t])
-        rev_v.append(fwd[order[:TOPN]].mean() - mu)
-        mom_v.append(fwd[order[-TOPN:]].mean() - mu)
-    s = split_stats(rev_d, rev_v, split)
-    out.append({"key": "reversal", "name": "短期反轉（週）", "claim": "上週跌最多的 20 檔，下週表現比股票池平均好",
-                "unit": "每週（相對池內平均）", **s, "tradeable": tradeable(s, COST_STOCK),
-                "note": "每週換股一次，每次來回成本約 0.59%"})
-    s = split_stats(rev_d, mom_v, split)
-    out.append({"key": "weekmom", "name": "短期動能（週）", "claim": "上週漲最多的 20 檔，下週表現比股票池平均好",
-                "unit": "每週（相對池內平均）", **s, "tradeable": tradeable(s, COST_STOCK),
-                "note": "每週換股一次，每次來回成本約 0.59%"})
+        Q = "量價型態"
+        out.append(lab.event(Q, "volspike", "爆量長紅", "成交量超過 20 日均量 3 倍、當天漲超過 5%，之後 5 天續強",
+                             (V > 3 * vma20) & (r1 > 0.05)))
+        pb = (ma20 > ma60) & (C > ma60) & (L <= ma20) & (C >= ma20) & (V < 0.7 * vma20)
+        out.append(lab.event(Q, "pullback", "多頭量縮回測月線", "上升趨勢中（月線＞季線）量縮回測 20 日線不破，之後 5 天上漲",
+                             pb & ~(pv(pb.astype(float)) > 0)))
+        out.append(lab.event(Q, "gap_up", "跳空上漲收紅", "開盤高於前一天最高價 2% 以上且收紅，之後 5 天續強",
+                             (O > pv(H) * 1.02) & (C > O)))
+        out.append(lab.event(Q, "limit_up", "漲停", "當天漲幅 ≥ 9.5%（接近漲停），之後 5 天續強",
+                             r1 >= 0.095, note="漲停隔天常開高，實際能否以開盤價買到是問題；結果偏樂觀"))
+        out.append(lab.event(Q, "limit_down", "跌停後反彈", "當天跌幅 ≥ 9.5%（接近跌停），之後 5 天反彈",
+                             r1 <= -0.095))
+        dry = (V < 0.4 * vma20) & (C > ma60)
+        out.append(lab.event(Q, "vol_dry", "量窒息", "多頭格局（收盤在季線上）成交量萎縮到 20 日均量 4 成以下，之後 5 天上漲",
+                             dry & ~(pv(dry.astype(float)) > 0)))
 
-    # 7 爆量長紅：量 > 20 日均量 3 倍且當日漲 > 5%，之後 5 日相對池內平均
-    ev_d, ev_v = [], []
-    for t in range(21, len(dates) - 6):
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", RuntimeWarning)
-            v20 = np.nanmean(V[:, t - 20:t], axis=1)
-        r1 = C[:, t] / C[:, t - 1] - 1
-        fwd = C[:, t + 6] / C[:, t + 1] - 1         # 隔天收盤進場，避免用到當天收盤才知道的訊號
-        pool = E[:, t] & np.isfinite(fwd)
-        if pool.sum() < 60:
+        X = "排序（每週／每月換股）"
+        wk = list(range(60, T - 1, 5))
+        mo = [t for t in range(60, T - 1) if lab.dates[t][:7] != lab.dates[t + 1][:7]]   # 每月最後交易日
+        p5 = C / pv(C, 5) - 1
+        out.append(lab.rank(X, "reversal", "短期反轉（週）", "上週跌最多的 20 檔，下週表現比股票池好",
+                            p5, 5, wk, pick="bottom"))
+        out.append(lab.rank(X, "weekmom", "短期動能（週）", "上週漲最多的 20 檔，下週表現比股票池好",
+                            p5, 5, wk))
+        out.append(lab.rank(X, "mrev", "月反轉", "上個月跌最多的 20 檔，下個月表現比股票池好",
+                            C / pv(C, 20) - 1, 20, mo, pick="bottom"))
+        out.append(lab.rank(X, "mom6", "中期動能（半年）", "過去半年（跳過最近一週）漲最多的 20 檔，下個月表現比股票池好",
+                            pv(C, 5) / pv(C, 125) - 1, 20, mo))
+        out.append(lab.rank(X, "lowvol", "低波動", "過去 60 日波動最小的 20 檔，下個月表現比股票池好",
+                            I.rstd(r1, 60), 20, mo, pick="bottom"))
+        out.append(lab.rank(X, "maxret", "樂透股較差", "上個月單日最大漲幅最高的 20 檔，下個月表現比股票池差",
+                            I.rmax(r1, 20), 20, mo, sign=-1, note="這是「避開」型說法：成立代表這群股票應該少碰"))
+        out.append(lab.rank(X, "near_high", "接近 52 週高點", "股價最接近近一年高點的 20 檔，下個月表現比股票池好",
+                            C / I.rmax(C, 250), 20, mo))
+        out += revenue_tests(lab, revenue)
+    return out
+
+
+def revenue_tests(lab, revenue):
+    """月營收：一律在次月 10 日之後的第一個交易日才「知道」，隔天開盤進場、持有 20 天。"""
+    if not revenue:
+        return []
+    G = "月營收"
+    months = sorted(revenue)
+    T = len(lab.dates)
+    N = len(lab.codes)
+    kpos = {c: k for k, c in enumerate(lab.codes)}
+    yoy = {m: {} for m in months}
+    for m in months:
+        for c, (cur, ly) in revenue[m].items():
+            if c in kpos and ly and ly > 0 and cur is not None:
+                yoy[m][c] = cur / ly - 1
+    S = np.full((N, T), np.nan)        # 營收年增率（公布日）
+    HI = np.zeros((N, T), bool)        # 創 12 個月新高且年增為正
+    TURN = np.zeros((N, T), bool)      # 年增率連 3 個月負轉正
+    GROW = np.zeros((N, T), bool)      # 連 3 個月年增 > 20%（剛滿 3 個月）
+    times = []
+    for i, m in enumerate(months):
+        y, mm = map(int, m.split("-"))
+        ny, nm = (y, mm + 1) if mm < 12 else (y + 1, 1)
+        known = f"{ny}-{nm:02d}-10"
+        t = next((j for j, d in enumerate(lab.dates) if d > known), None)
+        if t is None or t >= T:
             continue
-        mu = fwd[pool].mean()
-        hit = pool & (V[:, t] > 3 * v20) & (r1 > 0.05)
-        for k in np.where(hit)[0]:
-            ev_d.append(dates[t])
-            ev_v.append(fwd[k] - mu)
-    s = split_stats(ev_d, ev_v, split)
-    out.append({"key": "volspike", "name": "爆量長紅後續漲", "claim": "成交量超過 20 日均量 3 倍、當天漲超過 5% 的股票，之後 5 天續強",
-                "unit": "每次事件（後 5 日超額，隔天收盤進場）", **s, "tradeable": tradeable(s, COST_STOCK),
-                "note": "隔天收盤才進場，避免用到盤中無法知道的資訊"})
-    return out, dates[0], dates[-1]
+        times.append(t)
+        prev12 = months[max(0, i - 12):i]
+        prev3 = months[max(0, i - 3):i]
+        for c, g in yoy[m].items():
+            k = kpos[c]
+            S[k, t] = g
+            cur = revenue[m][c][0]
+            hist = [revenue[p][c][0] for p in prev12 if c in revenue[p]]
+            if len(prev12) == 12 and len(hist) == 12 and cur > max(hist) and g > 0:
+                HI[k, t] = True
+            p3 = [yoy[p].get(c) for p in prev3]
+            if len(p3) == 3 and None not in p3:
+                if g > 0 and all(x < 0 for x in p3):
+                    TURN[k, t] = True
+                pp = yoy[months[i - 4]].get(c) if i >= 4 else None
+                if g > 0.2 and all(x > 0.2 for x in p3[1:]) and p3[0] > 0.2 and (pp is None or pp <= 0.2):
+                    GROW[k, t] = True
+    out = [lab.rank(G, "rev_yoy", "營收年增最高", "每月營收公布後，年增率最高的 20 檔，之後 20 天表現比股票池好",
+                    S, 20, times, note="年增率極端值多半來自去年基期很低，未排除"),
+           lab.event(G, "rev_high", "營收創 12 個月新高", "當月營收創近 12 個月新高且年增為正，公布後 20 天表現比股票池好",
+                     HI, h=20, today_t=times[-1]),
+           lab.event(G, "rev_turn", "營收年增由負轉正", "連續 3 個月衰退後首度轉為成長，公布後 20 天表現比股票池好",
+                     TURN, h=20, today_t=times[-1]),
+           lab.event(G, "rev_grow", "營收連 4 月高成長", "年增率連續 4 個月超過 20%（剛滿 4 個月），公布後 20 天表現比股票池好",
+                     GROW, h=20, today_t=times[-1])]
+    return out
 
 
 def holm(tests):
@@ -244,27 +418,39 @@ def holm(tests):
             break
     for i, x in enumerate(tests):
         x["p_oos"] = round(pval(x["oos"]["t"]), 4)
-        same_sign = (x["is"]["t"] or 0) * (x["oos"]["t"] or 0) > 0
-        x["significant"] = bool(i in passed and same_sign)
+        ti, to = x["is"]["t"] or 0, x["oos"]["t"] or 0
+        x["significant"] = bool(i in passed and ti > 0 and to > 0)
         x["verdict"] = ("成立且扣成本後可交易" if x["significant"] and x.get("tradeable")
                         else "成立但不夠付成本" if x["significant"]
+                        else "顯著但方向相反" if i in passed and ti < 0 and to < 0
+                        else "有跡象（未過多重比較校正）" if x["p_oos"] < 0.05 and ti > 0 and to > 0
+                        else "反向跡象（未過多重比較校正）" if x["p_oos"] < 0.05 and ti < 0 and to < 0
                         else "證據不足")
     return tests
 
 
 def main():
     src = json.load(open(SRC, encoding="utf-8"))["symbols"]
-    stock, s0, s1 = stock_tests(src)
+    revenue = json.load(open(REV, encoding="utf-8"))["months"] if os.path.exists(REV) else {}
+    lab = Lab(src)
+    stock = stock_tests(lab, revenue)
+    s0, s1 = lab.dates[0], lab.dates[-1]
     rows = fetch_0050()
     cal = calendar_tests(rows)
+    for x in cal:
+        x["cat"] = "大盤日曆（0050）"
     tests = holm(stock + cal)
     for x in tests:
-        print(f"{x['name']:<10} 樣本內 {x['is']}  樣本外 {x['oos']}  p={x['p_oos']}  → {x['verdict']}")
+        print(f"{x['name']:<12} 內 {x['is']}  外 {x['oos']}  事件 {x.get('events')}  勝率 {x.get('win')}  淨 {x.get('raw')}"
+              f"  p={x['p_oos']}  → {x['verdict']}")
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump({"generated_at": datetime.now(timezone(timedelta(hours=8))).isoformat(timespec="seconds"),
                    "stock_period": [s0, s1], "index_period": [rows[0][0], rows[-1][0]],
-                   "m": len(tests), "tests": tests}, f, ensure_ascii=False, separators=(",", ":"))
-    print(f"→ {OUT}")
+                   "revenue_months": [min(revenue), max(revenue)] if revenue else None,
+                   "cost_stock": COST_STOCK, "m": len(tests), "tests": tests}, f, ensure_ascii=False, separators=(",", ":"))
+    with open(OUT_STOCKS, "w", encoding="utf-8") as f:
+        json.dump({"date": s1, "hist": lab.hist, "today": lab.today}, f, ensure_ascii=False, separators=(",", ":"))
+    print(f"→ {OUT}、{OUT_STOCKS}（{len(lab.hist)} 檔個股歷史）")
 
 
 if __name__ == "__main__":

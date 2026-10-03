@@ -252,6 +252,12 @@ header{display:flex;align-items:center;gap:12px;padding:10px 16px;
 .vbadge{display:inline-block;font-size:11px;padding:2px 9px;border-radius:999px;font-weight:700;margin-left:8px}
 .vbadge.ok{background:var(--up-bg);color:var(--up)}
 .vbadge.no{background:var(--card2);color:var(--s9);border:1px solid var(--line)}
+.erow{padding:12px 0;border-top:1px solid var(--line)}
+.ehead{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px}
+.estats{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:6px;font-size:12px;color:var(--s9)}
+.estats b{color:var(--s10);font-variant-numeric:tabular-nums}
+.ecat{margin:18px 0 4px;font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.5px}
+.vbadge.rev{background:var(--card2);color:var(--down);border:1px solid var(--line)}
 .vbadge.mid{background:var(--card2);color:var(--gold);border:1px solid var(--line)}
 .st{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:10px}
 .st th,.st td{padding:7px 8px;text-align:right;border-bottom:1px solid var(--line);font-family:var(--num);font-variant-numeric:tabular-nums}
@@ -912,7 +918,9 @@ function openStock(code){
     <div class="kv"><span>價格位階　近 60 日高低區間</span><b>${d.position!=null?d.position+'%':'—'}</b></div>
     ${secs.length?`<div class="stitle">所屬板塊</div><div class="sect">
       ${secs.map(n=>`<button class="chip" data-sec="${esc(n)}">${esc(n)}</button>`).join('')}</div>`:''}
-    ${twCross(code)}`;
+    ${twCross(code)}
+    <div id="kevi"></div>`;
+  stockEvi(code);
   $('kp-body').onclick=e=>{const b=e.target.closest('[data-sec]');
     if(b) openSector(sectors.find(s=>s.name===b.dataset.sec));
     const u=e.target.closest('[data-code]'); if(u) openStock(u.dataset.code);};
@@ -923,6 +931,28 @@ function openStock(code){
     <b style="color:${col(v)}">${v==null?'—':(v>=0?'+':'')+v.toFixed(2)+u}</b></div>`;}
 }
 
+// 個股的短線指標：今天觸發哪些、這檔自己過去觸發後的表現、全體股票的檢驗結論
+let EVS=null;
+const evsReady=()=>EVS?Promise.resolve(EVS)
+  :fetch('data/evidence_stocks.json').then(r=>r.json()).then(j=>(EVS=j)).catch(()=>null);
+function stockEvi(code){
+  Promise.all([evsReady(),eviReady()]).then(([s,e])=>{
+    const box=$('kevi'); if(!box||!s||!e) return;
+    const by=Object.fromEntries(e.tests.map(t=>[t.key,t]));
+    const today=(s.today[code]||[]).filter(k=>by[k]), hist=s.hist[code]||{};
+    const keys=Object.keys(hist).filter(k=>by[k]).sort((a,b)=>hist[b][0]-hist[a][0]);
+    if(!today.length&&!keys.length){ box.innerHTML=''; return; }
+    const f=x=>(x>=0?'+':'')+x.toFixed(2)+'%';
+    box.innerHTML=`<div class="stitle">短線指標・本檔</div>
+      ${today.length?`<div class="rsub" style="padding:0 16px 6px">最近一次符合條件（技術指標為 ${s.date}；排序與月營收為最近一次換股／公布日）</div>
+        ${today.map(k=>`<div class="kv"><span>${esc(by[k].name)}</span><b><span class="vbadge ${VC(by[k].verdict)}" style="margin:0">全體：${by[k].verdict}</span></b></div>`).join('')}`:''}
+      ${keys.length?`<div class="rsub" style="padding:10px 16px 4px">這檔過去五年觸發後的表現（隔天開盤買、扣成本）</div>
+        <div style="padding:0 16px"><table class="st" style="margin-top:2px"><tr><th>指標</th><th>次數</th><th>平均</th><th>勝率</th></tr>
+        ${keys.map(k=>{const [n,a,w]=hist[k];return `<tr><td>${esc(by[k].name)}<small style="color:var(--s8)">・${by[k].hold} 天</small></td><td>${n}</td>
+          <td style="color:${col(a)}">${f(a)}</td><td>${w}%</td></tr>`}).join('')}</table>
+        <p class="note" style="margin-top:6px;font-size:12px">單一個股觸發次數少，數字很容易是巧合（例如 5 次全賺也可能只是運氣），請以「全體」檢驗結論為主。不構成投資建議。</p></div>`:''}`;
+  });
+}
 // 近 30 日：收盤線 + 月線(MA20，虛線) + 法人買賣超柱
 function drawStockChart(code,h){
   drawChart($('kchart'),h.dates,h.stocks[code],'近 30 日收盤與法人買賣超（億）',
@@ -1634,23 +1664,38 @@ function oddsCard(){
 let EVI=null;
 const eviReady=()=>EVI?Promise.resolve(EVI)
   :fetch('data/evidence.json').then(r=>r.json()).then(j=>(EVI=j)).catch(()=>null);
+const VC=v=>v==='成立且扣成本後可交易'?'ok':v==='成立但不夠付成本'||v.startsWith('有跡象')?'mid':v.startsWith('反向')||v.includes('相反')?'rev':'no';
+let eviOpen=null;
 function eviCard(){
   if(!EVI) return '';
-  const f=x=>x==null?'—':(x>=0?'+':'')+x.toFixed(3)+'%';
-  const ok=EVI.tests.filter(t=>t.significant).length, tr=EVI.tests.filter(t=>t.verdict==='成立且扣成本後可交易').length;
-  const vc=v=>v==='成立且扣成本後可交易'?'ok':v==='成立但不夠付成本'?'mid':'no';
-  return `<div class="card"><h3>短線有沒有「有證據」的規律？</h3>
-    <div class="big" style="font-size:20px">${EVI.m} 個常見說法中，${ok} 個在樣本外成立，${tr} 個扣掉成本後還能賺</div>
-    <p class="note" style="margin-top:8px;font-size:12.5px;color:var(--s9)">這些說法是在看資料<b style="color:var(--s10)">之前</b>就先列好的，規則不調參數。
-      個股類用 ${EVI.stock_period[0]}～${EVI.stock_period[1]} 時點正確的流動性股票池；大盤類用 0050 含息還原日線（${EVI.index_period[0].slice(0,4)} 年起）。
-      資料前半段是樣本內、後半段是樣本外；要判定「成立」，樣本外 p 值須通過 Holm 多重比較校正（同時測 ${EVI.m} 個，門檻比 0.05 更嚴），且樣本內外方向一致。</p>
-    <table class="st" style="margin-top:8px"><tr><th>說法</th><th>樣本內 平均／t</th><th>樣本外 平均／t</th><th>結論</th></tr>
-      ${EVI.tests.map(t=>`<tr><td><b>${esc(t.name)}</b><div class="rsub" style="font-size:11.5px">${esc(t.claim)}<br>單位：${esc(t.unit||'')}${t.note?'・'+esc(t.note):''}</div></td>
-        <td><span style="color:${col(t.is.mean)}">${f(t.is.mean)}</span><br><small>t ${t.is.t??'—'}・n ${t.is.n}</small></td>
-        <td><span style="color:${col(t.oos.mean)}">${f(t.oos.mean)}</span><br><small>t ${t.oos.t??'—'}・n ${t.oos.n}・p ${t.p_oos}</small></td>
-        <td><span class="vbadge ${vc(t.verdict)}" style="margin:0">${t.verdict}</span></td></tr>`).join('')}</table>
-    <p class="note" style="margin-top:10px;font-size:12.5px">讀法：t 值絕對值約 2 以上才稍微像「不是巧合」；就算統計上成立，若平均差距小於一次來回成本（股票約 0.59%、ETF 約 0.39%），實際交易還是賠。
-      新聞與消息面無法用公開免費資料做時點正確的回測，因此不列入。歷史規律可能隨參與者增加而消失。</p></div>`;
+  const f=(x,k=2)=>x==null?'—':(x>=0?'+':'')+x.toFixed(k)+'%';
+  const T=EVI.tests, ok=T.filter(t=>t.significant).length, tr=T.filter(t=>t.verdict==='成立且扣成本後可交易').length,
+    hint=T.filter(t=>t.verdict.startsWith('有跡象')).length;
+  const cats=[...new Set(T.map(t=>t.cat||'其他'))];
+  const row=t=>{const ev=t.events, today=t.today||[];
+    return `<div class="erow">
+      <div class="ehead"><b>${esc(t.name)}</b><span class="vbadge ${VC(t.verdict)}" style="margin:0">${t.verdict}</span></div>
+      <div class="rsub" style="font-size:12px;line-height:1.6;margin-top:2px">${esc(t.claim)}${t.note?'<br>※ '+esc(t.note):''}</div>
+      <div class="estats">
+        <span>樣本外 <b>${ev?ev.oos:'—'}</b> 次</span>
+        ${t.win!=null?`<span>勝率 <b>${t.win}%</b></span>`:''}
+        ${t.raw!=null?`<span>每次 <b style="color:${col(t.raw)}">${f(t.raw)}</b></span>`:''}
+        <span>超額 內 <b style="color:${col(t.is.mean)}">${f(t.is.mean,3)}</b><small>（t ${t.is.t??'—'}）</small></span>
+        <span>外 <b style="color:${col(t.oos.mean)}">${f(t.oos.mean,3)}</b><small>（t ${t.oos.t??'—'}）</small></span></div>
+      ${today.length?`<button class="chip" data-evi="${t.key}" style="margin-top:6px;font-size:11.5px">${t.today_date&&t.today_date!==EVI.stock_period[1]?t.today_date.slice(5)+' ':'今天'}符合 ${today.length} 檔 ${eviOpen===t.key?'▴':'▾'}</button>`:''}
+      ${eviOpen===t.key?`<div class="chips" style="margin-top:6px">${today.map(x=>`<button class="chip" data-code="${x.code}">${esc(x.name)} <small style="color:var(--s8)">${x.code}</small></button>`).join('')}</div>`:''}
+    </div>`;};
+  return `<div class="card"><h3>短線指標有沒有證據？・個股實測</h3>
+    <div class="big" style="font-size:20px">${EVI.m} 個常見說法：${ok} 個成立、${tr} 個扣成本後還能賺${hint?`、${hint} 個有跡象`:''}</div>
+    <p class="note" style="margin-top:8px;font-size:12.5px;color:var(--s9)">規則在看資料<b style="color:var(--s10)">之前</b>就定好，參數用看盤軟體預設值，不調整。
+      個股用 ${EVI.stock_period[0]}～${EVI.stock_period[1]} 每天「當時」成交值前 150 名的股票；訊號出現後<b style="color:var(--s10)">隔天開盤買、持有 5 天（月營收與排序型 20 天）收盤賣</b>，每次扣來回成本約 ${(EVI.cost_stock*100).toFixed(2)}%。
+      ${EVI.revenue_months?`月營收 ${EVI.revenue_months[0]}～${EVI.revenue_months[1]}，一律假設次月 10 日後才知道。`:''}
+      前半段是樣本內、後半段是樣本外；「成立」要兩段都為正、且樣本外通過 Holm 多重比較校正（同時測 ${EVI.m} 個，門檻約 t ≥ 3.2）。</p>
+    <p class="note" style="margin-top:6px;font-size:12.5px;color:var(--s9)">欄位：<b>樣本外</b>＝後半段發生次數、扣成本後賺錢的比例（勝率）、每次平均淨報酬（含大盤漲跌）；
+      <b>超額</b>＝相對同期股票池平均（上：樣本內、下：樣本外），扣除大盤影響後指標本身的效果。</p>
+    ${cats.map(c=>`<div class="ecat">${esc(c)}</div>${T.filter(t=>(t.cat||'其他')===c).map(row).join('')}`).join('')}
+    <p class="note" style="margin-top:10px;font-size:12.5px">讀法：勝率與每次淨報酬包含同期大盤漲跌，多頭時看起來都不錯；真正要看的是「超額」是否穩定為正。
+      「今天符合」只是條件成立，不是推薦，大多數說法並沒有證據。新聞與消息面無法用公開免費資料做時點正確的回測，因此不列入。</p></div>`;
 }
 function buildSwing(){
   const el=$('swing');
@@ -1701,6 +1746,7 @@ function buildSwing(){
         長期而言，低成本的市值型 ETF 定期定額，是多數人最難被打敗的對照組。</p>
       <div class="note" style="margin-top:8px">回測不代表未來報酬。本頁僅為歷史資料的統計呈現，非證券投資顧問事業，不構成任何投資建議；投資人應自行判斷並自負盈虧。</div></div>`;
   el.onclick=e=>{const o=e.target.closest('[data-odds]'); if(o){oddsSel=o.dataset.odds;buildSwing();return;}
+    const v=e.target.closest('[data-evi]'); if(v){eviOpen=eviOpen===v.dataset.evi?null:v.dataset.evi;const y=scrollY;buildSwing();scrollTo(0,y);return;}
     const c=e.target.closest('[data-code]'); if(c) openStock(c.dataset.code);};
 }
 

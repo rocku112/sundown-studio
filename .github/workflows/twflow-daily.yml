@@ -53,6 +53,8 @@ jobs:
           python -X utf8 scripts/backtest.py || echo "::warning::訊號回測失敗"
           # ETF 折溢價（證交所 17:00 後的收盤估值快照）
           python -X utf8 scripts/fetch_etf.py || echo "::warning::ETF 折溢價抓取失敗"
+          # 月營收（只補新月份；失敗時沿用已存的月份）
+          ( cd .. && python -X utf8 swing/scripts/fetch_revenue.py ) || echo "::warning::月營收抓取失敗"
           # 波段實驗室：五年日線回測（約 3 分鐘）
           ( cd .. && python -X utf8 swing/scripts/fetch_hist.py && python -X utf8 swing/scripts/backtest_swing.py \
               && python -X utf8 swing/scripts/build_bench.py && python -X utf8 swing/scripts/holding_odds.py \
@@ -69,6 +71,7 @@ jobs:
           git config user.name  "twflow-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add twflow/data/market/days twflow/data/market/stock_meta.json $(ls -d twflow/data/etf 2>/dev/null) \
+                  $(ls swing/data/revenue.json 2>/dev/null) \
                   twflow/data/market/market.json twflow/web/data \
                   twflow/web/snapshot.html
           if git diff --staged --quiet; then
