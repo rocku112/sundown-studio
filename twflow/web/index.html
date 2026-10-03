@@ -1572,6 +1572,28 @@ function eqCurve(curve){
     <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--s8)"><span>${curve[0][0]}</span>
       <span>組合淨值（起點 1.00，已實現）</span><span>${curve[curve.length-1][0]}</span></div>`;
 }
+// 組合型策略（月換股、趨勢濾網）：沒有逐筆交易，改看相對基準的每月超額報酬
+function portCard(s,f){
+  const row=(lab,a,b)=>`<tr><td>${lab}</td><td>${a}</td><td>${b}</td></tr>`;
+  const c=x=>x==null?'—':`<span style="color:${col(x)}">${f(x)}</span>`;
+  return `<div class="card">
+    <h3>${esc(s.name)}<span class="vbadge ${s.verdict?'ok':'no'}">${s.verdict?'樣本外有效':'報酬未勝過基準'}</span>
+      ${s.risk_better?'<span class="vbadge ok">回落較小</span>':''}</h3>
+    <p style="font-size:13px;color:var(--s9);line-height:1.75">${esc(s.desc)}</p>
+    <table class="st"><tr><th></th><th>樣本內</th><th>樣本外</th></tr>
+      ${row('策略年化報酬',c(s.is.cagr),c(s.oos.cagr))}
+      ${row(esc(s.bench_name)+' 年化',c(s.bench_is.cagr),c(s.bench_oos.cagr))}
+      ${row('策略最大回落',f(s.is.mdd),f(s.oos.mdd))}
+      ${row(esc(s.bench_name)+' 最大回落',f(s.bench_is.mdd),f(s.bench_oos.mdd))}
+      ${row('平均每月超額報酬',c(s.is.ex_m),c(s.oos.ex_m))}
+      ${row('贏過基準的月份',s.is.win_m!=null?s.is.win_m+'%':'—',s.oos.win_m!=null?s.oos.win_m+'%':'—')}
+      ${row('t 值（月超額）',s.is.t??'—',s.oos.t??'—')}</table>
+    ${s.flips!=null?`<div class="krow" style="margin-top:8px"><span>五年內進出場次數</span><b>${s.flips} 次</b></div>`:''}
+    ${eqCurve(s.curve)}
+    <div class="rsub" style="margin:14px 0 6px">${esc(s.today_label)}・不等於推薦${s.verdict?'':'，且此策略報酬未勝過基準'}</div>
+    <div class="chips">${s.today.map(t=>`<button class="chip" data-code="${t.kind==='etf'?'ETF:':''}${t.code}">${esc(t.name)} <small style="color:var(--s8)">${t.code}</small></button>`).join('')||'<span class="rsub">—</span>'}</div>
+  </div>`;
+}
 function buildSwing(){
   const el=$('swing');
   if(!SW){ el.innerHTML='<div class="empty">載入中…</div>';
@@ -1581,7 +1603,8 @@ function buildSwing(){
   const row=(lab,a,b_)=>`<tr><td>${lab}</td><td>${a}</td><td>${b_}</td></tr>`;
   el.innerHTML=`
     <div class="card"><h3>波段實驗室・${SW.period[0]} ～ ${SW.period[1]}</h3>
-      <div class="big" style="font-size:20px">${ok?`${SW.strategies.length} 個策略中 ${ok} 個在樣本外通過檢驗`:`${SW.strategies.length} 個常見短線策略，扣掉成本後都沒有通過檢驗`}</div>
+      <div class="big" style="font-size:20px">${ok?`${SW.strategies.length} 個策略中 ${ok} 個在樣本外通過檢驗`:`${SW.strategies.length} 個策略扣掉成本後，都沒有穩定贏過基準`}</div>
+      ${SW.strategies.length>3?`<p class="note" style="margin-top:6px;font-size:12px">同時測的策略越多，靠運氣「看起來有效」的機會越大；${SW.strategies.length} 個策略裡出現 1 個 t≈2 的結果，本身就可能只是巧合。</p>`:''}
       <p class="note" style="margin-top:8px;font-size:12.5px;color:var(--s9)">
         用台股 ${SW.universe} 檔（含主要 ETF）過去五年日線回測，每天只交易「當時」近 60 日成交值前 ${SW.pool} 名——
         避免用今天才知道的熱門股回頭找贏家。規則事先固定、不針對這份資料調參數；
@@ -1592,7 +1615,7 @@ function buildSwing(){
         ③ 樣本內也贏過隨機進場（只在某段行情有效的不算）④ 資金分 ${SW.slots} 份的組合年化報酬贏過同一股票池等權買進持有（${f(SW.pool_bench?.cagr)}／年）。
         另列同期 ${b.code||'0050'} 買進持有 ${f(b.cagr)}／年（未含配息）供參考。</p>
       <p class="note" style="margin-top:8px;font-size:12.5px;color:var(--s9)">殘留限制：已下市的股票抓不到歷史資料，回測仍略微偏樂觀；樣本外期間只有約兩年，碰上的行情（多頭或空頭）會大幅影響結果。</p></div>
-    ${SW.strategies.map(s=>`<div class="card">
+    ${SW.strategies.map(s=>s.kind==='portfolio'?portCard(s,f):`<div class="card">
       <h3>${esc(s.name)}<span class="vbadge ${s.verdict?'ok':'no'}">${s.verdict?'樣本外有效':'樣本外無效'}</span></h3>
       <p style="font-size:13px;color:var(--s9);line-height:1.75">${esc(s.desc)}</p>
       <table class="st"><tr><th></th><th>樣本內</th><th>樣本外</th></tr>
