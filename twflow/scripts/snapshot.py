@@ -35,8 +35,10 @@ RULES = [
     (r"fetch\('data/cross\.json\?'\+Date\.now\(\)\)\.then\(r=>r\.json\(\)\)", "cross.json"),
     (r"fetch\('data/us/history\.json'\)\.then\(r=>r\.json\(\)\)", "us/history.json"),
     (r"fetch\('data/backtest\.json'\)\.then\(r=>r\.json\(\)\)", "backtest.json"),
+    (r"fetch\('data/etf\.json'\)\.then\(r=>r\.json\(\)\)", "etf.json"),
+    (r"fetch\('data/swing\.json'\)\.then\(r=>r\.json\(\)\)", "swing.json"),
 ]
-OPTIONAL = {"us/latest.json", "cross.json", "us/history.json", "backtest.json"}
+OPTIONAL = {"us/latest.json", "cross.json", "us/history.json", "backtest.json", "etf.json", "swing.json"}
 
 
 def inline(payload):
@@ -53,7 +55,7 @@ def main():
     covered = {"data/latest.json?", "data/search.json", "data/history.json",
                "data/events.json", "data/chains.json",
                "data/us/latest.json?", "data/cross.json?", "data/us/history.json",
-               "data/backtest.json"}
+               "data/backtest.json", "data/etf.json", "data/swing.json"}
     missed = {f for f in found if f.rstrip("?") not in
               {c.rstrip("?") for c in covered}}
     if missed:

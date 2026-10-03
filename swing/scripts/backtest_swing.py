@@ -10,7 +10,11 @@
   2. 忽略成本：買進手續費 0.1425%、賣出手續費 0.1425% ＋ 證交稅（股票 0.3%、
      ETF 0.1%）、雙邊各 0.1% 滑價。短線交易次數多，成本常常吃掉全部利潤。
   3. 過度擬合：規則與參數是事先寫死的教科書版本，不在這份資料上調參數；
-     前 60% 期間（樣本內）與後 40%（樣本外）分開計分，**只看樣本外**。
+     前 60% 期間（樣本內）與後 40%（樣本外）分開計分。
+  4. 倖存者偏誤：若用「今天」最熱門的股票回測，等於事先知道誰是贏家——第一版就
+     中了這個陷阱（連隨機進場平均每筆都賺 1.8%，動能策略看起來年化破百）。
+     現在改為：抓較大的範圍，每天只交易「當時」流動性前 150 名；基準也改成同一個
+     股票池的等權買進持有，而不只是 0050。下市股票抓不到，仍有殘留偏誤。
 
 另外每個策略都跟「隨機進場、持有相同天數」比較——連隨機都贏不了的策略沒有意義。
 
@@ -35,6 +39,7 @@ OUT = os.path.join(REPO, "twflow", "web", "data", "swing.json")
 FEE, SLIP = 0.001425, 0.001
 TAX = {"stock": 0.003, "etf": 0.001}
 SPLIT = 0.6            # 前 60% 期間為樣本內
+POOL = 150             # 每天只交易「當時」近 60 日平均成交值前 150 名（時點正確的股票池）
 SLOTS = 10             # 組合模擬：資金分 10 份，同時最多持有 10 檔
 N_RANDOM = 200
 BENCH = "0050"
@@ -109,8 +114,36 @@ def net_return(buy_px, sell_px, kind):
     return cash_out / cost_in - 1
 
 
-def run_symbol(code, sym, strategies):
-    """逐日掃描，一檔同時只持有一筆。訊號在 t 收盤，t+1 開盤成交。"""
+def eligibility(src, dates):
+    """每天依近 60 日平均成交值排名，前 POOL 名才可進場。回傳 {code: set(可交易日期)}。"""
+    idx = {d: i for i, d in enumerate(dates)}
+    dv = np.full((len(src), len(dates)), np.nan)
+    codes = list(src)
+    for k, code in enumerate(codes):
+        for r in src[code]["rows"]:
+            dv[k, idx[r[0]]] = r[4] * r[5]
+    # 60 日滾動平均（缺值略過）
+    filled = np.nan_to_num(dv)
+    cnt = (~np.isnan(dv)).astype(float)
+    cs, cc = np.cumsum(filled, axis=1), np.cumsum(cnt, axis=1)
+    w = 60
+    avg = np.full_like(dv, np.nan)
+    avg[:, w:] = (cs[:, w:] - cs[:, :-w]) / np.maximum(cc[:, w:] - cc[:, :-w], 1)
+    avg[(np.nan_to_num(cc) < 40)] = np.nan
+    ok = {c: set() for c in codes}
+    for t in range(w, len(dates)):
+        col = avg[:, t]
+        valid = np.where(np.isfinite(col))[0]
+        if not len(valid):
+            continue
+        top = valid[np.argsort(-col[valid])][:POOL]
+        for k in top:
+            ok[codes[k]].add(dates[t])
+    return ok
+
+
+def run_symbol(code, sym, strategies, eligible):
+    """逐日掃描，一檔同時只持有一筆。訊號在 t 收盤，t+1 開盤成交；只有當天在股票池內才能進場。"""
     rows = sym["rows"]
     d = [r[0] for r in rows]
     o = np.array([r[1] for r in rows], float)
@@ -121,13 +154,13 @@ def run_symbol(code, sym, strategies):
         pos = None
         for t in range(len(c) - 1):
             if pos is None:
-                if s["entry"](t):
+                if d[t] in eligible and s["entry"](t):
                     pos = (t + 1, o[t + 1])
             elif s["exit"](t, pos[0], pos[1]):
                 trades[k].append({"code": code, "in": d[pos[0]], "out": d[t + 1], "days": t + 1 - pos[0],
                                   "ret": net_return(pos[1], o[t + 1], sym["kind"])})
                 pos = None
-        if s["entry"](len(c) - 1):
+        if d[-1] in eligible and s["entry"](len(c) - 1):
             signals_today.append(k)
     return trades, signals_today
 
@@ -144,20 +177,18 @@ def stats(rets):
             "t": round(float(r.mean() / (sd / math.sqrt(len(r)))), 2) if sd > 0 else 0.0}
 
 
-def random_baseline(trades, panel, rng):
-    """同樣筆數、同樣持有天數，隨機挑股票與進場日。回傳每輪平均報酬的分布。"""
-    codes = list(panel)
+def random_baseline(trades, slots, rng):
+    """同樣筆數、同樣持有天數，從同一期間的「當時股票池」隨機抽股票與進場日。
+    slots: [(code, 進場索引)]，panel 對應的開盤價序列。回傳每輪平均報酬的分布。"""
     means = []
     for _ in range(N_RANDOM):
         rs = []
         for tr in trades:
-            code = rng.choice(codes)
-            sym = panel[code]
+            sym, i = slots[rng.randrange(len(slots))]
             n = len(sym["o"])
-            if n <= tr["days"] + 2:
-                continue
-            i = rng.randrange(sym["lo"], max(sym["lo"] + 1, sym["hi"] - tr["days"] - 1))
             j = min(i + tr["days"], n - 1)
+            if j <= i:
+                continue
             rs.append(net_return(sym["o"][i], sym["o"][j], sym["kind"]))
         if rs:
             means.append(np.mean(rs))
@@ -210,6 +241,25 @@ def bench_stats(sym, start, end):
             "mdd": round(mdd * 100, 2)}
 
 
+def pool_bench(src, eligible, start, end):
+    """同一個時點股票池的等權買進持有（每日再平衡），扣除進出成本不計（給它優勢，比較更保守）。"""
+    closes = {c: {r[0]: r[4] for r in s["rows"]} for c, s in src.items()}
+    dates = sorted({r[0] for s in src.values() for r in s["rows"] if start <= r[0] <= end})
+    eq, peak, mdd, prev = 1.0, 1.0, 0.0, None
+    for d in dates:
+        if prev:
+            rs = [closes[c][d] / closes[c][prev] - 1 for c in src
+                  if prev in eligible[c] and d in closes[c] and prev in closes[c]]
+            if rs:
+                eq *= 1 + float(np.mean(rs))
+                peak = max(peak, eq)
+                mdd = min(mdd, eq / peak - 1)
+        prev = d
+    yrs = max((date.fromisoformat(end) - date.fromisoformat(start)).days / 365.25, 0.1)
+    return {"total": round((eq - 1) * 100, 2), "cagr": round((eq ** (1 / yrs) - 1) * 100, 2),
+            "mdd": round(mdd * 100, 2)}
+
+
 def main():
     src = json.load(open(SRC, encoding="utf-8"))["symbols"]
     all_dates = sorted({r[0] for s in src.values() for r in s["rows"]})
@@ -217,6 +267,7 @@ def main():
     start, end = all_dates[0], all_dates[-1]
     rng = random.Random(20261003)
 
+    eligible = eligibility(src, all_dates)
     trades = {}
     today = {}
     panel = {}
@@ -225,44 +276,54 @@ def main():
              "h": np.array([r[2] for r in sym["rows"]], float),
              "v": np.array([r[5] for r in sym["rows"]], float)}
         strat = make_strategies(a)
-        tr, sig = run_symbol(code, sym, strat)
+        tr, sig = run_symbol(code, sym, strat, eligible[code])
         for k, v in tr.items():
             trades.setdefault(k, []).extend(v)
         for k in sig:
             r = sym["rows"][-1]
             today.setdefault(k, []).append({"code": code, "name": sym["name"], "close": r[4],
                                             "kind": sym["kind"]})
-        dl = [r[0] for r in sym["rows"]]
         panel[code] = {"o": [r[1] for r in sym["rows"]], "kind": sym["kind"],
-                       "lo": next((i for i, x in enumerate(dl) if x >= split_date), len(dl) - 1),
-                       "hi": len(dl) - 1}
+                       "d": [r[0] for r in sym["rows"]]}
+    # 隨機抽樣的候選：(股票, 進場索引)，限定當天在股票池內；樣本內外分開
+    slots_is, slots_oos = [], []
+    for code, p in panel.items():
+        for i, d_ in enumerate(p["d"][:-1]):
+            if d_ in eligible[code]:
+                (slots_is if d_ < split_date else slots_oos).append((p, i + 1))
 
     meta = make_strategies({"c": np.zeros(1), "h": np.zeros(1), "v": np.zeros(1)})
     bsym = src.get(BENCH)
+    pb = pool_bench(src, eligible, split_date, end)
     out_s = []
     for k, trs in trades.items():
         is_t = [t for t in trs if t["in"] < split_date]
         oos_t = [t for t in trs if t["in"] >= split_date]
-        rb = random_baseline(oos_t, panel, rng) if oos_t else None
+        rb = random_baseline(oos_t, slots_oos, rng) if oos_t else None
+        rb_is = random_baseline(is_t, slots_is, rng) if is_t else None
         curve, taken = portfolio(trs, split_date, end)
         cs = curve_stats(curve, split_date, end)
-        so = stats([t["ret"] for t in oos_t])
-        bs = bench_stats(bsym, split_date, end) if bsym else None
-        # 「樣本外有效」要同時過三關：統計上非雜訊、贏過隨機進場的 95 百分位、組合報酬贏過 0050
+        so, si = stats([t["ret"] for t in oos_t]), stats([t["ret"] for t in is_t])
+        # 「有效」要同時過四關：
+        #  ① 樣本外統計上非雜訊（≥30 筆、t≥2）
+        #  ② 樣本外平均每筆贏過同池隨機進場的第 95 百分位
+        #  ③ 樣本內也贏過同池隨機進場的平均（只在某段行情有效的不算）
+        #  ④ 樣本外組合年化報酬贏過同一股票池等權買進持有
         verdict = bool(so["n"] >= 30 and so.get("t", 0) >= 2 and rb and so["avg"] > rb["p95"]
-                       and bs and cs["cagr"] > bs["cagr"])
+                       and rb_is and si.get("avg") is not None and si["avg"] > rb_is["mean"]
+                       and cs["cagr"] > pb["cagr"])
         step = max(1, len(curve) // 120)
         out_s.append({
             "key": k, "name": meta[k]["name"], "desc": meta[k]["desc"],
-            "is": stats([t["ret"] for t in is_t]), "oos": so, "random": rb,
+            "is": si, "oos": so, "random": rb, "random_is": rb_is,
             "hold": round(float(np.mean([t["days"] for t in oos_t])), 1) if oos_t else None,
             "portfolio": {**cs, "trades": taken,
                           "curve": [[d_, round(e, 4)] for d_, e in curve[::step]]},
             "verdict": verdict,
             "today": sorted(today.get(k, []), key=lambda x: x["code"])[:40],
         })
-        print(f"{meta[k]['name']:<10} 樣本內 {stats([t['ret'] for t in is_t])}  樣本外 {so}  "
-              f"隨機 {rb}  組合 {cs}  0050 {bs}  → {'有效' if verdict else '無效'}  今日 {len(today.get(k, []))} 檔")
+        print(f"{meta[k]['name']:<10} 樣本內 {si} 隨機 {rb_is}\n           樣本外 {so} 隨機 {rb}\n"
+              f"           組合 {cs}  股票池等權 {pb}  → {'有效' if verdict else '無效'}  今日 {len(today.get(k, []))} 檔")
 
     doc = {
         "generated_at": datetime.now(timezone(timedelta(hours=8))).isoformat(timespec="seconds"),
@@ -270,6 +331,7 @@ def main():
         "costs": {"fee": FEE, "tax_stock": TAX["stock"], "tax_etf": TAX["etf"], "slip": SLIP},
         "slots": SLOTS,
         "bench": {"code": BENCH, **(bench_stats(bsym, split_date, end) or {})} if bsym else None,
+        "pool_bench": pb, "pool": POOL,
         "strategies": out_s,
     }
     with open(OUT, "w", encoding="utf-8") as f:

@@ -80,7 +80,9 @@ def yahoo(sym):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--top", type=int, default=150)
+    # 抓得比實際交易的範圍大：回測時每天只交易「當時」流動性前 150 檔（見 backtest_swing.py），
+    # 若只抓「今天」最熱的 150 檔，等於事先知道誰是這幾年的贏家（倖存者偏誤）
+    ap.add_argument("--top", type=int, default=400)
     args = ap.parse_args()
     uni = universe(args.top)
     data, failed = {}, {}
