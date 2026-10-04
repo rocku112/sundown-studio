@@ -8,6 +8,7 @@ on:
       - "twflow/scripts/fetch_etf.py"
       - "twflow/scripts/fetch_taifex.py"
       - "twflow/scripts/probe_etf_sources.py"
+      - "twflow/scripts/build_etf_profile.py"
       - "swing/**"
       - "twflow/web/index.html"
       - ".github/workflows/lab-check.yml"
@@ -70,6 +71,10 @@ jobs:
       - name: ETF 折溢價
         working-directory: twflow
         run: python -X utf8 scripts/fetch_etf.py
+
+      - name: ETF 體質表（配息、長期報酬、受益人數）
+        working-directory: twflow
+        run: python -u -X utf8 scripts/build_etf_profile.py
 
       - name: 波段：抓五年日線
         run: python -X utf8 swing/scripts/fetch_hist.py

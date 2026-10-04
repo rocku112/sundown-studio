@@ -1,0 +1,49 @@
+name: 台指期夜盤（清晨更新）
+
+# 夜盤 15:00 到隔日 05:00，期交所約 05:30 後提供下載。
+# 台灣時間週二到週六 06:20（UTC 週一到週五 22:20）：補上「歸屬下一營業日」的夜盤，
+# 讓今日頁在台股 9:00 開盤前就看得到夜盤結果（週六早上那次即週五夜盤＝下週一的參考）。
+on:
+  schedule:
+    - cron: "20 22 * * 1-5"
+  workflow_dispatch:
+
+concurrency:
+  group: taifex-morning
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r twflow/requirements.txt
+
+      - name: 台指期（只重抓當月）
+        working-directory: twflow
+        run: |
+          timeout 10m python -X utf8 scripts/fetch_taifex.py --budget 3
+          python -X utf8 scripts/snapshot.py
+
+      - name: 提交
+        run: |
+          git config user.name  "twflow-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add twflow/data/taifex twflow/web/data/taifex.json twflow/web/snapshot.html
+          if git diff --staged --quiet; then
+            echo "沒有變動"
+            exit 0
+          fi
+          git commit -m "data: $(date -u -d '+8 hours' +%Y-%m-%d) 台指期夜盤"
+          for i in 1 2 3; do
+            git pull --rebase origin main && git push && exit 0
+            sleep $((i * 10))
+          done
+          exit 1
