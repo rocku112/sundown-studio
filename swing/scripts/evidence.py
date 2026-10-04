@@ -552,7 +552,8 @@ def revenue_tests(lab, revenue):
             S[k, t] = g
             cur = revenue[m][c][0]
             hist = [revenue[p][c][0] for p in prev12 if c in revenue[p]]
-            if len(prev12) == 12 and len(hist) == 12 and cur > max(hist) and g > 0:
+            # 前 12 個月至少要有 10 個月的資料（容許來源少數月份缺頁）
+            if len(prev12) == 12 and len(hist) >= 10 and cur > max(hist) and g > 0:
                 HI[k, t] = True
             p3 = [yoy[p].get(c) for p in prev3]
             if len(p3) == 3 and None not in p3:

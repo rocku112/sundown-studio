@@ -56,6 +56,19 @@ def parse(html):
 
 
 def fetch_page(mkt, roc, m, kind):
+    """兩個主機輪流試，最多 3 輪（間隔遞增）；偶發 404／限流常在重試後恢復。"""
+    err = None
+    for rnd in range(3):
+        if rnd:
+            time.sleep(3 * rnd)
+        try:
+            return _fetch_once(mkt, roc, m, kind)
+        except RuntimeError as e:
+            err = e
+    raise err
+
+
+def _fetch_once(mkt, roc, m, kind):
     err = None
     for h in HOSTS:
         url = f"{h}/nas/t21/{mkt}/t21sc03_{roc}_{m}_{kind}.html"
@@ -85,15 +98,16 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--since", default="2020-01")
     args = ap.parse_args()
-    data = {}
+    data, partial = {}, set()
     if os.path.exists(OUT):
-        data = json.load(open(OUT, encoding="utf-8")).get("months", {})
+        j = json.load(open(OUT, encoding="utf-8"))
+        data, partial = j.get("months", {}), set(j.get("partial", []))
     todo = list(months(args.since))
     recent = {f"{y}-{m:02d}" for y, m in todo[-2:]}
     fetched, failed = 0, []
     for y, m in todo:
         key = f"{y}-{m:02d}"
-        if key in data and key not in recent:
+        if key in data and key not in recent and key not in partial:
             continue
         rows, ok = {}, 0
         for mkt in ("sii", "otc"):
@@ -108,15 +122,18 @@ def main():
                     failed.append(f"{key} {mkt}{kind}: {str(e)[:120]}")
                 fetched += 1
                 time.sleep(DELAY)
-        # 剛過 10 日前公司仍陸續申報；太少（< 500 家）代表還沒到齊，先不存，下次再抓
-        if len(rows) >= 500:
-            data[key] = rows
+        # 剛過 10 日前公司仍陸續申報；太少（< 500 家）代表還沒到齊，先不存，下次再抓。
+        # 有頁面抓不到時仍先存（標記為不完整），之後每次執行都會再試著補齊
+        if len(rows) >= 500 or (key in data and rows):
+            data[key] = {**data.get(key, {}), **rows}      # 補抓到的頁面併入，不覆蓋已有的
+        if key in data:
+            (partial.discard if ok == 4 else partial.add)(key)
         print(f"{key}: {len(rows)} 家（{ok}/4 頁）")
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump({"unit": "千元", "fields": ["當月營收", "去年同月營收"],
-                   "months": dict(sorted(data.items()))}, f, ensure_ascii=False, separators=(",", ":"))
-    print(f"完成：{len(data)} 個月份，本次抓 {fetched} 頁，失敗 {len(failed)}")
+                   "partial": sorted(partial & set(data)), "months": dict(sorted(data.items()))}, f, ensure_ascii=False, separators=(",", ":"))
+    print(f"完成：{len(data)} 個月份（不完整 {sorted(partial & set(data))}），本次抓 {fetched} 頁，失敗 {len(failed)}")
     for x in failed[:10]:
         print("  ", x)
     if not data:
