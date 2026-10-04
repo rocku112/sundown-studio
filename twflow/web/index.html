@@ -1875,7 +1875,7 @@ function buildHold(){
   const msg=t=>{ $('h-msg').textContent=t; };
   $('h-add').onclick=()=>{
     const r=resolveCode($('h-code').value), sh=+$('h-sh').value, cost=+$('h-cost').value, date=$('h-date').value||null;
-    if(!r) return msg('找不到這個代號。台股、ETF、美股（本站涵蓋的約 140 檔）都可以。');
+    if(!r) return msg('找不到這個代號。台股、台股 ETF、美股（S&P 500、那斯達克 100 與常見 ETF）都可以。');
     if(!(sh>0)||!(cost>0)) return msg('請填股數與平均成本（都要大於 0）。');
     HOLD.push({id:Date.now().toString(36),key:r.key,shares:sh,cost,date}); saveHold(); buildHold();
   };
@@ -1984,6 +1984,7 @@ $('mkt').onclick=e=>{const b=e.target.closest('[data-m]'); if(b&&b.dataset.m!==M
 
 /* ══ 搜尋 ══════════════════════════════════════════════════════ */
 let selIdx=-1;
+$('q').onfocus=()=>{ if(!ETFD) etfReady().then(()=>{ if($('q').value.trim()) $('q').oninput(); }); };
 $('q').oninput=()=>{
   const q=$('q').value.trim().toLowerCase(); const box=$('qr');
   if(!q||!SEARCH){box.classList.remove('on');return;}
@@ -1995,12 +1996,17 @@ $('q').oninput=()=>{
     .filter(([c,d])=>d.type!=='index'&&(c.toLowerCase().startsWith(q)||d.name.toLowerCase().includes(q)))
     .sort((a,b)=>(b[0].toLowerCase()===q)-(a[0].toLowerCase()===q))
     .map(([c,d])=>['US:'+c,c,d.name,'美']):[];
+  // 台股 ETF（折溢價資料裡的全部上市櫃 ETF）；代號 00 開頭時排最前
+  const etf=ETFD?ETFD.etfs.filter(e=>e.code.toLowerCase().startsWith(q)||e.name.toLowerCase().includes(q))
+    .sort((a,b)=>(b.code.toLowerCase()===q)-(a.code.toLowerCase()===q))
+    .map(e=>['ETF:'+e.code,e.code,e.name,'ETF']):[];
   // 純數字一定是台股；含英文字母時美股優先
-  const hits=(/^\d/.test(q)?[...tw,...us]:MARKET==='us'||/[a-z]/.test(q)?[...us,...tw]:[...tw,...us]).slice(0,20);
+  const hits=(/^00/.test(q)?[...etf,...tw,...us]:/^\d/.test(q)?[...tw,...etf,...us]
+    :MARKET==='us'||/[a-z]/.test(q)?[...us,...etf,...tw]:[...tw,...etf,...us]).slice(0,20);
   selIdx=-1;
   box.innerHTML=hits.length?hits.map(([k,c,n,m])=>
     `<div data-code="${k}"><i><em class="mk">${m}</em>${esc(c)}</i><span>${esc(n)}</span></div>`).join('')
-    :'<div style="color:var(--s8)">查無此股</div>';
+    :`<div style="color:var(--s8);line-height:1.7;white-space:normal">查無此股<br><small>目前收錄：台股上市櫃普通股與 ETF、美股 S&amp;P 500＋那斯達克 100 成分股與常見 ETF。${ETFD?'':'（ETF 清單載入中，稍後再試）'}</small></div>`;
   box.classList.toggle('on',true);
 };
 $('qr').onclick=e=>{const d=e.target.closest('[data-code]');
