@@ -7,7 +7,7 @@
 規則（在看結果之前就固定，不准事後修改條件）：
   · 每個說法只檢驗一種寫法，參數用看盤軟體預設值，不掃參數
   · 前半段（樣本內）與後半段（樣本外）分開算；「成立」要兩段都為正且樣本外顯著
-  · 同時檢驗約 30 個說法，用 Holm 校正多重比較（最小的 p 值要 < 0.05/30 才算數）
+  · 同時檢驗約 50 個說法，用 Holm 校正多重比較（最小的 p 值要 < 0.05/50 才算數）
   · 個股事件以「月」彙總後做 t 檢定：同一個月的訊號受同一段行情影響，不能當獨立樣本
   · 個股一律在訊號日收盤後才知道，隔天開盤進場、持有 h 天後收盤出場，每筆扣一次來回成本
   · 可交易性：樣本外相對股票池的超額報酬，要大於一次來回成本（股票約 0.69%：手續費 0.1425%×2＋證交稅 0.3%＋滑價 0.1%）
@@ -31,6 +31,7 @@ import numpy as np
 import requests
 
 import indicators as I
+from scipy.stats import norm
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -195,6 +196,11 @@ class Lab:
             for r in src[c]["rows"]:
                 t = idx[r[0]]
                 self.O[k, t], self.H[k, t], self.L[k, t], self.C[k, t], self.V[k, t] = r[1:6]
+        for X in (self.O, self.H, self.L):
+            X[X <= 0] = np.nan          # Yahoo 偶有無成交日開高低記為 0
+        self.bench = np.full(T, np.nan)  # 0050 收盤，供相對強弱
+        for r in src.get("0050", {}).get("rows", []):
+            self.bench[idx[r[0]]] = r[4]
         el = eligibility(src, self.dates)
         self.E = np.array([[x in el[c] for x in self.dates] for c in self.codes])
         self.split = self.dates[T // 2]
@@ -348,6 +354,86 @@ def stock_tests(lab, revenue):
                             I.rmax(r1, 20), 20, mo, sign=-1, note="這是「避開」型說法：成立代表這群股票應該少碰"))
         out.append(lab.rank(X, "near_high", "接近 52 週高點", "股價最接近近一年高點的 20 檔，下個月表現比股票池好",
                             C / I.rmax(C, 250), 20, mo))
+
+        # ── 第二批：只用價量資料（參數一律看盤軟體預設值）────────────────
+        F = I.first
+        B = "乖離／超買超賣"
+        bias = C / ma20 - 1
+        out.append(lab.event(B, "bias_neg", "負乖離過大", "收盤低於 20 日均線超過 10%（負乖離），之後 5 天反彈",
+                             I.cross_up(-bias, 0.10)))
+        wr = I.willr(H, L, C)
+        out.append(lab.event(B, "willr", "威廉指標脫離超賣", "W%R(14) 從 −80 以下回升到 −80 之上，之後 5 天上漲",
+                             I.cross_up(wr, -80)))
+        cc = I.cci(H, L, C)
+        out.append(lab.event(B, "cci", "CCI 脫離超賣", "CCI(20) 從 −100 以下回升到 −100 之上，之後 5 天上漲",
+                             I.cross_up(cc, -100)))
+        mf = I.mfi(H, L, C, V)
+        out.append(lab.event(B, "mfi", "MFI 資金流超賣", "MFI(14) 跌破 20（價量同步超賣），之後 5 天反彈",
+                             I.cross_up(-mf, -20)))
+
+        D_ = "趨勢強度"
+        pdi, mdi, adx = I.dmi(H, L, C)
+        out.append(lab.event(D_, "dmi", "DMI 黃金交叉", "+DI 向上穿過 −DI，之後 5 天上漲", I.cross_up(pdi, mdi)))
+        out.append(lab.event(D_, "adx", "ADX 趨勢成形", "ADX(14) 升破 25 且 +DI＞−DI（多頭趨勢確立），之後 5 天續漲",
+                             I.cross_up(adx, 25) & (pdi > mdi)))
+        sr = I.sar(H, L)
+        out.append(lab.event(D_, "sar", "SAR 翻多", "拋物線 SAR 由空翻多，之後 5 天上漲",
+                             (sr == 1) & (pv(sr) == -1)))
+        slope = ma60 - pv(ma60)
+        out.append(lab.event(D_, "ma60_turn", "季線翻揚", "60 日均線連跌 10 天後首度上揚、且收盤在季線上，之後 5 天上漲",
+                             (slope > 0) & (I.rmax(pv(slope), 10) < 0) & (C > ma60)))
+        ma100 = I.sma(C, 100)
+        out.append(lab.event(D_, "mtf", "日線週線同步轉多", "收盤站上 20 日線、且約 20 週線（100 日）上揚中、收盤在其上，之後 5 天上漲",
+                             I.cross_up(C, ma20) & (ma100 > pv(ma100, 5)) & (C > ma100)))
+
+        S_ = "波動收縮後突破"
+        bw = 4 * sd / ma20
+        sq = bw <= I.rmin(bw, 120) * 1.0001
+        out.append(lab.event(S_, "squeeze", "布林壓縮後突破", "布林帶寬創 120 日新低後 5 天內，收盤突破上軌，之後 5 天續強",
+                             (I.rmax(pv(sq.astype(float)), 5) > 0) & I.cross_up(C, mid + 2 * sd)))
+        ma10 = I.sma(C, 10)
+        hiM = np.fmax(np.fmax(ma5, ma10), ma20)
+        loM = np.fmin(np.fmin(ma5, ma10), ma20)
+        out.append(lab.event(S_, "tangle", "均線糾結後帶量突破", "5、10、20 日線差距在 1.5% 內，隔天收盤高於三線 2% 以上且量大於均量，之後 5 天續強",
+                             F((pv(hiM / loM - 1) < 0.015) & (C > hiM * 1.02) & (V > vma20))))
+        out.append(lab.event(S_, "donchian", "突破 20 日高點", "收盤突破前 20 日最高價（唐奇安通道），之後 5 天續強",
+                             F(C > pv(I.rmax(H, 20)))))
+
+        K_ = "K 線型態"
+        body = np.abs(C - O)
+        lower = np.fmin(O, C) - L
+        upper = H - np.fmax(O, C)
+        down5 = C < pv(C, 5)
+        out.append(lab.event(K_, "hammer", "長下影線（錘子）", "下跌 5 天後出現下影線 ≥ 實體 2 倍且 ≥ 2% 的 K 棒，之後 5 天反彈",
+                             down5 & (lower >= 2 * np.fmax(body, 0.001 * C)) & (upper <= np.fmax(body, 0.002 * C)) & (lower >= 0.02 * C)))
+        out.append(lab.event(K_, "engulf", "多頭吞噬", "下跌後，今天紅 K 實體完全包住昨天黑 K，之後 5 天上漲",
+                             (pv(C) < pv(O)) & (C > O) & (O <= pv(C)) & (C >= pv(O)) & (pv(C) < pv(C, 6))))
+        r1p = pv(r1)
+        out.append(lab.event(K_, "mstar", "晨星", "長黑（跌 > 2%）→ 小實體（< 0.5%）→ 紅 K 收過長黑一半，之後 5 天上漲",
+                             (pv(C, 2) < pv(O, 2)) & (pv(r1, 2) < -0.02) & (np.abs(pv(C) - pv(O)) / pv(O) < 0.005)
+                             & (np.fmax(pv(O), pv(C)) < pv(C, 2)) & (C > O) & (C > (pv(O, 2) + pv(C, 2)) / 2)))
+        up5 = I.rmin(r1, 5) > 0
+        dn5 = I.rmax(r1, 5) < 0
+        out.append(lab.event(K_, "up5", "連漲 5 天", "連續 5 天上漲，之後 5 天續漲", up5 & ~(pv(up5.astype(float)) > 0)))
+        out.append(lab.event(K_, "dn5", "連跌 5 天", "連續 5 天下跌，之後 5 天反彈", dn5 & ~(pv(dn5.astype(float)) > 0)))
+        out.append(lab.event(K_, "gapfill", "跳空下跌當日回補", "開盤低於昨天最低價 2% 以上、收盤回到昨天最低價之上，之後 5 天上漲",
+                             (O < pv(L) * 0.98) & (C > pv(L))))
+
+        P_ = "量價關係"
+        ob = I.obv(C, V)
+        ob[~np.isfinite(C)] = np.nan
+        hi60 = pv(I.rmax(C, 60))
+        out.append(lab.event(P_, "obv", "OBV 領先創高", "OBV 創 60 日新高、但股價還沒創高（低於前高 3% 以上），之後 5 天上漲",
+                             F((ob > pv(I.rmax(ob, 60))) & (C < hi60 * 0.97))))
+        out.append(lab.event(P_, "div_bear", "價漲量縮（量價背離）", "股價創 60 日新高、但 5 日均量低於 60 日均量 8 成，之後 5 天表現較差",
+                             F((C > hi60) & (I.sma(V, 5) < I.sma(V, 60) * 0.8)), sign=-1,
+                             note="「避開」型說法：成立代表這種創高比較不可靠"))
+        rs_ = C / lab.bench[None, :]
+        out.append(lab.event(P_, "rs_lead", "相對強弱領先創高", "個股相對 0050 的強弱線創 60 日新高、但股價還沒創高，之後 5 天續強",
+                             F((rs_ > pv(I.rmax(rs_, 60))) & (C < hi60))))
+        vw = I.sma(C * V, 20) / I.sma(V, 20)
+        out.append(lab.event(P_, "vwap", "跌破 20 日均價 1 成", "收盤低於近 20 日成交量加權均價 10% 以上，之後 5 天反彈",
+                             I.cross_up(-(C / vw - 1), 0.10)))
         out += revenue_tests(lab, revenue)
     return out
 
@@ -447,7 +533,8 @@ def main():
         json.dump({"generated_at": datetime.now(timezone(timedelta(hours=8))).isoformat(timespec="seconds"),
                    "stock_period": [s0, s1], "index_period": [rows[0][0], rows[-1][0]],
                    "revenue_months": [min(revenue), max(revenue)] if revenue else None,
-                   "cost_stock": COST_STOCK, "m": len(tests), "tests": tests}, f, ensure_ascii=False, separators=(",", ":"))
+                   "cost_stock": COST_STOCK, "m": len(tests),
+                   "t_min": round(float(norm.isf(0.025 / len(tests))), 2), "tests": tests}, f, ensure_ascii=False, separators=(",", ":"))
     with open(OUT_STOCKS, "w", encoding="utf-8") as f:
         json.dump({"date": s1, "hist": lab.hist, "today": lab.today}, f, ensure_ascii=False, separators=(",", ":"))
     print(f"→ {OUT}、{OUT_STOCKS}（{len(lab.hist)} 檔個股歷史）")
