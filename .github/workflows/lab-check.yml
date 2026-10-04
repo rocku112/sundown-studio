@@ -27,10 +27,6 @@ jobs:
           cache: pip
       - run: pip install -r twflow/requirements.txt
 
-      - name: 台指期（五年）
-        working-directory: twflow
-        run: timeout 50m python -u -X utf8 scripts/fetch_taifex.py --months 62 --budget 45 || true
-
       - name: 官方日線（最近 3 天＋除權息日驗證）
         run: |
           python -u -X utf8 swing/scripts/fetch_prices.py --days 3
@@ -93,6 +89,10 @@ jobs:
       - name: 智慧選股資料表
         run: python -X utf8 swing/scripts/build_screen.py
 
+      - name: 台指期（五年）
+        working-directory: twflow
+        run: timeout 50m python -u -X utf8 scripts/fetch_taifex.py --months 62 --budget 45 || true
+
       - uses: actions/upload-artifact@v4
         with:
           name: lab-output
@@ -102,3 +102,6 @@ jobs:
             twflow/web/data/evidence.json
             twflow/web/data/evidence_stocks.json
             twflow/web/data/screen.json
+            twflow/web/data/taifex.json
+            twflow/web/data/etf_profile.json
+            twflow/web/data/rules_dca.json
