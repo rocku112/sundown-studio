@@ -433,6 +433,7 @@ a.btn{text-decoration:none;color:inherit;display:inline-block}
   </div>
   <div class="tabs" id="tabs"></div>
   <button class="icon" id="install" title="安裝到主畫面" style="display:none">⬇</button>
+  <button class="icon" id="helpbtn" title="使用教學">?</button>
   <button class="icon" id="settings" title="設定">⚙</button>
 </header>
 
@@ -454,6 +455,7 @@ a.btn{text-decoration:none;color:inherit;display:inline-block}
   <section class="view" id="v-swing"><div class="wrap" id="swing"></div></section>
   <section class="view" id="v-screen"><div class="wrap" id="screen"></div></section>
   <section class="view" id="v-hold"><div class="wrap" id="hold"></div></section>
+  <section class="view" id="v-help"><div class="wrap" id="help"></div></section>
 </div>
 
 <aside class="rail" id="rail"></aside>
@@ -527,6 +529,7 @@ Promise.all([
   D=d; SEARCH=s; sectors=d.sectors; USD=u; CROSS=x;
   buildStats(); buildRank(); buildToday();
   setMarket(MARKET);
+  helpHint();
   evReady().then(()=>{updateBadge(); if(watchTab==='feed') buildWatch();});
 });
 // 走勢圖資料 1.3MB，開個股頁才需要——延後載入，不擋首屏
@@ -2284,13 +2287,170 @@ addEventListener('keydown',e=>{
   if(e.key==='0'&&e.target.tagName!=='INPUT'){view={k:1,x:0,y:0};applyView();}
 });
 
+/* ══ 使用教學 ══════════════════════════════════════════════════
+   任務導向：「我想分析一檔 X」→ 一步一步帶到對應頁面；每一步都有「前往」或「試試看」按鈕。
+   另附各頁說明、證據標籤的意思、名詞解釋、常見問題。 */
+const HELP_TASKS=[
+  {id:'stock',t:'分析一檔台股個股',d:'例如台積電、聯發科，或任何上市櫃公司',steps:[
+    ['在右上角搜尋框輸入代號或名稱（例：2330 或「台積」），點選結果。上市櫃全部證券都搜得到。','q'],
+    ['看個股頁最上方的走勢與當日報價，再往下看「法人買賣超」：外資、投信近 5 日在買還是賣。','try:2330'],
+    ['看「短線指標・本檔」：這檔股票過去每次出現某個訊號後 5 天的實際表現（次數、平均、勝率）。次數太少（< 10 次）就不要當真。','try:2330'],
+    ['到「選股」頁，用基本面條件（本益比、殖利率、營收年增、EPS）看它和同類股比起來的位置。','go:screen'],
+    ['到「波段」頁的「短線證據檢驗」，確認你想用的指標在全市場有沒有證據——大部分沒有。','go:swing'],
+    ['想追蹤就按個股頁右上角 ☆ 加入自選；買了就到「持股」記錄成本，看損益與風險。','go:hold']]},
+  {id:'etf',t:'分析一檔 ETF',d:'例如 0050、0056、00878、債券 ETF',steps:[
+    ['到「ETF」頁，用分類（股票型、高股息、債券…）與排序（規模、殖利率、長期含息報酬、受益人數）找到它，或直接搜尋代號。','go:etf'],
+    ['點進 ETF 頁，先看「折溢價」：溢價時買進等於多付錢，溢價大的 ETF 之後常回到淨值附近。','etf:0056'],
+    ['看「賺多少 vs 發多少」：含息年化 vs 股價年化 vs 殖利率。股價年化長期為負，代表配息有一部分是拿你自己的本金還你。','etf:0056'],
+    ['看「風險」：一年波動度、三年最大回撤——問自己跌這麼多抱不抱得住。','etf:0056'],
+    ['看「受益人」與「規模與資金流」：人數暴增常是追熱潮；申購贖回看長期資金去向。','etf:0056'],
+    ['想知道長期持有的勝率，到「波段」頁看「持有期勝率」與「定期定額 vs 調節」。','go:swing']]},
+  {id:'us',t:'分析一檔美股或美國 ETF',d:'例如 NVDA、AAPL、VOO、QQQ',steps:[
+    ['左上角切到「美股」，在搜尋框輸入代號（例：NVDA）。全部美股與 ETF 都搜得到；常用的約 620 檔有完整資料。','mkt:us'],
+    ['看個股頁的漲跌、所屬板塊，以及「基本面 SEC 申報・近四季」（營收、毛利率、EPS、股利）。','us:NVDA'],
+    ['看「台美連動」：這檔美股和哪些台股相關（供應鏈、ADR），昨晚美股的漲跌常會影響今天的台股。','go:link'],
+    ['「晨報」與「板塊」看昨晚整體市場與各產業的強弱。','go:us-today']]},
+  {id:'market',t:'判斷大盤今天、明天、下週一',d:'台指期夜盤、法人、市場情緒',steps:[
+    ['「今日」頁的「台指期・隔日開盤參考」：夜盤歸屬下一個交易日，週五晚上的夜盤＝下週一開盤前的參考。','go:today'],
+    ['讀法：過去五年夜盤漲跌和 0050 隔天開盤同方向約 87%；但「開盤後到收盤」幾乎無關——消息在開盤那一刻就反映完了，開盤後追沒有優勢。','go:today'],
+    ['看「今日情緒」、「大戶異常」、「近 5 日資金流入／流出」掌握法人資金往哪個板塊走。','go:today'],
+    ['美股剛收盤的早上（05:00–09:00）會自動顯示美股晨報；「台美」頁看昨晚美股對台股的影響。','go:link']]},
+  {id:'pick',t:'找出符合條件的股票',d:'用條件選股，並知道哪些條件有證據',steps:[
+    ['到「選股」頁，先點一個「熱門策略」看範例，再自己加減條件（≥ / ≤ 數值）。','go:screen'],
+    ['每個條件旁的標籤是本站的證據檢驗結論：「有跡象」的值得留意，「證據不足」「反向」的代表過去照做沒有比較好。','go:screen'],
+    ['結果可以排序、點進個股頁；滿意的條件組合可以「儲存為我的策略」（存在你的瀏覽器）。','go:screen'],
+    ['想看「每月照條件換股」長期能賺多少，到「波段」頁的「中期組合實驗」，有分規模與股價檔位的比較。','go:swing']]},
+  {id:'hold',t:'檢查自己的持股',d:'損益、集中度、和大盤比較',steps:[
+    ['到「持股」頁，輸入代號、股數、成本（台股、ETF、美股都可以，美股自動換算台幣）。','go:hold'],
+    ['看總覽：總損益、各市場配置、單一持股占比——一檔超過三成就要想清楚。','go:hold'],
+    ['「需要注意」會列出集中度過高、虧損過大等提醒；和 0050 長抱比較，看主動操作有沒有比較好。','go:hold'],
+    ['資料只存在你自己的瀏覽器，不會上傳。換手機或清除瀏覽資料會不見，請用持股頁下方的「匯出備份」存一份，之後可以「匯入備份」還原。','go:hold']]},
+  {id:'claim',t:'驗證網路上聽到的投資說法',d:'「KD 黃金交叉買進」「投信連買跟單」有用嗎？',steps:[
+    ['到「波段」頁的「短線指標有沒有證據？」，找找看這個說法是否已經檢驗過（目前約 100 個，含 XQ 內建選股腳本）。','go:swing'],
+    ['看結論標籤，再點開看樣本內／樣本外、事件次數、勝率、扣成本後的淨報酬。前後兩段都成立、而且扣完成本還有剩，才算數。','go:swing'],
+    ['長期持有類的說法（定期定額、調節、高股息）看「持有期勝率」與「定期定額 vs 調節」。','go:swing'],
+    ['看「前瞻紀錄」：每月事先寫死的選股，之後只看實際結果——這是比回測更誠實的證據。','go:swing']]},
+];
+const HELP_PAGES=[
+  ['today','今日','台股盤後的重點：一段話摘要（可分享）、台指期夜盤與隔日開盤參考、市場情緒、大戶異常買賣、資金流入流出的板塊。每天 18:40 後更新；夜盤清晨 06:20 更新。'],
+  ['screen','選股','約 2,000 檔上市櫃股票、40 多個欄位（估值、月營收、季報、技術面、法人、融資券、千張大戶）的條件選股，每個條件標出證據檢驗結果。'],
+  ['chart','泡泡圖','各產業板塊一張圖：橫軸漲跌、縱軸法人資金、泡泡大小是成交值。右上＝漲又有資金進來，左下＝跌又有資金流出。點泡泡看板塊成分股。'],
+  ['etf','ETF','全部台股 ETF 的折溢價、申購贖回資金流、殖利率、長期含息報酬、受益人數；點進去看單檔的完整體質。'],
+  ['swing','波段','本站的研究室：中期組合實驗、前瞻紀錄、持有期勝率、定期定額 vs 調節、短線證據檢驗、波段策略回測。所有結果都含交易成本，失敗的也照實列出。'],
+  ['hold','持股','記錄自己的持股，看損益、配置、集中度，並和 0050 長抱比較。資料只存在你的瀏覽器。'],
+  ['rank','排行榜','法人買超、漲跌幅、成交值等排行。'],
+  ['chain','供應鏈','產業上中下游關係圖：從一家公司找到它的供應商與客戶。'],
+  ['link','台美','台美連動：台積電等 ADR 的溢價、美股與相關台股的對應，昨晚美股對今天台股的影響。'],
+  ['watch','自選','加了 ☆ 的股票集中在這裡，並有「動態」通知（自選股出現大戶異常、訊號時提醒）。'],
+  ['us-today','美股・晨報','美股收盤重點、指數、漲跌幅最大的股票（台灣早上 06:30 更新）。'],
+  ['us-sector','美股・板塊','美股 11 大板塊的強弱與成分股。'],
+];
+const HELP_VERDICT=[
+  ['成立且扣成本後可交易','前半段（樣本內）與後半段（樣本外）都成立、通過多重比較校正，扣掉手續費與證交稅還有剩。目前極少。','ok'],
+  ['成立但不夠付成本','統計上真的有差，但幅度小於交易成本，實際做會虧。','mid'],
+  ['有跡象（未過多重比較校正）','樣本外顯著，但同時測了很多說法，可能是運氣；值得持續觀察。','mid'],
+  ['證據不足','看不出和隨便買有差別。大部分說法在這裡。','no'],
+  ['反向跡象／顯著但方向相反','照做之後反而比平均差。','rev'],
+];
+const HELP_GLOSSARY=[
+  ['超額報酬','和同一天「股票池平均」相比多賺或少賺多少。股票池＝當時成交值前 150 名，避免用今天的眼光挑股票。'],
+  ['樣本內／樣本外','把歷史切成前後兩段。只在前段好看、後段失效的，多半是巧合。'],
+  ['t 值','結果偏離「沒有效果」有多遠。大約 |t| > 2 才算顯著；同時測很多說法時門檻要更高（多重比較校正）。'],
+  ['多重比較校正','測 100 個說法，靠運氣也會有 5 個「看起來有效」。校正後的門檻會隨測試數量提高。'],
+  ['年化報酬','把整段期間的報酬換算成平均每年幾 %。'],
+  ['最大回撤','從最高點跌到最低點的最大跌幅。這是「你會不會撐不住賣掉」的關鍵。'],
+  ['含息報酬','股價漲跌加上配息再投入；只看股價會低估高股息標的、也會讓「配息配本金」被忽略。'],
+  ['折溢價','ETF 市價 ÷ 淨值 − 1。溢價＝買貴了。'],
+  ['夜盤','台指期 15:00 到隔天 05:00 的交易時段，歸屬下一個營業日。'],
+  ['基差','台指期 − 加權指數。除權息旺季（6–9 月）常為負，是預期配息造成，不是看空。'],
+  ['法人','外資、投信、自營商。本站顯示的是買賣超（買進減賣出）。'],
+  ['融資／融券','借錢買股／借股票賣。券資比＝融券 ÷ 融資。'],
+  ['千張大戶','持有 1,000 張以上的股東，每週由集保公布。'],
+  ['前視偏誤','回測時不小心用了當時還不知道的資訊（例如用今天的熱門股回頭挑股票），結果會好得不真實。'],
+];
+const HELP_FAQ=[
+  ['資料多久更新一次？','台股：交易日 18:40 後；台指期夜盤：清晨 06:20；美股：台灣時間清晨 06:30；板塊定義每週日重算。首頁上方會顯示資料日期。'],
+  ['為什麼某檔股票資料比較少？','所有上市櫃證券（權證除外）與全部美股都搜得到；但歷史走勢、法人、證據統計只有流動性較高的股票才有完整資料，冷門股會顯示簡易頁。'],
+  ['這是投資建議嗎？','不是。本站只彙整公開資料並做統計檢驗，不推薦任何股票，也不預測漲跌。所有「符合條件」的清單都只是條件成立，不是推薦。'],
+  ['為什麼大部分指標都寫「證據不足」？','因為把交易成本算進去、用沒看過的資料驗證、並校正同時測很多說法的運氣之後，大部分流傳的方法確實沒有比隨便買好。這本身就是有用的資訊。'],
+  ['我的持股、自選、策略存在哪裡？','只存在你這支手機或電腦的瀏覽器裡，不會上傳。清除瀏覽資料會不見；持股可以在持股頁「匯出備份」存成檔案、換裝置後再「匯入備份」。'],
+  ['可以裝成 App 嗎？','可以。手機瀏覽器選「加入主畫面」（右上角出現 ⬇ 按鈕時也可以直接按），之後像 App 一樣開啟，離線也看得到最後一次的資料。'],
+];
+function buildHelp(){
+  const el=$('help');
+  const btn=a=>{
+    if(a==='q') return '<button class="btn" data-hq>前往搜尋框</button>';
+    const [k,v]=a.split(':');
+    const lab={go:'前往此頁',try:'試試看：'+v,etf:'試試看：'+v,us:'試試看：'+v,mkt:v==='us'?'切到美股':'切到台股'}[k];
+    return `<button class="btn" data-h${k}="${v}">${lab}</button>`;
+  };
+  el.innerHTML=`
+    <div class="card dg"><h3>使用教學</h3>
+      <p style="font-size:14px;line-height:1.85">這個工具做三件事：<b>彙整</b>台美股官方公開資料、<b>檢驗</b>常見投資說法到底有沒有用、
+        幫你<b>追蹤</b>自己的持股與自選股。下面依「你想做什麼」一步一步帶你，每一步都有按鈕直接帶你過去。</p>
+      <div class="chips" style="margin-top:10px">${HELP_TASKS.map(x=>`<button class="chip" data-hjump="${x.id}">${x.t} →</button>`).join('')}</div></div>
+    <div class="card"><h3>三分鐘上手</h3>
+      <ol style="line-height:1.9;padding-left:20px;font-size:14px">
+        <li>左上角切換<b>台股／美股</b>；上方（手機在下方）切換頁面。</li>
+        <li>右上角<b>搜尋</b>任何代號或名稱，點進去就是那一檔的完整資料。 ${btn('q')}</li>
+        <li>看到有興趣的按 <b>☆</b> 加入自選，到「自選」頁集中追蹤。 ${btn('go:watch')}</li>
+        <li>想知道某個方法有沒有用，到「波段」頁看檢驗結果。 ${btn('go:swing')}</li>
+      </ol></div>
+    ${HELP_TASKS.map((x,i)=>`<details class="card" id="hp-${x.id}" ${i===0?'open':''}><summary style="cursor:pointer;font-weight:600;font-size:15px">${x.t}<span class="rsub" style="font-weight:400">　${x.d}</span></summary>
+      <ol style="line-height:1.85;padding-left:20px;margin-top:10px;font-size:13.5px">
+        ${x.steps.map(([t,a])=>`<li style="margin-bottom:8px">${t}<div style="margin-top:4px">${btn(a)}</div></li>`).join('')}
+      </ol></details>`).join('')}
+    <details class="card"><summary style="cursor:pointer;font-weight:600;font-size:15px">每一頁在做什麼</summary>
+      ${HELP_PAGES.map(([v,n,d])=>`<div class="krow" style="align-items:flex-start;gap:12px"><span style="min-width:84px"><b>${n}</b></span>
+        <span style="font-size:13px;line-height:1.7;flex:1">${d}</span>${btn('go:'+v)}</div>`).join('')}</details>
+    <details class="card"><summary style="cursor:pointer;font-weight:600;font-size:15px">證據標籤怎麼看</summary>
+      ${HELP_VERDICT.map(([n,d,c])=>`<div class="krow" style="align-items:flex-start;gap:12px"><span class="vbadge ${c}" style="white-space:nowrap">${n}</span>
+        <span style="font-size:13px;line-height:1.7">${d}</span></div>`).join('')}
+      <p class="note" style="margin-top:8px;font-size:12.5px">所有檢驗都是：訊號出現當天收盤後才知道 → 隔天開盤買 → 持有固定天數賣出，扣手續費與證交稅，和同一天的股票池平均比較。</p></details>
+    <details class="card"><summary style="cursor:pointer;font-weight:600;font-size:15px">名詞解釋</summary>
+      ${HELP_GLOSSARY.map(([n,d])=>`<div class="krow" style="align-items:flex-start;gap:12px"><span style="min-width:96px"><b>${n}</b></span><span style="font-size:13px;line-height:1.7">${d}</span></div>`).join('')}</details>
+    <details class="card"><summary style="cursor:pointer;font-weight:600;font-size:15px">常見問題</summary>
+      ${HELP_FAQ.map(([q,a])=>`<div style="margin:10px 0"><b>${q}</b><div style="font-size:13px;line-height:1.75;color:var(--s9);margin-top:2px">${a}</div></div>`).join('')}</details>
+    <div class="card" style="color:var(--s8);font-size:11.5px;line-height:1.7">
+      資料來源：臺灣證券交易所、證券櫃檯買賣中心、臺灣期貨交易所、公開資訊觀測站、臺灣集中保管結算所、美國 SEC、Nasdaq。
+      本服務僅就公開市場資訊進行彙整與統計呈現，非證券投資顧問事業，不對特定有價證券提供分析意見或推介建議，亦不構成任何投資建議；投資人應自行判斷並自負盈虧。</div>`;
+  el.onclick=e=>{
+    const b=e.target.closest('button,a'); if(!b) return;
+    const d=b.dataset;
+    if(d.hjump){ e.preventDefault(); const x=$('hp-'+d.hjump); if(x){ x.open=true; x.scrollIntoView({behavior:'smooth',block:'start'}); } return; }
+    if('hq' in d){ scrollTo(0,0); $('q').focus(); toast('輸入代號或名稱，例如 2330'); return; }
+    if(d.hgo){ const v=d.hgo, m=TABS.tw.some(x=>x[0]===v)?(TABS.us.some(x=>x[0]===v)?MARKET:'tw'):'us';
+      if(m!==MARKET) setMarket(m); setView(v); scrollTo(0,0); return; }
+    if(d.hmkt){ setMarket(d.hmkt); scrollTo(0,0); $('q').focus(); return; }
+    if(d.htry){ if(MARKET!=='tw') setMarket('tw'); openStock(d.htry); return; }
+    if(d.hetf){ if(MARKET!=='tw') setMarket('tw'); etfReady().then(()=>openETF(d.hetf)); return; }
+    if(d.hus){ if(MARKET!=='us') setMarket('us'); openStock('US:'+d.hus); return; }
+  };
+}
+// 第一次使用：提示看教學（只提示一次，記在瀏覽器）
+function helpHint(){
+  let seen=false;
+  try{ seen=!!localStorage.getItem('twflow_help_seen'); }catch(_){ return; }
+  if(seen) return;
+  const b=document.createElement('div');
+  b.id='helphint';
+  b.style.cssText='position:fixed;left:12px;right:12px;bottom:calc(var(--nav,0px) + 14px);z-index:60;max-width:460px;margin:0 auto;'+
+    'background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;box-shadow:0 8px 24px rgba(0,0,0,.18);font-size:13.5px;line-height:1.6';
+  b.innerHTML='第一次使用？花三分鐘看怎麼用這個工具分析你想了解的股票。'+
+    '<div style="display:flex;gap:8px;margin-top:8px"><button class="btn pri" data-hh="go">看使用教學</button><button class="btn" data-hh="no">之後再說</button></div>';
+  document.body.appendChild(b);
+  b.onclick=e=>{ const x=e.target.closest('[data-hh]'); if(!x) return;
+    try{ localStorage.setItem('twflow_help_seen','1'); }catch(_){}
+    b.remove(); if(x.dataset.hh==='go'){ setView('help'); scrollTo(0,0); } };
+}
+
 /* ══ 視圖切換 ══════════════════════════════════════════════════ */
 // 「台美」「持股」「自選」兩個市場共用，其餘各市場自己一套
 const TABS={
   tw:[['today','★','今日'],['screen','⚲','選股'],['chart','◎','泡泡圖'],['etf','◈','ETF'],['swing','↗','波段'],
-      ['hold','◉','持股'],['rank','☰','排行榜'],['chain','⇄','供應鏈'],['link','⇆','台美'],['watch','☆','自選']],
+      ['hold','◉','持股'],['rank','☰','排行榜'],['chain','⇄','供應鏈'],['link','⇆','台美'],['watch','☆','自選'],['help','?','教學']],
   us:[['us-today','☀','晨報'],['us-sector','▦','板塊'],['us-rank','☰','排行'],
-      ['link','⇆','台美'],['hold','◉','持股'],['watch','☆','自選']],
+      ['link','⇆','台美'],['hold','◉','持股'],['watch','☆','自選'],['help','?','教學']],
 };
 let curView='today';
 function setView(v){
@@ -2308,6 +2468,7 @@ function setView(v){
   if(v==='swing') buildSwing();
   if(v==='hold') buildHold();
   if(v==='screen') buildScreen();
+  if(v==='help') buildHelp();
   // 手機導航：目前頁在「更多」裡時，讓「更多」亮起來
   const nb=$('nav').querySelector('[data-more]'); if(nb) nb.classList.toggle('on',!$('nav').querySelector(`[data-v="${v}"]`));
   $('more').classList.remove('on');
@@ -2450,6 +2611,7 @@ function buildSettings(){
 $('set-body').onclick=e=>{const b=e.target.closest('[data-k]'); if(!b) return;
   SET[b.dataset.k]=b.dataset.v; applySettings(); buildSettings();};
 $('settings').onclick=()=>{buildSettings(); show('set-panel');};
+$('helpbtn').onclick=()=>{ setView('help'); scrollTo(0,0); };
 applySettings();
 
 /* ══ 重畫觸發 ══════════════════════════════════════════════════
