@@ -888,6 +888,3280 @@
    "type": "index",
    "sector": null,
    "stooq": "usdtwd"
+  },
+  {
+   "sym": "MMM",
+   "name": "3M",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "AOS",
+   "name": "A. O. Smith",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "ACN",
+   "name": "Accenture",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "AES",
+   "name": "AES Corporation",
+   "type": "stock",
+   "sector": "公用事業",
+   "auto": true
+  },
+  {
+   "sym": "AFL",
+   "name": "Aflac",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "A",
+   "name": "Agilent Technologies",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "APD",
+   "name": "Air Products",
+   "type": "stock",
+   "sector": "原物料",
+   "auto": true
+  },
+  {
+   "sym": "ABNB",
+   "name": "Airbnb",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "AKAM",
+   "name": "Akamai Technologies",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "ALB",
+   "name": "Albemarle Corporation",
+   "type": "stock",
+   "sector": "原物料",
+   "auto": true
+  },
+  {
+   "sym": "ARE",
+   "name": "Alexandria Real Estate Equities",
+   "type": "stock",
+   "sector": "房地產",
+   "auto": true
+  },
+  {
+   "sym": "ALGN",
+   "name": "Align Technology",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "ALLE",
+   "name": "Allegion",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "LNT",
+   "name": "Alliant Energy",
+   "type": "stock",
+   "sector": "公用事業",
+   "auto": true
+  },
+  {
+   "sym": "ALL",
+   "name": "Allstate",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "GOOG",
+   "name": "Alphabet Inc.(Class C)",
+   "type": "stock",
+   "sector": "通訊服務",
+   "auto": true
+  },
+  {
+   "sym": "MO",
+   "name": "Altria",
+   "type": "stock",
+   "sector": "必需消費",
+   "auto": true
+  },
+  {
+   "sym": "AMCR",
+   "name": "Amcor",
+   "type": "stock",
+   "sector": "原物料",
+   "auto": true
+  },
+  {
+   "sym": "AEE",
+   "name": "Ameren",
+   "type": "stock",
+   "sector": "公用事業",
+   "auto": true
+  },
+  {
+   "sym": "AEP",
+   "name": "American Electric Power",
+   "type": "stock",
+   "sector": "公用事業",
+   "auto": true
+  },
+  {
+   "sym": "AIG",
+   "name": "American International Group",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "AWK",
+   "name": "American Water Works",
+   "type": "stock",
+   "sector": "公用事業",
+   "auto": true
+  },
+  {
+   "sym": "AMP",
+   "name": "Ameriprise Financial",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "AME",
+   "name": "Ametek",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "APH",
+   "name": "Amphenol",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "AON",
+   "name": "Aon plc",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "APA",
+   "name": "APA Corporation",
+   "type": "stock",
+   "sector": "能源",
+   "auto": true
+  },
+  {
+   "sym": "APO",
+   "name": "Apollo Global Management",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "APP",
+   "name": "AppLovin",
+   "type": "stock",
+   "sector": "通訊服務",
+   "auto": true
+  },
+  {
+   "sym": "APTV",
+   "name": "Aptiv",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "ACGL",
+   "name": "Arch Capital Group",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "ADM",
+   "name": "Archer Daniels Midland",
+   "type": "stock",
+   "sector": "必需消費",
+   "auto": true
+  },
+  {
+   "sym": "ARES",
+   "name": "Ares Management",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "AJG",
+   "name": "Arthur J. Gallagher & Co.",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "AIZ",
+   "name": "Assurant",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "ATO",
+   "name": "Atmos Energy",
+   "type": "stock",
+   "sector": "公用事業",
+   "auto": true
+  },
+  {
+   "sym": "ADSK",
+   "name": "Autodesk",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "ADP",
+   "name": "Automatic Data Processing",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "AZO",
+   "name": "AutoZone",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "AVY",
+   "name": "Avery Dennison",
+   "type": "stock",
+   "sector": "原物料",
+   "auto": true
+  },
+  {
+   "sym": "AXON",
+   "name": "Axon Enterprise",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "BKR",
+   "name": "Baker Hughes",
+   "type": "stock",
+   "sector": "能源",
+   "auto": true
+  },
+  {
+   "sym": "BALL",
+   "name": "Ball Corporation",
+   "type": "stock",
+   "sector": "原物料",
+   "auto": true
+  },
+  {
+   "sym": "BAX",
+   "name": "Baxter International",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "BDX",
+   "name": "Becton Dickinson",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "BBY",
+   "name": "Best Buy",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "TECH",
+   "name": "Bio-Techne",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "BIIB",
+   "name": "Biogen",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "BX",
+   "name": "Blackstone Inc.",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "XYZ",
+   "name": "Block, Inc.",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "BE",
+   "name": "Bloom Energy",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "BNY",
+   "name": "BNY Mellon",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "BSX",
+   "name": "Boston Scientific",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "BMY",
+   "name": "Bristol Myers Squibb",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "BR",
+   "name": "Broadridge Financial Solutions",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "BRO",
+   "name": "Brown & Brown",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "BF-B",
+   "name": "Brown–Forman",
+   "type": "stock",
+   "sector": "必需消費",
+   "auto": true
+  },
+  {
+   "sym": "BG",
+   "name": "Bunge Global",
+   "type": "stock",
+   "sector": "必需消費",
+   "auto": true
+  },
+  {
+   "sym": "BXP",
+   "name": "BXP, Inc.",
+   "type": "stock",
+   "sector": "房地產",
+   "auto": true
+  },
+  {
+   "sym": "CHRW",
+   "name": "C.H. Robinson",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "CPT",
+   "name": "Camden Property Trust",
+   "type": "stock",
+   "sector": "房地產",
+   "auto": true
+  },
+  {
+   "sym": "COF",
+   "name": "Capital One",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "CAH",
+   "name": "Cardinal Health",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "CCL",
+   "name": "Carnival Corporation",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "CARR",
+   "name": "Carrier Global",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "CVNA",
+   "name": "Carvana",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "CASY",
+   "name": "Casey's",
+   "type": "stock",
+   "sector": "必需消費",
+   "auto": true
+  },
+  {
+   "sym": "CBOE",
+   "name": "Cboe Global Markets",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "CBRE",
+   "name": "CBRE Group",
+   "type": "stock",
+   "sector": "房地產",
+   "auto": true
+  },
+  {
+   "sym": "CDW",
+   "name": "CDW Corporation",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "COR",
+   "name": "Cencora",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "CNC",
+   "name": "Centene Corporation",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "CNP",
+   "name": "CenterPoint Energy",
+   "type": "stock",
+   "sector": "公用事業",
+   "auto": true
+  },
+  {
+   "sym": "CF",
+   "name": "CF Industries",
+   "type": "stock",
+   "sector": "原物料",
+   "auto": true
+  },
+  {
+   "sym": "CRL",
+   "name": "Charles River Laboratories",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "SCHW",
+   "name": "Charles Schwab Corporation",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "CHTR",
+   "name": "Charter Communications",
+   "type": "stock",
+   "sector": "通訊服務",
+   "auto": true
+  },
+  {
+   "sym": "CMG",
+   "name": "Chipotle Mexican Grill",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "CB",
+   "name": "Chubb Limited",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "CHD",
+   "name": "Church & Dwight",
+   "type": "stock",
+   "sector": "必需消費",
+   "auto": true
+  },
+  {
+   "sym": "CIEN",
+   "name": "Ciena",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "CI",
+   "name": "Cigna",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "CINF",
+   "name": "Cincinnati Financial",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "CTAS",
+   "name": "Cintas",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "C",
+   "name": "Citigroup",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "CFG",
+   "name": "Citizens Financial Group",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "CLX",
+   "name": "Clorox",
+   "type": "stock",
+   "sector": "必需消費",
+   "auto": true
+  },
+  {
+   "sym": "CME",
+   "name": "CME Group",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "CMS",
+   "name": "CMS Energy",
+   "type": "stock",
+   "sector": "公用事業",
+   "auto": true
+  },
+  {
+   "sym": "CTSH",
+   "name": "Cognizant",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "COHR",
+   "name": "Coherent Corp.",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "CL",
+   "name": "Colgate-Palmolive",
+   "type": "stock",
+   "sector": "必需消費",
+   "auto": true
+  },
+  {
+   "sym": "FIX",
+   "name": "Comfort Systems USA",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "ED",
+   "name": "Consolidated Edison",
+   "type": "stock",
+   "sector": "公用事業",
+   "auto": true
+  },
+  {
+   "sym": "STZ",
+   "name": "Constellation Brands",
+   "type": "stock",
+   "sector": "必需消費",
+   "auto": true
+  },
+  {
+   "sym": "COO",
+   "name": "Cooper Companies (The)",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "CPRT",
+   "name": "Copart",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "GLW",
+   "name": "Corning Inc.",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "CPAY",
+   "name": "Corpay",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "CTVA",
+   "name": "Corteva",
+   "type": "stock",
+   "sector": "原物料",
+   "auto": true
+  },
+  {
+   "sym": "CSGP",
+   "name": "CoStar Group",
+   "type": "stock",
+   "sector": "房地產",
+   "auto": true
+  },
+  {
+   "sym": "CRH",
+   "name": "CRH plc",
+   "type": "stock",
+   "sector": "原物料",
+   "auto": true
+  },
+  {
+   "sym": "CCI",
+   "name": "Crown Castle",
+   "type": "stock",
+   "sector": "房地產",
+   "auto": true
+  },
+  {
+   "sym": "CSX",
+   "name": "CSX Corporation",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "CMI",
+   "name": "Cummins",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "CVS",
+   "name": "CVS Health",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "DHR",
+   "name": "Danaher Corporation",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "DRI",
+   "name": "Darden Restaurants",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "DDOG",
+   "name": "Datadog",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "DVA",
+   "name": "DaVita",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "DECK",
+   "name": "Deckers Brands",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "DAL",
+   "name": "Delta Air Lines",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "DVN",
+   "name": "Devon Energy",
+   "type": "stock",
+   "sector": "能源",
+   "auto": true
+  },
+  {
+   "sym": "DXCM",
+   "name": "Dexcom",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "FANG",
+   "name": "Diamondback Energy",
+   "type": "stock",
+   "sector": "能源",
+   "auto": true
+  },
+  {
+   "sym": "DLR",
+   "name": "Digital Realty",
+   "type": "stock",
+   "sector": "房地產",
+   "auto": true
+  },
+  {
+   "sym": "DG",
+   "name": "Dollar General",
+   "type": "stock",
+   "sector": "必需消費",
+   "auto": true
+  },
+  {
+   "sym": "DLTR",
+   "name": "Dollar Tree",
+   "type": "stock",
+   "sector": "必需消費",
+   "auto": true
+  },
+  {
+   "sym": "D",
+   "name": "Dominion Energy",
+   "type": "stock",
+   "sector": "公用事業",
+   "auto": true
+  },
+  {
+   "sym": "DPZ",
+   "name": "Domino's",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "DASH",
+   "name": "DoorDash",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "DOV",
+   "name": "Dover Corporation",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "DOW",
+   "name": "Dow Inc.",
+   "type": "stock",
+   "sector": "原物料",
+   "auto": true
+  },
+  {
+   "sym": "DHI",
+   "name": "D. R. Horton",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "DTE",
+   "name": "DTE Energy",
+   "type": "stock",
+   "sector": "公用事業",
+   "auto": true
+  },
+  {
+   "sym": "DD",
+   "name": "DuPont",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "EBAY",
+   "name": "eBay Inc.",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "ECHO",
+   "name": "EchoStar",
+   "type": "stock",
+   "sector": "通訊服務",
+   "auto": true
+  },
+  {
+   "sym": "ECL",
+   "name": "Ecolab",
+   "type": "stock",
+   "sector": "原物料",
+   "auto": true
+  },
+  {
+   "sym": "EIX",
+   "name": "Edison International",
+   "type": "stock",
+   "sector": "公用事業",
+   "auto": true
+  },
+  {
+   "sym": "EW",
+   "name": "Edwards Lifesciences",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "ELV",
+   "name": "Elevance Health",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "EME",
+   "name": "Emcor",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "EMR",
+   "name": "Emerson Electric",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "ETR",
+   "name": "Entergy",
+   "type": "stock",
+   "sector": "公用事業",
+   "auto": true
+  },
+  {
+   "sym": "EOG",
+   "name": "EOG Resources",
+   "type": "stock",
+   "sector": "能源",
+   "auto": true
+  },
+  {
+   "sym": "EQT",
+   "name": "EQT Corporation",
+   "type": "stock",
+   "sector": "能源",
+   "auto": true
+  },
+  {
+   "sym": "EFX",
+   "name": "Equifax",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "ERIE",
+   "name": "Erie Indemnity",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "ESS",
+   "name": "Essex Property Trust",
+   "type": "stock",
+   "sector": "房地產",
+   "auto": true
+  },
+  {
+   "sym": "EL",
+   "name": "Estée Lauder Companies (The)",
+   "type": "stock",
+   "sector": "必需消費",
+   "auto": true
+  },
+  {
+   "sym": "EG",
+   "name": "Everest Group",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "EVRG",
+   "name": "Evergy",
+   "type": "stock",
+   "sector": "公用事業",
+   "auto": true
+  },
+  {
+   "sym": "P",
+   "name": "Everpure",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "ES",
+   "name": "Eversource Energy",
+   "type": "stock",
+   "sector": "公用事業",
+   "auto": true
+  },
+  {
+   "sym": "EXC",
+   "name": "Exelon",
+   "type": "stock",
+   "sector": "公用事業",
+   "auto": true
+  },
+  {
+   "sym": "EXE",
+   "name": "Expand Energy",
+   "type": "stock",
+   "sector": "能源",
+   "auto": true
+  },
+  {
+   "sym": "EXPE",
+   "name": "Expedia Group",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "EXPD",
+   "name": "Expeditors International",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "EXR",
+   "name": "Extra Space Storage",
+   "type": "stock",
+   "sector": "房地產",
+   "auto": true
+  },
+  {
+   "sym": "FFIV",
+   "name": "F5, Inc.",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "FDS",
+   "name": "FactSet",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "FICO",
+   "name": "Fair Isaac",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "FAST",
+   "name": "Fastenal",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "FRT",
+   "name": "Federal Realty Investment Trust",
+   "type": "stock",
+   "sector": "房地產",
+   "auto": true
+  },
+  {
+   "sym": "FDX",
+   "name": "FedEx",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "FDXF",
+   "name": "FedEx Freight",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "FERG",
+   "name": "Ferguson Enterprises",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "FIS",
+   "name": "Fidelity National Information Services",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "FITB",
+   "name": "Fifth Third Bancorp",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "FSLR",
+   "name": "First Solar",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "FE",
+   "name": "FirstEnergy",
+   "type": "stock",
+   "sector": "公用事業",
+   "auto": true
+  },
+  {
+   "sym": "FISV",
+   "name": "Fiserv",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "FLEX",
+   "name": "Flex Ltd.",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "F",
+   "name": "Ford Motor Company",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "FTNT",
+   "name": "Fortinet",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "FTV",
+   "name": "Fortive",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "FOXA",
+   "name": "Fox Corporation(Class A)",
+   "type": "stock",
+   "sector": "通訊服務",
+   "auto": true
+  },
+  {
+   "sym": "FOX",
+   "name": "Fox Corporation(Class B)",
+   "type": "stock",
+   "sector": "通訊服務",
+   "auto": true
+  },
+  {
+   "sym": "BEN",
+   "name": "Franklin Resources",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "GRMN",
+   "name": "Garmin",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "IT",
+   "name": "Gartner",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "GEHC",
+   "name": "GE HealthCare",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "GEV",
+   "name": "GE Vernova",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "GEN",
+   "name": "Gen Digital",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "GNRC",
+   "name": "Generac",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "GD",
+   "name": "General Dynamics",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "GIS",
+   "name": "General Mills",
+   "type": "stock",
+   "sector": "必需消費",
+   "auto": true
+  },
+  {
+   "sym": "GM",
+   "name": "General Motors",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "GPC",
+   "name": "Genuine Parts Company",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "GILD",
+   "name": "Gilead Sciences",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "GPN",
+   "name": "Global Payments",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "GL",
+   "name": "Globe Life",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "GDDY",
+   "name": "GoDaddy",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "HAL",
+   "name": "Halliburton",
+   "type": "stock",
+   "sector": "能源",
+   "auto": true
+  },
+  {
+   "sym": "HIG",
+   "name": "Hartford (The)",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "HAS",
+   "name": "Hasbro",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "HCA",
+   "name": "HCA Healthcare",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "DOC",
+   "name": "Healthpeak Properties",
+   "type": "stock",
+   "sector": "房地產",
+   "auto": true
+  },
+  {
+   "sym": "HSIC",
+   "name": "Henry Schein",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "HSY",
+   "name": "Hershey Company (The)",
+   "type": "stock",
+   "sector": "必需消費",
+   "auto": true
+  },
+  {
+   "sym": "HLT",
+   "name": "Hilton Worldwide",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "HONA",
+   "name": "Honeywell Aerospace",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "HRL",
+   "name": "Hormel Foods",
+   "type": "stock",
+   "sector": "必需消費",
+   "auto": true
+  },
+  {
+   "sym": "HST",
+   "name": "Host Hotels & Resorts",
+   "type": "stock",
+   "sector": "房地產",
+   "auto": true
+  },
+  {
+   "sym": "HWM",
+   "name": "Howmet Aerospace",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "HPQ",
+   "name": "HP Inc.",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "HUBB",
+   "name": "Hubbell Incorporated",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "HUM",
+   "name": "Humana",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "HBAN",
+   "name": "Huntington Bancshares",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "HII",
+   "name": "Huntington Ingalls Industries",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "IEX",
+   "name": "IDEX Corporation",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "IDXX",
+   "name": "Idexx Laboratories",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "ITW",
+   "name": "Illinois Tool Works",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "ILMN",
+   "name": "Illumina, Inc.",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "INCY",
+   "name": "Incyte",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "IR",
+   "name": "Ingersoll Rand",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "PODD",
+   "name": "Insulet Corporation",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "IBKR",
+   "name": "Interactive Brokers",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "ICE",
+   "name": "Intercontinental Exchange",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "IFF",
+   "name": "International Flavors & Fragrances",
+   "type": "stock",
+   "sector": "原物料",
+   "auto": true
+  },
+  {
+   "sym": "IP",
+   "name": "International Paper",
+   "type": "stock",
+   "sector": "原物料",
+   "auto": true
+  },
+  {
+   "sym": "IVZ",
+   "name": "Invesco",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "INVH",
+   "name": "Invitation Homes",
+   "type": "stock",
+   "sector": "房地產",
+   "auto": true
+  },
+  {
+   "sym": "IQV",
+   "name": "IQVIA",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "IRM",
+   "name": "Iron Mountain",
+   "type": "stock",
+   "sector": "房地產",
+   "auto": true
+  },
+  {
+   "sym": "JBHT",
+   "name": "J.B. Hunt",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "JBL",
+   "name": "Jabil",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "JKHY",
+   "name": "Jack Henry & Associates",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "J",
+   "name": "Jacobs Solutions",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "JCI",
+   "name": "Johnson Controls",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "KVUE",
+   "name": "Kenvue",
+   "type": "stock",
+   "sector": "必需消費",
+   "auto": true
+  },
+  {
+   "sym": "KDP",
+   "name": "Keurig Dr Pepper",
+   "type": "stock",
+   "sector": "必需消費",
+   "auto": true
+  },
+  {
+   "sym": "KEY",
+   "name": "KeyCorp",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "KEYS",
+   "name": "Keysight Technologies",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "KMB",
+   "name": "Kimberly-Clark",
+   "type": "stock",
+   "sector": "必需消費",
+   "auto": true
+  },
+  {
+   "sym": "KIM",
+   "name": "Kimco Realty",
+   "type": "stock",
+   "sector": "房地產",
+   "auto": true
+  },
+  {
+   "sym": "KMI",
+   "name": "Kinder Morgan",
+   "type": "stock",
+   "sector": "能源",
+   "auto": true
+  },
+  {
+   "sym": "KKR",
+   "name": "KKR & Co.",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "KHC",
+   "name": "Kraft Heinz",
+   "type": "stock",
+   "sector": "必需消費",
+   "auto": true
+  },
+  {
+   "sym": "KR",
+   "name": "Kroger",
+   "type": "stock",
+   "sector": "必需消費",
+   "auto": true
+  },
+  {
+   "sym": "LHX",
+   "name": "L3Harris",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "LH",
+   "name": "Labcorp",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "LVS",
+   "name": "Las Vegas Sands",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "LDOS",
+   "name": "Leidos",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "LEN",
+   "name": "Lennar",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "LII",
+   "name": "Lennox International",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "LYV",
+   "name": "Live Nation Entertainment",
+   "type": "stock",
+   "sector": "通訊服務",
+   "auto": true
+  },
+  {
+   "sym": "L",
+   "name": "Loews Corporation",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "LULU",
+   "name": "Lululemon Athletica",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "LITE",
+   "name": "Lumentum",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "LYB",
+   "name": "LyondellBasell",
+   "type": "stock",
+   "sector": "原物料",
+   "auto": true
+  },
+  {
+   "sym": "MTB",
+   "name": "M&T Bank",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "MPC",
+   "name": "Marathon Petroleum",
+   "type": "stock",
+   "sector": "能源",
+   "auto": true
+  },
+  {
+   "sym": "MAR",
+   "name": "Marriott International",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "MRSH",
+   "name": "Marsh McLennan",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "MLM",
+   "name": "Martin Marietta Materials",
+   "type": "stock",
+   "sector": "原物料",
+   "auto": true
+  },
+  {
+   "sym": "MAS",
+   "name": "Masco",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "MKC",
+   "name": "McCormick & Company",
+   "type": "stock",
+   "sector": "必需消費",
+   "auto": true
+  },
+  {
+   "sym": "MCK",
+   "name": "McKesson Corporation",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "MDT",
+   "name": "Medtronic",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "MET",
+   "name": "MetLife",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "MTD",
+   "name": "Mettler Toledo",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "MGM",
+   "name": "MGM Resorts",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "MAA",
+   "name": "Mid-America Apartment Communities",
+   "type": "stock",
+   "sector": "房地產",
+   "auto": true
+  },
+  {
+   "sym": "MRNA",
+   "name": "Moderna",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "MPWR",
+   "name": "Monolithic Power Systems",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "MNST",
+   "name": "Monster Beverage",
+   "type": "stock",
+   "sector": "必需消費",
+   "auto": true
+  },
+  {
+   "sym": "MCO",
+   "name": "Moody's Corporation",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "MOS",
+   "name": "Mosaic Company (The)",
+   "type": "stock",
+   "sector": "原物料",
+   "auto": true
+  },
+  {
+   "sym": "MSI",
+   "name": "Motorola Solutions",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "MSCI",
+   "name": "MSCI",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "NDAQ",
+   "name": "Nasdaq, Inc.",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "NTAP",
+   "name": "NetApp",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "NWSA",
+   "name": "News Corp(Class A)",
+   "type": "stock",
+   "sector": "通訊服務",
+   "auto": true
+  },
+  {
+   "sym": "NWS",
+   "name": "News Corp(Class B)",
+   "type": "stock",
+   "sector": "通訊服務",
+   "auto": true
+  },
+  {
+   "sym": "NI",
+   "name": "NiSource",
+   "type": "stock",
+   "sector": "公用事業",
+   "auto": true
+  },
+  {
+   "sym": "NDSN",
+   "name": "Nordson Corporation",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "NSC",
+   "name": "Norfolk Southern",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "NTRS",
+   "name": "Northern Trust",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "NOC",
+   "name": "Northrop Grumman",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "NCLH",
+   "name": "Norwegian Cruise Line Holdings",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "NRG",
+   "name": "NRG Energy",
+   "type": "stock",
+   "sector": "公用事業",
+   "auto": true
+  },
+  {
+   "sym": "NUE",
+   "name": "Nucor",
+   "type": "stock",
+   "sector": "原物料",
+   "auto": true
+  },
+  {
+   "sym": "NVR",
+   "name": "NVR, Inc.",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "ORLY",
+   "name": "O'Reilly Automotive",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "OXY",
+   "name": "Occidental Petroleum",
+   "type": "stock",
+   "sector": "能源",
+   "auto": true
+  },
+  {
+   "sym": "ODFL",
+   "name": "Old Dominion",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "OMC",
+   "name": "Omnicom Group",
+   "type": "stock",
+   "sector": "通訊服務",
+   "auto": true
+  },
+  {
+   "sym": "OKE",
+   "name": "Oneok",
+   "type": "stock",
+   "sector": "能源",
+   "auto": true
+  },
+  {
+   "sym": "OTIS",
+   "name": "Otis Worldwide",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "PCAR",
+   "name": "Paccar",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "PKG",
+   "name": "Packaging Corporation of America",
+   "type": "stock",
+   "sector": "原物料",
+   "auto": true
+  },
+  {
+   "sym": "PSKY",
+   "name": "Paramount Skydance Corporation",
+   "type": "stock",
+   "sector": "通訊服務",
+   "auto": true
+  },
+  {
+   "sym": "PH",
+   "name": "Parker Hannifin",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "PAYX",
+   "name": "Paychex",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "PYPL",
+   "name": "PayPal",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "PNR",
+   "name": "Pentair",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "PCG",
+   "name": "PG&E Corporation",
+   "type": "stock",
+   "sector": "公用事業",
+   "auto": true
+  },
+  {
+   "sym": "PSX",
+   "name": "Phillips 66",
+   "type": "stock",
+   "sector": "能源",
+   "auto": true
+  },
+  {
+   "sym": "PNW",
+   "name": "Pinnacle West Capital",
+   "type": "stock",
+   "sector": "公用事業",
+   "auto": true
+  },
+  {
+   "sym": "PNC",
+   "name": "PNC Financial Services",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "PPG",
+   "name": "PPG Industries",
+   "type": "stock",
+   "sector": "原物料",
+   "auto": true
+  },
+  {
+   "sym": "PPL",
+   "name": "PPL Corporation",
+   "type": "stock",
+   "sector": "公用事業",
+   "auto": true
+  },
+  {
+   "sym": "PFG",
+   "name": "Principal Financial Group",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "PGR",
+   "name": "Progressive Corporation",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "PRU",
+   "name": "Prudential Financial",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "PEG",
+   "name": "Public Service Enterprise Group",
+   "type": "stock",
+   "sector": "公用事業",
+   "auto": true
+  },
+  {
+   "sym": "PTC",
+   "name": "PTC Inc.",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "PSA",
+   "name": "Public Storage",
+   "type": "stock",
+   "sector": "房地產",
+   "auto": true
+  },
+  {
+   "sym": "PHM",
+   "name": "PulteGroup",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "PWR",
+   "name": "Quanta Services",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "DGX",
+   "name": "Quest Diagnostics",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "Q",
+   "name": "Qnity Electronics",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "RL",
+   "name": "Ralph Lauren Corporation",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "RJF",
+   "name": "Raymond James Financial",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "RDDT",
+   "name": "Reddit",
+   "type": "stock",
+   "sector": "通訊服務",
+   "auto": true
+  },
+  {
+   "sym": "O",
+   "name": "Realty Income",
+   "type": "stock",
+   "sector": "房地產",
+   "auto": true
+  },
+  {
+   "sym": "REG",
+   "name": "Regency Centers",
+   "type": "stock",
+   "sector": "房地產",
+   "auto": true
+  },
+  {
+   "sym": "REGN",
+   "name": "Regeneron Pharmaceuticals",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "RF",
+   "name": "Regions Financial Corporation",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "RSG",
+   "name": "Republic Services",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "RMD",
+   "name": "ResMed|",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "RVTY",
+   "name": "Revvity",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "HOOD",
+   "name": "Robinhood Markets",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "ROK",
+   "name": "Rockwell Automation",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "ROL",
+   "name": "Rollins, Inc.",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "ROP",
+   "name": "Roper Technologies",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "ROST",
+   "name": "Ross Stores",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "RCL",
+   "name": "Royal Caribbean Group",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "SPGI",
+   "name": "S&P Global",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "SNDK",
+   "name": "Sandisk",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "SBAC",
+   "name": "SBA Communications",
+   "type": "stock",
+   "sector": "房地產",
+   "auto": true
+  },
+  {
+   "sym": "SLB",
+   "name": "Schlumberger",
+   "type": "stock",
+   "sector": "能源",
+   "auto": true
+  },
+  {
+   "sym": "STX",
+   "name": "Seagate Technology",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "SRE",
+   "name": "Sempra",
+   "type": "stock",
+   "sector": "公用事業",
+   "auto": true
+  },
+  {
+   "sym": "SHW",
+   "name": "Sherwin-Williams",
+   "type": "stock",
+   "sector": "原物料",
+   "auto": true
+  },
+  {
+   "sym": "SPG",
+   "name": "Simon Property Group",
+   "type": "stock",
+   "sector": "房地產",
+   "auto": true
+  },
+  {
+   "sym": "SWKS",
+   "name": "Skyworks Solutions",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "SJM",
+   "name": "J.M. Smucker Company (The)",
+   "type": "stock",
+   "sector": "必需消費",
+   "auto": true
+  },
+  {
+   "sym": "SW",
+   "name": "Smurfit Westrock",
+   "type": "stock",
+   "sector": "原物料",
+   "auto": true
+  },
+  {
+   "sym": "SNA",
+   "name": "Snap-on",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "SOLV",
+   "name": "Solventum",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "LUV",
+   "name": "Southwest Airlines",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "SWK",
+   "name": "Stanley Black & Decker",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "STT",
+   "name": "State Street Corporation",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "STLD",
+   "name": "Steel Dynamics",
+   "type": "stock",
+   "sector": "原物料",
+   "auto": true
+  },
+  {
+   "sym": "STE",
+   "name": "Steris",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "SYK",
+   "name": "Stryker Corporation",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "SYF",
+   "name": "Synchrony Financial",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "SYY",
+   "name": "Sysco",
+   "type": "stock",
+   "sector": "必需消費",
+   "auto": true
+  },
+  {
+   "sym": "TROW",
+   "name": "T. Rowe Price",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "TTWO",
+   "name": "Take-Two Interactive",
+   "type": "stock",
+   "sector": "通訊服務",
+   "auto": true
+  },
+  {
+   "sym": "TPR",
+   "name": "Tapestry, Inc.",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "TRGP",
+   "name": "Targa Resources",
+   "type": "stock",
+   "sector": "能源",
+   "auto": true
+  },
+  {
+   "sym": "TGT",
+   "name": "Target Corporation",
+   "type": "stock",
+   "sector": "必需消費",
+   "auto": true
+  },
+  {
+   "sym": "TEL",
+   "name": "TE Connectivity",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "TDY",
+   "name": "Teledyne Technologies",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "TER",
+   "name": "Teradyne",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "TPL",
+   "name": "Texas Pacific Land Corporation",
+   "type": "stock",
+   "sector": "能源",
+   "auto": true
+  },
+  {
+   "sym": "TXT",
+   "name": "Textron",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "TKO",
+   "name": "TKO Group Holdings",
+   "type": "stock",
+   "sector": "通訊服務",
+   "auto": true
+  },
+  {
+   "sym": "TSCO",
+   "name": "Tractor Supply",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "TT",
+   "name": "Trane Technologies",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "TDG",
+   "name": "TransDigm Group",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "TRV",
+   "name": "Travelers Companies (The)",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "TRMB",
+   "name": "Trimble Inc.",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "TFC",
+   "name": "Truist Financial",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "TYL",
+   "name": "Tyler Technologies",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "TSN",
+   "name": "Tyson Foods",
+   "type": "stock",
+   "sector": "必需消費",
+   "auto": true
+  },
+  {
+   "sym": "USB",
+   "name": "U.S. Bancorp",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "UDR",
+   "name": "UDR, Inc.",
+   "type": "stock",
+   "sector": "房地產",
+   "auto": true
+  },
+  {
+   "sym": "ULTA",
+   "name": "Ulta Beauty",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "UAL",
+   "name": "United Airlines Holdings",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "URI",
+   "name": "United Rentals",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "UHS",
+   "name": "Universal Health Services",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "VLO",
+   "name": "Valero Energy",
+   "type": "stock",
+   "sector": "能源",
+   "auto": true
+  },
+  {
+   "sym": "VEEV",
+   "name": "Veeva Systems",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "VTR",
+   "name": "Ventas",
+   "type": "stock",
+   "sector": "房地產",
+   "auto": true
+  },
+  {
+   "sym": "VLTO",
+   "name": "Veralto",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "VRSN",
+   "name": "Verisign",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "VRSK",
+   "name": "Verisk Analytics",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "VRTX",
+   "name": "Vertex Pharmaceuticals",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "VTRS",
+   "name": "Viatris",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "VICI",
+   "name": "Vici Properties",
+   "type": "stock",
+   "sector": "房地產",
+   "auto": true
+  },
+  {
+   "sym": "VST",
+   "name": "Vistra Corp.",
+   "type": "stock",
+   "sector": "公用事業",
+   "auto": true
+  },
+  {
+   "sym": "VMRK",
+   "name": "Vivmark Residential",
+   "type": "stock",
+   "sector": "房地產",
+   "auto": true
+  },
+  {
+   "sym": "VMC",
+   "name": "Vulcan Materials Company",
+   "type": "stock",
+   "sector": "原物料",
+   "auto": true
+  },
+  {
+   "sym": "WRB",
+   "name": "W. R. Berkley Corporation",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "GWW",
+   "name": "W. W. Grainger",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "WAB",
+   "name": "Wabtec",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "WBD",
+   "name": "Warner Bros. Discovery",
+   "type": "stock",
+   "sector": "通訊服務",
+   "auto": true
+  },
+  {
+   "sym": "WM",
+   "name": "Waste Management",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "WAT",
+   "name": "Waters Corporation",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "WEC",
+   "name": "WEC Energy Group",
+   "type": "stock",
+   "sector": "公用事業",
+   "auto": true
+  },
+  {
+   "sym": "WELL",
+   "name": "Welltower",
+   "type": "stock",
+   "sector": "房地產",
+   "auto": true
+  },
+  {
+   "sym": "WST",
+   "name": "West Pharmaceutical Services",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "WDC",
+   "name": "Western Digital",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "WY",
+   "name": "Weyerhaeuser",
+   "type": "stock",
+   "sector": "房地產",
+   "auto": true
+  },
+  {
+   "sym": "WSM",
+   "name": "Williams-Sonoma, Inc.",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "WMB",
+   "name": "Williams Companies",
+   "type": "stock",
+   "sector": "能源",
+   "auto": true
+  },
+  {
+   "sym": "WTW",
+   "name": "Willis Towers Watson",
+   "type": "stock",
+   "sector": "金融",
+   "auto": true
+  },
+  {
+   "sym": "WDAY",
+   "name": "Workday, Inc.",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "WYNN",
+   "name": "Wynn Resorts",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "XEL",
+   "name": "Xcel Energy",
+   "type": "stock",
+   "sector": "公用事業",
+   "auto": true
+  },
+  {
+   "sym": "XYL",
+   "name": "Xylem Inc.",
+   "type": "stock",
+   "sector": "工業",
+   "auto": true
+  },
+  {
+   "sym": "YUM",
+   "name": "Yum! Brands",
+   "type": "stock",
+   "sector": "非必需消費",
+   "auto": true
+  },
+  {
+   "sym": "ZBRA",
+   "name": "Zebra Technologies",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "ZBH",
+   "name": "Zimmer Biomet",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "ZTS",
+   "name": "Zoetis",
+   "type": "stock",
+   "sector": "醫療保健",
+   "auto": true
+  },
+  {
+   "sym": "VOO",
+   "name": "Vanguard 標普500",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "IVV",
+   "name": "iShares 標普500",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "VTI",
+   "name": "Vanguard 全美股市",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "VT",
+   "name": "Vanguard 全世界股市",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "VXUS",
+   "name": "Vanguard 美國以外股市",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "VEA",
+   "name": "Vanguard 已開發市場",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "VWO",
+   "name": "Vanguard 新興市場",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "EFA",
+   "name": "iShares 歐澳遠東",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "EEM",
+   "name": "iShares 新興市場",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "IEMG",
+   "name": "iShares 核心新興市場",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "QQQM",
+   "name": "Invesco 那斯達克100（小額）",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "VGT",
+   "name": "Vanguard 資訊科技",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "SCHD",
+   "name": "Schwab 美國股息",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "VYM",
+   "name": "Vanguard 高股息",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "VIG",
+   "name": "Vanguard 股息增長",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "DGRO",
+   "name": "iShares 股息成長",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "JEPI",
+   "name": "摩根 股票溢價收益",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "JEPQ",
+   "name": "摩根 那斯達克溢價收益",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "QYLD",
+   "name": "Global X 那斯達克備兌",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "SPYD",
+   "name": "SPDR 標普500高股息",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "NOBL",
+   "name": "ProShares 股息貴族",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "BND",
+   "name": "Vanguard 美國總體債",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "AGG",
+   "name": "iShares 美國核心債",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "IEF",
+   "name": "iShares 7-10 年美債",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "SHY",
+   "name": "iShares 1-3 年美債",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "SGOV",
+   "name": "iShares 0-3 月美國國庫券",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "BIL",
+   "name": "SPDR 1-3 月國庫券",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "LQD",
+   "name": "iShares 投資級公司債",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "HYG",
+   "name": "iShares 高收益債",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "TIP",
+   "name": "iShares 抗通膨債",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "VCIT",
+   "name": "Vanguard 中期公司債",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "BNDX",
+   "name": "Vanguard 國際債",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "EMB",
+   "name": "iShares 新興市場債",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "IAU",
+   "name": "iShares 黃金",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "SLV",
+   "name": "iShares 白銀",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "USO",
+   "name": "美國石油基金",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "DBC",
+   "name": "Invesco 原物料",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "VNQ",
+   "name": "Vanguard 房地產",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "IWF",
+   "name": "iShares 羅素1000成長",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "IWD",
+   "name": "iShares 羅素1000價值",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "VUG",
+   "name": "Vanguard 成長股",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "VTV",
+   "name": "Vanguard 價值股",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "MDY",
+   "name": "SPDR 標普中型400",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "RSP",
+   "name": "Invesco 標普500等權",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "MTUM",
+   "name": "iShares 動能因子",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "QUAL",
+   "name": "iShares 品質因子",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "USMV",
+   "name": "iShares 低波動",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "ARKK",
+   "name": "ARK 創新",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "XBI",
+   "name": "SPDR 生技",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "IBB",
+   "name": "iShares 生技",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "KRE",
+   "name": "SPDR 區域銀行",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "ITA",
+   "name": "iShares 航太國防",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "TAN",
+   "name": "Invesco 太陽能",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "ICLN",
+   "name": "iShares 全球潔淨能源",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "LIT",
+   "name": "Global X 鋰電池",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "BOTZ",
+   "name": "Global X 機器人與 AI",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "IGV",
+   "name": "iShares 軟體",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "CIBR",
+   "name": "First Trust 網路安全",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "SKYY",
+   "name": "First Trust 雲端",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "FXI",
+   "name": "iShares 中國大型股",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "KWEB",
+   "name": "KraneShares 中國網路",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "MCHI",
+   "name": "iShares MSCI 中國",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "EWJ",
+   "name": "iShares MSCI 日本",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "INDA",
+   "name": "iShares MSCI 印度",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "EWY",
+   "name": "iShares MSCI 南韓",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "EWZ",
+   "name": "iShares MSCI 巴西",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "VGK",
+   "name": "Vanguard 歐洲",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "IBIT",
+   "name": "iShares 比特幣",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "FBTC",
+   "name": "Fidelity 比特幣",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "ETHA",
+   "name": "iShares 以太幣",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "TQQQ",
+   "name": "ProShares 那斯達克三倍",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "SQQQ",
+   "name": "ProShares 那斯達克反三倍",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "UPRO",
+   "name": "ProShares 標普三倍",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "SOXL",
+   "name": "Direxion 半導體三倍",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "SOXS",
+   "name": "Direxion 半導體反三倍",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "SPXL",
+   "name": "Direxion 標普三倍",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "TMF",
+   "name": "Direxion 20 年美債三倍",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "SH",
+   "name": "ProShares 標普反向",
+   "type": "etf",
+   "auto": true
+  },
+  {
+   "sym": "UVXY",
+   "name": "ProShares 波動率 1.5 倍",
+   "type": "etf",
+   "auto": true
   }
  ]
 }
