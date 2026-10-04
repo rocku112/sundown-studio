@@ -62,7 +62,7 @@ def main():
     covered = {"data/latest.json?", "data/search.json", "data/history.json",
                "data/events.json", "data/chains.json",
                "data/us/latest.json?", "data/cross.json?", "data/us/history.json",
-               "data/backtest.json", "data/etf.json", "data/swing.json", "data/bench.json", "data/odds.json", "data/evidence.json", "data/evidence_stocks.json", "data/screen.json",
+               "data/backtest.json", "data/etf.json", "data/swing.json", "data/bench.json", "data/odds.json", "data/evidence.json", "data/evidence_stocks.json", "data/screen.json", "data/taifex.json", "data/rules_dca.json",
                # 完整搜尋清單太大，不內嵌（離線快照只搜得到深入追蹤的代號）
                "data/tw_all.json", "data/us/all.json"}
     missed = {f for f in found if f.rstrip("?") not in
