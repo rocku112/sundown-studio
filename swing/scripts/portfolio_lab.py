@@ -195,6 +195,25 @@ def simulate(book, rdays, target):
     return nav, rdays[0] + 1, turns
 
 
+def period_rets(nav, rd):
+    """每個持有期（調整日到下一個調整日收盤）的報酬。"""
+    pts = [1.0] + [nav[t] for t in rd[1:] if np.isfinite(nav[t])]
+    return np.array(pts[1:]) / np.array(pts[:-1]) - 1
+
+
+def excess_t(nav, base, rd):
+    """相對基準的每期超額報酬 t 值（全期、前半、後半）。每期約一個月，彼此不重疊。"""
+    a, b = period_rets(nav, rd), period_rets(base, rd)
+    n = min(len(a), len(b))
+    x = a[:n] - b[:n]
+
+    def t(v):
+        return round(float(v.mean() / v.std(ddof=1) * np.sqrt(len(v))), 2) if len(v) > 5 and v.std(ddof=1) > 0 else None
+    h = n // 2
+    return {"t": t(x), "t_halves": [t(x[:h]), t(x[h:])], "months": int(n),
+            "win_m": round(float((x > 0).mean() * 100), 1) if n else None}
+
+
 def stats(nav, dates, start):
     v = nav[start:]
     d = dates[start:]
@@ -370,10 +389,13 @@ def main():
              "CS": lambda t: {k: v * 0.3 for k, v in slots(picks["RM"].get(t, []), {B: 1.0}).items()} | {B: 0.7 + 0.3 * slots(picks["RM"].get(t, []), {B: 1.0}).get(B, 0)}}
     if not picks["E"]:
         plans.pop("E")
-    res = {}
+    res, navs = {}, {}
     for k, fn in plans.items():
         nav, start, turns = simulate(book, rd, fn)
+        navs[k] = nav
         s_ = stats(nav, lab.dates, start)
+        if s_ and k != "B0" and "B0" in navs:
+            s_.update(excess_t(nav, navs["B0"], rd))
         if s_:
             s_["turnover"] = round(float(np.mean(turns)) * 12 * 100)
             s_["label"] = LABEL[k]
@@ -399,7 +421,7 @@ def main():
             continue
         ms = {t: set(v) for t, v in mem.items()}
         ew = {t: {k: 1.0 / len(v) for k in v} for t, v in mem.items() if v}
-        out_t = {}
+        out_t, tnav = {}, {}
         for key in ("EW", "R", "E", "M", "RM"):
             if key == "E" and not eps:
                 continue
@@ -410,7 +432,10 @@ def main():
                     sel = top(scores(t)[key], lambda i: i in ms[t])
                     return slots(sel, ew.get(t) or {CASH: 1.0})
             nav, start, turns = simulate(book, rd, fn)
+            tnav[key] = nav
             s_ = stats(nav, lab.dates, start)
+            if s_ and key != "EW" and "EW" in tnav:
+                s_.update(excess_t(nav, tnav["EW"], rd))
             if s_:
                 s_.pop("curve", None)
                 s_["turnover"] = round(float(np.mean(turns)) * 12 * 100)
@@ -435,11 +460,11 @@ def main():
     for k, s_ in res.items():
         print(f"  {s_['label']:<20} {s_['cagr']:6.1f}% {s_['vol']:5.1f}% {s_['mdd']:7.1f}%  {s_['sharpe']}  "
               f"{s_['hit20']}%（{s_['n_full']} 年） {s_['worst_year']}%  {s_['halves']}  {s_['turnover']}%")
-        print(f"      各年：{s_['years']}")
+        print(f"      各年：{s_['years']}　相對 0050 每月超額 t={s_.get('t')} 前後半 t={s_.get('t_halves')} 贏 {s_.get('win_m')}% 的月份")
     for tr in tiers:
         print(f"\n  【{'規模' if tr['kind'] == 'size' else '股價'}・{tr['name']}】約 {tr['n']} 檔 {tr.get('note', '')}")
         for k, v in tr["results"].items():
-            print(f"    {TIER_LABEL[k]:<12} 年化 {v['cagr']:6.1f}%（超額 {v['excess']:+.1f}）回撤 {v['mdd']:6.1f}% "
+            print(f"    {TIER_LABEL[k]:<12} 年化 {v['cagr']:6.1f}%（超額 {v['excess']:+.1f}，t={v.get('t')}，前後半 t={v.get('t_halves')}，贏 {v.get('win_m')}% 月）回撤 {v['mdd']:6.1f}% "
                   f"≥20%年份 {v['hit20']}% 最差年 {v['worst_year']}% 前後半 {v['halves']} 各年 {v['years']}")
 
 
