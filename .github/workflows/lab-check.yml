@@ -25,6 +25,12 @@ jobs:
           cache: pip
       - run: pip install -r twflow/requirements.txt
 
+      - name: 探測 FinMind 股權分散歷史（不影響結果）
+        continue-on-error: true
+        run: |
+          curl -sS -m 60 "https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockHoldingSharesPer&data_id=2330&start_date=2021-01-01&end_date=2021-02-28" | head -c 1500; echo
+          curl -sS -m 60 "https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockHoldingSharesPer&data_id=2330&start_date=2026-08-01" | head -c 600; echo
+
       - name: 集保千張大戶
         run: python -X utf8 swing/scripts/fetch_tdcc.py
 
