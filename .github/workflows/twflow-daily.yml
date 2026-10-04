@@ -60,7 +60,7 @@ jobs:
           # 集保千張大戶（每週一份，只能從現在開始累積）
           ( cd .. && python -X utf8 swing/scripts/fetch_tdcc.py ) || echo "::warning::集保資料抓取失敗"
           # 基本面（月底估值、季報；已有的不重抓）
-          ( cd .. && python -X utf8 swing/scripts/fetch_fund.py ) || echo "::warning::基本面抓取失敗"
+          ( cd .. && timeout 20m python -X utf8 swing/scripts/fetch_fund.py ) || echo "::warning::基本面抓取失敗"
           # 波段實驗室：五年日線回測（約 3 分鐘）
           ( cd .. && python -X utf8 swing/scripts/fetch_hist.py && python -X utf8 swing/scripts/backtest_swing.py \
               && python -X utf8 swing/scripts/build_bench.py && python -X utf8 swing/scripts/holding_odds.py \

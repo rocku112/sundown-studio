@@ -149,10 +149,10 @@ def fetch_income(mkt, y, q):
     data = {"encodeURIComponent": 1, "step": 1, "firstin": 1, "off": 1, "isQuery": "Y",
             "TYPEK": mkt, "year": str(y - 1911), "season": f"{q:02d}"}
     err = None
-    for rnd in range(3):
+    for rnd in range(2):
         for url in MOPS:
             try:
-                r = requests.post(url, data=data, headers=UA, timeout=40)
+                r = requests.post(url, data=data, headers=UA, timeout=20)
                 if r.status_code == 200:
                     r.encoding = "utf-8"
                     rows = parse_income(r.text)
@@ -187,38 +187,50 @@ def main():
 
     val = load("valuation.json")
     days = month_ends(calendar(args.years * 250 + 30))
-    new = 0
+    print(f"月底 {len(days)} 天：{days[0]}～{days[-1]}", flush=True)
+    new, tpex_ok = 0, None
+    t0 = time.time()
     for d in days:
         k = d.isoformat()
         if k in val and d != days[-1]:
             continue
-        v = {**twse_val(d), **tpex_val(d)}
+        v1 = twse_val(d)
+        # 上櫃端點第一次就失敗時不再重試每個月份（每次失敗含退避約 20 秒）
+        v2 = tpex_val(d) if tpex_ok is not False else {}
+        if tpex_ok is None:
+            tpex_ok = bool(v2)
+            print(f"  上櫃估值端點：{'可用' if tpex_ok else '無資料，略過上櫃'}（{len(v2)} 檔）", flush=True)
+        v = {**v1, **v2}
         if len(v) > 500:
             val[k] = v
             new += 1
-        if new == 1:
-            print(f"  估值樣本 {k}：{len(v)} 檔，例 2330 → {v.get('2330')}")
+        if new == 1 or new % 12 == 0:
+            print(f"  估值 {k}：{len(v)} 檔，例 2330 → {v.get('2330')}（{(time.time()-t0)/60:.1f} 分）", flush=True)
     save("valuation.json", val)
     print(f"估值：{len(val)} 個月底（本次新增 {new}）")
 
     inc = load("income.json")
     qs = quarters(args.years)
-    failed = []
+    failed, streak = [], 0
     for i, (y, q) in enumerate(qs):
         key = f"{y}Q{q}"
         if key in inc and i < len(qs) - 1:
             continue
+        if streak >= 2:
+            print("  連續兩季都抓不到，來源可能擋了，停止季報", flush=True)
+            break
         rows = {}
         for mkt in ("sii", "otc"):
             try:
                 rows.update(fetch_income(mkt, y, q))
             except Exception as e:
                 failed.append(str(e)[:150])
+        streak = 0 if rows else streak + 1
         if len(rows) > 500:
             inc[key] = rows
             if len(inc) == 1 or i == len(qs) - 1:
                 print(f"  季報樣本 {key}：{len(rows)} 家，例 2330 → {rows.get('2330')}")
-        print(f"{key}: {len(rows)} 家")
+        print(f"{key}: {len(rows)} 家", flush=True)
     save("income.json", inc)
     print(f"季報：{len(inc)} 季；失敗 {failed[:6]}")
     if not val and not inc:
