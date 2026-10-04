@@ -86,6 +86,9 @@ jobs:
       - name: 短線證據檢驗
         run: python -X utf8 swing/scripts/evidence.py
 
+      - name: 中期組合實驗
+        run: python -X utf8 swing/scripts/portfolio_lab.py --no-forward
+
       - name: 智慧選股資料表
         run: python -X utf8 swing/scripts/build_screen.py
 
@@ -105,3 +108,4 @@ jobs:
             twflow/web/data/taifex.json
             twflow/web/data/etf_profile.json
             twflow/web/data/rules_dca.json
+            twflow/web/data/portfolio.json

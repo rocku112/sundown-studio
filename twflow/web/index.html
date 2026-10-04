@@ -1793,6 +1793,48 @@ function oddsCard(){
     <p class="note" style="margin-top:10px;font-size:12.5px">讀法：短線（一週、一個月）的賺錢機率接近擲硬幣；持有時間拉長，勝率才明顯上升，但短期最差情況可能虧損三到五成，抱不住就拿不到長期勝率。
       勝率高也不等於賺錢——要同時看「贏的時候賺多少、輸的時候賠多少」。歷史不代表未來，台股過去二十年整體向上，停滯的市場不會有同樣結果。</p></div>`;
 }
+// 中期組合實驗：每月調整、持有約一個月，年報酬能否穩定達到 20–40%
+let PF=null, pfSel='RM';
+const pfReady=()=>PF?Promise.resolve(PF)
+  :fetch('data/portfolio.json').then(r=>r.json()).then(j=>(PF=j)).catch(()=>null);
+function pfCard(){
+  if(!PF||!PF.results) return '';
+  const R=PF.results, f=x=>x==null?'—':(x>=0?'+':'')+x.toFixed(1)+'%';
+  const sel=R[pfSel]||R.RM||Object.values(R)[0], b=R.B0;
+  const yrs=Object.keys(sel.years);
+  return `<div class="card"><h3>中期組合實驗：年報酬 20–40% 做得到嗎？</h3>
+    <p style="font-size:13px;color:var(--s9);line-height:1.8">每月 10 日月營收公布後調整一次、持有約一個月；只在當時成交值前 150 名內選 20 檔，
+      沒選滿的部分持有 0050；含手續費與證交稅。規則事先固定，不事後調參數。期間 ${sel.period[0]} ～ ${sel.period[1]}（${PF.source==='official'?'官方日線、含已下市股票':'Yahoo 日線，未含已下市股票，結果偏樂觀'}）。</p>
+    <table class="st"><tr><th>做法</th><th>年化</th><th>最大回撤</th><th>年報酬≥20% 的年份</th><th>最差年</th><th>前半／後半</th></tr>
+      ${Object.entries(R).map(([k,v])=>`<tr data-pf="${k}" style="cursor:pointer;${k===pfSel?'background:var(--panel)':''}"><td>${esc(v.label)}</td>
+        <td><b style="color:${v.cagr>=20?'var(--up)':v.cagr>=(b?b.cagr:0)?'var(--gold)':'var(--s9)'}">${f(v.cagr)}</b></td>
+        <td style="color:var(--down)">${v.mdd.toFixed(1)}%</td><td>${v.hit20!=null?v.hit20+'%（'+v.n_full+' 年）':'—'}</td>
+        <td style="color:${col(v.worst_year)}">${f(v.worst_year)}</td><td>${f(v.halves[0])}／${f(v.halves[1])}</td></tr>`).join('')}</table>
+    <div class="rsub" style="margin-top:10px">${esc(sel.label)}・淨值走勢（點表格切換）</div>${eqCurve(sel.curve)}
+    <div class="chips" style="margin-top:6px">${yrs.map(y=>`<span class="chip">${y} <b style="color:${col(sel.years[y])}">${f(sel.years[y])}</b></span>`).join('')}</div>
+    ${PF.now&&PF.now.RM&&PF.now.RM.length?`<div class="rsub" style="margin:12px 0 6px">${PF.rebalance_date} 符合「營收創新高＋動能」條件的股票（條件成立，不是推薦）</div>
+      <div class="chips">${PF.now.RM.map(x=>`<button class="chip" data-code="${x.code}">${esc(x.name)} <small style="color:var(--s8)">${x.code}</small></button>`).join('')}</div>`:''}
+    <p class="note" style="margin-top:10px;font-size:12.5px">讀法：先看「前半／後半」是否都好——只有前半段好的，多半是碰巧；再看最大回撤自己撐不撐得住。
+      每年穩定 20–40% 是極高的目標：全球最好的專業基金長期年化也多在 10–20%。過去台股十年大多頭（0050 十年含息年化約 24%）會讓所有做多的方法看起來都很好，
+      空頭年份的表現才是關鍵。歷史回測不代表未來，本頁不構成投資建議。</p></div>`;
+}
+// 前瞻紀錄：每月調整日把選股寫死，之後只看實際結果（不能回頭修改）
+let FWDD=null;
+const fwdReady=()=>FWDD?Promise.resolve(FWDD)
+  :fetch('data/forward.json').then(r=>r.json()).then(j=>(FWDD=j)).catch(()=>null);
+function fwdCard(){
+  if(!FWDD) return '';
+  const L=FWDD.labels||{}, P=FWDD.periods||[], ks=['B0','RM','R','E','M'].filter(k=>k==='B0'||(FWDD.picks&&FWDD.picks.picks&&k in FWDD.picks.picks));
+  const f=x=>x==null?'—':(x>=0?'+':'')+x.toFixed(2)+'%';
+  return `<div class="card"><h3>前瞻紀錄（事前寫死、事後驗證）</h3>
+    <p style="font-size:13px;color:var(--s9);line-height:1.8">回測再嚴謹都可能不自覺地「看過答案」。這裡從 ${FWDD.start||'下一個調整日'} 起，
+      每月調整日收盤後把各做法選出的股票寫進紀錄檔（只增不改，放在公開的程式庫裡，任何人都能查修改紀錄），之後只看實際結果。</p>
+    ${P.length?`<table class="st"><tr><th>期別</th>${ks.map(k=>`<th>${esc(L[k]||k)}</th>`).join('')}</tr>
+      ${P.map(p=>`<tr><td>${p.month}${p.done?'':'（持有中）'}</td>${ks.map(k=>`<td style="color:${col(p[k])}">${f(p[k])}</td>`).join('')}</tr>`).join('')}
+      <tr><td><b>累計</b></td>${ks.map(k=>`<td><b style="color:${col(FWDD.cum[k])}">${f(FWDD.cum[k])}</b></td>`).join('')}</tr></table>`
+      :'<div class="rsub">第一筆紀錄會在下一個調整日（每月 10 日之後第一個交易日）盤後寫入。</div>'}
+    <p class="note" style="margin-top:8px;font-size:12.5px">報酬已扣保守成本（假設每月全數換股）。至少累積 2–3 年才有統計意義；前幾個月的好壞都可能只是運氣。不構成投資建議。</p></div>`;
+}
 // 坊間「低位階加碼、高檔調節」系統 vs 單純定期定額：所有參數組合全部列出
 let RDCA=null, rdcaSel=0;
 const rdcaReady=()=>RDCA?Promise.resolve(RDCA)
@@ -1858,12 +1900,14 @@ function buildSwing(){
   if(!ODDS){ oddsReady().then(o=>{ if(o&&curView==='swing') buildSwing(); }); }
   if(!EVI){ eviReady().then(o=>{ if(o&&curView==='swing') buildSwing(); }); }
   if(!RDCA){ rdcaReady().then(o=>{ if(o&&curView==='swing') buildSwing(); }); }
+  if(!PF){ pfReady().then(o=>{ if(o&&curView==='swing') buildSwing(); }); }
+  if(!FWDD){ fwdReady().then(o=>{ if(o&&curView==='swing') buildSwing(); }); }
   if(!SW){ el.innerHTML='<div class="empty">載入中…</div>';
     swReady().then(d=>{ if(d) buildSwing(); else el.innerHTML='<div class="empty">波段回測資料尚未產生。每個交易日盤後更新。</div>'; }); return; }
   const ok=SW.strategies.filter(s=>s.verdict).length, b=SW.bench||{};
   const f=x=>x==null?'—':(x>=0?'+':'')+x.toFixed(2)+'%';
   const row=(lab,a,b_)=>`<tr><td>${lab}</td><td>${a}</td><td>${b_}</td></tr>`;
-  el.innerHTML=`${oddsCard()}${rdcaCard()}${eviCard()}
+  el.innerHTML=`${pfCard()}${fwdCard()}${oddsCard()}${rdcaCard()}${eviCard()}
     <div class="card"><h3>波段實驗室・${SW.period[0]} ～ ${SW.period[1]}</h3>
       <div class="big" style="font-size:20px">${ok?`${SW.strategies.length} 個策略中 ${ok} 個在樣本外通過檢驗`:`${SW.strategies.length} 個策略扣掉成本後，都沒有穩定贏過基準`}</div>
       ${SW.strategies.length>3?`<p class="note" style="margin-top:6px;font-size:12px">同時測的策略越多，靠運氣「看起來有效」的機會越大；${SW.strategies.length} 個策略裡出現 1 個 t≈2 的結果，本身就可能只是巧合。</p>`:''}
@@ -1904,6 +1948,7 @@ function buildSwing(){
       <div class="note" style="margin-top:8px">回測不代表未來報酬。本頁僅為歷史資料的統計呈現，非證券投資顧問事業，不構成任何投資建議；投資人應自行判斷並自負盈虧。</div></div>`;
   el.onclick=e=>{const o=e.target.closest('[data-odds]'); if(o){oddsSel=o.dataset.odds;buildSwing();return;}
     const rd=e.target.closest('[data-rdca]'); if(rd){rdcaSel=+rd.dataset.rdca;buildSwing();return;}
+    const pfr=e.target.closest('[data-pf]'); if(pfr){pfSel=pfr.dataset.pf;const y=scrollY;buildSwing();scrollTo(0,y);return;}
     const v=e.target.closest('[data-evi]'); if(v){eviOpen=eviOpen===v.dataset.evi?null:v.dataset.evi;const y=scrollY;buildSwing();scrollTo(0,y);return;}
     const c=e.target.closest('[data-code]'); if(c) openStock(c.dataset.code);};
 }
