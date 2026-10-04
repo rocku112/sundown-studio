@@ -440,6 +440,8 @@ def stock_tests(lab, revenue):
         out += chips_tests(lab)
         out += fund_tests(lab)
         out += daytrade_tests(lab)
+        from xq_tests import xq_tests       # XQ 內建選股腳本（依原邏輯重寫）
+        out += xq_tests(lab, revenue)
     return out
 
 
