@@ -25,6 +25,26 @@ jobs:
           cache: pip
       - run: pip install -r twflow/requirements.txt
 
+      - name: 官方日線（最近 3 天＋除權息日驗證）
+        run: |
+          python -u -X utf8 swing/scripts/fetch_prices.py --days 3
+          cd swing/scripts && python -u -X utf8 -c "
+          from datetime import date
+          import fetch_prices as fp
+          ref = fp.refs('2025-06')
+          for d in (date(2025, 6, 12), date(2025, 6, 19)):
+              a, _ = fp.twse(d); b, _ = fp.tpex(d)
+              rows = fp.apply_refs({**a, **b}, ref.get(d.isoformat(), {}))
+              ex = [(c, rows[c][5]) for c in ref.get(d.isoformat(), {}) if c in rows][:6]
+              print(d, '除權息', len(ref.get(d.isoformat(), {})), '檔；例', ex, '；2330', rows.get('2330'), '0056', rows.get('0056'))
+          "
+
+      - name: 集保千張大戶
+        run: python -X utf8 swing/scripts/fetch_tdcc.py
+
+      - name: 基本面（估值＋季報）
+        run: timeout 20m python -u -X utf8 swing/scripts/fetch_fund.py; ls -la swing/data/fund || true
+
       - name: 月營收（公開資訊觀測站）
         run: python -X utf8 swing/scripts/fetch_revenue.py
 
@@ -37,6 +57,9 @@ jobs:
 
       - name: 波段：抓五年日線
         run: python -X utf8 swing/scripts/fetch_hist.py
+
+      - name: 官方日線整理（資料不足一千天時沿用 Yahoo）
+        run: python -X utf8 swing/scripts/build_ohlcv.py || echo "沿用 Yahoo"
 
       - name: 波段：回測
         run: python -X utf8 swing/scripts/backtest_swing.py

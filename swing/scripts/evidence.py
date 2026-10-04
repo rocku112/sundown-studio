@@ -15,6 +15,7 @@
 資料：
   · 個股：swing/.cache/ohlcv.json（流動性前 400 檔五年日線，時點正確的前 150 名股票池）
   · 籌碼：swing/data/chips/（法人買賣超、融資融券餘額；逐步回補）
+  · 基本面：swing/data/fund/（月底估值、季報；季報以法定申報期限後才視為已知）
   · 月營收：swing/data/revenue.json（公開資訊觀測站；一律假設次月 10 日後才知道）
   · 大盤：0050 自上市以來日線（Yahoo，含開盤價），用於日曆效應與大盤事件
 
@@ -219,7 +220,7 @@ class Lab:
     def _name(self, k):
         return self.src[self.codes[k]]["name"]
 
-    def event(self, cat, key, name, claim, M, h=5, sign=1, note="", today_t=None):
+    def event(self, cat, key, name, claim, M, h=5, sign=1, note="", today_t=None, min_n=10):
         """事件型：條件成立的那天收盤後得知。sign=-1 表示說法是「之後表現較差」。"""
         T = len(self.dates)
         tt = T - 1 if today_t is None else today_t
@@ -235,7 +236,7 @@ class Lab:
         for t, e in zip(ts, ex):
             by_m.setdefault(self.dates[t][:7], []).append(e)
         md = [m + "-15" for m in sorted(by_m)]
-        s = split_stats(md, [float(np.mean(by_m[m[:7]])) for m in md], self.split)
+        s = split_stats(md, [float(np.mean(by_m[m[:7]])) for m in md], self.split, min_n)
         oos = np.array([self.dates[t] >= self.split for t in ts], bool)
         s["events"] = {"is": int((~oos).sum()), "oos": int(oos.sum())}
         s["win"] = round(float((raw[oos] > 0).mean() * 100), 1) if oos.any() else None
@@ -250,7 +251,7 @@ class Lab:
                 "tradeable": tradeable(s, COST_STOCK), "note": note, "today": today,
                 "today_date": self.dates[tt]}
 
-    def rank(self, cat, key, name, claim, score, h, times, pick="top", sign=1, note=""):
+    def rank(self, cat, key, name, claim, score, h, times, pick="top", sign=1, note="", min_n=10):
         """排序型：在 times 這些日子收盤後，挑分數最高（或最低）的 TOPN 檔，持有 h 天，與股票池平均比。"""
         vd, vv, raws, wins, last = [], [], [], [], None
         for t in times:
@@ -270,7 +271,7 @@ class Lab:
             vd.append(self.dates[t]); vv.append(v)
             if self.dates[t] >= self.split:
                 raws.append(gr); wins.append(v > 0)
-        s = split_stats(vd, vv, self.split)
+        s = split_stats(vd, vv, self.split, min_n)
         s["events"] = {"is": sum(d < self.split for d in vd), "oos": sum(d >= self.split for d in vd)}
         s["win"] = round(float(np.mean(wins) * 100), 1) if wins else None
         s["raw"] = round(float(np.mean(raws) * 100), 3) if raws else None
@@ -437,6 +438,8 @@ def stock_tests(lab, revenue):
                              I.cross_up(-(C / vw - 1), 0.10)))
         out += revenue_tests(lab, revenue)
         out += chips_tests(lab)
+        out += fund_tests(lab)
+        out += daytrade_tests(lab)
     return out
 
 
@@ -515,6 +518,141 @@ def chips_tests(lab):
         ratio = SB / MB
         out.append(lab.event(G, "squeeze_short", "高券資比", "券資比升破 30%（融資 ≥ 500 張）且收盤在月線上，之後 5 天上漲（軋空）",
                              I.cross_up(ratio, 0.30) & (MB >= 500) & (C > I.sma(C, 20))))
+    return out
+
+
+def fund_tests(lab):
+    """基本面：每月底估值排序（本益比、殖利率、淨值比），季報公布後事件（EPS 年增、三率三升、轉虧為盈、EPS 創新高）。"""
+    vp = os.path.join(ROOT, "data", "fund", "valuation.json")
+    ip = os.path.join(ROOT, "data", "fund", "income.json")
+    N, T = len(lab.codes), len(lab.dates)
+    kpos = {c: k for k, c in enumerate(lab.codes)}
+    tpos = {d: t for t, d in enumerate(lab.dates)}
+    out = []
+    G = "基本面"
+    if os.path.exists(vp):
+        val = json.load(open(vp, encoding="utf-8"))
+        PE, DY, PB = (np.full((N, T), np.nan) for _ in range(3))
+        times = []
+        for d, rows in val.items():
+            t = tpos.get(d)
+            if t is None:
+                continue
+            times.append(t)
+            for c, (pe, dy, pb) in rows.items():
+                k = kpos.get(c)
+                if k is not None:
+                    PE[k, t] = pe if pe and pe > 0 else np.nan      # 虧損（無本益比）不列入
+                    DY[k, t] = dy
+                    PB[k, t] = pb if pb and pb > 0 else np.nan
+        times.sort()
+        if len(times) >= 24:
+            out.append(lab.rank(G, "low_pe", "低本益比", "每月底本益比最低的 20 檔（獲利公司），下個月表現比股票池好", PE, 20, times, pick="bottom"))
+            out.append(lab.rank(G, "high_dy", "高殖利率", "每月底殖利率最高的 20 檔，下個月表現比股票池好", DY, 20, times))
+            out.append(lab.rank(G, "low_pb", "低股價淨值比", "每月底股價淨值比最低的 20 檔，下個月表現比股票池好", PB, 20, times, pick="bottom"))
+    if os.path.exists(ip):
+        inc = json.load(open(ip, encoding="utf-8"))
+        # 累計 → 單季
+        single = {}
+        for key in sorted(inc):
+            y, q = int(key[:4]), int(key[-1])
+            prevk = f"{y}Q{q-1}"
+            for c, v in inc[key].items():
+                if q == 1:
+                    single.setdefault(key, {})[c] = v
+                elif prevk in inc and c in inc[prevk]:
+                    pv_ = inc[prevk][c]
+                    single.setdefault(key, {})[c] = [None if a is None or b is None else a - b for a, b in zip(v, pv_)]
+        EG = np.full((N, T), np.nan)
+        UP3, TURN, REC = (np.zeros((N, T), bool) for _ in range(3))
+        times = []
+        for key in sorted(single):
+            y, q = int(key[:4]), int(key[-1])
+            due = {1: f"{y}-05-15", 2: f"{y}-08-14", 3: f"{y}-11-14", 4: f"{y+1}-03-31"}[q]
+            t = next((i for i, d in enumerate(lab.dates) if d > due), None)
+            if t is None:
+                continue
+            times.append(t)
+            pq = f"{y}Q{q-1}" if q > 1 else f"{y-1}Q4"
+            ly = f"{y-1}Q{q}"
+            hist8 = []
+            yy, qq = y, q
+            for _ in range(8):
+                qq -= 1
+                if qq == 0:
+                    yy, qq = yy - 1, 4
+                hist8.append(f"{yy}Q{qq}")
+            for c, (rev, gp, op, ni, eps) in single[key].items():
+                k = kpos.get(c)
+                if k is None:
+                    continue
+                last = single.get(ly, {}).get(c)
+                if last and eps is not None and last[4] and last[4] > 0:
+                    EG[k, t] = eps / last[4] - 1
+                p_ = single.get(pq, {}).get(c)
+                if p_ and rev and p_[0] and rev > 0 and p_[0] > 0 and None not in (gp, op, ni) and None not in p_[1:4]:
+                    if gp / rev > p_[1] / p_[0] and op / rev > p_[2] / p_[0] and ni / rev > p_[3] / p_[0]:
+                        UP3[k, t] = True
+                if p_ and ni is not None and p_[3] is not None and ni > 0 and p_[3] < 0:
+                    TURN[k, t] = True
+                h = [single.get(x, {}).get(c, [None] * 5)[4] for x in hist8]
+                if eps is not None and eps > 0 and None not in h and eps > max(h):
+                    REC[k, t] = True
+        if len(times) >= 8:
+            last_t = times[-1]
+            out.append(lab.rank(G, "eps_yoy", "EPS 年增最高", "季報公布後，單季 EPS 年增率最高的 20 檔，之後 20 天表現比股票池好",
+                                EG, 20, times, note="一律以法定申報期限後才視為已知，不使用提早公布的優勢", min_n=6))
+            out.append(lab.event(G, "three_up", "三率三升", "單季毛利率、營業利益率、淨利率都比上一季高，季報公布後 20 天表現比股票池好",
+                                 UP3, h=20, today_t=last_t, min_n=6))
+            out.append(lab.event(G, "turn_profit", "轉虧為盈", "單季淨利由上一季虧損轉為獲利，季報公布後 20 天表現比股票池好",
+                                 TURN, h=20, today_t=last_t, min_n=6))
+            out.append(lab.event(G, "eps_record", "EPS 創 2 年新高", "單季 EPS 為近 8 季最高（且為正），季報公布後 20 天表現比股票池好",
+                                 REC, h=20, today_t=last_t, min_n=6))
+    return out
+
+
+def daytrade_tests(lab):
+    """當沖基準（日線近似）：每天挑「前一天」成交值前 50 名，開盤進場、盤中觸及 ±2% 停損就出場、否則收盤出場。
+    沒有任何選股判斷，用來看「照兩條規則無腦當沖」扣成本後剩多少。
+    限制：沒有分鐘線，假設停損剛好成交在 −2%（實際常更差），且無法判斷同一天先碰高還是先碰低。"""
+    O, H, L, C, V = lab.O, lab.H, lab.L, lab.C, lab.V
+    T = len(lab.dates)
+    cost = 0.001425 * 2 * 0.28 + 0.0015          # 手續費 2.8 折＋當沖證交稅減半 0.15%（約 0.23%）
+    cost_full = 0.001425 * 2 + 0.0015             # 手續費無折扣（約 0.44%）
+    out = []
+    dv = C * V
+    for side, key, name, claim in ((1, "dt_long", "無腦當沖（做多）", "每天挑成交值前 50 名，開盤買、跌 2% 停損、否則收盤賣，扣成本後平均為正"),
+                                   (-1, "dt_short", "無腦當沖（放空）", "每天挑成交值前 50 名，開盤空、漲 2% 停損、否則收盤回補，扣成本後平均為正")):
+        dd, vals, vals_full, wins = [], [], [], []
+        for t in range(61, T):
+            ok = np.isfinite(dv[:, t - 1]) & np.isfinite(O[:, t]) & np.isfinite(C[:, t]) & (O[:, t] > 0)
+            ix = np.where(ok)[0]
+            if len(ix) < 100:
+                continue
+            top = ix[np.argsort(-dv[ix, t - 1])][:50]
+            o, h, l, c = O[top, t], H[top, t], L[top, t], C[top, t]
+            if side == 1:
+                hit = np.isfinite(l) & (l <= o * 0.98)
+                r = np.where(hit, -0.02, c / o - 1)
+            else:
+                hit = np.isfinite(h) & (h >= o * 1.02)
+                r = np.where(hit, -0.02, 1 - c / o)
+            dd.append(lab.dates[t])
+            vals.append(float(np.mean(r - cost)))
+            vals_full.append(float(np.mean(r - cost_full)))
+            wins.append(float(np.mean(r - cost > 0)))
+        s = split_stats(dd, vals, lab.split, 20)
+        oos = [i for i, d in enumerate(dd) if d >= lab.split]
+        s["events"] = {"is": (len(dd) - len(oos)) * 50, "oos": len(oos) * 50}
+        s["win"] = round(float(np.mean([wins[i] for i in oos]) * 100), 1) if oos else None
+        s["raw"] = round(float(np.mean([vals[i] for i in oos]) * 100), 3) if oos else None
+        full = round(float(np.mean([vals_full[i] for i in oos]) * 100), 3) if oos else None
+        out.append({"cat": "當沖基準（日線近似）", "key": key, "name": name, "claim": claim, "hold": 0, "sign": 1,
+                    "unit": "每個交易日 50 筆的平均淨報酬（已扣成本）", **s,
+                    "tradeable": tradeable(s, 0),
+                    "note": f"成本以手續費 2.8 折＋當沖證交稅 0.15% 計（約 {cost*100:.2f}%）；手續費無折扣時樣本外每筆 {full}%。"
+                            "日線無法得知盤中先後順序，停損一律假設成交在 ±2%，結果偏樂觀。",
+                    "today": []})
     return out
 
 
