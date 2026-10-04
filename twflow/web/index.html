@@ -1794,9 +1794,24 @@ function oddsCard(){
       勝率高也不等於賺錢——要同時看「贏的時候賺多少、輸的時候賠多少」。歷史不代表未來，台股過去二十年整體向上，停滯的市場不會有同樣結果。</p></div>`;
 }
 // 中期組合實驗：每月調整、持有約一個月，年報酬能否穩定達到 20–40%
-let PF=null, pfSel='RM';
+let PF=null, pfSel='RM', pfKind='size';
 const pfReady=()=>PF?Promise.resolve(PF)
   :fetch('data/portfolio.json').then(r=>r.json()).then(j=>(PF=j)).catch(()=>null);
+function pfTiers(){
+  const T=(PF.tiers||[]).filter(x=>x.kind===pfKind); if(!T.length) return '';
+  const L=PF.tier_labels||{}, ks=['EW','R','E','M','RM'].filter(k=>T.some(x=>x.results&&x.results[k]));
+  const f=x=>x==null?'—':(x>=0?'+':'')+x.toFixed(1)+'%';
+  return `<div class="rsub" style="margin:16px 0 6px">分組比較：在同一組股票裡，選股方法能不能贏過「整組等權」？（只算近 60 日平均成交值 ≥ ${PF.min_dv/1e6} 百萬元的股票）</div>
+    <div class="rtabs"><span class="segs" style="margin-left:0"><button data-pfk="size" class="${pfKind==='size'?'on':''}">依規模</button><button data-pfk="price" class="${pfKind==='price'?'on':''}">依股價檔位</button></span></div>
+    <table class="st"><tr><th>組別（約幾檔）</th>${ks.map(k=>`<th>${esc(L[k]||k)}</th>`).join('')}<th>基準回撤</th></tr>
+      ${T.map(x=>{const R=x.results||{};
+        if(!R.EW) return `<tr><td>${esc(x.name)}（${x.n}）</td><td colspan="${ks.length+1}" style="color:var(--s8)">${esc(x.note||'資料不足')}</td></tr>`;
+        return `<tr><td>${esc(x.name)}（${x.n}）</td>${ks.map(k=>{const v=R[k]; if(!v) return '<td>—</td>';
+          return `<td><b style="color:${v.cagr>=20?'var(--up)':'var(--s10)'}">${f(v.cagr)}</b>${k==='EW'?'':`<br><small style="color:${col(v.excess)}">${v.excess>=0?'贏':'輸'} ${Math.abs(v.excess).toFixed(1)}</small>`}<br><small style="color:var(--s8)">≥20%：${v.hit20??'—'}%</small></td>`;}).join('')}
+          <td style="color:var(--down)">${R.EW.mdd.toFixed(1)}%</td></tr>`;}).join('')}</table>
+    <p class="note" style="font-size:12px;margin-top:6px">每格：年化報酬／相對整組等權贏或輸幾個百分點／年報酬 ≥ 20% 的年份比例。
+      ${PF.source==='official'?'':'目前是 Yahoo 資料，只有現在仍上市的熱門股，小型股與低價股組別樣本不足或偏樂觀；十年官方資料（含已下市股票）補齊後會自動更新。'}</p>`;
+}
 function pfCard(){
   if(!PF||!PF.results) return '';
   const R=PF.results, f=x=>x==null?'—':(x>=0?'+':'')+x.toFixed(1)+'%';
@@ -1811,6 +1826,7 @@ function pfCard(){
         <td style="color:var(--down)">${v.mdd.toFixed(1)}%</td><td>${v.hit20!=null?v.hit20+'%（'+v.n_full+' 年）':'—'}</td>
         <td style="color:${col(v.worst_year)}">${f(v.worst_year)}</td><td>${f(v.halves[0])}／${f(v.halves[1])}</td></tr>`).join('')}</table>
     <div class="rsub" style="margin-top:10px">${esc(sel.label)}・淨值走勢（點表格切換）</div>${eqCurve(sel.curve)}
+    ${pfTiers()}
     <div class="chips" style="margin-top:6px">${yrs.map(y=>`<span class="chip">${y} <b style="color:${col(sel.years[y])}">${f(sel.years[y])}</b></span>`).join('')}</div>
     ${PF.now&&PF.now.RM&&PF.now.RM.length?`<div class="rsub" style="margin:12px 0 6px">${PF.rebalance_date} 符合「營收創新高＋動能」條件的股票（條件成立，不是推薦）</div>
       <div class="chips">${PF.now.RM.map(x=>`<button class="chip" data-code="${x.code}">${esc(x.name)} <small style="color:var(--s8)">${x.code}</small></button>`).join('')}</div>`:''}
@@ -1949,6 +1965,7 @@ function buildSwing(){
   el.onclick=e=>{const o=e.target.closest('[data-odds]'); if(o){oddsSel=o.dataset.odds;buildSwing();return;}
     const rd=e.target.closest('[data-rdca]'); if(rd){rdcaSel=+rd.dataset.rdca;buildSwing();return;}
     const pfr=e.target.closest('[data-pf]'); if(pfr){pfSel=pfr.dataset.pf;const y=scrollY;buildSwing();scrollTo(0,y);return;}
+    const pk=e.target.closest('[data-pfk]'); if(pk){pfKind=pk.dataset.pfk;const y=scrollY;buildSwing();scrollTo(0,y);return;}
     const v=e.target.closest('[data-evi]'); if(v){eviOpen=eviOpen===v.dataset.evi?null:v.dataset.evi;const y=scrollY;buildSwing();scrollTo(0,y);return;}
     const c=e.target.closest('[data-code]'); if(c) openStock(c.dataset.code);};
 }

@@ -133,87 +133,66 @@ def eps_signal(lab, rdays):
     return out
 
 
-def simulate(lab, rdays, picks, core=0.0, filt=None):
-    """picks: {t: [k...]}（最多 TOPN 檔）；core: 0050 固定權重；filt: {t: bool} False 時全數持現金。
-    回傳每日淨值（從第一個調整日隔天開盤起算）、每次調整的換手率。"""
-    C, O = lab.C, lab.O
-    T = len(lab.dates)
-    b = lab.bench
-    bo = lab.bench_open
+class Book:
+    """價格矩陣：個股＋0050（列 B）＋現金（列 CASH），收盤缺值往前補（停牌、下市後維持最後價）。"""
+
+    def __init__(self, lab):
+        N, T = lab.C.shape
+        self.B, self.CASH = N, N + 1
+        C = np.vstack([lab.C, lab.bench[None, :], np.cumprod(np.full(T, (1 + CASH_Y) ** (1 / 250)))[None, :]])
+        O = np.vstack([lab.O, lab.bench_open[None, :], C[-1:, :]])
+        self.C = ffill(C)
+        O = np.where(np.isfinite(O) & (O > 0), O, np.nan)
+        prevc = np.full_like(self.C, np.nan)
+        prevc[:, 1:] = self.C[:, :-1]
+        self.O = np.where(np.isfinite(O), O, prevc)     # 開盤缺值用前一天收盤
+        self.T = T
+
+
+def ffill(X):
+    X = X.copy()
+    for t in range(1, X.shape[1]):
+        m = ~np.isfinite(X[:, t])
+        X[m, t] = X[m, t - 1]
+    return X
+
+
+def simulate(book, rdays, target):
+    """target(t) → {列: 權重}（列：個股索引、book.B＝0050、book.CASH＝現金），權重合計 1。
+    t 收盤決定、t+1 開盤成交；只對權重變動收成本。回傳 (每日淨值, 起點, 每次換手)。"""
+    T = book.T
     nav = np.full(T, np.nan)
     turns = []
-    value = 1.0
-    hold = {}            # key → 份數（key: 個股 k、"B" 為 0050、"$" 為現金）
-    cash_d = (1 + CASH_Y) ** (1 / 250) - 1
-    start = rdays[0] + 1
+    value, shares = 1.0, {}
     for i, t in enumerate(rdays):
-        e = t + 1                                 # 隔天開盤成交
+        e = t + 1
         if e >= T:
             break
         nxt = rdays[i + 1] + 1 if i + 1 < len(rdays) else T
-        # 以開盤價計算目前持股市值
-        def px_open(key):
-            if key == "$":
-                return 1.0
-            if key == "B":
-                return bo[e] if np.isfinite(bo[e]) else b[e - 1]
-            v = O[key, e]
-            if not np.isfinite(v):                # 停牌或下市：用最後收盤
-                past = C[key, :e]
-                f = np.where(np.isfinite(past))[0]
-                v = past[f[-1]] if len(f) else np.nan
-            return v
-        if hold:
-            value = sum(n * px_open(k) for k, n in hold.items() if np.isfinite(px_open(k)))
-        old_w = {k: n * px_open(k) / value for k, n in hold.items()} if hold and value > 0 else {}
-        # 目標權重
-        w = {}
-        if filt is not None and not filt.get(t, True):
-            w["$"] = 1.0
-        else:
-            sel = picks.get(t, [])[:TOPN]
-            sat = 1.0 - core
-            each = sat / TOPN
-            for k in sel:
-                if np.isfinite(O[k, e]) and O[k, e] > 0:
-                    w[k] = each
-            w["B"] = 1.0 - sum(w.values())
-        # 成本：只對權重變動收費
-        cost = 0.0
-        tw = 0.0
-        for k in set(w) | set(old_w):
-            dw = w.get(k, 0.0) - old_w.get(k, 0.0)
-            if k == "$":
+        po = book.O[:, e]
+        if shares:
+            value = sum(n * po[k] for k, n in shares.items() if np.isfinite(po[k]))
+        old = {k: n * po[k] / value for k, n in shares.items() if np.isfinite(po[k])} if shares else {}
+        w = {k: v for k, v in target(t).items() if v > 0 and np.isfinite(po[k]) and po[k] > 0}
+        tot = sum(w.values())
+        if tot <= 0:
+            w, tot = {book.CASH: 1.0}, 1.0
+        w = {k: v / tot for k, v in w.items()}
+        cost, tw = 0.0, 0.0
+        for k in set(w) | set(old):
+            if k == book.CASH:
                 continue
-            if dw > 0:
-                cost += dw * BUY
-            else:
-                cost += -dw * (SELL_E if k == "B" else SELL_S)
+            dw = w.get(k, 0.0) - old.get(k, 0.0)
+            cost += dw * BUY if dw > 0 else -dw * (SELL_E if k == book.B else SELL_S)
             tw += abs(dw)
-        if not old_w:
-            cost = sum(v * BUY for k, v in w.items() if k != "$")
         value *= 1 - cost
-        turns.append(tw / 2)
-        hold = {k: value * v / px_open(k) for k, v in w.items() if v > 0 and np.isfinite(px_open(k)) and px_open(k) > 0}
-        # 持有期每日淨值（收盤）
-        for s in range(e, min(nxt, T)):
-            tot = 0.0
-            for k, n in list(hold.items()):
-                if k == "$":
-                    hold[k] = n * (1 + cash_d)
-                    tot += hold[k]
-                    continue
-                if k == "B":
-                    p = b[s]
-                else:
-                    p = C[k, s]
-                    if not np.isfinite(p):
-                        past = C[k, :s]
-                        f = np.where(np.isfinite(past))[0]
-                        p = past[f[-1]] if len(f) else 0.0
-                tot += n * (p if np.isfinite(p) else 0.0)
-            nav[s] = tot
-    return nav, start, turns
+        turns.append(tw / 2 if old else 1.0)
+        keys = np.array(list(w))
+        n = np.array([value * w[k] / po[k] for k in keys])
+        shares = dict(zip(keys.tolist(), n))
+        seg = book.C[keys, e:nxt]
+        nav[e:nxt] = n @ np.nan_to_num(seg)
+    return nav, rdays[0] + 1, turns
 
 
 def stats(nav, dates, start):
@@ -315,79 +294,153 @@ def forward(lab, rdays, picks):
     print(f"前瞻紀錄：{len(recs)} 期，累計 {cum}")
 
 
+SIZE_TIERS = [("大型（成交值前 50）", 0, 50), ("中型（51–150）", 50, 150), ("中小型（151–400）", 150, 400), ("小型（401 名以後）", 400, 10 ** 6)]
+PRICE_TIERS = [("10 元以下", 0, 10), ("10–50 元", 10, 50), ("50–100 元", 50, 100), ("100–500 元", 100, 500),
+               ("500–1000 元", 500, 1000), ("1000 元以上", 1000, 1e12)]
+MIN_DV = 5e6          # 分組實驗的最低流動性：近 60 日平均成交值 500 萬元／日
+TIER_LABEL = {"EW": "整組等權（基準）", "R": "營收創新高", "E": "EPS 創 2 年新高", "M": "12-1 動能", "RM": "營收創新高＋動能"}
+
+
+def slots(sel, filler, n=TOPN):
+    """每檔 1/n；沒選滿的名額按比例分給 filler（{列: 權重}）。"""
+    w = {k: 1.0 / n for k in sel[:n]}
+    rest = 1.0 - sum(w.values())
+    for k, v in filler.items():
+        w[k] = w.get(k, 0.0) + rest * v
+    return w
+
+
 def main():
-    src = json.load(open(SRC, encoding="utf-8"))["symbols"]
+    src = json.load(open(SRC, encoding="utf-8"))
+    source = src.get("source", "yahoo")
+    src = src["symbols"]
     revenue = json.load(open(REV, encoding="utf-8"))["months"] if os.path.exists(REV) else {}
     lab = Lab(src)
     idx = {d: i for i, d in enumerate(lab.dates)}
     lab.bench_open = np.full(len(lab.dates), np.nan)
     for r in src.get("0050", {}).get("rows", []):
         lab.bench_open[idx[r[0]]] = r[1] if r[1] and r[1] > 0 else np.nan
-    # 0050 缺值往前補（停牌日、資料缺漏），避免淨值被當成 0
-    for arr in (lab.bench, lab.bench_open):
-        last = np.nan
-        for i in range(len(arr)):
-            if np.isfinite(arr[i]):
-                last = arr[i]
-            elif arr is lab.bench:
-                arr[i] = last
-    C = lab.C
+    lab.bench = ffill(lab.bench[None, :])[0]
+    book = Book(lab)
+    C, V = lab.C, lab.V
     rdays = [t for t in rebalance_days(lab.dates) if t >= 260]
     b = lab.bench
     ma200 = I.sma(b[None, :], 200)[0]
     trend = {t: bool(np.isfinite(ma200[t]) and b[t] > ma200[t]) for t in rdays}
     with np.errstate(invalid="ignore", divide="ignore"):
         mom = I.prev(C, 21) / I.prev(C, 252) - 1
+        x = C * V
+        ok_ = np.isfinite(x)
+        cs = np.cumsum(np.where(ok_, x, 0.0), axis=1)
+        cn = np.cumsum(ok_, axis=1)
+    DV = np.full(C.shape, np.nan)            # 近 60 日平均成交值（至少 40 天有成交）
+    sw = cs[:, 60:] - cs[:, :-60]
+    nw = cn[:, 60:] - cn[:, :-60]
+    DV[:, 60:] = np.where(nw >= 40, sw / np.maximum(nw, 1), np.nan)
     rev = revenue_signal(lab, revenue, rdays) if revenue else {}
     eps = eps_signal(lab, rdays)
 
-    def top(score_map, t, extra=None):
-        cand = [(k, s) for k, s in score_map.items() if lab.E[k, t] and (extra is None or extra(k))]
+    def top(score_map, ok):
+        cand = [(k, v) for k, v in score_map.items() if ok(k) and np.isfinite(v)]
         return [k for k, _ in sorted(cand, key=lambda x: -x[1])[:TOPN]]
 
-    picks = {"R": {}, "E": {}, "M": {}, "RM": {}}
-    for t in rdays:
-        if t in rev:
-            picks["R"][t] = top(rev[t], t)
-            picks["RM"][t] = top({k: mom[k, t] for k in rev[t] if np.isfinite(mom[k, t]) and mom[k, t] > 0}, t)
-        if t in eps:
-            picks["E"][t] = top(eps[t], t)
-        mm = {k: mom[k, t] for k in np.where(lab.E[:, t] & np.isfinite(mom[:, t]))[0]}
-        picks["M"][t] = top(mm, t)
+    def scores(t):
+        return {"R": rev.get(t, {}),
+                "RM": {k: mom[k, t] for k in rev.get(t, {}) if np.isfinite(mom[k, t]) and mom[k, t] > 0},
+                "E": eps.get(t, {}),
+                "M": {k: mom[k, t] for k in np.where(np.isfinite(mom[:, t]))[0]}}
 
-    # 各策略的起點對齊：取所有訊號都有資料的第一個調整日
+    # 全市場（當時成交值前 150 名）
+    picks = {k: {} for k in ("R", "E", "M", "RM")}
+    for t in rdays:
+        sc = scores(t)
+        for k in picks:
+            if sc[k] or k == "M":
+                picks[k][t] = top(sc[k], lambda i: lab.E[i, t])
     first = max([min(p) for p in picks.values() if p] + [rdays[0]])
     rd = [t for t in rdays if t >= first]
-    runs = {"B0": simulate(lab, rd, {}, core=1.0), "T0": simulate(lab, rd, {}, core=1.0, filt=trend),
-            "R": simulate(lab, rd, picks["R"]), "E": simulate(lab, rd, picks["E"]) if picks["E"] else None,
-            "M": simulate(lab, rd, picks["M"]), "RM": simulate(lab, rd, picks["RM"]),
-            "RMT": simulate(lab, rd, picks["RM"], filt=trend), "CS": simulate(lab, rd, picks["RM"], core=0.7)}
+    B, CASH = book.B, book.CASH
+    plans = {"B0": lambda t: {B: 1.0},
+             "T0": lambda t: {B: 1.0} if trend[t] else {CASH: 1.0},
+             "R": lambda t: slots(picks["R"].get(t, []), {B: 1.0}),
+             "E": lambda t: slots(picks["E"].get(t, []), {B: 1.0}),
+             "M": lambda t: slots(picks["M"].get(t, []), {B: 1.0}),
+             "RM": lambda t: slots(picks["RM"].get(t, []), {B: 1.0}),
+             "RMT": lambda t: slots(picks["RM"].get(t, []), {B: 1.0}) if trend[t] else {CASH: 1.0},
+             "CS": lambda t: {k: v * 0.3 for k, v in slots(picks["RM"].get(t, []), {B: 1.0}).items()} | {B: 0.7 + 0.3 * slots(picks["RM"].get(t, []), {B: 1.0}).get(B, 0)}}
+    if not picks["E"]:
+        plans.pop("E")
     res = {}
-    for k, r in runs.items():
-        if not r:
+    for k, fn in plans.items():
+        nav, start, turns = simulate(book, rd, fn)
+        s_ = stats(nav, lab.dates, start)
+        if s_:
+            s_["turnover"] = round(float(np.mean(turns)) * 12 * 100)
+            s_["label"] = LABEL[k]
+            res[k] = s_
+
+    # 分組：規模（成交值排名）與股價檔位；每組基準＝整組等權
+    members = {}
+    for t in rd:
+        d = DV[:, t]
+        ok = np.where(np.isfinite(d) & np.isfinite(C[:, t]))[0]
+        order = ok[np.argsort(-d[ok])]
+        rank = {k: r for r, k in enumerate(order)}
+        liquid = [k for k in order if d[k] >= MIN_DV]
+        for name, lo, hi in SIZE_TIERS:
+            members.setdefault(("size", name), {})[t] = [k for k in liquid if lo <= rank[k] < hi]
+        for name, lo, hi in PRICE_TIERS:
+            members.setdefault(("price", name), {})[t] = [k for k in liquid if lo <= C[k, t] < hi]
+    tiers = []
+    for (kind, name), mem in members.items():
+        sizes = [len(v) for v in mem.values()]
+        if np.median(sizes) < 20:
+            tiers.append({"kind": kind, "name": name, "n": int(np.median(sizes)), "results": {}, "note": "檔數太少，不做"})
             continue
-        nav, start, turns = r
-        s = stats(nav, lab.dates, start)
-        if s:
-            s["turnover"] = round(float(np.mean(turns)) * 12 * 100) if turns else 0
-            s["label"] = LABEL[k]
-            res[k] = s
+        ms = {t: set(v) for t, v in mem.items()}
+        ew = {t: {k: 1.0 / len(v) for k in v} for t, v in mem.items() if v}
+        out_t = {}
+        for key in ("EW", "R", "E", "M", "RM"):
+            if key == "E" and not eps:
+                continue
+            if key == "EW":
+                fn = (lambda t, ew=ew: ew.get(t) or {CASH: 1.0})
+            else:
+                def fn(t, key=key, ms=ms, ew=ew):
+                    sel = top(scores(t)[key], lambda i: i in ms[t])
+                    return slots(sel, ew.get(t) or {CASH: 1.0})
+            nav, start, turns = simulate(book, rd, fn)
+            s_ = stats(nav, lab.dates, start)
+            if s_:
+                s_.pop("curve", None)
+                s_["turnover"] = round(float(np.mean(turns)) * 12 * 100)
+                out_t[key] = s_
+        if "EW" in out_t:
+            for key, v in out_t.items():
+                v["excess"] = round(v["cagr"] - out_t["EW"]["cagr"], 1)
+        tiers.append({"kind": kind, "name": name, "n": int(np.median(sizes)), "results": out_t})
+
     last_t = rd[-1]
     now = {k: [{"code": lab.codes[i], "name": lab._name(i)} for i in picks[k].get(last_t, [])] for k in picks}
     doc = {"generated_at": datetime.now(timezone(timedelta(hours=8))).isoformat(timespec="seconds"),
-           "source": json.load(open(SRC, encoding="utf-8")).get("source", "yahoo"),
-           "rebalance_date": lab.dates[last_t], "topn": TOPN,
-           "cost": {"buy": BUY, "sell_stock": SELL_S, "sell_etf": SELL_E}, "results": res, "now": now}
+           "source": source, "rebalance_date": lab.dates[last_t], "topn": TOPN, "min_dv": MIN_DV,
+           "cost": {"buy": BUY, "sell_stock": SELL_S, "sell_etf": SELL_E}, "results": res,
+           "tier_labels": TIER_LABEL, "tiers": tiers, "now": now}
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(doc, f, ensure_ascii=False, separators=(",", ":"))
     if "--no-forward" not in sys.argv:
         forward(lab, rd, picks)
-    print(f"中期組合實驗（{doc['source']}）{len(rd)} 次調整")
+    print(f"中期組合實驗（{source}，{len(lab.codes)} 檔）{len(rd)} 次調整")
     print(f"  {'策略':<22} 年化    波動   最大回撤  Sharpe  ≥20%年份  最差年  前半/後半年化   年換手")
-    for k, s in res.items():
-        print(f"  {s['label']:<20} {s['cagr']:6.1f}% {s['vol']:5.1f}% {s['mdd']:7.1f}%  {s['sharpe']}  "
-              f"{s['hit20']}%（{s['n_full']} 年） {s['worst_year']}%  {s['halves']}  {s['turnover']}%")
-        print(f"      各年：{s['years']}")
+    for k, s_ in res.items():
+        print(f"  {s_['label']:<20} {s_['cagr']:6.1f}% {s_['vol']:5.1f}% {s_['mdd']:7.1f}%  {s_['sharpe']}  "
+              f"{s_['hit20']}%（{s_['n_full']} 年） {s_['worst_year']}%  {s_['halves']}  {s_['turnover']}%")
+        print(f"      各年：{s_['years']}")
+    for tr in tiers:
+        print(f"\n  【{'規模' if tr['kind'] == 'size' else '股價'}・{tr['name']}】約 {tr['n']} 檔 {tr.get('note', '')}")
+        for k, v in tr["results"].items():
+            print(f"    {TIER_LABEL[k]:<12} 年化 {v['cagr']:6.1f}%（超額 {v['excess']:+.1f}）回撤 {v['mdd']:6.1f}% "
+                  f"≥20%年份 {v['hit20']}% 最差年 {v['worst_year']}% 前後半 {v['halves']} 各年 {v['years']}")
 
 
 if __name__ == "__main__":
