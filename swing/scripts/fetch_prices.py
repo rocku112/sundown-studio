@@ -6,10 +6,12 @@
 為什麼不用 Yahoo：Yahoo 只有「現在還在交易」的股票，回測只看得到倖存者，結果偏樂觀。
 官方每日收盤行情是當天全部掛牌股票，日後下市的也在裡面。
 
-還原權息：不另外抓除權息表。官方行情的「漲跌價差」是相對「參考價」計算的，
-除權息、減資恢復交易當天的參考價已經扣掉權息，所以
-    當日還原報酬 = 收盤 ÷ (收盤 − 漲跌價差) − 1
-直接就是含息報酬。回測時把每日還原報酬串起來，就是還原股價。
+還原權息：當日還原報酬 = 收盤 ÷ 參考價 − 1。
+  · 一般日子：參考價 = 收盤 − 漲跌價差（官方漲跌即相對參考價）
+  · 除權息日：證交所行情把漲跌標成「X」、價差記 0，不能用；改用官方
+    「除權除息計算結果表」（證交所 TWT49U、櫃買 exDailyQ）的除權息參考價
+  · 減資恢復買賣：證交所 TWTAUU 的恢復買賣參考價
+回測時把每日還原報酬串起來，就是含息還原股價。
 
 輸出：swing/data/prices/YYYY-MM.json.gz（每月一檔、gzip）
   {"names": {code: 名稱}, "days": {"YYYY-MM-DD": {code: [開, 高, 低, 收, 成交張數, 還原報酬]}}}
@@ -60,6 +62,53 @@ def row_out(o, h, l, c, vol, chg):
     return [o, h, l, c, None if vol is None else round(vol / 1000), ret]
 
 
+def roc_date(s):
+    """'114年06月02日' 或 '114/06/02' → '2025-06-02'"""
+    m = re.match(r"(\d+)\D+(\d+)\D+(\d+)", str(s).strip())
+    return f"{int(m.group(1)) + 1911}-{int(m.group(2)):02d}-{int(m.group(3)):02d}" if m else None
+
+
+def refs(month):
+    """該月的官方參考價：{日期: {代號: 參考價}}（除權息＋證交所減資恢復買賣）。"""
+    y, m = map(int, month.split("-"))
+    ny, nm = (y, m + 1) if m < 12 else (y + 1, 1)
+    from datetime import date, timedelta
+    last = date(ny, nm, 1) - timedelta(days=1)
+    a, b = f"{y}{m:02d}01", last.strftime("%Y%m%d")
+    out = {}
+
+    def put(d, code, ref):
+        if d and ref and ref > 0 and keep(code):
+            out.setdefault(d, {})[code] = ref
+
+    j = fm.get_json(f"https://www.twse.com.tw/rwd/zh/exRight/TWT49U?startDate={a}&endDate={b}&response=json", f"twse_ex_{month}")
+    f = (j or {}).get("fields") or []
+    if "股票代號" in f and "除權息參考價" in f:
+        for r in j.get("data") or []:
+            put(roc_date(r[f.index("資料日期")]), clean(r[f.index("股票代號")]), fm.num(r[f.index("除權息參考價")]))
+    j = fm.get_json(f"https://www.twse.com.tw/rwd/zh/reducation/TWTAUU?startDate={a}&endDate={b}&response=json", f"twse_rd_{month}")
+    f = (j or {}).get("fields") or []
+    if "股票代號" in f and "恢復買賣參考價" in f:
+        for r in j.get("data") or []:
+            put(roc_date(r[f.index("恢復買賣日期")]), clean(r[f.index("股票代號")]), fm.num(r[f.index("恢復買賣參考價")]))
+    j = fm.get_json(f"https://www.tpex.org.tw/www/zh-tw/bulletin/exDailyQ?startDate={y}/{m:02d}/01&endDate={last:%Y/%m/%d}&response=json",
+                    f"tpex_ex_{month}")
+    for t in (j or {}).get("tables", []):
+        f = [clean(x) for x in (t.get("fields") or [])]
+        if "代號" in f and "除權息參考價" in f:
+            for r in t.get("data") or []:
+                put(roc_date(r[f.index("除權息日期")]), clean(r[f.index("代號")]), fm.num(r[f.index("除權息參考價")]))
+    return out
+
+
+def apply_refs(rows, ref):
+    """有官方參考價的日子，以參考價重算還原報酬；證交所標「X」但查無參考價的，報酬留空。"""
+    for code, v in rows.items():
+        if code in ref and v[3]:
+            v[5] = round(v[3] / ref[code] - 1, 6)
+    return rows
+
+
 def twse(d):
     ymd = d.strftime("%Y%m%d")
     j = fm.get_json(f"https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?date={ymd}&type=ALLBUT0999&response=json",
@@ -77,7 +126,10 @@ def twse(d):
             if not keep(code):
                 continue
             chg = fm.num(r[di]) if di is not None else None
-            if chg is not None and si is not None and "-" in clean(r[si]):
+            sign = clean(r[si]) if si is not None else ""
+            if "X" in sign.upper():
+                chg = None                  # 除權息／特殊情況：價差不可用，待官方參考價補上
+            elif chg is not None and "-" in sign:
                 chg = -abs(chg)
             v = row_out(fm.num(r[ci["開盤價"]]), fm.num(r[ci["最高價"]]), fm.num(r[ci["最低價"]]),
                         fm.num(r[ci["收盤價"]]), fm.num(r[ci["成交股數"]]), chg)
@@ -145,6 +197,9 @@ def main():
         month, key = d.strftime("%Y-%m"), d.isoformat()
         if month not in cache:
             cache[month] = load(month)
+            if "ref" not in cache[month] or month == days[-1].strftime("%Y-%m"):
+                cache[month]["ref"] = refs(month)
+                dirty.add(month)
         m = cache[month]
         if key in m["days"] and d != days[-1]:
             continue
@@ -153,7 +208,7 @@ def main():
         if len(q1) < 300:               # 上市少於 300 檔＝來源異常，不存
             empty.append(key)
             continue
-        m["days"][key] = {**q1, **q2}
+        m["days"][key] = apply_refs({**q1, **q2}, m["ref"].get(key, {}))
         m["names"].update({**n1, **n2})
         dirty.add(month)
         done += 1

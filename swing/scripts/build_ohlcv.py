@@ -89,7 +89,12 @@ def main():
         for j in range(len(ts) - 2, -1, -1):
             t1, t0 = ts[j + 1], ts[j]
             r = R[k, t1]
-            ratio = (1 + r) if np.isfinite(r) and r > -0.9 else C[k, t1] / C[k, t0]
+            if np.isfinite(r) and r > -0.9:
+                ratio = 1 + r
+            else:
+                # 查無參考價：原始價差在漲跌幅限制（±10%）內就照用；超出代表有未知的權值調整，當作 0 報酬
+                raw = C[k, t1] / C[k, t0]
+                ratio = raw if abs(raw - 1) <= 0.105 else 1.0
             # 還原收盤[t0] = 還原收盤[t1] / ratio  →  fac[t0] = fac[t1] × C[t1] / (ratio × C[t0])
             fac[j] = fac[j + 1] * C[k, t1] / (ratio * C[k, t0])
         rows = []

@@ -439,6 +439,7 @@ def stock_tests(lab, revenue):
         out += revenue_tests(lab, revenue)
         out += chips_tests(lab)
         out += fund_tests(lab)
+        out += daytrade_tests(lab)
     return out
 
 
@@ -607,6 +608,51 @@ def fund_tests(lab):
                                  TURN, h=20, today_t=last_t, min_n=6))
             out.append(lab.event(G, "eps_record", "EPS 創 2 年新高", "單季 EPS 為近 8 季最高（且為正），季報公布後 20 天表現比股票池好",
                                  REC, h=20, today_t=last_t, min_n=6))
+    return out
+
+
+def daytrade_tests(lab):
+    """當沖基準（日線近似）：每天挑「前一天」成交值前 50 名，開盤進場、盤中觸及 ±2% 停損就出場、否則收盤出場。
+    沒有任何選股判斷，用來看「照兩條規則無腦當沖」扣成本後剩多少。
+    限制：沒有分鐘線，假設停損剛好成交在 −2%（實際常更差），且無法判斷同一天先碰高還是先碰低。"""
+    O, H, L, C, V = lab.O, lab.H, lab.L, lab.C, lab.V
+    T = len(lab.dates)
+    cost = 0.001425 * 2 * 0.28 + 0.0015          # 手續費 2.8 折＋當沖證交稅減半 0.15%（約 0.23%）
+    cost_full = 0.001425 * 2 + 0.0015             # 手續費無折扣（約 0.44%）
+    out = []
+    dv = C * V
+    for side, key, name, claim in ((1, "dt_long", "無腦當沖（做多）", "每天挑成交值前 50 名，開盤買、跌 2% 停損、否則收盤賣，扣成本後平均為正"),
+                                   (-1, "dt_short", "無腦當沖（放空）", "每天挑成交值前 50 名，開盤空、漲 2% 停損、否則收盤回補，扣成本後平均為正")):
+        dd, vals, vals_full, wins = [], [], [], []
+        for t in range(61, T):
+            ok = np.isfinite(dv[:, t - 1]) & np.isfinite(O[:, t]) & np.isfinite(C[:, t]) & (O[:, t] > 0)
+            ix = np.where(ok)[0]
+            if len(ix) < 100:
+                continue
+            top = ix[np.argsort(-dv[ix, t - 1])][:50]
+            o, h, l, c = O[top, t], H[top, t], L[top, t], C[top, t]
+            if side == 1:
+                hit = np.isfinite(l) & (l <= o * 0.98)
+                r = np.where(hit, -0.02, c / o - 1)
+            else:
+                hit = np.isfinite(h) & (h >= o * 1.02)
+                r = np.where(hit, -0.02, 1 - c / o)
+            dd.append(lab.dates[t])
+            vals.append(float(np.mean(r - cost)))
+            vals_full.append(float(np.mean(r - cost_full)))
+            wins.append(float(np.mean(r - cost > 0)))
+        s = split_stats(dd, vals, lab.split, 20)
+        oos = [i for i, d in enumerate(dd) if d >= lab.split]
+        s["events"] = {"is": (len(dd) - len(oos)) * 50, "oos": len(oos) * 50}
+        s["win"] = round(float(np.mean([wins[i] for i in oos]) * 100), 1) if oos else None
+        s["raw"] = round(float(np.mean([vals[i] for i in oos]) * 100), 3) if oos else None
+        full = round(float(np.mean([vals_full[i] for i in oos]) * 100), 3) if oos else None
+        out.append({"cat": "當沖基準（日線近似）", "key": key, "name": name, "claim": claim, "hold": 0, "sign": 1,
+                    "unit": "每個交易日 50 筆的平均淨報酬（已扣成本）", **s,
+                    "tradeable": tradeable(s, 0),
+                    "note": f"成本以手續費 2.8 折＋當沖證交稅 0.15% 計（約 {cost*100:.2f}%）；手續費無折扣時樣本外每筆 {full}%。"
+                            "日線無法得知盤中先後順序，停損一律假設成交在 ±2%，結果偏樂觀。",
+                    "today": []})
     return out
 
 

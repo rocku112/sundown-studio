@@ -61,8 +61,12 @@ jobs:
           ( cd .. && python -X utf8 swing/scripts/fetch_tdcc.py ) || echo "::warning::集保資料抓取失敗"
           # 基本面（月底估值、季報；已有的不重抓）
           ( cd .. && timeout 20m python -X utf8 swing/scripts/fetch_fund.py ) || echo "::warning::基本面抓取失敗"
+          # 官方日線（含日後下市股票）：補最新幾天，並順便回補十年歷史 20 分鐘
+          ( cd .. && python -X utf8 swing/scripts/fetch_prices.py --days 2550 --budget 20 ) || echo "::warning::官方日線抓取失敗"
           # 波段實驗室：五年日線回測（約 3 分鐘）
-          ( cd .. && python -X utf8 swing/scripts/fetch_hist.py && python -X utf8 swing/scripts/backtest_swing.py \
+          # 官方日線滿一千天時取代 Yahoo（消除倖存者偏差），否則沿用 Yahoo
+          ( cd .. && python -X utf8 swing/scripts/fetch_hist.py && { python -X utf8 swing/scripts/build_ohlcv.py || true; } \
+              && python -X utf8 swing/scripts/backtest_swing.py \
               && python -X utf8 swing/scripts/build_bench.py && python -X utf8 swing/scripts/holding_odds.py \
               && python -X utf8 swing/scripts/evidence.py ) \
             || echo "::warning::波段回測失敗"
@@ -77,7 +81,7 @@ jobs:
           git config user.name  "twflow-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add twflow/data/market/days twflow/data/market/stock_meta.json $(ls -d twflow/data/etf 2>/dev/null) \
-                  $(ls swing/data/revenue.json 2>/dev/null) $(ls -d swing/data/chips swing/data/fund swing/data/tdcc 2>/dev/null) \
+                  $(ls swing/data/revenue.json 2>/dev/null) $(ls -d swing/data/chips swing/data/fund swing/data/tdcc swing/data/prices 2>/dev/null) \
                   twflow/data/market/market.json twflow/web/data \
                   twflow/web/snapshot.html
           if git diff --staged --quiet; then
