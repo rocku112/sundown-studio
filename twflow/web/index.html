@@ -1819,7 +1819,11 @@ function pfCard(){
   const yrs=Object.keys(sel.years);
   return `<div class="card"><h3>中期組合實驗：年報酬 20–40% 做得到嗎？</h3>
     <p style="font-size:13px;color:var(--s9);line-height:1.8">每月 10 日月營收公布後調整一次、持有約一個月；只在當時成交值前 150 名內選 20 檔，
-      沒選滿的部分持有 0050；含手續費與證交稅。規則事先固定，不事後調參數。期間 ${sel.period[0]} ～ ${sel.period[1]}（${PF.source==='official'?'官方日線、含已下市股票':'Yahoo 日線，未含已下市股票，結果偏樂觀'}）。</p>
+      沒選滿的部分持有 0050；含手續費與證交稅。規則事先固定，不事後調參數。期間 ${sel.period[0]} ～ ${sel.period[1]}（${PF.source==='official'?'官方日線、含已下市股票':'Yahoo 日線'}）。</p>
+    ${PF.source==='official'?'':`<div class="note" style="margin:8px 0;padding:10px 12px;border-left:3px solid var(--down);font-size:12.5px;line-height:1.7">
+      ⚠ 目前的股票池是用「今天」成交最熱的約 400 檔回頭挑的——這些股票之所以今天熱門，往往正是因為過去幾年大漲，而且不含期間下市的股票。
+      所以這一版的年化報酬嚴重偏高（連「整組等權」都有 40–60%），<b>絕對數字不可信</b>，只能參考同一組內「選股方法 vs 整組等權」的相對差距。
+      十年官方日線（含已下市、用當時的成交值排名）補齊後會自動換成可信的版本。</div>`}
     <table class="st"><tr><th>做法</th><th>年化</th><th>最大回撤</th><th>年報酬≥20% 的年份</th><th>最差年</th><th>前半／後半</th></tr>
       ${Object.entries(R).map(([k,v])=>`<tr data-pf="${k}" style="cursor:pointer;${k===pfSel?'background:var(--panel)':''}"><td>${esc(v.label)}</td>
         <td><b style="color:${v.cagr>=20?'var(--up)':v.cagr>=(b?b.cagr:0)?'var(--gold)':'var(--s9)'}">${f(v.cagr)}</b></td>
