@@ -39,6 +39,10 @@ jobs:
               print(d, '除權息', len(ref.get(d.isoformat(), {})), '檔；例', ex, '；2330', rows.get('2330'), '0056', rows.get('0056'))
           "
 
+      - name: 台股完整清單
+        working-directory: twflow
+        run: python -X utf8 scripts/build_directory.py
+
       - name: 集保千張大戶
         run: python -X utf8 swing/scripts/fetch_tdcc.py
 

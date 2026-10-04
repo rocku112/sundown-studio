@@ -895,9 +895,33 @@ function openSector(s){
 }
 
 /* ══ 個股面板 ══════════════════════════════════════════════════ */
+// 完整清單裡、但不在每日深入追蹤範圍的代號：顯示當日報價與基本資料
+function openLite(key){
+  const tw=key.startsWith('TWX:'), code=key.slice(4);
+  const r=tw?(DIR.tw&&DIR.tw[code]):(DIR.us&&DIR.us[code]);
+  if(!r){ dirReady().then(()=>{ if((tw?DIR.tw:DIR.us)?.[code]) openLite(key); }); return; }
+  const kv=(k,v,c)=>`<div class="kv"><span>${k}</span><b${c!=null?` style="color:${col(c)}"`:''}>${v}</b></div>`;
+  const price=tw?r[4]:r[3], chg=tw?r[5]:r[4];
+  $('kp-name').innerHTML=`${esc(r[1])} <span style="color:var(--s8);font-size:13px">${esc(code)}</span>`+
+    `<span class="badge">${tw?(TWK[r[2]]||'台股'):(r[2]==='e'?'美國 ETF':'美股')}</span>`;
+  $('kp-sub').innerHTML=`<b style="font-size:17px;color:var(--s10)">${price??'—'}${tw?'':' 美元'}</b>　`+
+    `<b style="color:${col(chg)}">${chg!=null?pct(chg):'—'}</b>　<span style="color:var(--s8)">${tw?r[3]:(r[6]||'')}・${tw?DIR.twDate:DIR.usDate}</span>`;
+  const link=tw?`https://tw.stock.yahoo.com/quote/${encodeURIComponent(code)}`:`https://finance.yahoo.com/quote/${encodeURIComponent(code)}`;
+  $('kp-body').innerHTML=`<div class="stitle">當日報價</div>
+    ${kv('收盤',price??'—')}${kv('漲跌',chg!=null?pct(chg):'—',chg)}
+    ${tw?kv('成交量',r[6]?r[6].toLocaleString()+' 張':'—'):kv('成交量',r[7]?r[7].toLocaleString()+' 股':'—')}
+    ${!tw&&r[5]?kv('市值',r[5]>=10000?(r[5]/10000).toFixed(2)+' 兆美元':r[5].toFixed(1)+' 億美元'):''}
+    ${!tw&&r[6]?kv('產業',esc(r[6])):''}
+    <p class="note" style="padding:12px 16px;font-size:12.5px;line-height:1.7">這檔不在本站每日深入追蹤的範圍，所以沒有走勢圖${tw?'、法人籌碼':'、基本面'}與板塊分析，只有當日報價。
+      仍可加入「持股健檢」計算損益。<br><a href="${link}" target="_blank" rel="noopener" style="color:var(--gold)">在 Yahoo 財經看更多 ↗</a></p>`;
+  $('kp-body').onclick=null;
+  $('kp-star').style.display='none';
+  show('stk-panel');
+}
 function openStock(code){
   if(String(code).startsWith('US:')) return openUS(code.slice(3));
   if(String(code).startsWith('ETF:')) return openETF(code.slice(4));
+  if(String(code).startsWith('TWX:')||String(code).startsWith('USX:')) return openLite(code);
   const d=D.stock_data[code]; if(!d) return;
   $('kp-name').innerHTML=`${esc(d.name)} <span style="color:var(--s8);font-size:13px">${code}</span>`
     +(d.anomaly?`<span class="badge">${d.anomaly}</span>`:'');
@@ -1771,6 +1795,8 @@ function resolveCode(raw){
   if(D&&D.stock_data[q]) return {key:q,mkt:'tw'};
   if(ETFD&&ETFD.etfs.some(e=>e.code===q)) return {key:'ETF:'+q,mkt:'etf'};
   if(USD&&USD.stock_data[q]&&USD.stock_data[q].type!=='index') return {key:'US:'+q,mkt:'us'};
+  if(DIR.tw&&DIR.tw[q]) return {key:'TWX:'+q,mkt:'tw'};
+  const u=q.replace('.','-'); if(DIR.us&&DIR.us[u]) return {key:'USX:'+u,mkt:'us'};
   return null;
 }
 function holdInfo(h){
@@ -1781,6 +1807,10 @@ function holdInfo(h){
   if(h.key.startsWith('ETF:')){ const e=ETFD&&ETFD.etfs.find(x=>x.code===h.key.slice(4));
     return e&&{name:e.name,code:e.code,mkt:'etf',price:e.price,cur:'TWD',fx:1,
       group:'ETF・'+e.cat,prem:e.prem,cat:e.cat}; }
+  if(h.key.startsWith('TWX:')){ const r=DIR.tw&&DIR.tw[h.key.slice(4)];
+    return r&&{name:r[1],code:r[0],mkt:r[2]==='e'?'etf':'tw',price:r[4],cur:'TWD',fx:1,chg:r[5],group:'台股・'+(TWK[r[2]]||'其他')}; }
+  if(h.key.startsWith('USX:')){ const r=DIR.us&&DIR.us[h.key.slice(4)];
+    return r&&{name:r[1],code:r[0],mkt:'us',price:r[3],cur:'USD',fx,chg:r[4],group:'美股・'+(r[2]==='e'?'ETF':(r[6]||'其他'))}; }
   const d=D&&D.stock_data[h.key];
   return d&&{name:d.name,code:h.key,mkt:'tw',price:d.price,cur:'TWD',fx:1,chg:d.chg_1d,
     group:'台股・'+String((D.stock_sectors[h.key]||['未分類'])[0]).replace(/^[^・]+・/,'')};
@@ -1795,6 +1825,7 @@ function buildHold(){
   const el=$('hold');
   // 解析代號需要 ETF 與美股資料，第一次進來先載入
   if(!ETFD||!BENCH){ Promise.all([etfReady(),benchReady()]).then(()=>{ if(curView==='hold') buildHold(); }); }
+  if(!DIR.tw&&!DIR.us&&HOLD.some(h=>/^(TWX|USX):/.test(h.key))) dirReady().then(()=>{ if(curView==='hold') buildHold(); });
   const rows=HOLD.map(h=>{const i=holdInfo(h); if(!i||!i.price||!i.fx) return {h,i:null};
     const val=i.price*h.shares*i.fx, cost=h.cost*h.shares*i.fx;
     const net=val*(1-SELLCOST[i.mkt]);
@@ -1873,6 +1904,7 @@ function buildHold(){
   function bar(k,w){ return `<div class="hbar"><span>${esc(k)}</span><div><i style="width:${(w*100).toFixed(1)}%"></i></div><b>${(w*100).toFixed(1)}%</b></div>`; }
 
   const msg=t=>{ $('h-msg').textContent=t; };
+  if($('h-code')) $('h-code').onfocus=()=>dirReady();
   $('h-add').onclick=()=>{
     const r=resolveCode($('h-code').value), sh=+$('h-sh').value, cost=+$('h-cost').value, date=$('h-date').value||null;
     if(!r) return msg('找不到這個代號。台股、台股 ETF、美股（S&P 500、那斯達克 100 與常見 ETF）都可以。');
@@ -1984,29 +2016,42 @@ $('mkt').onclick=e=>{const b=e.target.closest('[data-m]'); if(b&&b.dataset.m!==M
 
 /* ══ 搜尋 ══════════════════════════════════════════════════════ */
 let selIdx=-1;
-$('q').onfocus=()=>{ if(!ETFD) etfReady().then(()=>{ if($('q').value.trim()) $('q').oninput(); }); };
+// 完整清單（全部台股掛牌證券、全部美股與美國 ETF）：第一次點搜尋框才載入
+let DIR={tw:null,us:null}, dirLoading=null;
+const dirReady=()=>dirLoading||(dirLoading=Promise.all([
+  fetch('data/tw_all.json').then(r=>r.json()).catch(()=>null),
+  fetch('data/us/all.json').then(r=>r.json()).catch(()=>null)]).then(([t,u])=>{
+    DIR.tw=t&&Object.fromEntries(t.rows.map(r=>[r[0],r])); DIR.twDate=t&&t.date;
+    DIR.us=u&&Object.fromEntries(u.rows.map(r=>[r[0],r])); DIR.usDate=u&&u.date; return DIR;}));
+const TWK={s:'台',e:'ETF',n:'ETN',d:'TDR',p:'特別股',b:'REITs'};
+$('q').onfocus=()=>{
+  const re=()=>{ if($('q').value.trim()) $('q').oninput(); };
+  if(!ETFD) etfReady().then(re);
+  if(!DIR.tw&&!DIR.us) dirReady().then(re);
+};
 $('q').oninput=()=>{
   const q=$('q').value.trim().toLowerCase(); const box=$('qr');
   if(!q||!SEARCH){box.classList.remove('on');return;}
-  const tw=Object.entries(SEARCH)
-    .filter(([c,n])=>c.startsWith(q)||n.toLowerCase().includes(q))
-    .map(([c,n])=>[c,c,n,'台']);
-  // 美股：代號完全相符排最前（搜 "t" 要先看到 AT&T 的 T，不是一串 T 開頭的）
+  const m=(c,n)=>c.toLowerCase().startsWith(q)||String(n||'').toLowerCase().includes(q);
+  const exact=(a,b)=>(b[1].toLowerCase()===q)-(a[1].toLowerCase()===q);
+  // 每項：[開啟用的 key, 代號, 名稱, 標籤]
+  const tw=Object.entries(SEARCH).filter(([c,n])=>m(c,n)).map(([c,n])=>[c,c,n,'台']);
+  const etf=ETFD?ETFD.etfs.filter(e=>m(e.code,e.name)).map(e=>['ETF:'+e.code,e.code,e.name,'ETF']):[];
+  const twSeen=new Set([...Object.keys(SEARCH),...(ETFD?ETFD.etfs.map(e=>e.code):[])]);
+  const twx=DIR.tw?Object.values(DIR.tw).filter(r=>!twSeen.has(r[0])&&m(r[0],r[1]))
+    .map(r=>['TWX:'+r[0],r[0],r[1],TWK[r[2]]||'台']):[];
   const us=USD?Object.entries(USD.stock_data)
-    .filter(([c,d])=>d.type!=='index'&&(c.toLowerCase().startsWith(q)||d.name.toLowerCase().includes(q)))
-    .sort((a,b)=>(b[0].toLowerCase()===q)-(a[0].toLowerCase()===q))
-    .map(([c,d])=>['US:'+c,c,d.name,'美']):[];
-  // 台股 ETF（折溢價資料裡的全部上市櫃 ETF）；代號 00 開頭時排最前
-  const etf=ETFD?ETFD.etfs.filter(e=>e.code.toLowerCase().startsWith(q)||e.name.toLowerCase().includes(q))
-    .sort((a,b)=>(b.code.toLowerCase()===q)-(a.code.toLowerCase()===q))
-    .map(e=>['ETF:'+e.code,e.code,e.name,'ETF']):[];
-  // 純數字一定是台股；含英文字母時美股優先
-  const hits=(/^00/.test(q)?[...etf,...tw,...us]:/^\d/.test(q)?[...tw,...etf,...us]
-    :MARKET==='us'||/[a-z]/.test(q)?[...us,...etf,...tw]:[...tw,...etf,...us]).slice(0,20);
+    .filter(([c,d])=>d.type!=='index'&&m(c,d.name)).map(([c,d])=>['US:'+c,c,d.name,'美']):[];
+  const usx=DIR.us?Object.values(DIR.us).filter(r=>!(USD&&USD.stock_data[r[0]])&&m(r[0],r[1]))
+    .map(r=>['USX:'+r[0],r[0],r[1],r[2]==='e'?'美ETF':'美']):[];
+  const twAll=[...tw,...etf,...twx].sort(exact), usAll=[...us,...usx].sort(exact);
+  // 00 開頭先列台股 ETF；純數字台股優先；含英文字母或在美股頁時美股優先
+  const hits=(/^\d/.test(q)?[...twAll,...usAll]:MARKET==='us'||/[a-z]/.test(q)?[...usAll,...twAll]:[...twAll,...usAll])
+    .sort(exact).slice(0,30);
   selIdx=-1;
-  box.innerHTML=hits.length?hits.map(([k,c,n,m])=>
-    `<div data-code="${k}"><i><em class="mk">${m}</em>${esc(c)}</i><span>${esc(n)}</span></div>`).join('')
-    :`<div style="color:var(--s8);line-height:1.7;white-space:normal">查無此股<br><small>目前收錄：台股上市櫃普通股與 ETF、美股 S&amp;P 500＋那斯達克 100 成分股與常見 ETF。${ETFD?'':'（ETF 清單載入中，稍後再試）'}</small></div>`;
+  box.innerHTML=hits.length?hits.map(([k,c,n,mk])=>
+    `<div data-code="${k}"><i><em class="mk">${mk}</em>${esc(c)}</i><span>${esc(n)}</span></div>`).join('')
+    :`<div style="color:var(--s8);line-height:1.7;white-space:normal">查無此代號<br><small>收錄範圍：台股全部上市櫃證券（權證除外）、美股全部掛牌股票與 ETF。${DIR.tw||DIR.us?'':'（完整清單載入中，稍後再試）'}</small></div>`;
   box.classList.toggle('on',true);
 };
 $('qr').onclick=e=>{const d=e.target.closest('[data-code]');
