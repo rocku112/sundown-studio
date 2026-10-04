@@ -1690,7 +1690,7 @@ function eviCard(){
     <p class="note" style="margin-top:8px;font-size:12.5px;color:var(--s9)">規則在看資料<b style="color:var(--s10)">之前</b>就定好，參數用看盤軟體預設值，不調整。
       個股用 ${EVI.stock_period[0]}～${EVI.stock_period[1]} 每天「當時」成交值前 150 名的股票；訊號出現後<b style="color:var(--s10)">隔天開盤買、持有 5 天（月營收與排序型 20 天）收盤賣</b>，每次扣來回成本約 ${(EVI.cost_stock*100).toFixed(2)}%。
       ${EVI.revenue_months?`月營收 ${EVI.revenue_months[0]}～${EVI.revenue_months[1]}，一律假設次月 10 日後才知道。`:''}
-      前半段是樣本內、後半段是樣本外；「成立」要兩段都為正、且樣本外通過 Holm 多重比較校正（同時測 ${EVI.m} 個，門檻約 t ≥ 3.2）。</p>
+      前半段是樣本內、後半段是樣本外；「成立」要兩段都為正、且樣本外通過 Holm 多重比較校正（同時測 ${EVI.m} 個，最嚴的門檻約 t ≥ ${EVI.t_min??'3.2'}）。</p>
     <p class="note" style="margin-top:6px;font-size:12.5px;color:var(--s9)">欄位：<b>樣本外</b>＝後半段發生次數、扣成本後賺錢的比例（勝率）、每次平均淨報酬（含大盤漲跌）；
       <b>超額</b>＝相對同期股票池平均（上：樣本內、下：樣本外），扣除大盤影響後指標本身的效果。</p>
     ${cats.map(c=>`<div class="ecat">${esc(c)}</div>${T.filter(t=>(t.cat||'其他')===c).map(row).join('')}`).join('')}

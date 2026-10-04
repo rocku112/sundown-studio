@@ -48,7 +48,7 @@ def fetch(code):
     off = res["meta"].get("gmtoffset", 0)
     rows = [(datetime.fromtimestamp(t + off, tz=timezone.utc).date().isoformat(), p)
             for t, p in zip(ts, px) if p]
-    check(code, rows)
+    rows = check(code, rows)
     return rows, bool(adj)
 
 
@@ -61,7 +61,14 @@ def check(code, rows):
     jumps = [(b[0], round((b[1] / a[1] - 1) * 100, 1)) for a, b in zip(rows, rows[1:])
              if abs(b[1] / a[1] - 1) > 0.25]
     if jumps:
-        raise RuntimeError(f"{code} 有疑似未還原分割的單日跳動：{jumps[:5]}")
+        # 來源偶爾在早年資料留下未還原的分割：只用最後一次跳動之後的資料，剩不到 6 年才放棄
+        cut = jumps[-1][0]
+        rest = [r for r in rows if r[0] >= cut]
+        if len(rest) < 250 * 6:
+            raise RuntimeError(f"{code} 有疑似未還原分割的單日跳動：{jumps[:5]}")
+        print(f"  {code}：{jumps[:3]} 疑似未還原分割，改用 {cut} 之後的資料")
+        return rest
+    return rows
 
 
 def horizon_stats(p, n, years):

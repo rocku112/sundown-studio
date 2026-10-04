@@ -1,0 +1,45 @@
+name: 籌碼歷史回補（法人＋融資融券）
+
+# 五年約 1,250 個交易日、每天 4 個請求，證交所限流下約需 3 小時。
+# 手動觸發一次跑最多 5 小時；沒補完的部分，每日盤後更新也會每天再補 25 分鐘。
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "往回補幾個交易日"
+        default: "1300"
+      budget:
+        description: "最多跑幾分鐘"
+        default: "300"
+
+concurrency:
+  group: twflow-daily
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r twflow/requirements.txt
+
+      - name: 回補
+        run: python -X utf8 swing/scripts/fetch_chips.py --days ${{ inputs.days }} --budget ${{ inputs.budget }}
+
+      - name: 提交
+        if: always()
+        run: |
+          git config user.name  "twflow-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add swing/data/chips
+          if git diff --staged --quiet; then echo "沒有新資料"; exit 0; fi
+          git commit -m "data: 籌碼歷史回補"
+          for i in 1 2 3 4; do git pull --rebase -q && git push && break; sleep $((i*5)); done
