@@ -42,8 +42,10 @@ RULES = [
     (r"fetch\('data/evidence\.json'\)\.then\(r=>r\.json\(\)\)", "evidence.json"),
     (r"fetch\('data/evidence_stocks\.json'\)\.then\(r=>r\.json\(\)\)", "evidence_stocks.json"),
     (r"fetch\('data/screen\.json'\)\.then\(r=>r\.json\(\)\)", "screen.json"),
+    (r"fetch\('data/taifex\.json'\)\.then\(r=>r\.json\(\)\)", "taifex.json"),
+    (r"fetch\('data/rules_dca\.json'\)\.then\(r=>r\.json\(\)\)", "rules_dca.json"),
 ]
-OPTIONAL = {"us/latest.json", "cross.json", "us/history.json", "backtest.json", "etf.json", "swing.json", "bench.json", "odds.json", "evidence.json", "evidence_stocks.json", "screen.json"}
+OPTIONAL = {"us/latest.json", "cross.json", "us/history.json", "backtest.json", "etf.json", "swing.json", "bench.json", "odds.json", "evidence.json", "evidence_stocks.json", "screen.json", "taifex.json", "rules_dca.json"}
 
 
 def inline(payload):

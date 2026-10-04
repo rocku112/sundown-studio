@@ -70,6 +70,7 @@ jobs:
           ( cd .. && python -X utf8 swing/scripts/fetch_hist.py && { python -X utf8 swing/scripts/build_ohlcv.py || true; } \
               && python -X utf8 swing/scripts/backtest_swing.py \
               && python -X utf8 swing/scripts/build_bench.py && python -X utf8 swing/scripts/holding_odds.py \
+              && { python -X utf8 swing/scripts/rules_vs_dca.py || true; } \
               && python -X utf8 swing/scripts/evidence.py ) \
             || echo "::warning::波段回測失敗"
           # 智慧選股資料表（技術、籌碼、基本面、大戶）

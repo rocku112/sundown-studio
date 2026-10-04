@@ -756,6 +756,7 @@ function buildToday(){
   const sc=se.score>=60?'var(--up)':se.score>=40?'var(--gold)':'var(--down)';
   $('today').innerHTML=`
     ${digestCard('tw')}
+    <div id="tx"></div>
     <div class="card"><h3>今日情緒</h3>
       <div class="gwrap">${gauge(se.score)}
         <div><div class="big" style="color:${sc}">${se.score} <span style="font-size:15px">${se.label}</span></div>
@@ -787,6 +788,7 @@ function buildToday(){
       投資人應自行判斷並自負盈虧。
     </div>`;
   btReady().then(renderBacktest);
+  txReady().then(renderTx);
   $('today').onclick=e=>{
     const c=e.target.closest('[data-code]'), s=e.target.closest('[data-i]');
     if(c) openStock(c.dataset.code); else if(s) openSector(sectors[+s.dataset.i]);
@@ -796,6 +798,46 @@ function buildToday(){
     <b style="color:${col(x.net_1d_yi)}">${yi(x.net_1d_yi)}　<span style="color:${col(x.chg_1d)}">${pct(x.chg_1d)}</span></b></div>`;}
   function schip(s){return `<button class="chip" data-i="${sectors.indexOf(s)}">${esc(s.name)}
     <b style="color:${col(s.net_5d_yi)}">${yi(s.net_5d_yi)}</b></button>`;}
+}
+
+/* ══ 台指期：夜盤是台股開盤前最後的行情 ══════════════════════════
+   夜盤歸屬「次一營業日」（期交所規定），週五晚上的夜盤＝下週一開盤前的參考。
+   統計只說「過去夜盤漲跌和隔日開盤的關係有多緊」，不預測、不建議買賣。 */
+let TFX=null;
+const txReady=()=>TFX?Promise.resolve(TFX)
+  :fetch('data/taifex.json').then(r=>r.json()).then(j=>(TFX=j)).catch(()=>null);
+function renderTx(){
+  const el=$('tx'); if(!el||!TFX||!TFX.latest) return;
+  const L=TFX.latest, S=TFX.study||{}, wk=d=>d?'日一二三四五六'[new Date(d+'T00:00:00').getDay()]:'';
+  const n0=v=>v==null?'—':Math.round(v).toLocaleString();
+  const sgn=v=>v==null?'—':(v>0?'+':'')+n0(v);
+  const fresh=L.night!=null&&L.date&&(!L.day_date||L.date>L.day_date);
+  const bk=(st,v)=>st&&v!=null?st.buckets&&st.buckets.find(b=>{const m=b.label.match(/-?[\d.]+/g).map(Number);
+    return b.label.startsWith('<')?v<m[0]:b.label.startsWith('>')?v>=m[0]:v>=m[0]&&v<m[1];}):null;
+  const g=S.gap, gb=bk(g,L.night_ret), ib=bk(S.intraday,L.night_ret);
+  el.innerHTML=`<div class="card"><h3>台指期・隔日開盤參考</h3>
+    ${fresh?`<div class="rsub">夜盤（歸屬 ${L.date} 週${wk(L.date)} 開盤前）</div>
+      <div class="big" style="color:${col(L.night_ret)}">${n0(L.night)} <span style="font-size:15px">${sgn(L.night_pts)} 點（${pct(L.night_ret)}）</span></div>
+      <div class="rsub">夜盤高 ${n0(L.night_hi)}・低 ${n0(L.night_lo)}；比較基準為前一營業日日盤收盤</div>`
+      :`<div class="rsub">最新夜盤尚未收盤（夜盤 15:00 至隔日 05:00，資料約早上 6 點更新）</div>`}
+    ${g?`<div style="margin-top:10px;font-size:13px;line-height:1.8">
+      ${TFX.range?'自 '+TFX.range[0].slice(0,4)+' 年起 ':''}${g.n} 個交易日：夜盤漲跌與 0050 當天開盤跳空<b>同方向 ${g.same_sign}%</b>，
+      相關係數 ${g.corr}（夜盤每 1%，開盤平均 ${pct(g.beta)}）。
+      ${gb?`<br>夜盤落在 <b>${gb.label}</b> 時（${gb.n} 天），0050 開盤平均 <b style="color:${col(gb.mean)}">${pct(gb.mean)}</b>、高開比例 ${gb.up}%`:''}
+      ${ib?`；開盤後到收盤平均 <b style="color:${col(ib.mean)}">${pct(ib.mean)}</b>、收紅比例 ${ib.up}%`:''}
+      ${S.intraday?`<div class="note">夜盤對「開盤後到收盤」的關係：t=${S.intraday.t}、R²=${S.intraday.r2}——夜盤的消息大多在開盤那一刻就反映完了。</div>`:''}
+      </div>`:''}
+    <div style="margin-top:10px">
+      <div class="krow"><span>日盤 ${L.day_date||''} 台指期近月</span><b>${n0(L.tx)}</b></div>
+      <div class="krow"><span>加權指數／基差</span><b>${n0(L.taiex)}　<span style="color:${col(L.basis)}">${sgn(L.basis)}</span></b></div>
+      <div class="krow"><span>外資台指期淨未平倉</span><b style="color:${col(L.fi)}">${sgn(L.fi)} 口 <small style="color:${col(L.fi_chg)}">（${sgn(L.fi_chg)}）</small></b></div>
+      <div class="krow"><span>投信／自營商淨未平倉</span><b>${sgn(L.it)}／${sgn(L.dl)} 口</b></div>
+      <div class="krow"><span>選擇權 Put/Call 未平倉比</span><b>${L.pcr==null?'—':L.pcr.toFixed(1)+'%'}</b></div>
+    </div>
+    ${S.fi_next?`<div class="note" style="margin-top:6px">外資未平倉變化對隔日大盤：t=${S.fi_next.t}、同向 ${S.fi_next.same_sign}%；
+      Put/Call 比：t=${S.pcr_next?S.pcr_next.t:'—'}。|t| 小於 2 代表看不出關係。基差在除權息旺季（6–9 月）常為負，是預期配息造成，不是看空。</div>`:''}
+    <div class="note">資料來源：臺灣期貨交易所、臺灣證券交易所。統計描述過去的關係，不是預測，也不是買賣建議。</div>
+  </div>`;
 }
 
 /* ══ 盤後重點＋分享 ══════════════════════════════════════════════
@@ -1704,6 +1746,28 @@ function oddsCard(){
     <p class="note" style="margin-top:10px;font-size:12.5px">讀法：短線（一週、一個月）的賺錢機率接近擲硬幣；持有時間拉長，勝率才明顯上升，但短期最差情況可能虧損三到五成，抱不住就拿不到長期勝率。
       勝率高也不等於賺錢——要同時看「贏的時候賺多少、輸的時候賠多少」。歷史不代表未來，台股過去二十年整體向上，停滯的市場不會有同樣結果。</p></div>`;
 }
+// 坊間「低位階加碼、高檔調節」系統 vs 單純定期定額：所有參數組合全部列出
+let RDCA=null, rdcaSel=0;
+const rdcaReady=()=>RDCA?Promise.resolve(RDCA)
+  :fetch('data/rules_dca.json').then(r=>r.json()).then(j=>(RDCA=j)).catch(()=>null);
+function rdcaCard(){
+  if(!RDCA||!RDCA.results.length) return '';
+  const R=RDCA.results[rdcaSel]||RDCA.results[0], L=RDCA.labels;
+  const f=x=>x==null?'—':(x>=0?'+':'')+x.toFixed(1)+'%';
+  return `<div class="card"><h3>定期定額 vs「位階加碼、高檔調節」</h3>
+    <p style="font-size:13px;color:var(--s9);line-height:1.8">從 ${R.first} 到 ${R.last} 的<b style="color:var(--s10)">每一個月份開始、各扣款 ${RDCA.years} 年</b>（${R.windows} 個起點），
+      比較期末資產（股票＋現金）。加碼：跌破 200 日均線買 2 倍、高於均線 15% 只買半份；調節：高於均線 X% 賣出 20% 持股、跌回均線下全數買回。
+      現金年利 1%，含手續費與證交稅。</p>
+    <div class="rtabs" style="margin-top:8px">${RDCA.results.map((x,i)=>`<button data-rdca="${i}" class="${x===R?'on':''}">${x.code==='^TWII'?'加權指數（1997 起，不含息）':'0050（含息）'}</button>`).join('')}</div>
+    <table class="st"><tr><th>做法</th><th>期末÷投入（中位）</th><th>勝過定期定額</th><th>差距中位</th><th>最差／最好</th><th>資產回撤中位</th></tr>
+      ${Object.entries(R.rules).map(([k,v])=>`<tr><td>${L[k]}</td><td>${v.multiple_med.toFixed(2)} 倍</td>
+        <td>${k==='dca'?'—':`<b style="color:${v.beat>=60?'var(--up)':v.beat>=40?'var(--gold)':'var(--down)'}">${v.beat}%</b>`}</td>
+        <td style="color:${col(v.diff_med)}">${k==='dca'?'—':f(v.diff_med)}</td>
+        <td>${k==='dca'?'—':`${f(v.diff_min)}／${f(v.diff_max)}`}</td><td>${f(v.mdd_med)}</td></tr>`).join('')}</table>
+    <p class="note" style="margin-top:10px;font-size:12.5px">讀法：「勝過定期定額」是在所有起點中，這個做法期末資產比較多的比例；低於 50% 代表多數時候反而輸。
+      調節能讓帳面獲利變現、心理上比較舒服，但長期向上的市場裡，賣出的部分常常買不回更低的價格。
+      加權指數不含配息，會讓多抱現金的做法看起來比實際好。這是歷史統計，不是投資建議。</p></div>`;
+}
 // 短線「有沒有證據」：事先登記的假說，樣本內外＋多重比較校正
 let EVI=null;
 const eviReady=()=>EVI?Promise.resolve(EVI)
@@ -1745,12 +1809,13 @@ function buildSwing(){
   const el=$('swing');
   if(!ODDS){ oddsReady().then(o=>{ if(o&&curView==='swing') buildSwing(); }); }
   if(!EVI){ eviReady().then(o=>{ if(o&&curView==='swing') buildSwing(); }); }
+  if(!RDCA){ rdcaReady().then(o=>{ if(o&&curView==='swing') buildSwing(); }); }
   if(!SW){ el.innerHTML='<div class="empty">載入中…</div>';
     swReady().then(d=>{ if(d) buildSwing(); else el.innerHTML='<div class="empty">波段回測資料尚未產生。每個交易日盤後更新。</div>'; }); return; }
   const ok=SW.strategies.filter(s=>s.verdict).length, b=SW.bench||{};
   const f=x=>x==null?'—':(x>=0?'+':'')+x.toFixed(2)+'%';
   const row=(lab,a,b_)=>`<tr><td>${lab}</td><td>${a}</td><td>${b_}</td></tr>`;
-  el.innerHTML=`${oddsCard()}${eviCard()}
+  el.innerHTML=`${oddsCard()}${rdcaCard()}${eviCard()}
     <div class="card"><h3>波段實驗室・${SW.period[0]} ～ ${SW.period[1]}</h3>
       <div class="big" style="font-size:20px">${ok?`${SW.strategies.length} 個策略中 ${ok} 個在樣本外通過檢驗`:`${SW.strategies.length} 個策略扣掉成本後，都沒有穩定贏過基準`}</div>
       ${SW.strategies.length>3?`<p class="note" style="margin-top:6px;font-size:12px">同時測的策略越多，靠運氣「看起來有效」的機會越大；${SW.strategies.length} 個策略裡出現 1 個 t≈2 的結果，本身就可能只是巧合。</p>`:''}
@@ -1790,6 +1855,7 @@ function buildSwing(){
         長期而言，低成本的市值型 ETF 定期定額，是多數人最難被打敗的對照組。</p>
       <div class="note" style="margin-top:8px">回測不代表未來報酬。本頁僅為歷史資料的統計呈現，非證券投資顧問事業，不構成任何投資建議；投資人應自行判斷並自負盈虧。</div></div>`;
   el.onclick=e=>{const o=e.target.closest('[data-odds]'); if(o){oddsSel=o.dataset.odds;buildSwing();return;}
+    const rd=e.target.closest('[data-rdca]'); if(rd){rdcaSel=+rd.dataset.rdca;buildSwing();return;}
     const v=e.target.closest('[data-evi]'); if(v){eviOpen=eviOpen===v.dataset.evi?null:v.dataset.evi;const y=scrollY;buildSwing();scrollTo(0,y);return;}
     const c=e.target.closest('[data-code]'); if(c) openStock(c.dataset.code);};
 }

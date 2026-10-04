@@ -27,6 +27,9 @@ jobs:
           cache: pip
       - run: pip install -r twflow/requirements.txt
 
+      - name: 定期定額 vs 位階加碼／調節（先跑，結果最快看到）
+        run: python -u -X utf8 swing/scripts/rules_vs_dca.py || true
+
       - name: ETF 資料來源探測
         run: python -u -X utf8 twflow/scripts/probe_etf_sources.py || true
 
@@ -82,6 +85,9 @@ jobs:
 
       - name: 持有期勝率
         run: python -X utf8 swing/scripts/holding_odds.py
+
+      - name: 定期定額 vs 位階加碼／調節
+        run: python -X utf8 swing/scripts/rules_vs_dca.py
 
       - name: 短線證據檢驗
         run: python -X utf8 swing/scripts/evidence.py
