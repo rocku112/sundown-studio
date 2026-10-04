@@ -6,6 +6,8 @@ on:
     branches-ignore: [main]
     paths:
       - "twflow/scripts/fetch_etf.py"
+      - "twflow/scripts/fetch_taifex.py"
+      - "twflow/scripts/probe_etf_sources.py"
       - "swing/**"
       - "twflow/web/index.html"
       - ".github/workflows/lab-check.yml"
@@ -24,6 +26,13 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: pip install -r twflow/requirements.txt
+
+      - name: ETF 資料來源探測
+        run: python -u -X utf8 twflow/scripts/probe_etf_sources.py || true
+
+      - name: 台指期（五年）
+        working-directory: twflow
+        run: timeout 30m python -u -X utf8 scripts/fetch_taifex.py --months 62 --budget 25 --verbose || true
 
       - name: 官方日線（最近 3 天＋除權息日驗證）
         run: |
