@@ -32,6 +32,16 @@ jobs:
 
       - run: pip install -r usflow/requirements.txt
 
+      # 完整搜尋清單：全部美股與美國 ETF 的當日報價（Nasdaq 選股器，兩個請求）
+      - name: 美股完整清單
+        working-directory: usflow
+        run: python -X utf8 scripts/fetch_directory.py || echo "::warning::美股完整清單更新失敗，沿用舊檔"
+
+      # S&P 500＋那斯達克 100＋常見 ETF；來源失敗時沿用既有股票池
+      - name: 更新股票池
+        working-directory: usflow
+        run: python -X utf8 scripts/build_universe.py || echo "::warning::股票池更新失敗，沿用既有清單"
+
       - name: 抓美股日線
         working-directory: usflow
         run: python -X utf8 scripts/fetch_us.py
