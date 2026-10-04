@@ -89,13 +89,15 @@ def post_csv(path, data, tag):
 
 
 def get_json(url, tag):
-    for k in range(3):
+    for k in range(2):
+        r = None
         try:
             r = S.get(url, timeout=40)
             time.sleep(2)
             return r.json()
         except Exception as e:                       # noqa: BLE001
-            print(f"  ! {tag} 第 {k + 1} 次失敗：{e!r}", file=sys.stderr)
+            head = r.text[:150] if r is not None else ""
+            print(f"  ! {tag} 第 {k + 1} 次失敗：{e!r} {head!r}", file=sys.stderr)
             time.sleep(4 * (k + 1))
     return None
 
@@ -186,20 +188,26 @@ def pcr(a, b):
 
 
 def taiex(month):
-    j = get_json(f"https://www.twse.com.tw/rwd/zh/indicesReport/MI_5MINS_HIST?date={month.replace('-', '')}01&response=json",
-                 f"加權指數 {month}")
-    f = (j or {}).get("fields") or []
-    out = {}
-    if "收盤指數" in f:
-        for r in j.get("data") or []:
-            out[iso(r[0])] = num(r[f.index("收盤指數")])
-    return out
+    """加權指數每日收盤：證交所「市場成交資訊」FMTQIK（備援：MI_5MINS_HIST）。"""
+    ym = month.replace("-", "")
+    for url, key in ((f"https://www.twse.com.tw/rwd/zh/afterTrading/FMTQIK?date={ym}01&response=json", "發行量加權股價指數"),
+                     (f"https://www.twse.com.tw/rwd/zh/TAIEX/MI_5MINS_HIST?date={ym}01&response=json", "收盤指數"),
+                     (f"https://www.twse.com.tw/indicesReport/MI_5MINS_HIST?response=json&date={ym}01", "收盤指數")):
+        j = get_json(url, f"加權指數 {month}")
+        f = (j or {}).get("fields") or []
+        if key in f:
+            return {iso(r[0]): num(r[f.index(key)]) for r in j.get("data") or []}
+        if VERBOSE:
+            print(f"  ! 加權指數來源無 {key}：{url} → {str(j)[:200]}")
+    return {}
 
 
 def etf0050(month):
     j = get_json(f"https://www.twse.com.tw/rwd/zh/afterTrading/STOCK_DAY?date={month.replace('-', '')}01&stockNo=0050&response=json",
                  f"0050 {month}")
     f = (j or {}).get("fields") or []
+    if VERBOSE and "開盤價" not in f:
+        print(f"  ! 0050 {month} 沒有資料：{str(j)[:200]}")
     out = {}
     if "開盤價" in f and "收盤價" in f:
         for r in j.get("data") or []:
@@ -224,7 +232,9 @@ def fetch_month(month, today):
     fu = futures(a, b2)
     if not fu:
         return None
-    ins, pc, ix, e5 = insti(a, b2), pcr(a, b2), taiex(month), etf0050(month)
+    # 法人與 PCR 的查詢區間不能超過今天（超過會回錯誤頁）；期貨行情可以
+    b3 = min(b, today)
+    ins, pc, ix, e5 = insti(a, b3), pcr(a, b3), taiex(month), etf0050(month)
     days = {}
     for d in sorted(set(fu) | set(ix)):
         x = fu.get(d, {})
