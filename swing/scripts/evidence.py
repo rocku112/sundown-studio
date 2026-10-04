@@ -14,6 +14,7 @@
 
 資料：
   · 個股：swing/.cache/ohlcv.json（流動性前 400 檔五年日線，時點正確的前 150 名股票池）
+  · 籌碼：swing/data/chips/（法人買賣超、融資融券餘額；逐步回補）
   · 月營收：swing/data/revenue.json（公開資訊觀測站；一律假設次月 10 日後才知道）
   · 大盤：0050 自上市以來日線（Yahoo，含開盤價），用於日曆效應與大盤事件
 
@@ -435,6 +436,85 @@ def stock_tests(lab, revenue):
         out.append(lab.event(P_, "vwap", "跌破 20 日均價 1 成", "收盤低於近 20 日成交量加權均價 10% 以上，之後 5 天反彈",
                              I.cross_up(-(C / vw - 1), 0.10)))
         out += revenue_tests(lab, revenue)
+        out += chips_tests(lab)
+    return out
+
+
+def load_chips(lab):
+    """swing/data/chips/*.json → 外資、投信（張）、融資、融券餘額（張）四個 N×T 矩陣。"""
+    import glob
+    N, T = len(lab.codes), len(lab.dates)
+    kpos = {c: k for k, c in enumerate(lab.codes)}
+    tpos = {d: t for t, d in enumerate(lab.dates)}
+    M = [np.full((N, T), np.nan) for _ in range(4)]
+    days = 0
+    for p in sorted(glob.glob(os.path.join(ROOT, "data", "chips", "*.json"))):
+        j = json.load(open(p, encoding="utf-8"))
+        ks = [kpos.get(c) for c in j["codes"]]
+        for d, rows in j["days"].items():
+            t = tpos.get(d)
+            if t is None:
+                continue
+            days += 1
+            for k, r in zip(ks, rows):
+                if k is None:
+                    continue
+                for i in range(4):
+                    if r[i] is not None:
+                        M[i][k, t] = r[i]
+    return M, days
+
+
+def chips_tests(lab):
+    """籌碼：法人連買、投信首買、土洋同買、法人買超強度、融資增減、券資比。"""
+    (FB, TB, MB, SB), days = load_chips(lab)
+    if days < 120:
+        print(f"籌碼資料只有 {days} 天，略過")
+        return []
+    C, V = lab.C, lab.V
+    pv = I.prev
+    G = "籌碼（法人／融資融券）"
+    out = []
+    with np.errstate(invalid="ignore", divide="ignore"):
+        fpos, tpos_ = (FB > 0).astype(float), (TB > 0).astype(float)
+        fpos[np.isnan(FB)] = np.nan
+        tpos_[np.isnan(TB)] = np.nan
+        f3 = I.rmin(fpos, 3) > 0
+        t3 = I.rmin(tpos_, 3) > 0
+        fneg = (FB < 0).astype(float)
+        fneg[np.isnan(FB)] = np.nan
+        out.append(lab.event(G, "foreign3", "外資連 3 日買超", "外資連續 3 個交易日買超，之後 5 天表現比股票池好",
+                             f3 & ~(pv(f3.astype(float)) > 0)))
+        out.append(lab.event(G, "trust3", "投信連 3 日買超", "投信連續 3 個交易日買超，之後 5 天表現比股票池好",
+                             t3 & ~(pv(t3.astype(float)) > 0)))
+        out.append(lab.event(G, "trust_first", "投信首度買超", "投信過去 20 天都沒買、今天開始買超，之後 5 天表現比股票池好",
+                             (TB > 0) & (I.rmax(pv(tpos_), 20) == 0)))
+        both = (FB > 0) & (TB > 0)
+        out.append(lab.event(G, "both", "土洋同買", "外資與投信同一天都買超（前 5 天沒有過），之後 5 天表現比股票池好",
+                             I.first(both, 5)))
+        s3 = I.rmin(fneg, 3) > 0
+        out.append(lab.event(G, "foreign_sell3", "外資連 3 日賣超", "外資連續 3 個交易日賣超，之後 5 天表現比股票池差",
+                             s3 & ~(pv(s3.astype(float)) > 0), sign=-1, note="「避開」型說法"))
+        dv20 = I.sma(C * V, 20)
+        wk = list(range(60, len(lab.dates) - 1, 5))
+        fi = I.sma(np.nan_to_num(FB) * 1000 * C, 5) * 5 / dv20
+        ti = I.sma(np.nan_to_num(TB) * 1000 * C, 5) * 5 / dv20
+        fi[np.isnan(FB)] = np.nan
+        ti[np.isnan(TB)] = np.nan
+        out.append(lab.rank(G, "foreign_int", "外資買超強度前 20", "近 5 日外資買超金額占成交值比例最高的 20 檔，下週表現比股票池好",
+                            fi, 5, wk))
+        out.append(lab.rank(G, "trust_int", "投信買超強度前 20", "近 5 日投信買超金額占成交值比例最高的 20 檔，下週表現比股票池好",
+                            ti, 5, wk))
+        mchg = MB / pv(MB, 5) - 1
+        pchg = C / pv(C, 5) - 1
+        big = pv(MB, 5) >= 500        # 融資至少 500 張，避免小數字放大比例
+        out.append(lab.event(G, "margin_catch", "融資增、股價跌", "5 日內融資增加 10% 以上、股價卻下跌（散戶接刀），之後 5 天表現比股票池差",
+                             I.first(big & (mchg > 0.10) & (pchg < 0), 5), sign=-1, note="「避開」型說法"))
+        out.append(lab.event(G, "margin_wash", "融資大減", "5 日內融資減少 15% 以上（籌碼沉澱），之後 5 天表現比股票池好",
+                             I.first(big & (mchg < -0.15), 5)))
+        ratio = SB / MB
+        out.append(lab.event(G, "squeeze_short", "高券資比", "券資比升破 30%（融資 ≥ 500 張）且收盤在月線上，之後 5 天上漲（軋空）",
+                             I.cross_up(ratio, 0.30) & (MB >= 500) & (C > I.sma(C, 20))))
     return out
 
 
