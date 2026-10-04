@@ -28,6 +28,9 @@ jobs:
       - name: 月營收（公開資訊觀測站）
         run: python -X utf8 swing/scripts/fetch_revenue.py
 
+      - name: 籌碼（試抓最近 3 天）
+        run: python -X utf8 swing/scripts/fetch_chips.py --days 3 && ls -la swing/data/chips && head -c 400 swing/data/chips/*.json
+
       - name: ETF 折溢價
         working-directory: twflow
         run: python -X utf8 scripts/fetch_etf.py
