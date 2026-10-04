@@ -25,11 +25,16 @@ jobs:
           cache: pip
       - run: pip install -r twflow/requirements.txt
 
-      - name: 探測 FinMind 股權分散歷史（不影響結果）
-        continue-on-error: true
+      - name: 官方日線（試抓最近 3 天＋十年前、除息日樣本）
         run: |
-          curl -sS -m 60 "https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockHoldingSharesPer&data_id=2330&start_date=2021-01-01&end_date=2021-02-28" | head -c 1500; echo
-          curl -sS -m 60 "https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockHoldingSharesPer&data_id=2330&start_date=2026-08-01" | head -c 600; echo
+          python -u -X utf8 swing/scripts/fetch_prices.py --days 3
+          cd swing/scripts && python -u -X utf8 -c "
+          from datetime import date
+          import fetch_prices as fp
+          for d in (date(2016, 6, 1), date(2019, 3, 4), date(2025, 6, 12), date(2025, 7, 17)):
+              a, _ = fp.twse(d); b, _ = fp.tpex(d)
+              print(d, '上市', len(a), '上櫃', len(b), '2330', a.get('2330'), '0056', a.get('0056'), '6488', b.get('6488'))
+          "
 
       - name: 集保千張大戶
         run: python -X utf8 swing/scripts/fetch_tdcc.py
