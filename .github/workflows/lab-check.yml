@@ -6,6 +6,8 @@ on:
     branches-ignore: [main]
     paths:
       - "twflow/scripts/fetch_etf.py"
+      - "twflow/scripts/fetch_taifex.py"
+      - "twflow/scripts/build_etf_profile.py"
       - "swing/**"
       - "twflow/web/index.html"
       - ".github/workflows/lab-check.yml"
@@ -59,6 +61,10 @@ jobs:
         working-directory: twflow
         run: python -X utf8 scripts/fetch_etf.py
 
+      - name: ETF 體質表（配息、長期報酬、受益人數）
+        working-directory: twflow
+        run: python -u -X utf8 scripts/build_etf_profile.py
+
       - name: 波段：抓五年日線
         run: python -X utf8 swing/scripts/fetch_hist.py
 
@@ -74,8 +80,18 @@ jobs:
       - name: 持有期勝率
         run: python -X utf8 swing/scripts/holding_odds.py
 
+      - name: 定期定額 vs 位階加碼／調節
+        run: python -X utf8 swing/scripts/rules_vs_dca.py
+
       - name: 短線證據檢驗
         run: python -X utf8 swing/scripts/evidence.py
+
+      - name: 智慧選股資料表
+        run: python -X utf8 swing/scripts/build_screen.py
+
+      - name: 台指期（五年）
+        working-directory: twflow
+        run: timeout 50m python -u -X utf8 scripts/fetch_taifex.py --months 62 --budget 32 || true
 
       - uses: actions/upload-artifact@v4
         with:
@@ -85,3 +101,7 @@ jobs:
             twflow/web/data/swing.json
             twflow/web/data/evidence.json
             twflow/web/data/evidence_stocks.json
+            twflow/web/data/screen.json
+            twflow/web/data/taifex.json
+            twflow/web/data/etf_profile.json
+            twflow/web/data/rules_dca.json

@@ -8,7 +8,7 @@
      （集保網站的個股查詢可回溯約一年，但一檔一週一個請求，450 檔 × 52 週不可行。）
 
 輸出：swing/data/tdcc/YYYY-MM-DD.json（資料日期）
-     {code: [千張以上 %, 400 張以上 %, 50 張以下 %, 總股東人數]}
+     {code: [千張以上 %, 400 張以上 %, 50 張以下 %, 總股東人數]}（含 ETF：股東人數即受益人數）
 
 用法：python swing/scripts/fetch_tdcc.py
 """
@@ -27,7 +27,7 @@ ROOT = os.path.dirname(HERE)
 OUT = os.path.join(ROOT, "data", "tdcc")
 URL = "https://opendata.tdcc.com.tw/getOD.ashx?id=1-5"
 UA = {"User-Agent": "Mozilla/5.0 (compatible; twflow-research/0.1)"}
-STOCK_RE = re.compile(r"^[1-9]\d{3}$")
+STOCK_RE = re.compile(r"^([1-9]\d{3}|00\d{2,4}[A-Z]?)$")   # 普通股＋ETF（ETF 用來看受益人數）
 
 
 def main():

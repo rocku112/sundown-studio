@@ -61,6 +61,10 @@ jobs:
           ( cd .. && python -X utf8 swing/scripts/fetch_chips.py --days 1300 --budget 25 ) || echo "::warning::籌碼抓取失敗"
           # 集保千張大戶（每週一份，只能從現在開始累積）
           ( cd .. && python -X utf8 swing/scripts/fetch_tdcc.py ) || echo "::warning::集保資料抓取失敗"
+          # ETF 體質表（配息、長期含息報酬、風險、受益人數）
+          python -X utf8 scripts/build_etf_profile.py || echo "::warning::ETF 體質表產生失敗"
+          # 台指期（日盤、法人未平倉、PCR；夜盤由 taifex-morning.yml 清晨補上）
+          timeout 15m python -X utf8 scripts/fetch_taifex.py --budget 8 || echo "::warning::台指期抓取失敗"
           # 基本面（月底估值、季報；已有的不重抓）
           ( cd .. && timeout 20m python -X utf8 swing/scripts/fetch_fund.py ) || echo "::warning::基本面抓取失敗"
           # 官方日線（含日後下市股票）：補最新幾天，並順便回補十年歷史 20 分鐘
@@ -70,8 +74,11 @@ jobs:
           ( cd .. && python -X utf8 swing/scripts/fetch_hist.py && { python -X utf8 swing/scripts/build_ohlcv.py || true; } \
               && python -X utf8 swing/scripts/backtest_swing.py \
               && python -X utf8 swing/scripts/build_bench.py && python -X utf8 swing/scripts/holding_odds.py \
+              && { python -X utf8 swing/scripts/rules_vs_dca.py || true; } \
               && python -X utf8 swing/scripts/evidence.py ) \
             || echo "::warning::波段回測失敗"
+          # 智慧選股資料表（技術、籌碼、基本面、大戶）
+          ( cd .. && python -X utf8 swing/scripts/build_screen.py ) || echo "::warning::智慧選股資料表產生失敗"
           python -X utf8 scripts/snapshot.py
 
       - name: 檢查資料是否合理
@@ -82,7 +89,7 @@ jobs:
         run: |
           git config user.name  "twflow-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add twflow/data/market/days twflow/data/market/stock_meta.json $(ls -d twflow/data/etf 2>/dev/null) \
+          git add twflow/data/market/days twflow/data/market/stock_meta.json $(ls -d twflow/data/etf twflow/data/taifex 2>/dev/null) \
                   $(ls swing/data/revenue.json 2>/dev/null) $(ls -d swing/data/chips swing/data/fund swing/data/tdcc swing/data/prices 2>/dev/null) \
                   twflow/data/market/market.json twflow/web/data \
                   twflow/web/snapshot.html

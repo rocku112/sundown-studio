@@ -66,8 +66,9 @@ header{display:flex;align-items:center;gap:12px;padding:10px 16px;
 .meta b{color:var(--s10);font-variant-numeric:tabular-nums}
 .spacer{flex:1}
 .tabs{display:flex;gap:2px;background:var(--card);border:1px solid var(--line);
-  border-radius:11px;padding:3px}
-.tabs button{padding:6px 15px;border-radius:8px;font-size:13px;color:var(--s9);
+  border-radius:11px;padding:3px;overflow-x:auto;scrollbar-width:none;min-width:0;flex-shrink:1}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{padding:6px 12px;white-space:nowrap;flex-shrink:0;border-radius:8px;font-size:13px;color:var(--s9);
   transition:color .15s,background .15s}
 .tabs button:hover{color:var(--s10)}
 .tabs button.on{background:var(--card2);color:var(--s10);font-weight:600;
@@ -257,6 +258,24 @@ header{display:flex;align-items:center;gap:12px;padding:10px 16px;
 .estats{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:6px;font-size:12px;color:var(--s9)}
 .estats b{color:var(--s10);font-variant-numeric:tabular-nums}
 .ecat{margin:18px 0 4px;font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.5px}
+.scond{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:8px;align-items:center;padding:9px 0;border-top:1px solid var(--line);font-size:13.5px}
+.scond select,.scond input{background:var(--panel);color:var(--s10);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font:inherit;font-size:13px}
+.scond input{width:76px;text-align:right}
+.scond .x{background:none;border:0;color:var(--s8);font-size:16px;cursor:pointer;padding:4px 6px}
+.spick{display:none;margin-top:10px}.spick.on{display:block}
+.spick h4{margin:12px 0 6px;font-size:12px;color:var(--gold);font-weight:700;letter-spacing:.5px}
+.spick .chips button{font-size:12.5px}
+.preset{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.preset button{text-align:left;padding:12px 14px;border-radius:12px;background:var(--panel);border:1px solid var(--line);color:var(--s10);cursor:pointer;font:inherit}
+.preset button:hover{border-color:var(--gold)}
+.preset b{display:block;font-size:14px;margin-bottom:4px}
+.preset small{color:var(--s9);font-size:12px;line-height:1.5;display:block}
+.sres{width:100%;border-collapse:collapse;font-size:13px}
+.sres th{position:sticky;top:0;background:var(--card);color:var(--s8);font-weight:500;cursor:pointer;white-space:nowrap;padding:8px 6px;text-align:right;border-bottom:1px solid var(--line)}
+.sres th:first-child,.sres td:first-child{text-align:left}
+.sres td{padding:8px 6px;text-align:right;border-bottom:1px solid var(--line);font-family:var(--num);font-variant-numeric:tabular-nums;white-space:nowrap}
+.sres tr[data-code]{cursor:pointer}.sres tr[data-code]:hover td{background:var(--panel)}
+.sres th.on{color:var(--gold)}
 .vbadge.rev{background:var(--card2);color:var(--down);border:1px solid var(--line)}
 .vbadge.mid{background:var(--card2);color:var(--gold);border:1px solid var(--line)}
 .st{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:10px}
@@ -433,6 +452,7 @@ a.btn{text-decoration:none;color:inherit;display:inline-block}
   <section class="view" id="v-link"><div class="wrap" id="link"></div></section>
   <section class="view" id="v-etf"><div class="wrap" id="etf"></div></section>
   <section class="view" id="v-swing"><div class="wrap" id="swing"></div></section>
+  <section class="view" id="v-screen"><div class="wrap" id="screen"></div></section>
   <section class="view" id="v-hold"><div class="wrap" id="hold"></div></section>
 </div>
 
@@ -736,6 +756,7 @@ function buildToday(){
   const sc=se.score>=60?'var(--up)':se.score>=40?'var(--gold)':'var(--down)';
   $('today').innerHTML=`
     ${digestCard('tw')}
+    <div id="tx"></div>
     <div class="card"><h3>今日情緒</h3>
       <div class="gwrap">${gauge(se.score)}
         <div><div class="big" style="color:${sc}">${se.score} <span style="font-size:15px">${se.label}</span></div>
@@ -767,6 +788,7 @@ function buildToday(){
       投資人應自行判斷並自負盈虧。
     </div>`;
   btReady().then(renderBacktest);
+  txReady().then(renderTx);
   $('today').onclick=e=>{
     const c=e.target.closest('[data-code]'), s=e.target.closest('[data-i]');
     if(c) openStock(c.dataset.code); else if(s) openSector(sectors[+s.dataset.i]);
@@ -776,6 +798,46 @@ function buildToday(){
     <b style="color:${col(x.net_1d_yi)}">${yi(x.net_1d_yi)}　<span style="color:${col(x.chg_1d)}">${pct(x.chg_1d)}</span></b></div>`;}
   function schip(s){return `<button class="chip" data-i="${sectors.indexOf(s)}">${esc(s.name)}
     <b style="color:${col(s.net_5d_yi)}">${yi(s.net_5d_yi)}</b></button>`;}
+}
+
+/* ══ 台指期：夜盤是台股開盤前最後的行情 ══════════════════════════
+   夜盤歸屬「次一營業日」（期交所規定），週五晚上的夜盤＝下週一開盤前的參考。
+   統計只說「過去夜盤漲跌和隔日開盤的關係有多緊」，不預測、不建議買賣。 */
+let TFX=null;
+const txReady=()=>TFX?Promise.resolve(TFX)
+  :fetch('data/taifex.json').then(r=>r.json()).then(j=>(TFX=j)).catch(()=>null);
+function renderTx(){
+  const el=$('tx'); if(!el||!TFX||!TFX.latest) return;
+  const L=TFX.latest, S=TFX.study||{}, wk=d=>d?'日一二三四五六'[new Date(d+'T00:00:00').getDay()]:'';
+  const n0=v=>v==null?'—':Math.round(v).toLocaleString();
+  const sgn=v=>v==null?'—':(v>0?'+':'')+n0(v);
+  const fresh=L.night!=null&&L.date&&(!L.day_date||L.date>L.day_date);
+  const bk=(st,v)=>st&&v!=null?st.buckets&&st.buckets.find(b=>{const m=b.label.match(/-?[\d.]+/g).map(Number);
+    return b.label.startsWith('<')?v<m[0]:b.label.startsWith('>')?v>=m[0]:v>=m[0]&&v<m[1];}):null;
+  const g=S.gap, gb=bk(g,L.night_ret), ib=bk(S.intraday,L.night_ret);
+  el.innerHTML=`<div class="card"><h3>台指期・隔日開盤參考</h3>
+    ${fresh?`<div class="rsub">夜盤（歸屬 ${L.date} 週${wk(L.date)} 開盤前）</div>
+      <div class="big" style="color:${col(L.night_ret)}">${n0(L.night)} <span style="font-size:15px">${sgn(L.night_pts)} 點（${pct(L.night_ret)}）</span></div>
+      <div class="rsub">夜盤高 ${n0(L.night_hi)}・低 ${n0(L.night_lo)}；比較基準為前一營業日日盤收盤</div>`
+      :`<div class="rsub">最新夜盤尚未收盤（夜盤 15:00 至隔日 05:00，資料約早上 6 點更新）</div>`}
+    ${g?`<div style="margin-top:10px;font-size:13px;line-height:1.8">
+      ${TFX.range?'自 '+TFX.range[0].slice(0,4)+' 年起 ':''}${g.n} 個交易日：夜盤漲跌與 0050 當天開盤跳空<b>同方向 ${g.same_sign}%</b>，
+      相關係數 ${g.corr}（夜盤每 1%，開盤平均 ${pct(g.beta)}）。
+      ${gb?`<br>夜盤落在 <b>${gb.label}</b> 時（${gb.n} 天），0050 開盤平均 <b style="color:${col(gb.mean)}">${pct(gb.mean)}</b>、高開比例 ${gb.up}%`:''}
+      ${ib?`；開盤後到收盤平均 <b style="color:${col(ib.mean)}">${pct(ib.mean)}</b>、收紅比例 ${ib.up}%`:''}
+      ${S.intraday?`<div class="note">夜盤對「開盤後到收盤」的關係：t=${S.intraday.t}、R²=${S.intraday.r2}——夜盤的消息大多在開盤那一刻就反映完了。</div>`:''}
+      </div>`:''}
+    <div style="margin-top:10px">
+      <div class="krow"><span>日盤 ${L.day_date||''} 台指期近月</span><b>${n0(L.tx)}</b></div>
+      <div class="krow"><span>加權指數／基差</span><b>${n0(L.taiex)}　<span style="color:${col(L.basis)}">${sgn(L.basis)}</span></b></div>
+      <div class="krow"><span>外資台指期淨未平倉</span><b style="color:${col(L.fi)}">${sgn(L.fi)} 口 <small style="color:${col(L.fi_chg)}">（${sgn(L.fi_chg)}）</small></b></div>
+      <div class="krow"><span>投信／自營商淨未平倉</span><b>${sgn(L.it)}／${sgn(L.dl)} 口</b></div>
+      <div class="krow"><span>選擇權 Put/Call 未平倉比</span><b>${L.pcr==null?'—':L.pcr.toFixed(1)+'%'}</b></div>
+    </div>
+    ${S.fi_next?`<div class="note" style="margin-top:6px">外資未平倉變化對隔日大盤：t=${S.fi_next.t}、同向 ${S.fi_next.same_sign}%；
+      Put/Call 比：t=${S.pcr_next?S.pcr_next.t:'—'}。|t| 小於 2 代表看不出關係。基差在除權息旺季（6–9 月）常為負，是預期配息造成，不是看空。</div>`:''}
+    <div class="note">資料來源：臺灣期貨交易所、臺灣證券交易所。統計描述過去的關係，不是預測，也不是買賣建議。</div>
+  </div>`;
 }
 
 /* ══ 盤後重點＋分享 ══════════════════════════════════════════════
@@ -1555,7 +1617,15 @@ let ETFD=null, etfCat='全部', etfSort='aum';
 const etfReady=()=>ETFD?Promise.resolve(ETFD)
   :fetch('data/etf.json').then(r=>r.json()).then(j=>(ETFD=j)).catch(()=>null);
 const ETFCATS=['全部','股票型','高股息','主動式','海外','債券','槓桿','反向','自選'];
-const ETFSORT=[['aum','規模'],['prem','溢價高'],['disc','折價深'],['flow','申購流入'],['out','贖回流出']];
+const ETFSORT=[['aum','規模'],['prem','溢價高'],['disc','折價深'],['flow','申購流入'],['out','贖回流出'],['yld','殖利率'],['tr','長期含息報酬'],['hold','受益人數']];
+// ETF 體質表（配息、長期報酬、風險、受益人數、基本資料）
+let EPF=null;
+const epfReady=()=>EPF?Promise.resolve(EPF)
+  :fetch('data/etf_profile.json').then(r=>r.json()).then(j=>(EPF=j)).catch(()=>null);
+const epf=c=>{ if(!EPF||!EPF.rows[c]) return null; const o={}; EPF.fields.forEach((k,i)=>o[k]=EPF.rows[c][i]); return o; };
+// 長期指標：優先 10 年，不足時退到 5、3 年，再不足用成立以來
+const epfLong=p=>p&&(p.tr10!=null?{y:10,tr:p.tr10,px:p.px10}:p.tr5!=null?{y:5,tr:p.tr5,px:p.px5}
+  :p.tr3!=null?{y:3,tr:p.tr3,px:p.px3}:p.tr_since!=null?{y:p.years,tr:p.tr_since,px:p.px_since,since:1}:null);
 const yi1=v=>v==null?'—':(v>=0?'+':'')+v.toFixed(1)+' 億';
 function buildETF(){
   const el=$('etf');
@@ -1564,7 +1634,10 @@ function buildETF(){
   const S=ETFD.summary, by=c=>ETFD.etfs.find(e=>e.code===c);
   const mx=by(S.max), mn=by(S.min);
   let list=ETFD.etfs.filter(e=>etfCat==='全部'||(etfCat==='自選'?inWatch('ETF:'+e.code):e.cat===etfCat));
-  const key={aum:e=>-e.aum,prem:e=>-e.prem,disc:e=>e.prem,flow:e=>-e.flow,out:e=>e.flow}[etfSort];
+  if(!EPF) epfReady().then(d=>d&&curView==='etf'&&buildETF());
+  const pv=(e,f)=>{const p=epf(e.code),v=p&&f(p); return v==null?-1e9:v;};
+  const key={aum:e=>-e.aum,prem:e=>-e.prem,disc:e=>e.prem,flow:e=>-e.flow,out:e=>e.flow,
+    yld:e=>-pv(e,p=>p.yield),tr:e=>-pv(e,p=>(epfLong(p)||{}).tr),hold:e=>-pv(e,p=>p.holders)}[etfSort];
   list=[...list].sort((a,b)=>key(a)-key(b));
   const pos=Math.max(3,Math.min(97,50+S.avg_prem*50));   // ±1% 對應溫度計兩端
   el.innerHTML=`
@@ -1586,10 +1659,12 @@ function buildETF(){
     ${list.slice(0,80).map((e,i)=>`<div class="ritem" data-etf="${e.code}">
       <button class="star ${inWatch('ETF:'+e.code)?'on':''}" data-star="ETF:${e.code}">${inWatch('ETF:'+e.code)?'★':'☆'}</button>
       <div><div class="rname">${esc(e.name)} <span style="color:var(--s8);font-weight:400">${e.code}</span></div>
-        <div class="rsub">${e.cat}　市價 ${e.price}　淨值 ${e.nav}　規模 ${e.aum.toLocaleString()} 億　申購贖回 <span style="color:${col(e.flow)}">${yi1(e.flow)}</span></div></div>
+        <div class="rsub">${e.cat}　市價 ${e.price}　淨值 ${e.nav}　規模 ${e.aum.toLocaleString()} 億　申購贖回 <span style="color:${col(e.flow)}">${yi1(e.flow)}</span></div>
+        ${(p=>p?`<div class="rsub">${p.yield!=null?`殖利率 ${p.yield.toFixed(2)}%　`:''}${(l=>l?`${l.since?'上市以來':l.y+' 年'}含息年化 <span style="color:${col(l.tr)}">${pct(l.tr)}</span>　股價年化 <span style="color:${col(l.px)}">${pct(l.px)}</span>　`:'')(epfLong(p))}${p.holders?`受益人 ${p.holders.toLocaleString()}`:''}</div>`:'')(epf(e.code))}</div>
       <div class="rval">${pill(e.prem)}<small style="color:var(--s8)">折溢價</small></div></div>`).join('')
       ||'<div class="empty">這個分類沒有 ETF</div>'}
-    <div class="card note" style="margin-top:12px">折溢價＝市價 ÷ 預估淨值 − 1，以證交所基本市況報導網收盤後的最後一筆估值計算；預估淨值由各投信提供，與隔日公告的正式淨值可能略有差異。
+    <div class="card note" style="margin-top:12px">含息年化＝股價漲跌加上配息再投入的年化報酬；股價年化＝只看股價。兩者的差距就是配息貢獻。
+      股價年化長期為負，代表配出去的比賺到的多（配息有一部分來自本金）。<br>折溢價＝市價 ÷ 預估淨值 − 1，以證交所基本市況報導網收盤後的最後一筆估值計算；預估淨值由各投信提供，與隔日公告的正式淨值可能略有差異。
       溢價時買進等於多付錢，溢價大的 ETF 之後常會回到淨值附近。本頁僅彙整公開資料，不構成投資建議。</div>`;
   el.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{etfCat=b.dataset.c;buildETF();});
   el.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{etfSort=b.dataset.s;buildETF();});
@@ -1614,10 +1689,44 @@ function openETF(code){
     ${kv('已發行單位數',e.units?(e.units/1e4).toLocaleString(undefined,{maximumFractionDigits:0})+' 萬':'—')}
     ${kv('今日申購贖回',yi1(e.flow),e.flow)}
     ${kv('近 5 日申購贖回',yi1(e.flow5),e.flow5)}
-    <div class="note" style="padding:12px 16px">申購贖回金額＝已發行單位數增減 × 淨值。正值代表有資金透過申購進入這檔 ETF，負值代表贖回流出。</div>`;
+    <div class="note" style="padding:12px 16px">申購贖回金額＝已發行單位數增減 × 淨值。正值代表有資金透過申購進入這檔 ETF，負值代表贖回流出。</div>
+    ${etfProfileHtml(code,kv)}`;
+  if(!EPF) epfReady().then(d=>d&&epf(code)&&openETF(code));
   $('kp-body').onclick=null;
   $('kp-star').dataset.code='ETF:'+code; $('kp-star').style.display=''; refreshStars();
   show('stk-panel');
+}
+
+function etfProfileHtml(code,kv){
+  const p=epf(code); if(!p) return EPF?'':'<div class="note" style="padding:0 16px 12px">體質資料載入中…</div>';
+  const l=epfLong(p), f2=v=>v==null?'—':pct(v);
+  let verdict='';
+  if(l&&p.yield!=null){
+    const short=l.y<3;
+    verdict=l.px>=0
+      ?`這 ${l.since?'檔自 '+(p.since||'').slice(0,4)+' 年起約 '+l.y:l.y} 年，含息年化 ${pct(l.tr)}、股價年化 ${pct(l.px)}：配完息股價仍${l.px>0.5?'往上':'大致持平'}，配息不是從本金拿出來的。`
+      :`這 ${l.since?'檔自 '+(p.since||'').slice(0,4)+' 年起約 '+l.y:l.y} 年，股價年化 ${pct(l.px)}：配出去的比賺到的多，股價一路往下，有一部分配息等於拿回自己的本金。`;
+    if(short) verdict+='（期間不到 3 年，參考價值低。）';
+  }
+  return `<div class="stitle">賺多少 vs 發多少</div>
+    ${kv('近 12 個月配息',p.ttm_div!=null?`${p.ttm_div} 元（${p.n_div} 次）`:p.n_div===0?'不配息':'—')}
+    ${kv('殖利率（近 12 月配息 ÷ 市價）',p.yield!=null?p.yield.toFixed(2)+'%':'—')}
+    ${kv('含息年化 1／3／5／10 年',`${f2(p.tr1)}／${f2(p.tr3)}／${f2(p.tr5)}／${f2(p.tr10)}`)}
+    ${kv('股價年化（不含息）3／5／10 年',`${f2(p.px3)}／${f2(p.px5)}／${f2(p.px10)}`)}
+    ${p.years!=null?kv(`${p.since?'自 '+p.since.slice(0,7)+' 起':'可取得期間'}（約 ${p.years} 年）含息／股價年化`,`${f2(p.tr_since)}／${f2(p.px_since)}`):''}
+    ${verdict?`<div class="note" style="padding:8px 16px 4px;font-size:12.5px">${verdict}</div>`:''}
+    <div class="stitle">風險</div>
+    ${kv('一年波動度（年化）',p.vol!=null?p.vol+'%':'—')}
+    ${kv('近三年最大回撤（含息）',p.mdd3!=null?p.mdd3+'%':'—',p.mdd3)}
+    <div class="stitle">受益人</div>
+    ${kv(`受益人數（集保 ${EPF.holders_date||''}）`,p.holders?p.holders.toLocaleString()+' 人':'—')}
+    ${kv('受益人數近 4 週變化',p.holders_chg!=null?pct(p.holders_chg):'—',p.holders_chg)}
+    ${kv('持有 50 張以下的散戶占比',p.retail!=null?p.retail.toFixed(1)+'%':'—')}
+    <div class="stitle">基本資料</div>
+    ${kv('上市日',p.listed||'—')}${kv('發行投信',esc(p.issuer||'—'))}${kv('追蹤指數',esc(p.index||'—'))}
+    ${p.type?kv('類型',esc(p.type)):''}
+    <div class="note" style="padding:12px 16px">配息取自證交所／櫃買除權除息計算結果表；長期報酬以 Yahoo 日線收盤加上配息再投入計算；受益人數取自集保結算所股權分散表。
+      過去報酬不代表未來，且不同期間的結果可能差很多。</div>`;
 }
 
 /* ══ 波段實驗室 ══════════════════════════════════════════════════
@@ -1684,6 +1793,29 @@ function oddsCard(){
     <p class="note" style="margin-top:10px;font-size:12.5px">讀法：短線（一週、一個月）的賺錢機率接近擲硬幣；持有時間拉長，勝率才明顯上升，但短期最差情況可能虧損三到五成，抱不住就拿不到長期勝率。
       勝率高也不等於賺錢——要同時看「贏的時候賺多少、輸的時候賠多少」。歷史不代表未來，台股過去二十年整體向上，停滯的市場不會有同樣結果。</p></div>`;
 }
+// 坊間「低位階加碼、高檔調節」系統 vs 單純定期定額：所有參數組合全部列出
+let RDCA=null, rdcaSel=0;
+const rdcaReady=()=>RDCA?Promise.resolve(RDCA)
+  :fetch('data/rules_dca.json').then(r=>r.json()).then(j=>(RDCA=j)).catch(()=>null);
+function rdcaCard(){
+  if(!RDCA||!RDCA.results.length) return '';
+  const R=RDCA.results[rdcaSel]||RDCA.results[0], L=RDCA.labels;
+  const f=x=>x==null?'—':(x>=0?'+':'')+x.toFixed(1)+'%';
+  return `<div class="card"><h3>定期定額 vs「位階加碼、高檔調節」</h3>
+    <p style="font-size:13px;color:var(--s9);line-height:1.8">從 ${R.first} 到 ${R.last} 的<b style="color:var(--s10)">每一個月份開始、各扣款 ${RDCA.years} 年</b>（${R.windows} 個起點），
+      比較期末資產（股票＋現金）。加碼：跌破 200 日均線買 2 倍、高於均線 15% 只買半份；調節：高於均線 X% 賣出 20% 持股、跌回均線下全數買回。
+      現金年利 1%，含手續費與證交稅。</p>
+    <div class="rtabs" style="margin-top:8px">${RDCA.results.map((x,i)=>`<button data-rdca="${i}" class="${x===R?'on':''}">${x.code==='^TWII'?'加權指數（1997 起，不含息）':'0050（含息）'}</button>`).join('')}</div>
+    <table class="st"><tr><th>做法</th><th>期末÷投入（中位）</th><th>勝過定期定額</th><th>差距中位</th><th>最差／最好</th><th>資產回撤中位</th></tr>
+      ${Object.entries(R.rules).map(([k,v])=>`<tr><td>${L[k]}</td><td>${v.multiple_med.toFixed(2)} 倍</td>
+        <td>${k==='dca'?'—':`<b style="color:${v.beat>=60?'var(--up)':v.beat>=40?'var(--gold)':'var(--down)'}">${v.beat}%</b>`}</td>
+        <td style="color:${col(v.diff_med)}">${k==='dca'?'—':f(v.diff_med)}</td>
+        <td>${k==='dca'?'—':`${f(v.diff_min)}／${f(v.diff_max)}`}</td><td>${f(v.mdd_med)}</td></tr>`).join('')}</table>
+    ${R.windows<60?`<p class="note" style="margin-top:8px;font-size:12.5px;color:var(--gold)">這個標的的可用歷史只夠 ${R.windows} 個起點，而且彼此大量重疊，等於只看到同一段行情；請以加權指數（近三十年、${(RDCA.results.find(x=>x.code==='^TWII')||{}).windows||'—'} 個起點）的結果為主。</p>`:''}
+    <p class="note" style="margin-top:10px;font-size:12.5px">讀法：「勝過定期定額」是在所有起點中，這個做法期末資產比較多的比例；低於 50% 代表多數時候反而輸。
+      調節能讓帳面獲利變現、心理上比較舒服，但長期向上的市場裡，賣出的部分常常買不回更低的價格。
+      加權指數不含配息，會讓多抱現金的做法看起來比實際好。這是歷史統計，不是投資建議。</p></div>`;
+}
 // 短線「有沒有證據」：事先登記的假說，樣本內外＋多重比較校正
 let EVI=null;
 const eviReady=()=>EVI?Promise.resolve(EVI)
@@ -1725,12 +1857,13 @@ function buildSwing(){
   const el=$('swing');
   if(!ODDS){ oddsReady().then(o=>{ if(o&&curView==='swing') buildSwing(); }); }
   if(!EVI){ eviReady().then(o=>{ if(o&&curView==='swing') buildSwing(); }); }
+  if(!RDCA){ rdcaReady().then(o=>{ if(o&&curView==='swing') buildSwing(); }); }
   if(!SW){ el.innerHTML='<div class="empty">載入中…</div>';
     swReady().then(d=>{ if(d) buildSwing(); else el.innerHTML='<div class="empty">波段回測資料尚未產生。每個交易日盤後更新。</div>'; }); return; }
   const ok=SW.strategies.filter(s=>s.verdict).length, b=SW.bench||{};
   const f=x=>x==null?'—':(x>=0?'+':'')+x.toFixed(2)+'%';
   const row=(lab,a,b_)=>`<tr><td>${lab}</td><td>${a}</td><td>${b_}</td></tr>`;
-  el.innerHTML=`${oddsCard()}${eviCard()}
+  el.innerHTML=`${oddsCard()}${rdcaCard()}${eviCard()}
     <div class="card"><h3>波段實驗室・${SW.period[0]} ～ ${SW.period[1]}</h3>
       <div class="big" style="font-size:20px">${ok?`${SW.strategies.length} 個策略中 ${ok} 個在樣本外通過檢驗`:`${SW.strategies.length} 個策略扣掉成本後，都沒有穩定贏過基準`}</div>
       ${SW.strategies.length>3?`<p class="note" style="margin-top:6px;font-size:12px">同時測的策略越多，靠運氣「看起來有效」的機會越大；${SW.strategies.length} 個策略裡出現 1 個 t≈2 的結果，本身就可能只是巧合。</p>`:''}
@@ -1770,8 +1903,152 @@ function buildSwing(){
         長期而言，低成本的市值型 ETF 定期定額，是多數人最難被打敗的對照組。</p>
       <div class="note" style="margin-top:8px">回測不代表未來報酬。本頁僅為歷史資料的統計呈現，非證券投資顧問事業，不構成任何投資建議；投資人應自行判斷並自負盈虧。</div></div>`;
   el.onclick=e=>{const o=e.target.closest('[data-odds]'); if(o){oddsSel=o.dataset.odds;buildSwing();return;}
+    const rd=e.target.closest('[data-rdca]'); if(rd){rdcaSel=+rd.dataset.rdca;buildSwing();return;}
     const v=e.target.closest('[data-evi]'); if(v){eviOpen=eviOpen===v.dataset.evi?null:v.dataset.evi;const y=scrollY;buildSwing();scrollTo(0,y);return;}
     const c=e.target.closest('[data-code]'); if(c) openStock(c.dataset.code);};
+}
+
+
+/* ══ 智慧選股 ════════════════════════════════════════════════════
+   參考券商 App 的條件選股（基本面／技術面／籌碼面），差別是每個條件旁邊直接標出
+   本站回測的證據結論——條件「篩得出來」不代表「有用」。資料每天盤後更新一次。 */
+let SCR=null, scrConds=[], scrSort={k:null,dir:-1}, scrPick=false;
+const scrReady=()=>SCR?Promise.resolve(SCR)
+  :fetch('data/screen.json').then(r=>r.json()).then(j=>(SCR=j)).catch(()=>null);
+const SCRKEY='twflow_screens';
+let SAVED=[]; try{ SAVED=JSON.parse(localStorage.getItem(SCRKEY)||'[]'); }catch(_){ SAVED=[]; }
+const saveScreens=()=>{ try{localStorage.setItem(SCRKEY,JSON.stringify(SAVED))}catch(_){} };
+// 條件定義：f 欄位、t 型別（n 數值、b 是否）、op 預設方向、v 預設值、u 單位、ev 對應的證據檢驗
+const SDEF=[
+  ['基本面',[
+    {f:'pe',l:'本益比',t:'n',op:'<=',v:15,u:'倍',ev:'low_pe'},
+    {f:'dy',l:'殖利率',t:'n',op:'>=',v:5,u:'%',ev:'high_dy'},
+    {f:'pb',l:'股價淨值比',t:'n',op:'<=',v:1.5,u:'倍',ev:'low_pb'},
+    {f:'rev_yoy',l:'月營收年增率',t:'n',op:'>=',v:20,u:'%',ev:'rev_yoy'},
+    {f:'rev_mom',l:'月營收月增率',t:'n',op:'>=',v:10,u:'%'},
+    {f:'rev_high',l:'月營收創 12 個月新高',t:'b',ev:'rev_high'},
+    {f:'rev_up',l:'營收連續年增',t:'n',op:'>=',v:6,u:'個月',ev:'rev_grow'},
+    {f:'eps',l:'單季 EPS',t:'n',op:'>=',v:1,u:'元'},
+    {f:'eps_yoy',l:'單季 EPS 年增率',t:'n',op:'>=',v:30,u:'%',ev:'eps_yoy'},
+    {f:'gm',l:'單季毛利率',t:'n',op:'>=',v:30,u:'%'},
+    {f:'three_up',l:'三率三升（較上季）',t:'b',ev:'three_up'},
+    {f:'eps_rec',l:'單季 EPS 創 2 年新高',t:'b',ev:'eps_record'},
+  ]],
+  ['技術面',[
+    {f:'chg',l:'今日漲跌',t:'n',op:'>=',v:3,u:'%'},
+    {f:'r5',l:'近 5 日漲跌',t:'n',op:'<=',v:-5,u:'%',ev:'reversal'},
+    {f:'r20',l:'近 20 日漲跌',t:'n',op:'>=',v:10,u:'%'},
+    {f:'r60',l:'近 60 日漲跌',t:'n',op:'>=',v:20,u:'%',ev:'mom6'},
+    {f:'above20',l:'站上月線（20 日）',t:'b'},
+    {f:'above60',l:'站上季線（60 日）',t:'b'},
+    {f:'bull',l:'均線多頭排列',t:'b',ev:'ma_bull'},
+    {f:'high52',l:'創 52 週新高',t:'b',ev:'high52'},
+    {f:'near52',l:'距 52 週高點',t:'n',op:'>=',v:95,u:'%',ev:'near_high'},
+    {f:'rsi',l:'RSI(14)',t:'n',op:'<=',v:30,u:'',ev:'rsi_os'},
+    {f:'k',l:'KD 的 K 值',t:'n',op:'<=',v:20,u:''},
+    {f:'kd_gold',l:'KD 黃金交叉（今天）',t:'b',ev:'kd_gold'},
+    {f:'macd_gold',l:'MACD 黃金交叉（今天）',t:'b',ev:'macd_gold'},
+    {f:'bias20',l:'20 日乖離率',t:'n',op:'<=',v:-10,u:'%',ev:'bias_neg'},
+    {f:'vr',l:'量比（今日／20 日均量）',t:'n',op:'>=',v:2,u:'倍',ev:'volspike'},
+    {f:'vol',l:'成交量',t:'n',op:'>=',v:1000,u:'張'},
+  ]],
+  ['籌碼面',[
+    {f:'f5',l:'外資近 5 日買賣超',t:'n',op:'>=',v:1,u:'億'},
+    {f:'t5',l:'投信近 5 日買賣超',t:'n',op:'>=',v:0.5,u:'億'},
+    {f:'n20',l:'三大法人近 20 日買賣超',t:'n',op:'>=',v:5,u:'億'},
+    {f:'fs',l:'外資連續買超',t:'n',op:'>=',v:3,u:'天',ev:'foreign3'},
+    {f:'ts',l:'投信連續買超',t:'n',op:'>=',v:3,u:'天',ev:'trust3'},
+    {f:'mchg5',l:'融資 5 日增減',t:'n',op:'<=',v:-15,u:'%',ev:'margin_wash'},
+    {f:'sratio',l:'券資比',t:'n',op:'>=',v:30,u:'%',ev:'squeeze_short'},
+    {f:'big',l:'千張大戶持股',t:'n',op:'>=',v:60,u:'%'},
+    {f:'big_chg',l:'千張大戶週增減',t:'n',op:'>=',v:0.5,u:'百分點'},
+  ]],
+];
+const SFLD=Object.fromEntries(SDEF.flatMap(([g,a])=>a.map(d=>[d.f,{...d,g}])));
+const SPRE=[
+  {n:'營收創新高＋站上季線',d:'月營收創 12 個月新高，股價在季線之上',c:[['rev_high'],['above60']]},
+  {n:'EPS 創 2 年新高',d:'最新一季 EPS 為近 8 季最高',c:[['eps_rec']]},
+  {n:'存股：高殖利率、低本益比',d:'殖利率 ≥ 5%、本益比 ≤ 15、單季 EPS 為正',c:[['dy','>=',5],['pe','<=',15],['eps','>=',0]]},
+  {n:'三率三升',d:'毛利率、營益率、淨利率都比上季高',c:[['three_up']]},
+  {n:'外資連買',d:'外資連續買超 3 天以上、成交量 ≥ 1,000 張',c:[['fs','>=',3],['vol','>=',1000]]},
+  {n:'投信認養',d:'投信連續買超 3 天以上',c:[['ts','>=',3]]},
+  {n:'多頭排列創新高',d:'均線多頭排列，且創 52 週新高',c:[['bull'],['high52']]},
+  {n:'強勢股',d:'近 60 日漲 20% 以上、站上月線',c:[['r60','>=',20],['above20']]},
+  {n:'超跌反彈',d:'20 日負乖離 10% 以上、RSI ≤ 30',c:[['bias20','<=',-10],['rsi','<=',30]]},
+  {n:'KD 低檔黃金交叉',d:'最常見的技術選股——先看證據',c:[['kd_gold'],['k','<=',30]]},
+];
+function evOf(key){ return key&&EVI?EVI.tests.find(t=>t.key===key):null; }
+function evBadge(key,named){
+  const t=evOf(key);
+  if(!t) return key?`<span class="vbadge no" style="margin:0">${EVI?'尚未檢驗':'…'}</span>`:'';
+  return `<span class="vbadge ${VC(t.verdict)}" style="margin:0" title="${esc(t.claim)}">${named?esc(t.name)+'：':''}${t.verdict.replace('（未過多重比較校正）','')}</span>`;
+}
+function scrMatch(){
+  const C=SCR.cols, n=SCR.codes.length, out=[];
+  for(let i=0;i<n;i++){
+    let ok=true;
+    for(const [f,op,v] of scrConds){
+      const x=C[f]?C[f][i]:null, d=SFLD[f];
+      if(d.t==='b'){ if(x!==true){ok=false;break;} }
+      else if(x==null||(op==='>='?x<v:x>v)){ok=false;break;}
+    }
+    if(ok) out.push(i);
+  }
+  return out;
+}
+function buildScreen(){
+  const el=$('screen');
+  if(!SCR){ el.innerHTML='<div class="empty">載入選股資料…</div>';
+    scrReady().then(d=>{ if(curView!=='screen') return; d?buildScreen():el.innerHTML='<div class="empty">選股資料尚未產生，每個交易日盤後更新。</div>'; }); return; }
+  if(!EVI) eviReady().then(()=>{ if(curView==='screen') buildScreen(); });
+  const f2=x=>x==null?'—':(typeof x==='boolean'?(x?'是':'否'):(Math.abs(x)>=1000?Math.round(x).toLocaleString():x));
+  const hits=scrConds.length?scrMatch():[];
+  const shownF=[...new Set(scrConds.map(c=>c[0]).filter(f=>SFLD[f].t==='n'))];
+  const cols=['price','chg',...shownF.filter(f=>f!=='chg')];
+  let rows=hits;
+  if(scrSort.k){ const a=SCR.cols[scrSort.k]||[]; rows=[...hits].sort((i,j)=>((a[i]??-1e18)-(a[j]??-1e18))*scrSort.dir); }
+  const name=i=>SEARCH&&SEARCH[SCR.codes[i]]||(D&&D.stock_data[SCR.codes[i]]?.name)||'';
+  const F=SCR.fund||{};
+  el.innerHTML=`<div class="card"><h3>智慧選股・${SCR.date}</h3>
+      <p class="note" style="font-size:12.5px;color:var(--s9);line-height:1.8">全部上市櫃普通股（${SCR.codes.length} 檔）。資料：價量 ${esc(SCR.price_source||'')}、估值 ${F.valuation||'—'}、月營收 ${F.revenue||'—'}、季報 ${F.quarter||'—'}、千張大戶 ${F.tdcc||'累積中'}。
+        每個條件旁的標籤是<b style="color:var(--s10)">本站用過去資料檢驗的結果</b>（見「波段」頁）：「有跡象」才稍微有參考價值，「反效果」代表照做過去反而比較差。</p></div>
+    <div class="card"><h3>熱門策略</h3><div class="preset">${SPRE.map((p,i)=>`<button data-pre="${i}"><b>${esc(p.n)}</b><small>${esc(p.d)}</small>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">${[...new Set(p.c.map(c=>SFLD[c[0]].ev).filter(Boolean))].map(k=>evBadge(k,true)).join('')}</div></button>`).join('')}</div>
+      ${SAVED.length?`<h4 style="margin:14px 0 6px;font-size:12px;color:var(--gold)">我的策略</h4><div class="chips">${SAVED.map((s_,i)=>`<button class="chip" data-saved="${i}">${esc(s_.name)}</button><button class="chip" data-unsave="${i}" title="刪除" style="padding:7px 9px">✕</button>`).join('')}</div>`:''}</div>
+    <div class="card"><h3>條件（全部符合）</h3>
+      ${scrConds.length?scrConds.map(([f,op,v],i)=>{const d=SFLD[f]; return `<div class="scond"><span>${esc(d.l)} <small style="color:var(--s8)">${d.g}</small></span>
+        ${d.t==='n'?`<select data-op="${i}"><option value=">="${op==='>='?' selected':''}>≥</option><option value="<="${op==='<='?' selected':''}>≤</option></select>
+          <span><input data-v="${i}" type="number" step="any" value="${v}"> <small style="color:var(--s8)">${d.u}</small></span>`:'<span></span><span style="color:var(--s9)">是</span>'}
+        <button class="x" data-rm="${i}" title="移除">✕</button>
+        ${d.ev?`<div style="grid-column:1/-1;margin-top:-2px">${evBadge(d.ev,true)}</div>`:''}</div>`;}).join('')
+        :'<p class="rsub" style="padding:6px 0">還沒有條件。點上方熱門策略，或按「＋新增條件」。</p>'}
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+        <button class="btn" id="s-add">${scrPick?'收起':'＋新增條件'}</button>
+        ${scrConds.length?'<button class="btn" id="s-save">儲存為我的策略</button><button class="btn" id="s-clear">清除</button>':''}</div>
+      <div class="spick ${scrPick?'on':''}">${SDEF.map(([g,a])=>`<h4>${g}</h4><div class="chips">${a.map(d=>`<button class="chip" data-addf="${d.f}">${esc(d.l)}</button>`).join('')}</div>`).join('')}</div></div>
+    ${scrConds.length?`<div class="card"><h3>符合 ${hits.length} 檔${hits.length>200?'（顯示前 200 檔）':''}</h3>
+      ${hits.length?`<div style="overflow-x:auto;max-height:70vh"><table class="sres"><tr><th>股票</th>${cols.map(f=>`<th data-sort="${f}" class="${scrSort.k===f?'on':''}">${f==='price'?'收盤':f==='chg'?'漲跌':esc(SFLD[f]?.l||f)}${scrSort.k===f?(scrSort.dir<0?' ↓':' ↑'):''}</th>`).join('')}</tr>
+        ${rows.slice(0,200).map(i=>`<tr data-code="${SCR.codes[i]}"><td><b>${esc(name(i))}</b> <small style="color:var(--s8)">${SCR.codes[i]}</small></td>
+          ${cols.map(f=>{const x=SCR.cols[f]?.[i]; return `<td${f==='chg'?` style="color:${col(x)}"`:''}>${f==='chg'&&x!=null?pct(x):f2(x)}</td>`;}).join('')}</tr>`).join('')}</table></div>`
+        :'<p class="rsub">沒有股票同時符合全部條件，試著放寬數值。</p>'}
+      <p class="note" style="margin-top:10px;font-size:12px">篩選結果只是符合條件的清單，不是推薦。大部分條件過去並沒有穩定的超額報酬；請搭配「波段」頁的證據檢驗與自己的判斷。</p></div>`:''}`;
+  el.onclick=e=>{
+    const t=e.target;
+    const pre=t.closest('[data-pre]'); if(pre){ scrConds=SPRE[+pre.dataset.pre].c.map(([f,op,v])=>SFLD[f].t==='b'?[f]:[f,op,v]); scrSort={k:null,dir:-1}; buildScreen(); return; }
+    const sv=t.closest('[data-saved]'); if(sv){ scrConds=JSON.parse(JSON.stringify(SAVED[+sv.dataset.saved].conds)); buildScreen(); return; }
+    const us=t.closest('[data-unsave]'); if(us){ SAVED.splice(+us.dataset.unsave,1); saveScreens(); buildScreen(); return; }
+    const ad=t.closest('[data-addf]'); if(ad){ const d=SFLD[ad.dataset.addf]; if(!scrConds.some(c=>c[0]===d.f)) scrConds.push(d.t==='b'?[d.f]:[d.f,d.op,d.v]); scrPick=false; buildScreen(); return; }
+    const rm=t.closest('[data-rm]'); if(rm){ scrConds.splice(+rm.dataset.rm,1); buildScreen(); return; }
+    const so=t.closest('[data-sort]'); if(so){ const k=so.dataset.sort; scrSort=scrSort.k===k?{k,dir:-scrSort.dir}:{k,dir:-1}; buildScreen(); return; }
+    if(t.id==='s-add'){ scrPick=!scrPick; buildScreen(); return; }
+    if(t.id==='s-clear'){ scrConds=[]; buildScreen(); return; }
+    if(t.id==='s-save'){ const n=prompt('策略名稱',''); if(n){ SAVED.push({name:n.slice(0,20),conds:scrConds}); saveScreens(); toast('已儲存'); buildScreen(); } return; }
+    const tr=t.closest('tr[data-code]'); if(tr) openStock(tr.dataset.code);
+  };
+  el.onchange=e=>{
+    const o=e.target.closest('[data-op]'); if(o){ scrConds[+o.dataset.op][1]=o.value; buildScreen(); }
+    const v=e.target.closest('[data-v]'); if(v&&v.value!==''){ scrConds[+v.dataset.v][2]=+v.value; buildScreen(); }
+  };
 }
 
 /* ══ 持股健檢 ════════════════════════════════════════════════════
@@ -1944,7 +2221,7 @@ addEventListener('keydown',e=>{
 /* ══ 視圖切換 ══════════════════════════════════════════════════ */
 // 「台美」「持股」「自選」兩個市場共用，其餘各市場自己一套
 const TABS={
-  tw:[['today','★','今日'],['chart','◎','泡泡圖'],['etf','◈','ETF'],['swing','↗','波段'],
+  tw:[['today','★','今日'],['screen','⚲','選股'],['chart','◎','泡泡圖'],['etf','◈','ETF'],['swing','↗','波段'],
       ['hold','◉','持股'],['rank','☰','排行榜'],['chain','⇄','供應鏈'],['link','⇆','台美'],['watch','☆','自選']],
   us:[['us-today','☀','晨報'],['us-sector','▦','板塊'],['us-rank','☰','排行'],
       ['link','⇆','台美'],['hold','◉','持股'],['watch','☆','自選']],
@@ -1964,6 +2241,7 @@ function setView(v){
   if(v==='etf') buildETF();
   if(v==='swing') buildSwing();
   if(v==='hold') buildHold();
+  if(v==='screen') buildScreen();
   // 手機導航：目前頁在「更多」裡時，讓「更多」亮起來
   const nb=$('nav').querySelector('[data-more]'); if(nb) nb.classList.toggle('on',!$('nav').querySelector(`[data-v="${v}"]`));
   $('more').classList.remove('on');
