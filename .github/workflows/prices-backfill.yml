@@ -1,16 +1,19 @@
 name: 官方日線回補（十年，含已下市）
 
 # 十年約 2,550 個交易日、每天 2 個請求（另每月 3 個參考價表），證交所限流下約需 3 小時。
-# 手動觸發一次跑最多 5 小時；沒補完的部分，每日盤後更新也會每天再補 20 分鐘。
+# 分段執行：每補約 55 分鐘就提交並推送到 main 一次——中途取消或失敗，已補的部分也不會遺失，
+# 而且補滿約四年（一千個交易日）後回測就能先改用官方資料。
+# 一律從「最新的 main」開始（排隊期間每日更新可能已寫入近期月份），
+# 推送時若同一月份檔案兩邊都有改，合併兩邊的日資料而不是失敗。
 on:
   workflow_dispatch:
     inputs:
       days:
         description: "往回補幾個交易日"
         default: "2550"
-      budget:
-        description: "最多跑幾分鐘"
-        default: "300"
+      rounds:
+        description: "分幾段（每段約 55 分鐘）"
+        default: "5"
 
 concurrency:
   group: twflow-daily
@@ -25,21 +28,64 @@ jobs:
     timeout-minutes: 340
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: pip
       - run: pip install -r twflow/requirements.txt
 
-      - name: 回補
-        run: python -X utf8 swing/scripts/fetch_prices.py --days ${{ inputs.days }} --budget ${{ inputs.budget }}
+      - name: 準備合併工具
+        run: |
+          cat > /tmp/merge_prices.py <<'PY'
+          """rebase 衝突時合併同一月份的日線檔：兩邊的交易日取聯集（同一天兩邊都有時取個股數較多的）。"""
+          import gzip, json, subprocess, sys
+          path = sys.argv[1]
+          def stage(n):
+              raw = subprocess.run(["git", "show", f":{n}:{path}"], capture_output=True).stdout
+              try:
+                  return json.loads(gzip.decompress(raw).decode("utf-8")) if raw else {}
+              except Exception:
+                  return {}
+          a, b = stage(2), stage(3)
+          out = {"names": {**a.get("names", {}), **b.get("names", {})},
+                 "ref": {**a.get("ref", {}), **b.get("ref", {})}, "days": dict(a.get("days", {}))}
+          for d, rows in b.get("days", {}).items():
+              if len(rows) >= len(out["days"].get(d, {})):
+                  out["days"][d] = rows
+          out["days"] = dict(sorted(out["days"].items()))
+          with gzip.open(path, "wt", encoding="utf-8") as f:
+              json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
+          print(f"合併 {path}：{len(a.get('days', {}))} ＋ {len(b.get('days', {}))} → {len(out['days'])} 天")
+          PY
 
-      - name: 提交
-        if: always()
+      - name: 分段回補並提交
         run: |
           git config user.name  "twflow-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add swing/data/prices
-          if git diff --staged --quiet; then echo "沒有新資料"; exit 0; fi
-          git commit -m "data: 官方日線回補"
-          for i in 1 2 3 4; do git pull --rebase -q && git push && break; sleep $((i*5)); done
+          commit_push() {
+            git add swing/data/prices
+            if git diff --staged --quiet; then echo "沒有新資料"; return 0; fi
+            git commit -qm "data: 官方日線回補（第 $1 段）"
+            for i in 1 2 3 4; do
+              git fetch -q origin main
+              if git rebase -q origin/main; then
+                git push -q origin HEAD:main && return 0
+              else
+                for f in $(git diff --name-only --diff-filter=U); do
+                  python /tmp/merge_prices.py "$f" && git add "$f"
+                done
+                GIT_EDITOR=true git rebase --continue && git push -q origin HEAD:main && return 0
+                git rebase --abort 2>/dev/null || true
+              fi
+              sleep $((i * 10))
+            done
+            echo "::error::推送失敗"; return 1
+          }
+          for r in $(seq 1 ${{ inputs.rounds }}); do
+            python -X utf8 swing/scripts/fetch_prices.py --days ${{ inputs.days }} --budget 55 | tee /tmp/round.log
+            commit_push $r
+            if ! grep -q "時間預算用完" /tmp/round.log; then echo "已補完"; break; fi
+          done
+          ls swing/data/prices | wc -l
