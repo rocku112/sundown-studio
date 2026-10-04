@@ -25,6 +25,9 @@ jobs:
           cache: pip
       - run: pip install -r twflow/requirements.txt
 
+      - name: 基本面（估值＋季報）
+        run: python -X utf8 swing/scripts/fetch_fund.py && ls -la swing/data/fund
+
       - name: 月營收（公開資訊觀測站）
         run: python -X utf8 swing/scripts/fetch_revenue.py
 
