@@ -1811,6 +1811,7 @@ function rdcaCard(){
         <td>${k==='dca'?'—':`<b style="color:${v.beat>=60?'var(--up)':v.beat>=40?'var(--gold)':'var(--down)'}">${v.beat}%</b>`}</td>
         <td style="color:${col(v.diff_med)}">${k==='dca'?'—':f(v.diff_med)}</td>
         <td>${k==='dca'?'—':`${f(v.diff_min)}／${f(v.diff_max)}`}</td><td>${f(v.mdd_med)}</td></tr>`).join('')}</table>
+    ${R.windows<60?`<p class="note" style="margin-top:8px;font-size:12.5px;color:var(--gold)">這個標的的可用歷史只夠 ${R.windows} 個起點，而且彼此大量重疊，等於只看到同一段行情；請以加權指數（近三十年、${(RDCA.results.find(x=>x.code==='^TWII')||{}).windows||'—'} 個起點）的結果為主。</p>`:''}
     <p class="note" style="margin-top:10px;font-size:12.5px">讀法：「勝過定期定額」是在所有起點中，這個做法期末資產比較多的比例；低於 50% 代表多數時候反而輸。
       調節能讓帳面獲利變現、心理上比較舒服，但長期向上的市場裡，賣出的部分常常買不回更低的價格。
       加權指數不含配息，會讓多抱現金的做法看起來比實際好。這是歷史統計，不是投資建議。</p></div>`;
