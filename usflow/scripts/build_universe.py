@@ -75,9 +75,10 @@ def constituents(url):
     soup = BeautifulSoup(r.text, "lxml")
     out = []
     for tb in soup.find_all("table", class_="wikitable"):
-        head = [th.get_text(strip=True) for th in tb.find("tr").find_all(["th", "td"])]
-        si = next((i for i, h in enumerate(head) if h in ("Symbol", "Ticker")), None)
-        ni = next((i for i, h in enumerate(head) if h in ("Security", "Company")), None)
+        # 表頭可能帶註腳（如「Ticker[13]」），只比對開頭
+        head = [re.sub(r"\[.*?\]", "", th.get_text(strip=True)) for th in tb.find("tr").find_all(["th", "td"])]
+        si = next((i for i, h in enumerate(head) if h.startswith(("Symbol", "Ticker"))), None)
+        ni = next((i for i, h in enumerate(head) if h.startswith(("Security", "Company"))), None)
         gi = next((i for i, h in enumerate(head) if "GICS" in h and "Sub" not in h), None)
         if si is None or ni is None:
             continue
