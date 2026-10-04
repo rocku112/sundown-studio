@@ -7,7 +7,6 @@ on:
     paths:
       - "twflow/scripts/fetch_etf.py"
       - "twflow/scripts/fetch_taifex.py"
-      - "twflow/scripts/probe_etf_sources.py"
       - "twflow/scripts/build_etf_profile.py"
       - "swing/**"
       - "twflow/web/index.html"
@@ -28,15 +27,9 @@ jobs:
           cache: pip
       - run: pip install -r twflow/requirements.txt
 
-      - name: 定期定額 vs 位階加碼／調節（先跑，結果最快看到）
-        run: python -u -X utf8 swing/scripts/rules_vs_dca.py || true
-
-      - name: ETF 資料來源探測
-        run: python -u -X utf8 twflow/scripts/probe_etf_sources.py || true
-
       - name: 台指期（五年）
         working-directory: twflow
-        run: timeout 30m python -u -X utf8 scripts/fetch_taifex.py --months 62 --budget 25 --verbose || true
+        run: timeout 50m python -u -X utf8 scripts/fetch_taifex.py --months 62 --budget 45 || true
 
       - name: 官方日線（最近 3 天＋除權息日驗證）
         run: |

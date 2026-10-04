@@ -234,7 +234,14 @@ def fetch_month(month, today):
         return None
     # 法人與 PCR 的查詢區間不能超過今天（超過會回錯誤頁）；期貨行情可以
     b3 = min(b, today)
-    ins, pc, ix, e5 = insti(a, b3), pcr(a, b3), taiex(month), etf0050(month)
+    ins = insti(a, b3)
+    # 結束日晚於最新資料日（週末、當天尚未公布）時期交所回錯誤頁：往前退到有資料為止
+    k = 0
+    while not ins and b3 > a and k < 6:
+        b3 -= timedelta(days=1)
+        k += 1
+        ins = insti(a, b3)
+    pc, ix, e5 = pcr(a, b3), taiex(month), etf0050(month)
     days = {}
     for d in sorted(set(fu) | set(ix)):
         x = fu.get(d, {})
