@@ -91,7 +91,7 @@ jobs:
 
       - name: 台指期（五年）
         working-directory: twflow
-        run: timeout 50m python -u -X utf8 scripts/fetch_taifex.py --months 62 --budget 45 || true
+        run: timeout 50m python -u -X utf8 scripts/fetch_taifex.py --months 62 --budget 32 || true
 
       - uses: actions/upload-artifact@v4
         with:

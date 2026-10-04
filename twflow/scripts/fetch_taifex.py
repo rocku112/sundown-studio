@@ -67,10 +67,10 @@ def iso(s):
 
 
 def post_csv(path, data, tag):
-    for k in range(3):
+    for k in range(2):
         try:
             r = S.post(TF + path, data=data, timeout=60)
-            time.sleep(1.2)
+            time.sleep(2.5)
             r.raise_for_status()
             txt = r.content.decode("cp950", errors="replace")
             rows = [x for x in csv.reader(io.StringIO(txt)) if any(c.strip() for c in x)]
@@ -80,11 +80,11 @@ def post_csv(path, data, tag):
                     print("    ", x[:20])
             if rows and len(rows[0]) > 3:
                 return rows
-            if rows and k == 2:
-                print(f"  ! {tag} 回應不是 CSV：{txt[:200]!r}", file=sys.stderr)
+            if rows and k == 1:
+                print(f"  ! {tag} 回應不是 CSV（{len(r.content)} bytes）", file=sys.stderr)
         except Exception as e:                       # noqa: BLE001
             print(f"  ! {tag} 第 {k + 1} 次失敗：{e!r}", file=sys.stderr)
-        time.sleep(3 * (k + 1))
+        time.sleep(8)
     return []
 
 
@@ -235,9 +235,9 @@ def fetch_month(month, today):
     # 法人與 PCR 的查詢區間不能超過今天（超過會回錯誤頁）；期貨行情可以
     b3 = min(b, today)
     ins = insti(a, b3)
-    # 結束日晚於最新資料日（週末、當天尚未公布）時期交所回錯誤頁：往前退到有資料為止
+    # 當月：結束日晚於最新資料日（週末、尚未公布）時期交所回錯誤頁，往前退到有資料為止（最多 4 天）
     k = 0
-    while not ins and b3 > a and k < 6:
+    while not ins and b >= today and b3 > a and k < 4:
         b3 -= timedelta(days=1)
         k += 1
         ins = insti(a, b3)
@@ -249,7 +249,9 @@ def fetch_month(month, today):
                    "day_all": {m: v[4] or v[6] for m, v in (x.get("day_all") or {}).items()},
                    "fi": (ins.get(d) or {}).get("外資"), "it": (ins.get(d) or {}).get("投信"),
                    "dl": (ins.get(d) or {}).get("自營商"), "pcr": pc.get(d), "taiex": ix.get(d), "e50": e5.get(d)}
-    return {"month": month, "complete": b < today - timedelta(days=7), "days": days}
+    # 法人資料沒抓到的月份不算完整，之後的排程會再補（期交所只提供近幾年的法人下載，太舊的就不再重試）
+    old_enough = a < today - timedelta(days=3 * 365)
+    return {"month": month, "complete": b < today - timedelta(days=7) and (bool(ins) or old_enough), "days": days}
 
 
 def months_back(today, n):
@@ -421,6 +423,13 @@ def main():
         if not old and (time.time() - t0) > args.budget * 60:
             continue
         s = fetch_month(month, today)
+        if s and old:
+            # 這次法人／PCR 沒抓到的日子，沿用舊檔已有的
+            for d, x in s["days"].items():
+                o = old["days"].get(d) or {}
+                for k in ("fi", "it", "dl", "pcr", "taiex", "e50"):
+                    if x.get(k) is None and o.get(k) is not None:
+                        x[k] = o[k]
         if s:
             with open(path, "w", encoding="utf-8") as f:
                 json.dump(s, f, ensure_ascii=False, separators=(",", ":"))

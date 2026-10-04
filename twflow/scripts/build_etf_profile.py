@@ -111,7 +111,7 @@ def official_divs(today):
 # ── Yahoo 長期日線＋配息 ─────────────────────────────────────────────
 def yahoo(code, suffix):
     r = S.get(f"https://query1.finance.yahoo.com/v8/finance/chart/{code}{suffix}",
-              params={"period1": int(time.time()) - 86400 * 365 * 11, "period2": int(time.time()), "interval": "1d",
+              params={"period1": 0, "period2": int(time.time()), "interval": "1d",
                       "events": "div,split"}, timeout=30)
     time.sleep(0.4)
     if r.status_code != 200:
@@ -241,7 +241,7 @@ def main():
     info = meta()
     print(f"官方配息：{len(divs)} 檔；集保受益人數：{len(hold)} 檔（{hold_date}）；基本資料：{len(info)} 檔")
 
-    fields = ["tr1", "tr3", "tr5", "tr10", "px3", "px5", "px10", "tr_since", "px_since", "years",
+    fields = ["tr1", "tr3", "tr5", "tr10", "px3", "px5", "px10", "tr_since", "px_since", "years", "since",
               "ttm_div", "yield", "n_div", "vol", "mdd3", "holders", "holders_chg", "retail",
               "listed", "issuer", "index", "type"]
     rows, fail = {}, []
@@ -260,6 +260,7 @@ def main():
                        px3=ann(px, dates, 3), px5=ann(px, dates, 5), px10=ann(px, dates, 10))
             rec["tr_since"], rec["years"] = since_ann(tr, dates)
             rec["px_since"], _ = since_ann(px, dates)
+            rec["since"] = dates[0]           # 可用資料起點（上市日，或資料錯誤截斷後的起點）
             rec["vol"], rec["mdd3"] = risk(tr, dates)
         else:
             fail.append(c)
@@ -287,7 +288,7 @@ def main():
         if c in rows:
             r = dict(zip(fields, rows[c]))
             print(f"  {c}：含息年化 1/3/5/10 年 {r['tr1']}/{r['tr3']}/{r['tr5']}/{r['tr10']}%；股價年化 3/5/10 年 "
-                  f"{r['px3']}/{r['px5']}/{r['px10']}%；成立以來 {r['years']} 年 含息 {r['tr_since']}% 股價 {r['px_since']}%；"
+                  f"{r['px3']}/{r['px5']}/{r['px10']}%；自 {r['since']} 起 {r['years']} 年 含息 {r['tr_since']}% 股價 {r['px_since']}%；"
                   f"近 12 月配息 {r['ttm_div']}（{r['n_div']} 次）殖利率 {r['yield']}%；波動 {r['vol']}% 三年回撤 {r['mdd3']}%；"
                   f"受益人 {r['holders']}（{r['holders_chg']}%）；{r['issuer']}／{r['index']}")
 

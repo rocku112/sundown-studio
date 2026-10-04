@@ -1660,7 +1660,7 @@ function buildETF(){
       <button class="star ${inWatch('ETF:'+e.code)?'on':''}" data-star="ETF:${e.code}">${inWatch('ETF:'+e.code)?'★':'☆'}</button>
       <div><div class="rname">${esc(e.name)} <span style="color:var(--s8);font-weight:400">${e.code}</span></div>
         <div class="rsub">${e.cat}　市價 ${e.price}　淨值 ${e.nav}　規模 ${e.aum.toLocaleString()} 億　申購贖回 <span style="color:${col(e.flow)}">${yi1(e.flow)}</span></div>
-        ${(p=>p?`<div class="rsub">${p.yield!=null?`殖利率 ${p.yield.toFixed(2)}%　`:''}${(l=>l?`${l.since?'成立以來':l.y+' 年'}含息年化 <span style="color:${col(l.tr)}">${pct(l.tr)}</span>　股價年化 <span style="color:${col(l.px)}">${pct(l.px)}</span>　`:'')(epfLong(p))}${p.holders?`受益人 ${p.holders.toLocaleString()}`:''}</div>`:'')(epf(e.code))}</div>
+        ${(p=>p?`<div class="rsub">${p.yield!=null?`殖利率 ${p.yield.toFixed(2)}%　`:''}${(l=>l?`${l.since?'上市以來':l.y+' 年'}含息年化 <span style="color:${col(l.tr)}">${pct(l.tr)}</span>　股價年化 <span style="color:${col(l.px)}">${pct(l.px)}</span>　`:'')(epfLong(p))}${p.holders?`受益人 ${p.holders.toLocaleString()}`:''}</div>`:'')(epf(e.code))}</div>
       <div class="rval">${pill(e.prem)}<small style="color:var(--s8)">折溢價</small></div></div>`).join('')
       ||'<div class="empty">這個分類沒有 ETF</div>'}
     <div class="card note" style="margin-top:12px">含息年化＝股價漲跌加上配息再投入的年化報酬；股價年化＝只看股價。兩者的差距就是配息貢獻。
@@ -1704,8 +1704,8 @@ function etfProfileHtml(code,kv){
   if(l&&p.yield!=null){
     const short=l.y<3;
     verdict=l.px>=0
-      ?`這 ${l.since?'檔成立以來約 '+l.y:l.y} 年，含息年化 ${pct(l.tr)}、股價年化 ${pct(l.px)}：配完息股價仍${l.px>0.5?'往上':'大致持平'}，配息不是從本金拿出來的。`
-      :`這 ${l.since?'檔成立以來約 '+l.y:l.y} 年，股價年化 ${pct(l.px)}：配出去的比賺到的多，股價一路往下，有一部分配息等於拿回自己的本金。`;
+      ?`這 ${l.since?'檔自 '+(p.since||'').slice(0,4)+' 年起約 '+l.y:l.y} 年，含息年化 ${pct(l.tr)}、股價年化 ${pct(l.px)}：配完息股價仍${l.px>0.5?'往上':'大致持平'}，配息不是從本金拿出來的。`
+      :`這 ${l.since?'檔自 '+(p.since||'').slice(0,4)+' 年起約 '+l.y:l.y} 年，股價年化 ${pct(l.px)}：配出去的比賺到的多，股價一路往下，有一部分配息等於拿回自己的本金。`;
     if(short) verdict+='（期間不到 3 年，參考價值低。）';
   }
   return `<div class="stitle">賺多少 vs 發多少</div>
@@ -1713,7 +1713,7 @@ function etfProfileHtml(code,kv){
     ${kv('殖利率（近 12 月配息 ÷ 市價）',p.yield!=null?p.yield.toFixed(2)+'%':'—')}
     ${kv('含息年化 1／3／5／10 年',`${f2(p.tr1)}／${f2(p.tr3)}／${f2(p.tr5)}／${f2(p.tr10)}`)}
     ${kv('股價年化（不含息）3／5／10 年',`${f2(p.px3)}／${f2(p.px5)}／${f2(p.px10)}`)}
-    ${p.years!=null?kv(`成立以來（約 ${p.years} 年）含息／股價年化`,`${f2(p.tr_since)}／${f2(p.px_since)}`):''}
+    ${p.years!=null?kv(`${p.since?'自 '+p.since.slice(0,7)+' 起':'可取得期間'}（約 ${p.years} 年）含息／股價年化`,`${f2(p.tr_since)}／${f2(p.px_since)}`):''}
     ${verdict?`<div class="note" style="padding:8px 16px 4px;font-size:12.5px">${verdict}</div>`:''}
     <div class="stitle">風險</div>
     ${kv('一年波動度（年化）',p.vol!=null?p.vol+'%':'—')}
