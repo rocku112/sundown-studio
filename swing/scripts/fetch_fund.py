@@ -182,7 +182,7 @@ def quarters(years):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--years", type=int, default=5)
+    ap.add_argument("--years", type=int, default=11)   # 回測涵蓋 2016 起的十年官方日線；已有的月份／季度不重抓
     args = ap.parse_args()
 
     val = load("valuation.json")
