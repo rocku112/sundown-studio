@@ -713,6 +713,13 @@
    "advancers": 483.0,
    "decliners": 506.0,
    "date": "2026-10-02"
+  },
+  {
+   "twse_index": 49712.04,
+   "twse_chg_pct": 2.55,
+   "advancers": 364.0,
+   "decliners": 631.0,
+   "date": "2026-10-05"
   }
  ]
 }
