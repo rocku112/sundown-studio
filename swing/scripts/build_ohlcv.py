@@ -30,7 +30,7 @@ SRC = os.path.join(ROOT, "data", "prices")
 OUT = os.path.join(ROOT, ".cache", "ohlcv.json")
 ETFS = {"0050", "006208", "0056", "00878", "00919", "00929", "00631L"}
 KEEP = 900          # 涵蓋中小型股，供分組（規模／股價檔位）組合實驗；短線檢驗仍只用前 150 名
-MIN_DAYS = 1000
+MIN_DAYS = 1000      # 約四年；官方回補從最近往前補，滿四年即取代 Yahoo（2026-10 首次啟用時約五年）
 
 
 def main():

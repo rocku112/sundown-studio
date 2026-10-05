@@ -1810,9 +1810,9 @@ function pfTiers(){
       ${T.map(x=>{const R=x.results||{};
         if(!R.EW) return `<tr><td>${esc(x.name)}（${x.n}）</td><td colspan="${ks.length+1}" style="color:var(--s8)">${esc(x.note||'資料不足')}</td></tr>`;
         return `<tr><td>${esc(x.name)}（${x.n}）</td>${ks.map(k=>{const v=R[k]; if(!v) return '<td>—</td>';
-          return `<td><b style="color:${v.cagr>=20?'var(--up)':'var(--s10)'}">${f(v.cagr)}</b>${k==='EW'?'':`<br><small style="color:${col(v.excess)}">${v.excess>=0?'贏':'輸'} ${Math.abs(v.excess).toFixed(1)}</small>`}<br><small style="color:var(--s8)">≥20%：${v.hit20??'—'}%</small></td>`;}).join('')}
+          return `<td><b style="color:${v.cagr>=20?'var(--up)':'var(--s10)'}">${f(v.cagr)}</b>${k==='EW'?'':`<br><small style="color:${col(v.excess)}">${v.excess>=0?'贏':'輸'} ${Math.abs(v.excess).toFixed(1)}</small> <small style="color:${v.t!=null&&Math.abs(v.t)>=2?'var(--s10)':'var(--s8)'}">t ${v.t??'—'}</small>`}<br><small style="color:var(--s8)">≥20%：${v.hit20??'—'}%</small></td>`;}).join('')}
           <td style="color:var(--down)">${R.EW.mdd.toFixed(1)}%</td></tr>`;}).join('')}</table>
-    <p class="note" style="font-size:12px;margin-top:6px">每格：年化報酬／相對整組等權贏或輸幾個百分點／年報酬 ≥ 20% 的年份比例。
+    <p class="note" style="font-size:12px;margin-top:6px">每格：年化報酬／相對整組等權贏或輸幾個百分點與 t 值（每月超額報酬的 t 檢定，|t| ≥ 2 才算明顯，同時比較很多組時門檻要更高）／年報酬 ≥ 20% 的年份比例。
       ${PF.source==='official'?'':'目前是 Yahoo 資料，只有現在仍上市的熱門股，小型股與低價股組別樣本不足或偏樂觀；十年官方資料（含已下市股票）補齊後會自動更新。'}</p>`;
 }
 function pfCard(){
