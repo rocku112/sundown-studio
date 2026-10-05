@@ -376,8 +376,12 @@ def main():
         for k in picks:
             if sc[k] or k == "M":
                 picks[k][t] = top(sc[k], lambda i: lab.E[i, t])
-    first = max([min(p) for p in picks.values() if p] + [rdays[0]])
-    rd = [t for t in rdays if t >= first]
+    # 每個做法從自己的訊號第一次有資料的調整日開始算（月營收、季報的歷史比日線短）；
+    # 和基準比較時，基準也只取同一段期間
+    def first_nonempty(p):
+        ts = [t for t, v in p.items() if v]
+        return min(ts) if ts else None
+    starts = {k: first_nonempty(picks[k]) for k in picks}
     B, CASH = book.B, book.CASH
     plans = {"B0": lambda t: {B: 1.0},
              "T0": lambda t: {B: 1.0} if trend[t] else {CASH: 1.0},
@@ -387,21 +391,30 @@ def main():
              "RM": lambda t: slots(picks["RM"].get(t, []), {B: 1.0}),
              "RMT": lambda t: slots(picks["RM"].get(t, []), {B: 1.0}) if trend[t] else {CASH: 1.0},
              "CS": lambda t: {k: v * 0.3 for k, v in slots(picks["RM"].get(t, []), {B: 1.0}).items()} | {B: 0.7 + 0.3 * slots(picks["RM"].get(t, []), {B: 1.0}).get(B, 0)}}
-    if not picks["E"]:
-        plans.pop("E")
-    res, navs = {}, {}
+    need = {"B0": None, "T0": None, "R": "R", "E": "E", "M": "M", "RM": "RM", "RMT": "RM", "CS": "RM"}
+    res = {}
     for k, fn in plans.items():
-        nav, start, turns = simulate(book, rd, fn)
-        navs[k] = nav
+        s0 = starts.get(need[k]) if need[k] else rdays[0]
+        if s0 is None:
+            continue
+        rdk = [t for t in rdays if t >= s0]
+        if len(rdk) < 13:
+            continue
+        nav, start, turns = simulate(book, rdk, fn)
         s_ = stats(nav, lab.dates, start)
-        if s_ and k != "B0" and "B0" in navs:
-            s_.update(excess_t(nav, navs["B0"], rd))
+        if s_ and k != "B0":
+            base, _, _ = simulate(book, rdk, plans["B0"])
+            s_.update(excess_t(nav, base, rdk))
+            bs = stats(base, lab.dates, start)
+            s_["base_cagr"] = bs["cagr"] if bs else None
         if s_:
             s_["turnover"] = round(float(np.mean(turns)) * 12 * 100)
             s_["label"] = LABEL[k]
             res[k] = s_
 
-    # 分組：規模（成交值排名）與股價檔位；每組基準＝整組等權
+    # 分組：規模（成交值排名）與股價檔位；每組基準＝整組等權（和各做法同一段期間）
+    t0 = min(x for x in (starts.get("R"), starts.get("M")) if x is not None)
+    rd = [t for t in rdays if t >= t0]
     members = {}
     for t in rd:
         d = DV[:, t]
@@ -421,31 +434,38 @@ def main():
             continue
         ms = {t: set(v) for t, v in mem.items()}
         ew = {t: {k: 1.0 / len(v) for k in v} for t, v in mem.items() if v}
-        out_t, tnav = {}, {}
+        ewfn = (lambda t, ew=ew: ew.get(t) or {CASH: 1.0})
+        out_t = {}
         for key in ("EW", "R", "E", "M", "RM"):
-            if key == "E" and not eps:
+            if key != "EW" and starts.get(key) is None:
+                continue
+            rdk = rd if key == "EW" else [t for t in rd if t >= starts[key]]
+            if len(rdk) < 13:
                 continue
             if key == "EW":
-                fn = (lambda t, ew=ew: ew.get(t) or {CASH: 1.0})
+                fn = ewfn
             else:
                 def fn(t, key=key, ms=ms, ew=ew):
                     sel = top(scores(t)[key], lambda i: i in ms[t])
                     return slots(sel, ew.get(t) or {CASH: 1.0})
-            nav, start, turns = simulate(book, rd, fn)
-            tnav[key] = nav
+            nav, start, turns = simulate(book, rdk, fn)
             s_ = stats(nav, lab.dates, start)
-            if s_ and key != "EW" and "EW" in tnav:
-                s_.update(excess_t(nav, tnav["EW"], rd))
-            if s_:
-                s_.pop("curve", None)
-                s_["turnover"] = round(float(np.mean(turns)) * 12 * 100)
-                out_t[key] = s_
-        if "EW" in out_t:
-            for key, v in out_t.items():
-                v["excess"] = round(v["cagr"] - out_t["EW"]["cagr"], 1)
+            if not s_:
+                continue
+            s_.pop("curve", None)
+            s_["turnover"] = round(float(np.mean(turns)) * 12 * 100)
+            if key == "EW":
+                s_["excess"] = 0.0
+            else:
+                base, _, _ = simulate(book, rdk, ewfn)
+                bs = stats(base, lab.dates, start)
+                s_.update(excess_t(nav, base, rdk))
+                s_["excess"] = round(s_["cagr"] - bs["cagr"], 1) if bs else None
+                s_["base_cagr"] = bs["cagr"] if bs else None
+            out_t[key] = s_
         tiers.append({"kind": kind, "name": name, "n": int(np.median(sizes)), "results": out_t})
 
-    last_t = rd[-1]
+    last_t = rdays[-1]
     now = {k: [{"code": lab.codes[i], "name": lab._name(i)} for i in picks[k].get(last_t, [])] for k in picks}
     doc = {"generated_at": datetime.now(timezone(timedelta(hours=8))).isoformat(timespec="seconds"),
            "source": source, "rebalance_date": lab.dates[last_t], "topn": TOPN, "min_dv": MIN_DV,
@@ -454,12 +474,12 @@ def main():
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(doc, f, ensure_ascii=False, separators=(",", ":"))
     if "--no-forward" not in sys.argv:
-        forward(lab, rd, picks)
-    print(f"中期組合實驗（{source}，{len(lab.codes)} 檔）{len(rd)} 次調整")
+        forward(lab, rdays, picks)
+    print(f"中期組合實驗（{source}，{len(lab.codes)} 檔）分組期間 {lab.dates[rd[0]]}～，{len(rd)} 次調整；各做法起點 { {k: lab.dates[v] for k, v in starts.items() if v is not None} }")
     print(f"  {'策略':<22} 年化    波動   最大回撤  Sharpe  ≥20%年份  最差年  前半/後半年化   年換手")
     for k, s_ in res.items():
         print(f"  {s_['label']:<20} {s_['cagr']:6.1f}% {s_['vol']:5.1f}% {s_['mdd']:7.1f}%  {s_['sharpe']}  "
-              f"{s_['hit20']}%（{s_['n_full']} 年） {s_['worst_year']}%  {s_['halves']}  {s_['turnover']}%")
+              f"{s_['hit20']}%（{s_['n_full']} 年） {s_['worst_year']}%  {s_['halves']}  {s_['turnover']}%  期間 {s_['period']}  同期 0050 {s_.get('base_cagr')}%")
         print(f"      各年：{s_['years']}　相對 0050 每月超額 t={s_.get('t')} 前後半 t={s_.get('t_halves')} 贏 {s_.get('win_m')}% 的月份")
     for tr in tiers:
         print(f"\n  【{'規模' if tr['kind'] == 'size' else '股價'}・{tr['name']}】約 {tr['n']} 檔 {tr.get('note', '')}")

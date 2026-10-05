@@ -66,7 +66,7 @@ jobs:
           # 台指期（日盤、法人未平倉、PCR；夜盤由 taifex-morning.yml 清晨補上）
           timeout 15m python -X utf8 scripts/fetch_taifex.py --budget 8 || echo "::warning::台指期抓取失敗"
           # 基本面（月底估值、季報；已有的不重抓）
-          ( cd .. && timeout 20m python -X utf8 swing/scripts/fetch_fund.py ) || echo "::warning::基本面抓取失敗"
+          ( cd .. && timeout 20m python -X utf8 swing/scripts/fetch_fund.py --budget 16 ) || echo "::warning::基本面抓取失敗"
           # 官方日線（含日後下市股票）：補最新幾天，並順便回補十年歷史 20 分鐘
           ( cd .. && python -X utf8 swing/scripts/fetch_prices.py --days 2550 --budget 20 ) || echo "::warning::官方日線抓取失敗"
           # 波段實驗室：五年日線回測（約 3 分鐘）

@@ -10,7 +10,7 @@
 時點：法規要求次月 10 日前公布，回測一律假設「次月 10 日之後的第一個交易日」才知道，
 不使用提早公布的優勢，避免偷看未來。
 
-用法：python swing/scripts/fetch_revenue.py [--since 2020-01]
+用法：python swing/scripts/fetch_revenue.py [--since 2015-01]
 """
 
 import argparse
@@ -96,7 +96,7 @@ def months(since):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--since", default="2020-01")
+    ap.add_argument("--since", default="2015-01")   # 配合十年官方日線；已有的月份不重抓
     args = ap.parse_args()
     data, partial = {}, set()
     if os.path.exists(OUT):
