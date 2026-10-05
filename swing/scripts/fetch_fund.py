@@ -183,14 +183,19 @@ def quarters(years):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--years", type=int, default=11)   # 回測涵蓋 2016 起的十年官方日線；已有的月份／季度不重抓
+    ap.add_argument("--budget", type=float, default=15, help="分鐘；超過就存檔收工，下次接著補（外層 timeout 要比這長）")
     args = ap.parse_args()
+    t_start = time.time()
+
+    def over(frac=1.0):
+        return time.time() - t_start > args.budget * 60 * frac
 
     val = load("valuation.json")
     days = month_ends(calendar(args.years * 250 + 30))
     print(f"月底 {len(days)} 天：{days[0]}～{days[-1]}", flush=True)
     new, tpex_ok = 0, None
     t0 = time.time()
-    for d in days:
+    for d in reversed(days):                     # 新的先抓：預算用完時最新月底一定已更新
         k = d.isoformat()
         if k in val and d != days[-1]:
             continue
@@ -206,16 +211,23 @@ def main():
             new += 1
         if new == 1 or new % 12 == 0:
             print(f"  估值 {k}：{len(v)} 檔，例 2330 → {v.get('2330')}（{(time.time()-t0)/60:.1f} 分）", flush=True)
+            save("valuation.json", val)          # 分段存檔：被外層 timeout 砍掉也不白跑
+        if over(0.55):                           # 留時間給季報，兩邊每天都有進度
+            print("  時間預算用完，估值先停在這裡", flush=True)
+            break
     save("valuation.json", val)
     print(f"估值：{len(val)} 個月底（本次新增 {new}）")
 
     inc = load("income.json")
     qs = quarters(args.years)
     failed, streak = [], 0
-    for i, (y, q) in enumerate(qs):
+    for i, (y, q) in reversed(list(enumerate(qs))):   # 新的先抓，再往回補
         key = f"{y}Q{q}"
         if key in inc and i < len(qs) - 1:
             continue
+        if over():
+            print("  時間預算用完，季報下次接著補", flush=True)
+            break
         if streak >= 2:
             print("  連續兩季都抓不到，來源可能擋了，停止季報", flush=True)
             break
@@ -231,6 +243,7 @@ def main():
             if len(inc) == 1 or i == len(qs) - 1:
                 print(f"  季報樣本 {key}：{len(rows)} 家，例 2330 → {rows.get('2330')}")
         print(f"{key}: {len(rows)} 家", flush=True)
+        save("income.json", inc)                 # 每季存一次
     save("income.json", inc)
     print(f"季報：{len(inc)} 季；失敗 {failed[:6]}")
     if not val and not inc:
