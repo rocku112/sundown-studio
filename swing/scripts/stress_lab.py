@@ -126,6 +126,19 @@ def main():
     out["default"] = D
     print(f"預設：年化 {D['cagr']}%（同組 {D['base']}%）超額 {D['excess']} t={D['t']} 前後半 {D['t_halves']} 回撤 {D['mdd']}%")
 
+    # 多元配置：長線核心（0050 長抱）＋中線衛星（本做法），看合起來的報酬與回撤
+    r0 = [t for t in rd if t + 1 < book.T]
+    b0, st0, _ = P.simulate(book, r0, lambda t: {B: 1.0})
+    sb0 = P.stats(b0, lab.dates, st0)
+    tg_s, _ = strat()
+    combo = {"0050 長抱": {k: sb0[k] for k in ("cagr", "mdd", "vol", "years")}}
+    for w in (0.7, 0.5, 0.0):
+        fn = (lambda t, w=w: {k: v * (1 - w) for k, v in tg_s(t).items()} | {B: w + (1 - w) * tg_s(t).get(B, 0)})
+        nav, st_, _ = P.simulate(book, r0, fn)
+        s_ = P.stats(nav, lab.dates, st_)
+        combo[f"{int(w * 100)}% 0050＋{int((1 - w) * 100)}% 本做法" if w else "100% 本做法"] = {k: s_[k] for k in ("cagr", "mdd", "vol", "years")}
+    out["combo"] = combo
+
     # C1 成本
     out["slip"] = {f"{s * 100:.1f}": run(slip=s) for s in (0.002, 0.005, 0.01)}
     # C5 執行：隔日收盤成交、延後進場
@@ -254,6 +267,7 @@ def main():
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
 
+    print("多元配置：", {k: (v["cagr"], v["mdd"]) for k, v in combo.items()})
     print("滑價：", {k: (v["excess"], v["t"]) for k, v in out["slip"].items() if v})
     print("執行：", {k: (v["excess"], v["t"]) for k, v in out["exec"].items() if v})
     print("抹平疑似未還原跳動：", out["clean"]["events"], "筆 →", out["clean"]["result"] and (out["clean"]["result"]["excess"], out["clean"]["result"]["t"]))
