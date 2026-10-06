@@ -11,6 +11,7 @@ data/market/prices.json ＋ data/fundamentals.json → 前端資料
 
 import json
 import os
+import sys
 from datetime import datetime, timezone
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -23,6 +24,7 @@ WEB = os.path.join(REPO, "twflow", "web", "data", "us")
 
 HIST_N = 30
 CAL_SYM = "SPY"         # 以 SPY 的交易日當美股日曆（指數在部分來源會缺）
+SUSPECT = 40            # 單日漲跌超過這個 % 多半是來源還沒還原分割／合併——先不顯示漲跌
 WITHHOLD = 0.30         # 非美國稅務居民的股利預扣稅率（台灣與美國無租稅協定）
 SURGE = 2.0             # 成交量是 20 日均量的幾倍算「爆量」
 
@@ -104,6 +106,11 @@ def main():
         if not rows:
             continue
         m, c, v = metrics(rows, cal)
+        # 單檔異常（例：ETHA 某日 +200%，來源未還原分割）不該擋住整天的更新：
+        # 只拿掉這檔的漲跌類欄位，標記待確認；板塊、排行、漲跌家數自然不會算到它
+        if m.get("chg_1d") is not None and abs(m["chg_1d"]) > SUSPECT:
+            print(f"⚠️  {sym} 單日 {m['chg_1d']}%，疑似來源未還原分割，先不顯示漲跌", file=sys.stderr)
+            m = {"price": m["price"], "suspect": m["chg_1d"]}
         d = {"name": it["name"], "type": it["type"], "sector": it.get("sector"), **m}
         f = fund.get(sym)
         if f:

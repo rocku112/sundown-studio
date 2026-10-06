@@ -418,6 +418,77 @@ a.btn{text-decoration:none;color:inherit;display:inline-block}
   .search input,.search input:focus{width:112px;padding-left:28px;background-position:9px 50%}
   .sresult{position:fixed;top:50px;left:8px;right:8px;width:auto}
 }
+/* ── 主頁 ───────────────────────────────────────────── */
+.hero{position:relative;overflow:hidden;padding:22px 20px}
+.hero::after{content:"";position:absolute;right:-60px;top:-60px;width:220px;height:220px;border-radius:50%;
+  background:radial-gradient(circle,rgba(228,177,37,.22),transparent 70%);pointer-events:none}
+.hero h2{font-size:22px;font-weight:700;line-height:1.35;margin:6px 0 4px}
+.hero .sub{color:var(--s9);font-size:13.5px;line-height:1.7}
+.hmk{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 4px}
+.hmk>div{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px 13px;min-width:120px}
+.hmk small{display:block;color:var(--s8);font-size:11.5px}
+.hmk b{font-size:18px}
+.mascot{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font-size:24px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--gold),#E0603A 60%,#B83A5E);box-shadow:0 4px 16px rgba(228,177,37,.35)}
+.mascot.wave{animation:wave 2.4s ease-in-out infinite}
+@keyframes wave{0%,60%,100%{transform:rotate(0)}10%,30%{transform:rotate(-10deg)}20%,40%{transform:rotate(10deg)}}
+.htiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:12px}
+@media (max-width:720px){.htiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.htile{text-align:left;background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--line);
+  border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:4px;min-height:104px;
+  transition:transform .18s,border-color .18s,box-shadow .18s;box-shadow:var(--shadow)}
+.htile:hover{transform:translateY(-3px);border-color:var(--gold)}
+.htile em{font-style:normal;font-size:20px;width:36px;height:36px;border-radius:11px;display:grid;place-items:center;
+  background:color-mix(in srgb,var(--gold) 16%,transparent);color:var(--gold);margin-bottom:4px}
+.htile b{font-size:14.5px}
+.htile small{color:var(--s9);font-size:12px;line-height:1.5}
+.quest{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--line);width:100%;text-align:left}
+.quest:first-of-type{border-top:0}
+.quest i{width:26px;height:26px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;
+  font-style:normal;font-size:13px;flex-shrink:0;color:transparent;transition:all .25s}
+.quest.done i{background:var(--down);border-color:var(--down);color:#fff}
+.quest span{flex:1;font-size:14px}.quest small{display:block;color:var(--s8);font-size:12px}
+.quest .go{color:var(--gold);font-size:13px;white-space:nowrap}
+.qbar{height:8px;border-radius:4px;background:var(--panel);overflow:hidden;margin:4px 0 10px}
+.qbar div{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--gold),#E0603A);transition:width .6s cubic-bezier(.2,.7,.2,1)}
+
+/* ── 互動導覽 ───────────────────────────────────────── */
+.tblk{position:fixed;z-index:200;background:transparent}
+.thole{position:fixed;z-index:201;border-radius:12px;pointer-events:none;
+  box-shadow:0 0 0 9999px rgba(4,8,7,.66);transition:all .38s cubic-bezier(.2,.7,.2,1)}
+.thole::after{content:"";position:absolute;inset:-4px;border-radius:15px;border:2px solid var(--gold);
+  animation:tpulse 1.6s ease-out infinite}
+.thole.none{box-shadow:0 0 0 9999px rgba(4,8,7,.72)}
+.thole.none::after{display:none}
+@keyframes tpulse{0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.08)}}
+.ttip{position:fixed;z-index:203;width:340px;max-width:calc(100vw - 24px);background:var(--panel);
+  border:1px solid var(--line);border-radius:18px;padding:16px 16px 12px;box-shadow:0 18px 50px rgba(0,0,0,.45);
+  animation:tpop .32s cubic-bezier(.2,.9,.3,1.25);transition:top .38s cubic-bezier(.2,.7,.2,1),left .38s cubic-bezier(.2,.7,.2,1)}
+@keyframes tpop{from{opacity:0;transform:scale(.9) translateY(8px)}to{opacity:1;transform:none}}
+.ttip .th{display:flex;gap:11px;align-items:flex-start}
+.ttip .mascot{width:38px;height:38px;font-size:20px;border-radius:12px}
+.ttip h4{font-size:15.5px;line-height:1.4;margin:1px 0 4px}
+.ttip p{font-size:13.5px;line-height:1.75;color:var(--s9)}
+.ttip p b{color:var(--s10)}
+.ttip .tnav{display:flex;align-items:center;gap:8px;margin-top:12px}
+.ttip .tdots{flex:1;height:5px;border-radius:3px;background:var(--card2);overflow:hidden}
+.ttip .tdots div{height:100%;background:linear-gradient(90deg,var(--gold),#E0603A);border-radius:3px;transition:width .4s}
+.ttip .tcnt{font-size:11.5px;color:var(--s8);font-family:var(--num);min-width:34px;text-align:right}
+.ttip .btn{padding:6px 13px;font-size:13px}
+.ttip .tskip{position:absolute;top:10px;right:12px;font-size:12px;color:var(--s8)}
+.ttip .tskip:hover{color:var(--s10)}
+.ttip .tact{margin-top:10px;font-size:12.5px;color:var(--gold);display:flex;align-items:center;gap:6px}
+.ttip .tact::before{content:"👆";animation:tbob 1s ease-in-out infinite}
+@keyframes tbob{50%{transform:translateY(-3px)}}
+.ttip.shake{animation:tshake .35s}
+@keyframes tshake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.ttip.center{left:50%!important;top:50%!important;transform:translate(-50%,-50%);animation:tpopc .35s cubic-bezier(.2,.9,.3,1.25)}
+@keyframes tpopc{from{opacity:0;transform:translate(-50%,-46%) scale(.92)}to{opacity:1;transform:translate(-50%,-50%)}}
+.ttip .tlist{display:grid;gap:7px;margin-top:10px}
+.confetti{position:fixed;top:-12px;width:9px;height:14px;z-index:202;pointer-events:none;border-radius:2px;
+  animation:cfall linear forwards}
+@keyframes cfall{to{transform:translate(var(--dx),105vh) rotate(var(--r));opacity:.9}}
+@media (prefers-reduced-motion:reduce){.thole,.ttip{transition:none}.thole::after,.mascot.wave,.ttip .tact::before{animation:none}.confetti{display:none}}
 </style>
 </head>
 <body>
@@ -438,7 +509,8 @@ a.btn{text-decoration:none;color:inherit;display:inline-block}
 </header>
 
 <div id="main">
-  <section class="view on" id="v-chart">
+  <section class="view on" id="v-home"><div class="wrap" id="home"><div class="empty">載入中…</div></div></section>
+  <section class="view" id="v-chart">
     <svg id="chart"></svg>
     <div class="stats" id="stats"></div>
     <div class="hint">右＝近5日買超　上＝力道加速　圈大小＝近20日金額　｜　滾輪縮放・拖曳移動</div>
@@ -530,6 +602,8 @@ Promise.all([
   buildStats(); buildRank(); buildToday();
   setMarket(MARKET);
   helpHint();
+  // 分享連結加 #tour 直接開始導覽
+  if(location.hash==='#tour') setTimeout(()=>startTour('full'),400);
   evReady().then(()=>{updateBadge(); if(watchTab==='feed') buildWatch();});
 });
 // 走勢圖資料 1.3MB，開個股頁才需要——延後載入，不擋首屏
@@ -1518,7 +1592,7 @@ function openUS(sym){
   const key='US:'+sym, isIdx=d.type==='index';
   $('kp-name').innerHTML=`${esc(d.name)} <span style="color:var(--s8);font-size:13px">${esc(sym)}</span><span class="badge">美股</span>`;
   $('kp-sub').innerHTML=`<b style="font-size:17px;color:var(--s10)">${isIdx?d.price:usd(d.price)}</b>　`+
-    `<b style="color:${col(d.chg_1d)}">${pct(d.chg_1d)}</b>　<span style="color:var(--s8)">${esc(d.sector||'')}${d.stale?'　最後資料 '+d.stale:''}　${USD.date}</span>`;
+    `<b style="color:${col(d.chg_1d)}">${pct(d.chg_1d)}</b>　<span style="color:var(--s8)">${esc(d.sector||'')}${d.stale?'　最後資料 '+d.stale:''}${d.suspect!=null?'　來源資料異常，漲跌待確認':''}　${USD.date}</span>`;
   const kv=(k,v,c)=>`<div class="kv"><span>${k}</span><b${c!=null?` style="color:${col(c)}"`:''}>${v}</b></div>`;
   const q=d.quarters||[];
   const adr=CROSS&&CROSS.adr.find(a=>a.us===sym);
@@ -2389,6 +2463,9 @@ function buildHelp(){
       <p style="font-size:14px;line-height:1.85">這個工具做三件事：<b>彙整</b>台美股官方公開資料、<b>檢驗</b>常見投資說法到底有沒有用、
         幫你<b>追蹤</b>自己的持股與自選股。下面依「你想做什麼」一步一步帶你，每一步都有按鈕直接帶你過去。</p>
       <div class="chips" style="margin-top:10px">${HELP_TASKS.map(x=>`<button class="chip" data-hjump="${x.id}">${x.t} →</button>`).join('')}</div></div>
+    <div class="card"><h3>互動導覽・跟著小潮做一遍</h3>
+      <p class="note" style="margin-bottom:10px">聚光燈會圈出畫面上真的按鈕，有些步驟要你自己動手點。完成會記在主頁的「學習任務」。</p>
+      <div class="htiles" style="margin:0">${Object.entries(TOURS).map(([k,x])=>`<button class="htile" data-htour="${k}"><em>${TDONE[k]?'✓':'▶'}</em><b>${x.t}</b><small>${x.d}・約 ${x.min} 分鐘</small></button>`).join('')}</div></div>
     <div class="card"><h3>三分鐘上手</h3>
       <ol style="line-height:1.9;padding-left:20px;font-size:14px">
         <li>左上角切換<b>台股／美股</b>；上方（手機在下方）切換頁面。</li>
@@ -2417,6 +2494,7 @@ function buildHelp(){
   el.onclick=e=>{
     const b=e.target.closest('button,a'); if(!b) return;
     const d=b.dataset;
+    if(d.htour) return startTour(d.htour);
     if(d.hjump){ e.preventDefault(); const x=$('hp-'+d.hjump); if(x){ x.open=true; x.scrollIntoView({behavior:'smooth',block:'start'}); } return; }
     if('hq' in d){ scrollTo(0,0); $('q').focus(); toast('輸入代號或名稱，例如 2330'); return; }
     if(d.hgo){ const v=d.hgo, m=TABS.tw.some(x=>x[0]===v)?(TABS.us.some(x=>x[0]===v)?MARKET:'tw'):'us';
@@ -2431,28 +2509,270 @@ function buildHelp(){
 function helpHint(){
   let seen=false;
   try{ seen=!!localStorage.getItem('twflow_help_seen'); }catch(_){ return; }
-  if(seen) return;
+  if(seen||location.hash==='#tour') return;
   const b=document.createElement('div');
   b.id='helphint';
   b.style.cssText='position:fixed;left:12px;right:12px;bottom:calc(var(--nav,0px) + 14px);z-index:60;max-width:460px;margin:0 auto;'+
     'background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;box-shadow:0 8px 24px rgba(0,0,0,.18);font-size:13.5px;line-height:1.6';
-  b.innerHTML='第一次使用？花三分鐘看怎麼用這個工具分析你想了解的股票。'+
-    '<div style="display:flex;gap:8px;margin-top:8px"><button class="btn pri" data-hh="go">看使用教學</button><button class="btn" data-hh="no">之後再說</button></div>';
+  b.innerHTML='<div style="display:flex;gap:10px;align-items:center"><div class="mascot wave" style="width:36px;height:36px;font-size:19px">🌊</div>'+
+    '<div>第一次來？我是小潮，花 3 分鐘帶你把整套功能走一遍，每一步都是真的畫面。</div></div>'+
+    '<div style="display:flex;gap:8px;margin-top:10px"><button class="btn pri" data-hh="go">▶ 開始導覽</button><button class="btn" data-hh="no">之後再說</button></div>';
   document.body.appendChild(b);
   b.onclick=e=>{ const x=e.target.closest('[data-hh]'); if(!x) return;
     try{ localStorage.setItem('twflow_help_seen','1'); }catch(_){}
-    b.remove(); if(x.dataset.hh==='go'){ setView('help'); scrollTo(0,0); } };
+    b.remove(); if(x.dataset.hh==='go') startTour('full'); };
+}
+
+/* ══ 主頁 ══════════════════════════════════════════════════════
+   每天打開先看這裡：今天的數字、常用入口、學習進度（互動導覽完成幾個）。 */
+const TKEY='twflow_tours';
+let TDONE={}; try{ TDONE=JSON.parse(localStorage.getItem(TKEY)||'{}')||{}; }catch(_){ TDONE={}; }
+const tourDone=k=>{ TDONE[k]=1; try{ localStorage.setItem(TKEY,JSON.stringify(TDONE)); }catch(_){} };
+function buildHome(){
+  const el=$('home'); if(!el) return;
+  const h=new Date(Date.now()+8*3600e3).getUTCHours();
+  const hi=h<5?'夜深了':h<11?'早安':h<14?'午安':h<18?'午後好':'晚安';
+  const g=USD&&USD.stock_data&&USD.stock_data['^GSPC'];
+  const top=D&&[...D.sectors].sort((a,b)=>(b.net_5d_yi||0)-(a.net_5d_yi||0))[0];
+  const nW=WATCH.length, nH=HOLD.length;
+  const ts=Object.keys(TOURS), nd=ts.filter(k=>TDONE[k]).length;
+  const tile=(go,e,t,s)=>`<button class="htile" data-hm="${go}"><em>${e}</em><b>${t}</b><small>${s}</small></button>`;
+  // 研究一句話：只陳述回測統計，不推薦個股
+  let res='';
+  if(!PF) pfReady().then(j=>{ if(j&&curView==='home') buildHome(); });
+  const pt=PF&&PF.tiers&&PF.tiers.find(x=>/151/.test(x.name)), r=pt&&pt.results&&pt.results.R;
+  if(r&&r.t!=null) res=`<div class="card"><h3>研究一句話</h3>
+    <p style="font-size:14px;line-height:1.85">十年官方資料、扣掉交易成本、經過多重比較校正後，
+      目前<b>只有一個做法</b>站得住：<b>中小型股（成交值第 151–400 名）＋營收創新高</b>，
+      回測年化 <b>${r.cagr}%</b>（同組平均 ${(r.cagr-r.excess).toFixed(1)}%），t 值 ${r.t}。其餘流傳的方法大多沒贏過大盤。</p>
+    <p class="note" style="margin-top:6px;font-size:12px">回測不是保證；下跌年照樣會跌。真正的考驗看「前瞻紀錄」——每月事前寫死、事後驗證。</p>
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-hm="swing">看完整研究</button>
+      <button class="btn" data-ht="research">導覽：怎麼看研究結論</button></div></div>`;
+  el.innerHTML=`
+    <div class="card hero">
+      <div style="display:flex;gap:12px;align-items:center"><div class="mascot wave">🌊</div>
+        <div><div class="rsub">${hi}，我是小潮</div><h2>今天的錢往哪裡流？</h2></div></div>
+      <div class="hmk">
+        <div><small>台股加權・${D?D.date.slice(5):'—'}</small><b style="color:${col(D&&D.market_chg_1d)}">${D?pct(D.market_chg_1d):'—'}</b></div>
+        <div><small>美股標普・${USD?USD.date.slice(5):'—'}</small><b style="color:${col(g&&g.chg_1d)}">${g?pct(g.chg_1d):'—'}</b></div>
+        ${top?`<div><small>近 5 日資金最多</small><b style="font-size:15px">${esc(top.name)}</b></div>`:''}
+      </div>
+      <p class="sub" style="margin-top:8px">彙整台美股官方公開資料、檢驗流傳的投資說法、追蹤你自己的持股。</p>
+      <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+        <button class="btn pri" data-ht="full">${TDONE.full?'重播 3 分鐘導覽':'▶ 開始 3 分鐘導覽'}</button>
+        <button class="btn" data-hm="q">🔍 查一檔股票</button></div></div>
+    <div class="htiles">
+      ${MARKET==='us'
+        ?tile('us-today','☀','昨晚美股','收盤重點、漲跌排行')+tile('us-sector','▦','美股板塊','哪些產業在漲')+tile('link','⇆','台美連動','美股走勢對台股的影響')
+        :tile('today','★','今日重點',top?`資金最多：${esc(top.name)}`:'一句話看懂今天')+tile('screen','⚲','選股','用條件篩出符合的股票')+tile('etf','◈','ETF 體檢','折溢價、配息、長期報酬')}
+      ${tile('swing','↗','研究結論','哪些說法有證據、哪些沒有')}
+      ${tile('hold','◉','我的持股',nH?`已記錄 ${nH} 檔`:'記錄成本、看損益與風險')}
+      ${tile('watch','☆','自選',nW?`追蹤 ${nW} 檔`:'按 ☆ 加入想追蹤的股票')}
+    </div>
+    ${res}
+    <div class="card"><h3>學習任務・${nd} / ${ts.length}</h3>
+      <div class="qbar"><div style="width:${nd/ts.length*100}%"></div></div>
+      ${ts.map(k=>`<button class="quest ${TDONE[k]?'done':''}" data-ht="${k}"><i>✓</i>
+        <span>${TOURS[k].t}<small>${TOURS[k].d}・約 ${TOURS[k].min} 分鐘</small></span><b class="go">${TDONE[k]?'再看一次':'開始'} →</b></button>`).join('')}
+      ${nd===ts.length?'<p class="note" style="margin-top:8px">全部完成！你已經會用這個工具分析任何想了解的標的了 🎉</p>':''}</div>
+    <div class="card" style="color:var(--s8);font-size:11.5px;line-height:1.7">本服務僅就公開資訊進行彙整與統計呈現，非證券投資顧問事業，不對特定有價證券提供推介建議，亦不構成任何投資建議。</div>`;
+  el.onclick=e=>{
+    const b=e.target.closest('[data-hm],[data-ht]'); if(!b) return;
+    if(b.dataset.ht) return startTour(b.dataset.ht);
+    const v=b.dataset.hm;
+    if(v==='q'){ $('q').focus(); toast('輸入代號或名稱，例如 2330'); return; }
+    if(!TABS[MARKET].some(x=>x[0]===v)) setMarket(v.startsWith('us-')?'us':'tw');
+    setView(v);
+  };
+}
+
+/* ══ 互動導覽 ══════════════════════════════════════════════════
+   聚光燈圈出畫面上真的元素，泡泡說明；能操作的步驟讓使用者自己點（點到就自動下一步）。
+   每步：{t 標題, d 說明, el 目標（選擇器或函式）, pre 進入前的動作, wait 完成條件, auto 按「下一步」時代為完成}
+   找不到目標（例如資料還沒產生）就自動略過該步，不卡住。 */
+const vis=x=>x&&x.getClientRects().length&&x.getBoundingClientRect().width>0;
+const pick=s=>{ for(const q of s.split('|')){ const x=[...document.querySelectorAll(q)].find(vis); if(x) return x; } return null; };
+const cardOf=(root,txt)=>()=>[...document.querySelectorAll(`#${root} .card`)].find(c=>vis(c)&&(c.querySelector('h3')?.textContent||'').includes(txt));
+// 個股頁的一個區段＝標題＋底下幾列，聚光燈框住整段，泡泡才不會蓋住正在講的數字
+const stitleOf=txt=>()=>{
+  const h=[...document.querySelectorAll('#stk-panel .stitle')].find(x=>vis(x)&&x.textContent.includes(txt)); if(!h) return null;
+  const g=[h]; for(let x=h.nextElementSibling;x&&!x.classList.contains('stitle')&&g.length<6;x=x.nextElementSibling) if(vis(x)) g.push(x);
+  return {getBoundingClientRect(){ const rs=g.map(x=>x.getBoundingClientRect());
+      const l=Math.min(...rs.map(r=>r.left)),t=Math.min(...rs.map(r=>r.top)),r=Math.max(...rs.map(r=>r.right)),b=Math.max(...rs.map(r=>r.bottom));
+      return {left:l,top:t,right:r,bottom:b,width:r-l,height:b-t}; },
+    scrollIntoView(){ h.scrollIntoView({block:'start',behavior:'smooth'}); }};
+};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const goTW=v=>()=>{ hideAll(); if(MARKET!=='tw') setMarket('tw'); setView(v); };
+const goUS=v=>()=>{ hideAll(); if(MARKET!=='us') setMarket('us'); setView(v); };
+const ensureStock=c=>()=>{ if(MARKET!=='tw') setMarket('tw'); if(!$('stk-panel').classList.contains('on')||!$('kp-name').textContent.includes(c)) openStock(c); };
+async function typeDemo(s){
+  const q=$('q'); hideAll(); q.value='';
+  // 手機上 focus 會跳出鍵盤擋住畫面，只在桌機 focus
+  if(!matchMedia('(pointer:coarse)').matches) q.focus();
+  if(!DIR.tw) await Promise.race([dirReady(),sleep(1500)]);
+  for(const ch of s){ q.value+=ch; q.oninput(); await sleep(170); }
+}
+const STEP_SEARCH=[
+  {t:'搜尋任何股票',d:'右上角的搜尋框可以找<b>全部上市櫃證券與美股</b>。小潮幫你輸入「2330」……',el:'#q',pre:()=>typeDemo('2330')},
+  {t:'換你點一下！',d:'點搜尋結果裡的<b>台積電</b>，打開它的個股頁。',el:'#qr',act:'點一下「2330 台積電」',
+    pre:()=>{ if($('q').value!=='2330') return typeDemo('2330'); $('qr').classList.add('on'); },
+    wait:()=>$('stk-panel').classList.contains('on'),auto:()=>{ openStock('2330'); $('qr').classList.remove('on'); $('q').value=''; },pad:4},
+  {t:'個股頁',d:'最上面是<b>價格與當日漲跌</b>，下面是走勢圖。往下捲還有更多。',el:'#stk-panel .sh',pre:ensureStock('2330')},
+  {t:'法人在買還是賣？',d:'外資、投信近 1／5／20 日的<b>買賣超金額</b>。連續大買不等於會漲，但代表大錢的動向。',el:stitleOf('法人買賣超'),pre:ensureStock('2330')},
+  {t:'這檔自己的歷史紀錄',d:'過去每次出現某個訊號後 5 天的<b>實際表現</b>。次數少於 10 次就別當真——運氣成分太大。',el:stitleOf('短線指標'),pre:ensureStock('2330')},
+  {t:'加入自選',d:'按 <b>☆</b> 就能加入自選，之後在「自選」頁集中追蹤，有異常會提醒你。',el:'#kp-star',pre:ensureStock('2330')},
+];
+const TOURS={
+  full:{t:'3 分鐘走完整套',d:'主頁 → 查股票 → 選股 → ETF → 研究 → 持股',min:3,steps:[
+    {t:'嗨，我是小潮 👋',d:'接下來 3 分鐘，我帶你把這個工具<b>從頭到尾用一遍</b>。每一步都是真的畫面，有些步驟要你自己動手點。<br>隨時可以按「跳過」離開。',pre:goTW('home')},
+    {t:'先選市場',d:'這裡切換<b>台股／美股</b>。清晨美股剛收盤時會自動切到美股。',el:'#mkt'},
+    {t:'所有頁面都在這',d:'桌機在上方、手機在<b>下方</b>。看不到的頁面在「更多」裡。',el:'#tabs|#nav'},
+    {t:'主頁',d:'每天打開先看這裡：今天大盤、<b>資金最多的板塊</b>、常用入口、你的學習進度。',el:'#home .htiles',pre:goTW('home')},
+    {t:'今日重點',d:'盤後一句話看懂今天：錢流進哪、流出哪、誰爆量。可以一鍵<b>分享到 LINE</b>。',el:cardOf('today','重點'),pre:goTW('today')},
+    ...STEP_SEARCH,
+    {t:'用條件選股',d:'點一個<b>熱門策略</b>一鍵套用，或自己組條件（本益比、殖利率、營收年增……）。旁邊會標示這個條件<b>有沒有證據</b>。',el:cardOf('screen','熱門策略'),pre:goTW('screen')},
+    {t:'ETF 不只看折溢價',d:'配息、<b>含息長期報酬</b>、受益人數、最大回撤都在這。點任一檔看「賺多少 vs 發多少」。',el:cardOf('etf','ETF'),pre:goTW('etf')},
+    {t:'研究結論',d:'每個流傳的說法，我們都用<b>十年官方資料、扣成本</b>實際檢驗過。大部分其實沒用——這本身就很值錢。',el:()=>cardOf('swing','無腦賺')()||cardOf('swing','波段')(),pre:goTW('swing')},
+    {t:'記錄你的持股',d:'輸入代號、股數、成本，就能看損益、集中度、和 0050 比。<b>資料只存在你的裝置</b>，不會上傳。',el:()=>$('h-code')?.closest('.card'),pre:goTW('hold')},
+    {t:'隨時回來',d:'按右上角 <b>?</b> 打開教學，隨時重播任何一段導覽。',el:'#helpbtn',pre:goTW('home')},
+    {t:'完成！🎉',d:'你已經走完整套了。接下來可以挑一個主題深入：',fin:1,pre:goTW('home')},
+  ]},
+  stock:{t:'分析一檔個股',d:'搜尋、法人、本檔歷史、加自選',min:1,steps:[
+    {t:'來分析一檔股票',d:'我們以<b>台積電</b>為例，你之後可以換成任何代號。',pre:goTW('home')},
+    ...STEP_SEARCH,
+    {t:'跟同類股比一比',d:'到「選股」用條件篩，看它的本益比、殖利率、營收年增在全市場的位置。',el:cardOf('screen','條件'),pre:goTW('screen')},
+    {t:'完成！🎉',d:'任何股票都照這個順序看：<b>價格 → 法人 → 本檔歷史 → 同類比較</b>。',fin:1,pre:goTW('home')},
+  ]},
+  etf:{t:'挑一檔 ETF',d:'總覽、配息 vs 總報酬、受益人、風險',min:1,steps:[
+    {t:'ETF 體檢',d:'這頁列出全部台股 ETF：<b>折溢價、殖利率、長期報酬</b>，可以排序。',el:cardOf('etf','ETF'),pre:goTW('etf')},
+    {t:'換你點一檔',d:'點清單裡任何一檔 ETF（例如 0050）打開它的體檢表。',el:()=>pick('#etf [data-etf]'),act:'點一檔 ETF',
+      wait:()=>$('stk-panel').classList.contains('on'),auto:()=>openETF('0050')},
+    {t:'賺多少 vs 發多少',d:'<b>配息高不等於賺得多</b>——有的 ETF 是把本金拿來發。這裡比較含息總報酬和價格報酬。',el:stitleOf('賺多少'),pre:()=>{ if(!$('stk-panel').classList.contains('on')) openETF('0050'); }},
+    {t:'風險',d:'波動、近 3 年<b>最大回撤</b>：最慘時會跌多少，買之前先想清楚撐不撐得住。',el:stitleOf('風險')},
+    {t:'受益人',d:'持有人數與增減。<b>散戶暴增</b>常出現在熱門 ETF 的高點附近。',el:stitleOf('受益人')},
+    {t:'完成！🎉',d:'挑 ETF 三件事：<b>總報酬、最大回撤、費用與折溢價</b>。',fin:1,pre:goTW('home')},
+  ]},
+  research:{t:'看懂研究結論',d:'證據標籤、組合實驗、前瞻紀錄',min:2,steps:[
+    {t:'為什麼沒有「無腦賺」？',d:'先看這張：我們怎麼檢驗、為什麼大部分方法過不了關。',el:cardOf('swing','無腦賺'),pre:goTW('swing')},
+    {t:'短線指標有沒有用？',d:'每個指標都標上<b>證據等級</b>。「有證據」要同時過：扣成本後仍贏、前後兩段都成立、校正多重比較。',el:cardOf('swing','短線指標'),pre:goTW('swing')},
+    {t:'中期組合實驗',d:'每月調整一次、持有一個月，看<b>年報酬 20–40%</b> 做不做得到；可以切換規模、股價分組。',el:cardOf('swing','中期組合'),pre:goTW('swing')},
+    {t:'前瞻紀錄',d:'回測再漂亮也可能是巧合。這裡<b>每月事前寫死</b>選股、事後對答案，不能改。',el:cardOf('swing','前瞻紀錄'),pre:goTW('swing')},
+    {t:'定期定額 vs 調節',d:'「高檔調節、低檔加碼」聽起來很聰明，十年滾動回測卻<b>大多輸給單純定期定額</b>。',el:cardOf('swing','定期定額'),pre:goTW('swing')},
+    {t:'完成！🎉',d:'記住：<b>沒有證據的方法，再多人講都只是故事</b>。',fin:1,pre:goTW('home')},
+  ]},
+  hold:{t:'記錄持股做健檢',d:'輸入持股、看損益與集中度',min:1,steps:[
+    {t:'輸入你的持股',d:'代號、股數、平均成本，買進日期選填（用來和 0050 比）。按「加入」就好。',el:()=>$('h-code')?.closest('.card'),pre:goTW('hold')},
+    {t:'健檢報告',d:'加了持股後這裡會顯示：<b>總損益、單一持股太集中、和大盤比</b>。',el:cardOf('hold','健檢')},
+    {t:'備份',d:'持股只存在這台裝置。換手機前記得<b>匯出備份</b>，到新裝置再匯入。',el:'#h-exp'},
+    {t:'完成！🎉',d:'有買賣就回來更新，健檢會自動重算。',fin:1,pre:goTW('home')},
+  ]},
+  us:{t:'美股與台美連動',d:'晨報、板塊、美股對台股的影響',min:1,steps:[
+    {t:'切到美股',d:'美股收盤是台灣清晨，這時打開會<b>自動切到美股</b>。',el:'#mkt',pre:goUS('us-today')},
+    {t:'昨晚美股重點',d:'指數、漲跌最多的股票與板塊，一頁看完。',el:cardOf('us-today','美股'),pre:goUS('us-today')},
+    {t:'台美連動',d:'美股相關族群昨晚的表現，對照<b>台股今天</b>的實際結果。',el:cardOf('link','台美'),pre:goUS('link')},
+    {t:'完成！🎉',d:'美股代號一樣能搜尋，例如 AAPL、NVDA。',fin:1,pre:goTW('home')},
+  ]},
+};
+
+let TR=null;  // {k, i, steps, els}
+function tourEls(){
+  const mk=c=>{ const x=document.createElement('div'); x.className=c; document.body.appendChild(x); return x; };
+  return {b:[mk('tblk'),mk('tblk'),mk('tblk'),mk('tblk'),mk('tblk')],h:mk('thole'),t:mk('ttip')};
+}
+function startTour(k){
+  if(!D||!TOURS[k]) return;
+  endTour(true);
+  TR={k,i:0,steps:TOURS[k].steps,els:tourEls(),tok:0};
+  // 不讓點擊冒泡到 document：那裡會把搜尋結果收起來
+  TR.els.t.onclick=e=>{ e.stopPropagation(); const b=e.target.closest('[data-tn]'); if(!b) return; const a=b.dataset.tn;
+    if(a==='next') tourNext(); else if(a==='prev') tourGo(TR.i-1); else if(a==='end') endTour(); else startTour(a); };
+  TR.els.b.forEach(x=>x.onclick=e=>{ e.stopPropagation(); const t=TR.els.t; t.classList.remove('shake'); void t.offsetWidth; t.classList.add('shake'); });
+  tourGo(0);
+}
+function endTour(silent){
+  if(!TR) return;
+  clearInterval(TR.poll); TR.els.b.forEach(x=>x.remove()); TR.els.h.remove(); TR.els.t.remove();
+  TR=null;
+  if(!silent&&curView==='home') buildHome();
+}
+async function tourNext(){
+  const s=TR.steps[TR.i];
+  if(s.auto&&!(s.wait&&s.wait())) s.auto();
+  tourGo(TR.i+1);
+}
+async function tourGo(i){
+  if(!TR) return;
+  if(i<0){ i=0; TR._last=-1; }
+  if(i>=TR.steps.length) return endTour();
+  const tok=++TR.tok; clearInterval(TR.poll);
+  TR.i=i; const s=TR.steps[i];
+  if(s.pre) await s.pre();
+  let el=null;
+  if(s.el){
+    const get=typeof s.el==='function'?s.el:()=>pick(s.el);
+    for(let n=0;n<25&&!(el=get());n++) await sleep(120);   // 等資料載入、面板滑出
+    if(tok!==TR?.tok) return;
+    if(!el||(el.nodeType&&!vis(el))) return tourGo(i+(i<(TR._last??-1)?-1:1));  // 找不到就略過（往原本的方向）
+    el.scrollIntoView({block:'center',behavior:'smooth'}); await sleep(380);
+  }
+  if(tok!==TR?.tok) return;
+  TR._last=i; TR.el=el;
+  if(s.fin) { tourDone(TR.k); confetti(); }
+  const n=TR.steps.length, t=TR.els.t;
+  const others=Object.keys(TOURS).filter(k=>k!==TR.k&&k!=='full');
+  t.className='ttip'+(el?'':' center');
+  t.innerHTML=`<button class="tskip" data-tn="end">${s.fin?'關閉':'跳過'} ✕</button>
+    <div class="th"><div class="mascot">🌊</div><div style="flex:1;padding-right:34px"><h4>${s.t}</h4><p>${s.d}</p>
+    ${s.act?`<div class="tact">${s.act}</div>`:''}</div></div>
+    ${s.fin?`<div class="tlist">${others.filter(k=>!TDONE[k]).slice(0,3).map(k=>`<button class="btn" data-tn="${k}">${TOURS[k].t} →</button>`).join('')}
+      <button class="btn pri" data-tn="end">好，我自己逛逛</button></div>`
+     :`<div class="tnav"><div class="tdots"><div style="width:${(i+1)/n*100}%"></div></div><span class="tcnt">${i+1} / ${n}</span>
+      ${i>0?'<button class="btn" data-tn="prev">上一步</button>':''}<button class="btn pri" data-tn="next">${i===n-2?'完成':s.act?'幫我點':'下一步'}</button></div>`}`;
+  tourPlace();
+  if(s.wait) TR.poll=setInterval(()=>{ if(TR&&s.wait()){ clearInterval(TR.poll); setTimeout(()=>tourGo(TR.i+1),350); } },200);
+}
+function tourPlace(){
+  if(!TR) return;
+  const {b,h,t}=TR.els, s=TR.steps[TR.i], el=TR.el, W=innerWidth, Hh=innerHeight;
+  if(!el){ h.className='thole none'; Object.assign(h.style,{left:W/2+'px',top:Hh/2+'px',width:0,height:0});
+    b.forEach(x=>Object.assign(x.style,{left:0,top:0,width:'100vw',height:'100vh'})); b.forEach((x,j)=>x.style.display=j?'none':'block'); return; }
+  const r=el.getBoundingClientRect(), p=s.pad??6;
+  const L=Math.max(4,r.left-p), T=Math.max(4,r.top-p), R=Math.min(W-4,r.right+p), B=Math.min(Hh-4,r.bottom+p);
+  h.className='thole'; Object.assign(h.style,{left:L+'px',top:T+'px',width:(R-L)+'px',height:(B-T)+'px'});
+  // 四塊擋住聚光燈以外的地方；不需要操作的步驟連聚光燈也擋住
+  const set=(x,l,tp,w,hh)=>Object.assign(x.style,{display:'block',left:l+'px',top:tp+'px',width:Math.max(0,w)+'px',height:Math.max(0,hh)+'px'});
+  set(b[0],0,0,W,T); set(b[1],0,B,W,Hh-B); set(b[2],0,T,L,B-T); set(b[3],R,T,W-R,B-T);
+  if(s.wait) b[4].style.display='none'; else set(b[4],L,T,R-L,B-T);
+  // 泡泡：下方放得下就放下方，否則上方；手機貼齊螢幕寬
+  const tw=Math.min(340,W-24), th=t.offsetHeight||180, gap=14;
+  let top=B+gap; if(top+th>Hh-8) top=T-gap-th; if(top<8) top=Math.min(Hh-th-8,Math.max(8,B+gap));
+  let left=Math.min(Math.max(12,(L+R)/2-tw/2),W-tw-12);
+  Object.assign(t.style,{top:top+'px',left:left+'px'});
+}
+addEventListener('resize',()=>tourPlace());
+document.addEventListener('scroll',()=>{ if(TR&&TR.el){ cancelAnimationFrame(TR.raf); TR.raf=requestAnimationFrame(tourPlace); } },true);
+addEventListener('keydown',e=>{ if(!TR) return;
+  if(e.key==='Escape'){ e.stopPropagation(); endTour(); }
+  else if(e.key==='ArrowRight'&&e.target.tagName!=='INPUT') tourNext();
+  else if(e.key==='ArrowLeft'&&e.target.tagName!=='INPUT') tourGo(TR.i-1); },true);
+function confetti(){
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const cs=['#E4B125','#E0603A','#22A87E','#B83A5E','#5B8DEF'];
+  for(let i=0;i<70;i++){ const c=document.createElement('i'); c.className='confetti';
+    c.style.cssText=`left:${Math.random()*100}vw;background:${cs[i%cs.length]};--dx:${(Math.random()-.5)*200}px;--r:${Math.random()*900-450}deg;animation-duration:${1.6+Math.random()*1.6}s;animation-delay:${Math.random()*.4}s`;
+    document.body.appendChild(c); setTimeout(()=>c.remove(),3800); }
 }
 
 /* ══ 視圖切換 ══════════════════════════════════════════════════ */
 // 「台美」「持股」「自選」兩個市場共用，其餘各市場自己一套
 const TABS={
-  tw:[['today','★','今日'],['screen','⚲','選股'],['chart','◎','泡泡圖'],['etf','◈','ETF'],['swing','↗','波段'],
+  tw:[['home','⌂','主頁'],['today','★','今日'],['screen','⚲','選股'],['etf','◈','ETF'],['chart','◎','泡泡圖'],['swing','↗','波段'],
       ['hold','◉','持股'],['rank','☰','排行榜'],['chain','⇄','供應鏈'],['link','⇆','台美'],['watch','☆','自選'],['help','?','教學']],
-  us:[['us-today','☀','晨報'],['us-sector','▦','板塊'],['us-rank','☰','排行'],
+  us:[['home','⌂','主頁'],['us-today','☀','晨報'],['us-sector','▦','板塊'],['us-rank','☰','排行'],
       ['link','⇆','台美'],['hold','◉','持股'],['watch','☆','自選'],['help','?','教學']],
 };
-let curView='today';
+let curView='home';
 function setView(v){
   curView=v;
   document.querySelectorAll('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));
@@ -2469,6 +2789,7 @@ function setView(v){
   if(v==='hold') buildHold();
   if(v==='screen') buildScreen();
   if(v==='help') buildHelp();
+  if(v==='home') buildHome();
   // 手機導航：目前頁在「更多」裡時，讓「更多」亮起來
   const nb=$('nav').querySelector('[data-more]'); if(nb) nb.classList.toggle('on',!$('nav').querySelector(`[data-v="${v}"]`));
   $('more').classList.remove('on');

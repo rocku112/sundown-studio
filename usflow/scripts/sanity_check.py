@@ -48,6 +48,13 @@ def main():
         if not d.get("price") or d["price"] <= 0:
             errs.append(f"{s} 價格 {d.get('price')}")
 
+    # build_us 已把單日異常的個別代號隔離（不顯示漲跌）；太多檔同時異常代表來源整體壞了
+    sus = sorted(s for s, d in sd.items() if d.get("suspect") is not None)
+    if len(sus) > 5:
+        errs.append(f"{len(sus)} 檔單日漲跌異常，來源可能整體出錯：{sus[:10]}")
+    elif sus:
+        warns.append(f"單日漲跌異常、暫不顯示：{[(s, sd[s]['suspect']) for s in sus]}")
+
     fx = sd.get("TWD=X", {}).get("price")
     if not fx or not (20 < fx < 45):
         errs.append(f"美元兌台幣 {fx} 不合理（ADR 溢價會全錯）")
