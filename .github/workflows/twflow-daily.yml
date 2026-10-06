@@ -98,5 +98,11 @@ jobs:
             echo "沒有變動（非交易日或來源尚未更新）"
           else
             git commit -m "data: $(date -u -d '+8 hours' +%Y-%m-%d) 盤後更新"
-            git push
+            # 執行期間 main 可能有新提交（合併 PR、台指期清晨更新）：rebase 後重推；同檔衝突以本次新資料為準
+            for i in 1 2 3; do
+              git push && exit 0
+              git pull --rebase -X theirs origin main || { git rebase --abort; exit 1; }
+              sleep $((i * 10))
+            done
+            exit 1
           fi
