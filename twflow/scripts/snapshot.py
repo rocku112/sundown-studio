@@ -49,8 +49,10 @@ RULES = [
     (r"fetch\('data/forward\.json'\)\.then\(r=>r\.json\(\)\)", "forward.json"),
     (r"fetch\('data/stress\.json'\)\.then\(r=>r\.json\(\)\)", "stress.json"),
     (r"fetch\('data/horizon\.json'\)\.then\(r=>r\.json\(\)\)", "horizon.json"),
+    (r"fetch\('data/news\.json'\)\.then\(r=>r\.json\(\)\)", "news.json"),
+    (r"fetch\('data/literature\.json'\)\.then\(r=>r\.json\(\)\)", "literature.json"),
 ]
-OPTIONAL = {"us/latest.json", "cross.json", "us/history.json", "backtest.json", "etf.json", "swing.json", "bench.json", "odds.json", "evidence.json", "evidence_stocks.json", "screen.json", "taifex.json", "rules_dca.json", "etf_profile.json", "portfolio.json", "forward.json", "stress.json", "horizon.json"}
+OPTIONAL = {"us/latest.json", "cross.json", "us/history.json", "backtest.json", "etf.json", "swing.json", "bench.json", "odds.json", "evidence.json", "evidence_stocks.json", "screen.json", "taifex.json", "rules_dca.json", "etf_profile.json", "portfolio.json", "forward.json", "stress.json", "horizon.json", "news.json", "literature.json"}
 
 
 def inline(payload):
@@ -67,7 +69,7 @@ def main():
     covered = {"data/latest.json?", "data/search.json", "data/history.json",
                "data/events.json", "data/chains.json",
                "data/us/latest.json?", "data/cross.json?", "data/us/history.json",
-               "data/backtest.json", "data/etf.json", "data/swing.json", "data/bench.json", "data/odds.json", "data/evidence.json", "data/evidence_stocks.json", "data/screen.json", "data/taifex.json", "data/rules_dca.json", "data/etf_profile.json", "data/portfolio.json", "data/forward.json", "data/stress.json", "data/horizon.json",
+               "data/backtest.json", "data/etf.json", "data/swing.json", "data/bench.json", "data/odds.json", "data/evidence.json", "data/evidence_stocks.json", "data/screen.json", "data/taifex.json", "data/rules_dca.json", "data/etf_profile.json", "data/portfolio.json", "data/forward.json", "data/stress.json", "data/horizon.json", "data/news.json", "data/literature.json",
                # 完整搜尋清單太大，不內嵌（離線快照只搜得到深入追蹤的代號）
                "data/tw_all.json", "data/us/all.json"}
     missed = {f for f in found if f.rstrip("?") not in

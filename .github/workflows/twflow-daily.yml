@@ -58,7 +58,7 @@ jobs:
           # 月營收（只補新月份；失敗時沿用已存的月份）
           ( cd .. && python -X utf8 swing/scripts/fetch_revenue.py ) || echo "::warning::月營收抓取失敗"
           # 籌碼歷史（法人＋融資融券）：每天補最新幾天，並順便回補五年歷史 25 分鐘，補完後幾秒就結束
-          ( cd .. && python -X utf8 swing/scripts/fetch_chips.py --days 1300 --budget 25 ) || echo "::warning::籌碼抓取失敗"
+          ( cd .. && python -X utf8 swing/scripts/fetch_chips.py --days 2550 --budget 25 ) || echo "::warning::籌碼抓取失敗"
           # 集保千張大戶（每週一份，只能從現在開始累積）
           ( cd .. && python -X utf8 swing/scripts/fetch_tdcc.py ) || echo "::warning::集保資料抓取失敗"
           # ETF 體質表（配息、長期含息報酬、風險、受益人數）
@@ -67,6 +67,8 @@ jobs:
           timeout 15m python -X utf8 scripts/fetch_taifex.py --budget 8 || echo "::warning::台指期抓取失敗"
           # 基本面（月底估值、季報；已有的不重抓）
           ( cd .. && timeout 20m python -X utf8 swing/scripts/fetch_fund.py --budget 16 ) || echo "::warning::基本面抓取失敗"
+          # 新增官方來源：重大訊息、庫藏股、董監質押、處置／注意股、借券、景氣燈號（每日快照＋歷史回補）
+          ( cd .. && timeout 14m python -u -X utf8 swing/scripts/fetch_extra.py --budget 12 ) || echo "::warning::新增資料來源抓取失敗"
           # 官方日線（含日後下市股票）：補最新幾天，並順便回補十年歷史 20 分鐘
           ( cd .. && python -X utf8 swing/scripts/fetch_prices.py --days 2550 --budget 20 ) || echo "::warning::官方日線抓取失敗"
           # 波段實驗室：五年日線回測（約 3 分鐘）
@@ -78,10 +80,13 @@ jobs:
               && python -X utf8 swing/scripts/evidence.py \
               && { python -X utf8 swing/scripts/portfolio_lab.py || true; } \
               && { python -X utf8 swing/scripts/stress_lab.py || true; } \
-              && { python -X utf8 swing/scripts/horizon_lab.py || true; } ) \
+              && { python -X utf8 swing/scripts/horizon_lab.py || true; } \
+              && { python -X utf8 swing/scripts/literature_lab.py || true; } ) \
             || echo "::warning::波段回測失敗"
           # 智慧選股資料表（技術、籌碼、基本面、大戶）
           ( cd .. && python -X utf8 swing/scripts/build_screen.py ) || echo "::warning::智慧選股資料表產生失敗"
+          # 每檔股票最新消息（需要 build_web 產生的 latest.json）
+          timeout 12m python -u -X utf8 scripts/fetch_news.py --top 300 --budget 8 || echo "::warning::新聞抓取失敗"
           python -X utf8 scripts/snapshot.py
 
       - name: 檢查資料是否合理
@@ -93,7 +98,7 @@ jobs:
           git config user.name  "twflow-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add twflow/data/market/days twflow/data/market/stock_meta.json $(ls -d twflow/data/etf twflow/data/taifex 2>/dev/null) \
-                  $(ls swing/data/revenue.json 2>/dev/null) $(ls -d swing/data/chips swing/data/fund swing/data/tdcc swing/data/prices swing/data/forward 2>/dev/null) \
+                  $(ls swing/data/revenue.json 2>/dev/null) $(ls -d swing/data/chips swing/data/fund swing/data/tdcc swing/data/prices swing/data/forward swing/data/extra 2>/dev/null) \
                   twflow/data/market/market.json twflow/web/data \
                   twflow/web/snapshot.html
           if git diff --staged --quiet; then

@@ -12,6 +12,11 @@
     {"2024Q2": {code: [營收, 毛利, 營業利益, 歸屬母公司淨利, EPS]}}   ← 皆為「年初至該季累計」，單位千元／元
     回測時一律以法定申報期限（Q1 5/15、Q2 8/14、Q3 11/14、Q4 隔年 3/31）之後才視為已知。
 
+三、資產負債表（公開資訊觀測站 資產負債表彙總 t163sb05，上市＋上櫃）
+    存 swing/data/fund/balance.json
+    {"2024Q2": {code: [資產總額, 負債總額, 權益總額, 歸屬母公司權益, 流動資產, 流動負債]}}   ← 季末時點值，千元
+    金融業沒有流動資產／流動負債，該兩欄為 null。用來算 ROE、負債比、流動比等獲利品質指標。
+
 已存在的日期／季別不重抓（最近一季每次重抓）。
 
 用法：python swing/scripts/fetch_fund.py [--years 5]
@@ -39,7 +44,7 @@ import fetch_market as fm          # noqa: E402
 from fetch_chips import calendar   # noqa: E402
 
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36"}
-MOPS = ["https://mopsov.twse.com.tw/mops/web/ajax_t163sb04", "https://mops.twse.com.tw/mops/web/ajax_t163sb04"]
+MOPS_HOSTS = ["https://mopsov.twse.com.tw/mops/web/", "https://mops.twse.com.tw/mops/web/"]
 
 
 def load(name):
@@ -120,7 +125,12 @@ def num(s):
         return None
 
 
-def parse_income(html):
+BAL_COLS = {"ta": ["資產總額", "資產總計"], "tl": ["負債總額", "負債總計"], "eq": ["權益總額", "權益總計"],
+            "eqp": ["歸屬於母公司業主之權益"], "ca": ["流動資產"], "cl": ["流動負債"]}
+
+
+def parse_income(html, cols=None):
+    cols = cols or COLS
     soup = BeautifulSoup(html, "lxml")
     out = {}
     for tb in soup.find_all("table"):
@@ -131,7 +141,7 @@ def parse_income(html):
         if not head or "公司代號" not in head[0]:
             continue
         idx = {}
-        for k, pats in COLS.items():
+        for k, pats in cols.items():
             for p in pats:          # 依優先順序找第一個符合的欄位
                 hit = next((i for i, h in enumerate(head) if p in h), None)
                 if hit is not None:
@@ -141,21 +151,21 @@ def parse_income(html):
             td = [x.get_text(strip=True) for x in tr.find_all("td")]
             if len(td) < len(head) or not re.fullmatch(r"\d{4}", td[0]):
                 continue
-            out[td[0]] = [num(td[idx[k]]) if k in idx else None for k in COLS]
+            out[td[0]] = [num(td[idx[k]]) if k in idx else None for k in cols]
     return out
 
 
-def fetch_income(mkt, y, q):
+def fetch_income(mkt, y, q, ep="ajax_t163sb04", cols=None):
     data = {"encodeURIComponent": 1, "step": 1, "firstin": 1, "off": 1, "isQuery": "Y",
             "TYPEK": mkt, "year": str(y - 1911), "season": f"{q:02d}"}
     err = None
     for rnd in range(2):
-        for url in MOPS:
+        for url in (h + ep for h in MOPS_HOSTS):
             try:
                 r = requests.post(url, data=data, headers=UA, timeout=20)
                 if r.status_code == 200:
                     r.encoding = "utf-8"
-                    rows = parse_income(r.text)
+                    rows = parse_income(r.text, cols)
                     if rows:
                         return rows
                     err = f"無資料表（{len(r.text)} 字元）"
@@ -246,6 +256,34 @@ def main():
         save("income.json", inc)                 # 每季存一次
     save("income.json", inc)
     print(f"季報：{len(inc)} 季；失敗 {failed[:6]}")
+
+    # 資產負債表：同樣新的先抓、每季存檔；季報抓完剩下的預算給它
+    bal = load("balance.json")
+    bfail, streak = [], 0
+    for i, (y, q) in reversed(list(enumerate(qs))):
+        key = f"{y}Q{q}"
+        if key in bal and i < len(qs) - 1:
+            continue
+        if over():
+            print("  時間預算用完，資產負債表下次接著補", flush=True)
+            break
+        if streak >= 2:
+            print("  連續兩季都抓不到，停止資產負債表", flush=True)
+            break
+        rows = {}
+        for mkt in ("sii", "otc"):
+            try:
+                rows.update(fetch_income(mkt, y, q, "ajax_t163sb05", BAL_COLS))
+            except Exception as e:
+                bfail.append(str(e)[:150])
+        streak = 0 if rows else streak + 1
+        if len(rows) > 500:
+            bal[key] = rows
+            if len(bal) == 1 or i == len(qs) - 1:
+                print(f"  資產負債表樣本 {key}：{len(rows)} 家，例 2330 → {rows.get('2330')}")
+        print(f"{key} 資產負債表: {len(rows)} 家", flush=True)
+        save("balance.json", bal)
+    print(f"資產負債表：{len(bal)} 季；失敗 {bfail[:6]}")
     if not val and not inc:
         sys.exit("基本面資料全部失敗")
 

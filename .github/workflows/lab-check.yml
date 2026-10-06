@@ -51,6 +51,10 @@ jobs:
       - name: 基本面（估值＋季報）
         run: timeout 18m python -u -X utf8 swing/scripts/fetch_fund.py --budget 15 || echo "::warning::基本面來源逾時或被限流（證交所），沿用已抓到的部分"; ls -la swing/data/fund || true
 
+      # 新增官方來源：先確認端點與欄位（印在 log），抓不到不擋其他步驟
+      - name: 新增資料來源（重大訊息、庫藏股、質押、處置注意、借券、景氣燈號）
+        run: timeout 9m python -u -X utf8 swing/scripts/fetch_extra.py --budget 7 --hist-days 40 || echo "::warning::新增資料來源抓取失敗"; ls -R swing/data/extra | head -60 || true
+
       - name: 月營收（公開資訊觀測站）
         run: python -X utf8 swing/scripts/fetch_revenue.py
 
@@ -96,6 +100,13 @@ jobs:
       - name: 當沖與隔日沖檢驗
         run: python -X utf8 swing/scripts/horizon_lab.py
 
+      - name: 文獻因子檢驗
+        run: python -X utf8 swing/scripts/literature_lab.py
+
+      - name: 每檔股票最新消息（重大訊息＋新聞標題，試抓 20 檔）
+        working-directory: twflow
+        run: python -u -X utf8 scripts/fetch_news.py --top 20 --budget 1 || echo "::warning::新聞抓取失敗"
+
       - name: 智慧選股資料表
         run: python -X utf8 swing/scripts/build_screen.py
 
@@ -118,3 +129,5 @@ jobs:
             twflow/web/data/portfolio.json
             twflow/web/data/stress.json
             twflow/web/data/horizon.json
+            twflow/web/data/literature.json
+            twflow/web/data/news.json
