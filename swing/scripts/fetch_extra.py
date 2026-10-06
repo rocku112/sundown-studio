@@ -42,11 +42,11 @@ TW = timezone(timedelta(hours=8))
 
 OPENAPI = {
     "twse": ("https://openapi.twse.com.tw/v1/swagger.json", "https://openapi.twse.com.tw/v1"),
-    "tpex": ("https://www.tpex.org.tw/openapi/swagger.json", "https://www.tpex.org.tw/openapi"),
+    "tpex": ("https://www.tpex.org.tw/openapi/swagger.json", "https://www.tpex.org.tw/openapi/v1"),
 }
 # 名稱 → 端點摘要須包含的關鍵字（任一）；排除字避免抓到不相干的
 WANT = {
-    "news": (["重大訊息"], ["英文", "外國"]),
+    "news": (["重大訊息"], ["英文", "外國", "違反"]),
     "buyback": (["庫藏股"], []),
     "pledge": (["質押", "董監事持股"], []),
     "punish": (["處置"], []),
@@ -82,6 +82,9 @@ def load_json(path, default=None):
         return json.load(f)
 
 
+BASE = {k: v[1] for k, v in OPENAPI.items()}
+
+
 def discover():
     """從官方 swagger 依關鍵字找端點：{name: [(market, path, summary)]}"""
     found = {k: [] for k in WANT}
@@ -91,6 +94,13 @@ def discover():
         except Exception as e:                  # noqa: BLE001
             print(f"  ⚠️ {mkt} swagger 讀取失敗：{e}")
             continue
+        # 端點的根網址以 swagger 自己宣告的為準（servers 或 host+basePath），沒有才用預設
+        srv = [x.get("url") for x in spec.get("servers") or [] if x.get("url", "").startswith("http")]
+        if srv:
+            BASE[mkt] = srv[0].rstrip("/")
+        elif spec.get("host"):
+            BASE[mkt] = f"https://{spec['host']}{spec.get('basePath') or ''}".rstrip("/")
+        print(f"  {mkt} 根網址：{BASE[mkt]}")
         for path, ops in spec.get("paths", {}).items():
             op = ops.get("get") or {}
             text = (op.get("summary") or "") + (op.get("description") or "") + " ".join(op.get("tags") or [])
@@ -107,11 +117,14 @@ def snapshot(found, today):
     for k, eps in found.items():
         rows_all = []
         for mkt, path, summ in eps:
-            url = OPENAPI[mkt][1] + path
+            url = BASE[mkt] + path
+            r = None
             try:
-                rows = get(url).json()
+                r = get(url)
+                rows = r.json()
             except Exception as e:              # noqa: BLE001
-                print(f"  ⚠️ {k} {mkt}{path} 失敗：{e}")
+                head = r.text[:80].replace("\n", " ") if r is not None else ""
+                print(f"  ⚠️ {k} {url} 失敗：{e}；回應開頭 {head!r}")
                 continue
             if not isinstance(rows, list):
                 continue

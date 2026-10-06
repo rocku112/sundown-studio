@@ -34,6 +34,8 @@ SNAP = os.path.join(REPO, "swing", "data", "extra", "news")
 LATEST = os.path.join(TW, "web", "data", "latest.json")
 OUT = os.path.join(TW, "web", "data", "news.json")
 TZ = timezone(timedelta(hours=8))
+# 論壇、社群貼文不是新聞，排除
+NOT_NEWS = ("爆料同學會", "PTT", "Dcard", "Mobile01", "論壇", "社團")
 UA = {"User-Agent": "Mozilla/5.0 (compatible; twflow-research/0.1)"}
 
 
@@ -117,6 +119,8 @@ def headlines(codes, names, budget_s):
             if src and title.endswith(" - " + src):
                 title = title[: -len(src) - 3]
             # 標題裡要真的有公司名稱或代號，避免同名雜訊
+            if any(w in title or w in src for w in NOT_NEWS):
+                continue
             if title and link and (names[c] in title or c in title):
                 items.append([ts, title[:120], src[:20], link])
         items.sort(key=lambda x: x[0], reverse=True)
