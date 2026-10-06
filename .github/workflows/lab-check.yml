@@ -89,6 +89,10 @@ jobs:
       - name: 中期組合實驗
         run: python -X utf8 swing/scripts/portfolio_lab.py --no-forward
 
+      # 壓力測試（滑價、執行、參數格點、安慰劑、容量；判定標準寫死在 stress_lab.py 開頭）
+      - name: 壓力測試
+        run: python -X utf8 swing/scripts/stress_lab.py
+
       - name: 智慧選股資料表
         run: python -X utf8 swing/scripts/build_screen.py
 
@@ -109,3 +113,4 @@ jobs:
             twflow/web/data/etf_profile.json
             twflow/web/data/rules_dca.json
             twflow/web/data/portfolio.json
+            twflow/web/data/stress.json
