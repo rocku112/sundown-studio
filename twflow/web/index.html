@@ -1592,7 +1592,7 @@ function openUS(sym){
   const key='US:'+sym, isIdx=d.type==='index';
   $('kp-name').innerHTML=`${esc(d.name)} <span style="color:var(--s8);font-size:13px">${esc(sym)}</span><span class="badge">美股</span>`;
   $('kp-sub').innerHTML=`<b style="font-size:17px;color:var(--s10)">${isIdx?d.price:usd(d.price)}</b>　`+
-    `<b style="color:${col(d.chg_1d)}">${pct(d.chg_1d)}</b>　<span style="color:var(--s8)">${esc(d.sector||'')}${d.stale?'　最後資料 '+d.stale:''}　${USD.date}</span>`;
+    `<b style="color:${col(d.chg_1d)}">${pct(d.chg_1d)}</b>　<span style="color:var(--s8)">${esc(d.sector||'')}${d.stale?'　最後資料 '+d.stale:''}${d.suspect!=null?'　來源資料異常，漲跌待確認':''}　${USD.date}</span>`;
   const kv=(k,v,c)=>`<div class="kv"><span>${k}</span><b${c!=null?` style="color:${col(c)}"`:''}>${v}</b></div>`;
   const q=d.quarters||[];
   const adr=CROSS&&CROSS.adr.find(a=>a.us===sym);
