@@ -39,11 +39,12 @@ OUT = os.path.join(REPO, "twflow", "web", "data", "portfolio.json")
 FWD = os.path.join(ROOT, "data", "forward")                 # 前瞻紀錄（只增不改，進版控）
 FWD_OUT = os.path.join(REPO, "twflow", "web", "data", "forward.json")
 TOPN = 20
+FWD_WINDOW = 5        # 調整日後幾個交易日內還能補寫當月前瞻紀錄
 BUY, SELL_S, SELL_E = 0.001425, 0.001425 + 0.003, 0.001425 + 0.001
 CASH_Y = 0.01
 LABEL = {"B0": "0050 長抱", "T0": "0050＋大盤濾網", "R": "營收創新高 20 檔", "E": "EPS 創 2 年新高 20 檔",
          "M": "12-1 動能 20 檔", "RM": "營收創新高＋動能", "RMT": "營收創新高＋動能＋大盤濾網",
-         "CS": "核心衛星（70% 0050＋30% 營收動能）"}
+         "CS": "核心衛星（70% 0050＋30% 營收動能）", "S": "中小型＋營收創新高（壓力測試通過的唯一做法）"}
 
 
 def rebalance_days(dates):
@@ -157,7 +158,7 @@ def ffill(X):
     return X
 
 
-def simulate(book, rdays, target):
+def simulate(book, rdays, target, slip=0.0):
     """target(t) → {列: 權重}（列：個股索引、book.B＝0050、book.CASH＝現金），權重合計 1。
     t 收盤決定、t+1 開盤成交；只對權重變動收成本。回傳 (每日淨值, 起點, 每次換手)。"""
     T = book.T
@@ -183,7 +184,8 @@ def simulate(book, rdays, target):
             if k == book.CASH:
                 continue
             dw = w.get(k, 0.0) - old.get(k, 0.0)
-            cost += dw * BUY if dw > 0 else -dw * (SELL_E if k == book.B else SELL_S)
+            s_ = 0.0 if k == book.B else slip           # 滑價只算個股（0050 流動性極高）
+            cost += dw * (BUY + s_) if dw > 0 else -dw * ((SELL_E if k == book.B else SELL_S) + s_)
             tw += abs(dw)
         value *= 1 - cost
         turns.append(tw / 2 if old else 1.0)
@@ -248,7 +250,7 @@ def stats(nav, dates, start):
             "curve": [[d[i], round(float(v[i] / v[0]), 4)] for i in range(0, len(v), 5)]}
 
 
-def forward(lab, rdays, picks):
+def forward(lab, rdays, picks, univ=None):
     """前瞻紀錄：每月調整日當天（資料最新一天就是調整日，或調整日後 5 個交易日內尚未記錄）把各策略的選股寫入
     swing/data/forward/YYYY-MM.json，之後永不修改；再用最新價格計算每一期的實際報酬。"""
     os.makedirs(FWD, exist_ok=True)
@@ -256,10 +258,12 @@ def forward(lab, rdays, picks):
     t = rdays[-1]
     ym = lab.dates[t][:7]
     path = os.path.join(FWD, f"{ym}.json")
-    if not os.path.exists(path) and T - 1 - t <= 5:
+    if not os.path.exists(path) and T - 1 - t <= FWD_WINDOW:
         rec = {"month": ym, "decided": lab.dates[t], "recorded": lab.dates[-1],
                "rule": "決定日收盤後選出，下一個交易日開盤買進，持有到下個月的調整日；每檔等權、20 個名額沒選滿的部分持有 0050",
-               "picks": {k: [lab.codes[i] for i in v.get(t, [])] for k, v in picks.items()}}
+               "picks": {k: [lab.codes[i] for i in v.get(t, [])] for k, v in picks.items()},
+               # 有自己股票池的做法（S＝中小型 151–400 名）：同時寫死當時的股票池，事後用「同組等權」當基準、補滿空額
+               "universe": {k: [lab.codes[i] for i in u.get(t, [])] for k, u in (univ or {}).items()}}
         with open(path, "w", encoding="utf-8") as f:
             json.dump(rec, f, ensure_ascii=False, indent=1)
         print(f"前瞻紀錄：寫入 {ym}（決定日 {rec['decided']}）")
@@ -296,10 +300,17 @@ def forward(lab, rdays, picks):
         for k, codes in r["picks"].items():
             rs = [ret(kpos[c]) for c in codes if c in kpos]
             rs = [v for v in rs if v is not None]
-            slots = rs + [br] * (TOPN - len(rs))
+            fill = br
+            uc = r.get("universe", {}).get(k)
+            if uc:
+                us = [v for v in (ret(kpos[c]) for c in uc if c in kpos) if v is not None]
+                if us:
+                    fill = sum(us) / len(us)
+                    row[k + "_base"] = round(fill * 100, 2)
+            slots = rs + [fill] * (TOPN - len(rs))
             row[k] = round((sum(slots) / TOPN - cost * len(rs) / TOPN) * 100, 2)
         periods.append(row)
-    for k in ["B0"] + list(picks):
+    for k in ["B0"] + list(picks) + [k + "_base" for k in (univ or {})]:
         v = 1.0
         for p in periods:
             if p.get(k) is not None:
@@ -329,7 +340,9 @@ def slots(sel, filler, n=TOPN):
     return w
 
 
-def main():
+def prepare():
+    """載入日線、月營收、季報，算好調整日、動能、近 60 日成交值；main() 與 stress_lab.py 共用。"""
+    from types import SimpleNamespace
     src = json.load(open(SRC, encoding="utf-8"))
     source = src.get("source", "yahoo")
     src = src["symbols"]
@@ -358,6 +371,14 @@ def main():
     DV[:, 60:] = np.where(nw >= 40, sw / np.maximum(nw, 1), np.nan)
     rev = revenue_signal(lab, revenue, rdays) if revenue else {}
     eps = eps_signal(lab, rdays)
+    return SimpleNamespace(src=src, source=source, revenue=revenue, lab=lab, book=book, C=C, V=V, rdays=rdays,
+                           trend=trend, mom=mom, DV=DV, rev=rev, eps=eps)
+
+
+def main():
+    P = prepare()
+    source, lab, book, C, rdays, trend, mom, DV, rev, eps = (
+        P.source, P.lab, P.book, P.C, P.rdays, P.trend, P.mom, P.DV, P.rev, P.eps)
 
     def top(score_map, ok):
         cand = [(k, v) for k, v in score_map.items() if ok(k) and np.isfinite(v)]
@@ -465,6 +486,9 @@ def main():
             out_t[key] = s_
         tiers.append({"kind": kind, "name": name, "n": int(np.median(sizes)), "results": out_t})
 
+    # S：中小型（151–400 名）＋營收創新高——壓力測試（stress_lab.py）的對象，前瞻紀錄也追蹤它
+    smem = members.get(("size", SIZE_TIERS[2][0]), {})
+    picks["S"] = {t: top(rev.get(t, {}), lambda i, ms=set(m): i in ms) for t, m in smem.items()}
     last_t = rdays[-1]
     now = {k: [{"code": lab.codes[i], "name": lab._name(i)} for i in picks[k].get(last_t, [])] for k in picks}
     doc = {"generated_at": datetime.now(timezone(timedelta(hours=8))).isoformat(timespec="seconds"),
@@ -474,7 +498,7 @@ def main():
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(doc, f, ensure_ascii=False, separators=(",", ":"))
     if "--no-forward" not in sys.argv:
-        forward(lab, rdays, picks)
+        forward(lab, rdays, picks, {"S": smem})
     print(f"中期組合實驗（{source}，{len(lab.codes)} 檔）分組期間 {lab.dates[rd[0]]}～，{len(rd)} 次調整；各做法起點 { {k: lab.dates[v] for k, v in starts.items() if v is not None} }")
     print(f"  {'策略':<22} 年化    波動   最大回撤  Sharpe  ≥20%年份  最差年  前半/後半年化   年換手")
     for k, s_ in res.items():
