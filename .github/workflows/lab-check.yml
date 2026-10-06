@@ -93,6 +93,9 @@ jobs:
       - name: 壓力測試
         run: python -X utf8 swing/scripts/stress_lab.py
 
+      - name: 當沖與隔日沖檢驗
+        run: python -X utf8 swing/scripts/horizon_lab.py
+
       - name: 智慧選股資料表
         run: python -X utf8 swing/scripts/build_screen.py
 
@@ -114,3 +117,4 @@ jobs:
             twflow/web/data/rules_dca.json
             twflow/web/data/portfolio.json
             twflow/web/data/stress.json
+            twflow/web/data/horizon.json

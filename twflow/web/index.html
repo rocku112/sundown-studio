@@ -489,6 +489,7 @@ a.btn{text-decoration:none;color:inherit;display:inline-block}
   animation:cfall linear forwards}
 @keyframes cfall{to{transform:translate(var(--dx),105vh) rotate(var(--r));opacity:.9}}
 @media (prefers-reduced-motion:reduce){.thole,.ttip{transition:none}.thole::after,.mascot.wave,.ttip .tact::before{animation:none}.confetti{display:none}}
+.st.lft td,.st.lft th{text-align:left}
 </style>
 </head>
 <body>
@@ -1942,6 +1943,9 @@ function stressCard(){
         ${Object.entries(STR.liquidity||{}).map(([k,v])=>row('只買'+k,v)).join('')}
         ${row('所有符合的都買（不依年增率挑）',STR.all_signals)}
         ${STR.clean?row(`抹平 ${STR.clean.events} 筆疑似未還原的價格跳動`,STR.clean.result):''}</table>
+      ${STR.combo?`<div class="stitle" style="padding:10px 0 4px">多元配置：長線核心＋中線衛星</div>
+      <table class="st"><tr><th>配置</th><th>年化</th><th>最大回撤</th><th>波動</th></tr>
+        ${Object.entries(STR.combo).map(([k,v])=>`<tr><td>${esc(k)}</td><td>${v.cagr}%</td><td>${v.mdd}%</td><td>${v.vol}%</td></tr>`).join('')}</table>`:''}
       <p class="note" style="margin-top:6px;font-size:12px">參數格點 ${g.length} 組（分組邊界 × 檔數 10／20／30 × 創高回溯 6／12／24 個月 × 延後 0／3 天）：${gp} 組超額為正。
         安慰劑：同組每月隨機抽 ${STR.rule.topn} 檔重複 ${STR.placebo.n} 次，年化中位數 ${STR.placebo.median}%、最好的一次 ${STR.placebo.max}%。</p>
       <div style="overflow-x:auto"><table class="st"><tr><th>年份</th>${ys.map(y=>`<th>${y}</th>`).join('')}</tr>
@@ -1949,6 +1953,54 @@ function stressCard(){
         <tr><td>同組平均</td>${ys.map(y=>`<td style="color:${col(D.base_years[y])}">${D.base_years[y]??'—'}</td>`).join('')}</tr></table></div></details>
     <p class="note" style="margin-top:10px;font-size:12.5px">讀法：回測全部過關只代表「過去十年、扣掉合理成本後，這個規律不像是運氣」。它照樣會在空頭年虧錢（最大回撤 ${D.mdd}%），
       而且公開的規律可能被套利掉——所以第七關要看事前寫死的前瞻紀錄。這是統計檢驗，不是投資建議，也不推薦任何個股。</p></div>`;
+}
+// 極短線：當沖與隔日沖（只能用開盤、收盤價成交的規則）
+let HZ=null;
+const hzReady=()=>HZ?Promise.resolve(HZ)
+  :fetch('data/horizon.json').then(r=>r.json()).then(j=>(HZ=j)).catch(()=>null);
+const HV=v=>v==='成立且扣成本後可交易'?'ok':v==='回測成立但實際買不到'?'no':v.startsWith('成立')||v.startsWith('有跡象')?'mid':v.startsWith('反向')?'rev':'no';
+function horizonCard(){
+  if(!HZ) return '';
+  const pools=[...new Set(HZ.tests.map(t=>t.pool))], keys=[...new Set(HZ.tests.map(t=>t.key))];
+  const get=(k,p)=>HZ.tests.find(t=>t.key===k&&t.pool===p);
+  const f=x=>x==null?'—':(x>=0?'+':'')+x.toFixed(2)+'%';
+  const cell=t=>!t?'—':`<span class="vbadge ${HV(t.verdict)}" style="margin:0">${t.verdict}</span>
+    ${t.oos?`<div class="rsub" style="font-size:11.5px;margin-top:3px;white-space:normal">每筆扣成本 ${f(t.oos.net)}・勝率 ${t.oos.win}%</div>`:''}`;
+  const d=Object.values(HZ.desc)[0];
+  return `<div class="card"><h3>當沖與隔日沖有沒有證據？</h3>
+    <p style="font-size:13px;color:var(--s9);line-height:1.8">${HZ.period[0]}～${HZ.period[1]}，時點正確的股票池；後半段（${HZ.split} 起）為樣本外，${HZ.m} 個檢驗一起做多重比較校正。
+      一次來回成本：當沖約 ${HZ.cost.daytrade}%（當沖證交稅減半）、隔日沖約 ${HZ.cost.overnight}%。只有日線，所以只能檢驗「開盤價、收盤價成交」的規則。</p>
+    <p class="note" style="margin-top:6px;font-size:12.5px">一個有趣的事實：股票池平均每天「收盤到隔天開盤」漲 ${d.overnight.toFixed(2)}%、「開盤到收盤」跌 ${Math.abs(d.intraday).toFixed(2)}%——台股的漲幅大多發生在夜裡。
+      但每天隔夜持有的報酬還不夠付一次來回成本。</p>
+    <div style="overflow-x:auto"><table class="st lft"><tr><th>說法</th>${pools.map(p=>`<th>${esc(p)}</th>`).join('')}</tr>
+      ${keys.map(k=>{const t=get(k,pools[0])||get(k,pools[1]);
+        return `<tr><td style="min-width:150px"><b>${esc(t.name)}</b><div class="rsub" style="font-size:11.5px;white-space:normal">${esc(t.claim)}</div>
+          ${pools.map(p=>get(k,p)?.note).filter(Boolean).slice(0,1).map(n=>`<div class="note" style="font-size:11.5px;color:var(--gold);margin-top:2px">※ ${esc(n)}</div>`).join('')}</td>
+          ${pools.map(p=>`<td style="min-width:120px">${cell(get(k,p))}</td>`).join('')}</tr>`;}).join('')}</table></div>
+    <p class="note" style="margin-top:8px;font-size:12.5px">讀法：最漂亮的數字（漲停隔日沖、每筆 +1% 以上、勝率六成多）恰好是散戶<b>買不到</b>的那種——漲停鎖住時買單排不進去。
+      能成交的版本一換上去，優勢就消失了。當沖少數成立的說法，扣完成本只剩零點幾 %，滑價多一點就沒了。需要盤中分時資料的手法無法驗證，不列入。不構成投資建議。</p></div>`;
+}
+// 依持有時間分類：每一種操作節奏，本站檢驗到哪、結論是什麼
+function mapCard(){
+  const sp=STR&&STR.criteria?STR.criteria.slice(0,6).filter(c=>c.pass).length:null;
+  const rows=[
+    ['當沖（現股當沖）','Day trading','同一天進出','當沖六種常見做法',HZ?'少數成立，但扣成本只剩零點幾 %，滑價多 0.2% 就沒了':'—','mid'],
+    ['隔日沖','Overnight','今天收盤買、明天賣','隔日沖六種做法',HZ?'回測最漂亮的「漲停隔日沖」實際買不到；買得到的版本不成立':'—','no'],
+    ['短線（極短波段）','Short-term','2–10 天','約 50 個技術指標、型態、籌碼說法（持有 5 天）','沒有任何一個通過校正','no'],
+    ['波段','Swing','數週–3 個月','突破、均線、動能等波段策略（持有 20 天）','扣成本後沒有穩定贏過大盤','no'],
+    ['中線','Position','1–6 個月（每月調整）','十年月調整組合實驗＋七關壓力測試',sp!=null?`中小型＋營收創新高：壓力測試 ${sp}／6 通過，等前瞻紀錄`:'中小型＋營收創新高通過校正','ok'],
+    ['長線','Long-term','1 年以上','定期定額、位階加碼、高檔調節（十年滾動）','單純定期定額大盤最穩；調節、加碼沒有比較好','ok'],
+    ['存股','Dividend investing','長期領息','ETF 配息 vs 含息總報酬','只看殖利率會誤判；要看「賺多少」不是「發多少」','mid'],
+  ];
+  return `<div class="card"><h3>策略地圖：依持有時間分類</h3>
+    <p style="font-size:13px;color:var(--s9);line-height:1.8">每一種操作節奏我們都用同一套方法檢驗：規則事先寫死、扣交易成本、分前後兩段、校正多重比較。下面是目前的結論。</p>
+    ${innerWidth<=720?rows.map(([n,e,h,w,c,k])=>`<div class="erow"><div class="ehead"><b>${n}</b><span class="rsub" style="font-size:12px">${h}</span></div>
+        <div class="rsub" style="font-size:12px;white-space:normal;margin:2px 0 5px">${w}</div><span class="vbadge ${k}" style="margin:0;white-space:normal;line-height:1.5">${c}</span></div>`).join(''):`
+    <div style="overflow-x:auto"><table class="st lft"><tr><th>稱呼</th><th>持有時間</th><th>檢驗了什麼</th><th>結論</th></tr>
+      ${rows.map(([n,e,h,w,c,k])=>`<tr><td style="min-width:96px"><b>${n}</b><div class="rsub" style="font-size:11px">${e}</div></td><td style="min-width:84px">${h}</td>
+        <td style="min-width:140px;font-size:12.5px">${w}</td><td style="min-width:170px"><span class="vbadge ${k}" style="margin:0 0 3px;white-space:normal">${c}</span></td></tr>`).join('')}</table></div>`}
+    <p class="note" style="margin-top:8px;font-size:12.5px">多元化的意思是<b>每一塊都要有證據</b>才放進來——把沒有優勢的方法湊在一起，只會多付手續費。
+      目前有證據的組合是「長線核心（大盤定期定額或長抱）＋中線衛星（中小型營收創新高）」，配置比例見上方壓力測試的「多元配置」。不構成投資建議。</p></div>`;
 }
 // 前瞻紀錄：每月調整日把選股寫死，之後只看實際結果（不能回頭修改）
 let FWDD=null;
@@ -2036,12 +2088,13 @@ function buildSwing(){
   if(!PF){ pfReady().then(o=>{ if(o&&curView==='swing') buildSwing(); }); }
   if(!FWDD){ fwdReady().then(o=>{ if(o&&curView==='swing') buildSwing(); }); }
   if(!STR){ strReady().then(o=>{ if(o&&curView==='swing') buildSwing(); }); }
+  if(!HZ){ hzReady().then(o=>{ if(o&&curView==='swing') buildSwing(); }); }
   if(!SW){ el.innerHTML='<div class="empty">載入中…</div>';
     swReady().then(d=>{ if(d) buildSwing(); else el.innerHTML='<div class="empty">波段回測資料尚未產生。每個交易日盤後更新。</div>'; }); return; }
   const ok=SW.strategies.filter(s=>s.verdict).length, b=SW.bench||{};
   const f=x=>x==null?'—':(x>=0?'+':'')+x.toFixed(2)+'%';
   const row=(lab,a,b_)=>`<tr><td>${lab}</td><td>${a}</td><td>${b_}</td></tr>`;
-  el.innerHTML=`${stressCard()}${pfCard()}${fwdCard()}${oddsCard()}${rdcaCard()}${eviCard()}
+  el.innerHTML=`${mapCard()}${stressCard()}${pfCard()}${fwdCard()}${horizonCard()}${oddsCard()}${rdcaCard()}${eviCard()}
     <div class="card"><h3>波段實驗室・${SW.period[0]} ～ ${SW.period[1]}</h3>
       <div class="big" style="font-size:20px">${ok?`${SW.strategies.length} 個策略中 ${ok} 個在樣本外通過檢驗`:`${SW.strategies.length} 個策略扣掉成本後，都沒有穩定贏過基準`}</div>
       ${SW.strategies.length>3?`<p class="note" style="margin-top:6px;font-size:12px">同時測的策略越多，靠運氣「看起來有效」的機會越大；${SW.strategies.length} 個策略裡出現 1 個 t≈2 的結果，本身就可能只是巧合。</p>`:''}
@@ -2464,6 +2517,13 @@ const HELP_VERDICT=[
   ['反向跡象／顯著但方向相反','照做之後反而比平均差。','rev'],
 ];
 const HELP_GLOSSARY=[
+  ['當沖（現股當沖）','同一天買進又賣出，不留倉過夜。台股當沖證交稅減半（0.15%），但每筆仍有約 0.4–0.5% 的來回成本。'],
+  ['隔日沖','今天（多半是收盤）買進、隔天賣出。常見手法是買強勢股、隔天開盤賣，賺「隔夜」的跳空。'],
+  ['短線','持有幾天到兩週左右，多半看技術指標、量價、籌碼。'],
+  ['波段','持有數週到三個月，抓一段趨勢，常用均線、突破、動能。'],
+  ['中線','持有一到六個月、定期調整持股，多半結合基本面（營收、獲利）與趨勢。'],
+  ['長線','持有一年以上，例如大盤定期定額或長抱；報酬主要來自整體市場與企業成長。'],
+  ['核心衛星','大部分資金放在穩健的核心（例如大盤 ETF），一小部分放在有證據的主動策略（衛星），分散單一做法失靈的風險。'],
   ['超額報酬','和同一天「股票池平均」相比多賺或少賺多少。股票池＝當時成交值前 150 名，避免用今天的眼光挑股票。'],
   ['樣本內／樣本外','把歷史切成前後兩段。只在前段好看、後段失效的，多半是巧合。'],
   ['t 值','結果偏離「沒有效果」有多遠。大約 |t| > 2 才算顯著；同時測很多說法時門檻要更高（多重比較校正）。'],
