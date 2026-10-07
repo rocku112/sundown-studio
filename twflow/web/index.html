@@ -2128,8 +2128,8 @@ const fwdReady=()=>FWDD?Promise.resolve(FWDD)
   :fetch('data/forward.json').then(r=>r.json()).then(j=>(FWDD=j)).catch(()=>null);
 function fwdCard(){
   if(!FWDD) return '';
-  const L={...(FWDD.labels||{}),S:'中小型＋營收創新高',S_base:'同組平均（151–400 名）'}, P=FWDD.periods||[],
-    ks=['B0','S','S_base','RM','R','E','M'].filter(k=>k==='B0'||P.some(p=>p[k]!=null)||(FWDD.picks&&FWDD.picks.picks&&k in FWDD.picks.picks));
+  const L={...(FWDD.labels||{}),S:'中小型＋營收創新高',SD:'S＋負債比 ≤ 60%（影子）',S_base:'同組平均（151–400 名）'}, P=FWDD.periods||[],
+    ks=['B0','S','SD','S_base','RM','R','E','M'].filter(k=>k==='B0'||P.some(p=>p[k]!=null)||(FWDD.picks&&FWDD.picks.picks&&k in FWDD.picks.picks));
   const f=x=>x==null?'—':(x>=0?'+':'')+x.toFixed(2)+'%';
   return `<div class="card"><h3>前瞻紀錄（事前寫死、事後驗證）</h3>
     <p style="font-size:13px;color:var(--s9);line-height:1.8">回測再嚴謹都可能不自覺地「看過答案」。這裡從 ${FWDD.start||'下一個調整日'} 起，

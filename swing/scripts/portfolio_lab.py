@@ -44,7 +44,8 @@ BUY, SELL_S, SELL_E = 0.001425, 0.001425 + 0.003, 0.001425 + 0.001
 CASH_Y = 0.01
 LABEL = {"B0": "0050 長抱", "T0": "0050＋大盤濾網", "R": "營收創新高 20 檔", "E": "EPS 創 2 年新高 20 檔",
          "M": "12-1 動能 20 檔", "RM": "營收創新高＋動能", "RMT": "營收創新高＋動能＋大盤濾網",
-         "CS": "核心衛星（70% 0050＋30% 營收動能）", "S": "中小型＋營收創新高（壓力測試通過的唯一做法）"}
+         "CS": "核心衛星（70% 0050＋30% 營收動能）", "S": "中小型＋營收創新高（壓力測試通過的唯一做法）",
+         "SD": "S＋負債比 ≤ 60%（影子策略，2026-10 起事後驗證）"}
 
 
 def rebalance_days(dates):
@@ -148,6 +149,28 @@ class Book:
         prevc[:, 1:] = self.C[:, :-1]
         self.O = np.where(np.isfinite(O), O, prevc)     # 開盤缺值用前一天收盤
         self.T = T
+
+
+def debt_known(lab, rdays):
+    """{t: {k: 負債比}}：調整日當時已過法定公布期限的最近一季資產負債表（swing/data/fund/balance.json）。"""
+    bp = os.path.join(ROOT, "data", "fund", "balance.json")
+    if not os.path.exists(bp):
+        return {}
+    bal = json.load(open(bp, encoding="utf-8"))
+
+    def due(key):
+        y, q = int(key[:4]), int(key[-1])
+        return {1: f"{y}-05-15", 2: f"{y}-08-14", 3: f"{y}-11-14", 4: f"{y+1}-03-31"}[q]
+    keys = sorted(bal)
+    kpos = {c: k for k, c in enumerate(lab.codes)}
+    out = {}
+    for t in rdays:
+        known = [k for k in keys if due(k) < lab.dates[t]]
+        if not known:
+            continue
+        out[t] = {kpos[c]: b[1] / b[0] for c, b in bal[known[-1]].items()
+                  if c in kpos and b and b[0] and b[0] > 0 and b[1] is not None}
+    return out
 
 
 def ffill(X):
@@ -489,6 +512,11 @@ def main():
     # S：中小型（151–400 名）＋營收創新高——壓力測試（stress_lab.py）的對象，前瞻紀錄也追蹤它
     smem = members.get(("size", SIZE_TIERS[2][0]), {})
     picks["S"] = {t: top(rev.get(t, {}), lambda i, ms=set(m): i in ms) for t, m in smem.items()}
+    # SD：S 的候選只留負債比 ≤ 60%。回測只有約 3.5 年（literature_lab.py 的獲利品質檢驗），
+    # 從 2026-10 起當作「影子策略」寫進前瞻紀錄，讓它接受事後驗證；S 本身的規則不變。
+    dk = debt_known(lab, list(smem))
+    picks["SD"] = {t: top(rev.get(t, {}), lambda i, ms=set(m), d=dk.get(t, {}): i in ms and i in d and d[i] <= 0.6)
+                   for t, m in smem.items() if t in dk}
     last_t = rdays[-1]
     now = {k: [{"code": lab.codes[i], "name": lab._name(i)} for i in picks[k].get(last_t, [])] for k in picks}
     doc = {"generated_at": datetime.now(timezone(timedelta(hours=8))).isoformat(timespec="seconds"),
@@ -498,7 +526,7 @@ def main():
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(doc, f, ensure_ascii=False, separators=(",", ":"))
     if "--no-forward" not in sys.argv:
-        forward(lab, rdays, picks, {"S": smem})
+        forward(lab, rdays, picks, {"S": smem, "SD": smem})
     print(f"中期組合實驗（{source}，{len(lab.codes)} 檔）分組期間 {lab.dates[rd[0]]}～，{len(rd)} 次調整；各做法起點 { {k: lab.dates[v] for k, v in starts.items() if v is not None} }")
     print(f"  {'策略':<22} 年化    波動   最大回撤  Sharpe  ≥20%年份  最差年  前半/後半年化   年換手")
     for k, s_ in res.items():
