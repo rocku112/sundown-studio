@@ -7,7 +7,7 @@ SunDown Studio 日落工作室 · 台灣在地專業工具品牌
 
 傷當有計：
 
-早謀遠算：
+早謀遠算：https://rocku112.github.io/sundown-studio/tools/zaomou/
 
 落霞千頁：https://rocku112.github.io/sundown-studio/tools/luoxia/
 

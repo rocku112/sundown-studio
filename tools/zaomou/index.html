@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>早謀遠算 · SunDown Studio — 台灣退休規劃試算工具</title>
+  <meta name="description" content="台灣退休規劃試算：整合勞保年金、勞退新制、勞基法舊制與投資複利，依生命表與現行法令估算退休月領。免費、免帳號。"/>
+  <!-- Open Graph -->
+  <meta property="og:type"        content="website"/>
+  <meta property="og:title"       content="早謀遠算 · SunDown Studio — 台灣退休規劃試算"/>
+  <meta property="og:description" content="整合勞保年金、勞退新制、投資複利，依生命表與現行法令估算。免費、免帳號，完全在你的裝置上運算。"/>
+  <meta property="og:locale"      content="zh_TW"/>
+  <!-- Twitter Card -->
+  <meta name="twitter:card"        content="summary"/>
+  <meta name="twitter:title"       content="早謀遠算 — 台灣退休規劃試算工具"/>
+  <meta name="twitter:description" content="勞保年金、勞退新制、投資複利一次算清楚。免費免帳號。"/>
+  <!-- SEO -->
+  <meta name="keywords" content="退休規劃,勞保年金,勞退新制,退休試算,台灣退休計算機"/>
+  <meta name="author"   content="SunDown Studio 日落工作室"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="canonical" href="https://rocku112.github.io/sundown-studio/tools/zaomou/">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="css/landing.css">
+</head>
+<body>
+<body>
+
+<!-- ══ 首頁 ══ -->
+<div id="home-page">
+
+<nav class="nav" id="main-nav">
+  <a class="brand" href="#">
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+      <circle cx="16" cy="16" r="15" fill="#2D4A6E"/>
+      <path d="M2 16 A14 14 0 0 1 30 16" fill="#E8B84B"/>
+      <line x1="4"   y1="18.5" x2="28" y2="18.5" stroke="#fff" stroke-width="1.5"/>
+      <line x1="6.5" y1="21"   x2="25.5" y2="21"   stroke="#fff" stroke-width="1.5"/>
+      <line x1="10"  y1="23.5" x2="22"   y2="23.5" stroke="#fff" stroke-width="1.5"/>
+    </svg>
+    <div>
+      <div class="brand-name">SunDown <b>Studio</b></div>
+      <span class="brand-sub">早謀遠算 · 日落工作室</span>
+    </div>
+  </a>
+  <div class="nav-right">
+    <a class="nav-link" href="#lp-quickcalc">快算</a>
+    <a class="nav-link" href="#lp-features">功能</a>
+    <a class="nav-link" href="#lp-why">比較</a>
+    <a class="nav-link" href="#lp-tw">關於</a>
+    <a class="nav-btn" href="app.html">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg>
+      開始試算
+    </a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="glow glow-gold"></div>
+  <div class="glow glow-navy"></div>
+  <div class="glow glow-green"></div>
+  <div class="hero-inner">
+    <div class="hero-pill fu1">
+      <div class="hero-pill-dot">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </div>
+      勞保・勞退・投資，一次算清楚
+    </div>
+    <h1 class="fu2">
+      <span class="hl-gold">早謀</span>，<br>才能<span class="hl-navy">遠算</span>退休
+    </h1>
+    <p class="hero-sub fu3">
+      整合勞保年金、勞退新制、投資複利，<br>
+      依生命表餘命與現行法令試算。<br>
+      免費、免帳號，完全在你的裝置上運算。
+    </p>
+    <div class="hero-actions fu4">
+      <a class="btn-primary" href="app.html">
+        立即免費試算
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </a>
+      <button class="btn-secondary" onclick="document.getElementById('lp-features').scrollIntoView({behavior:'smooth'})">
+        了解功能
+      </button>
+    </div>
+    <div class="stats-row fu5">
+      <div class="stat"><div class="stat-n">11</div><div class="stat-l">級勞保投保薪資</div></div>
+      <div class="stat"><div class="stat-n">6</div><div class="stat-l">種分析圖表</div></div>
+      <div class="stat"><div class="stat-n">115</div><div class="stat-l">年度生活費標準</div></div>
+      <div class="stat"><div class="stat-n">$0</div><div class="stat-l">完全免費</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 工具預覽 -->
+<section class="preview-section">
+  <div class="preview-inner">
+    <div style="text-align:center;margin-bottom:32px">
+      <div class="section-eyebrow">工具預覽</div>
+      <h2 class="section-title" style="max-width:400px;margin:0 auto 12px">一眼看清<br>你的退休全貌</h2>
+    </div>
+    <div class="preview-frame">
+      <div class="preview-bar">
+        <div class="dot" style="background:#FF5F57"></div>
+        <div class="dot" style="background:#FEBC2E"></div>
+        <div class="dot" style="background:#28C840"></div>
+        <div style="flex:1;background:#E8E4DC;height:22px;border-radius:6px;margin-left:8px;display:flex;align-items:center;padding:0 10px">
+          <span style="font-size:10px;color:#8A8E96">早謀遠算 · SunDown Studio</span>
+        </div>
+      </div>
+      <div class="preview-content">
+        <div class="preview-sidebar">
+          <div class="preview-big-label">退休月領總額</div>
+          <div class="preview-big">$84,320</div>
+          <div style="height:1px;background:rgba(255,255,255,.1);margin:10px 0"></div>
+          <div class="preview-sidebar-label">月領明細</div>
+          <div class="preview-row"><span class="preview-row-label">勞保年金</span><span class="preview-row-value">$30,526</span></div>
+          <div class="preview-row"><span class="preview-row-label">勞退月領</span><span class="preview-row-value">$28,194</span></div>
+          <div class="preview-row"><span class="preview-row-label">投資月領</span><span class="preview-row-value">$25,600</span></div>
+          <div style="height:1px;background:rgba(255,255,255,.1);margin:8px 0"></div>
+          <div class="preview-sidebar-label">距退休</div>
+          <div class="preview-row"><span class="preview-row-label">剩餘年數</span><span class="preview-row-value" style="color:#E8B84B">28 年</span></div>
+        </div>
+        <div class="preview-main">
+          <div class="preview-tab-row">
+            <div class="preview-tab active">⚙ 起點設定</div>
+            <div class="preview-tab inactive">基本盤</div>
+            <div class="preview-tab inactive">現有部位</div>
+            <div class="preview-tab inactive">加碼計劃</div>
+            <div class="preview-tab inactive">戰況圖</div>
+          </div>
+          <div class="preview-card">
+            <div class="preview-card-title">個人基本資料</div>
+            <div class="preview-slider-row">
+              <div class="preview-slider-label" style="font-size:10px;color:#8A8E96">目前年齡</div>
+              <div class="preview-slider-track">
+                <div class="preview-slider-fill" style="width:37%"></div>
+                <div class="preview-slider-thumb" style="left:calc(37% - 6px)"></div>
+              </div>
+              <div class="preview-slider-value">37 歲</div>
+            </div>
+            <div class="preview-slider-row">
+              <div class="preview-slider-label" style="font-size:10px;color:#8A8E96">退休年齡</div>
+              <div class="preview-slider-track">
+                <div class="preview-slider-fill" style="width:65%"></div>
+                <div class="preview-slider-thumb" style="left:calc(65% - 6px)"></div>
+              </div>
+              <div class="preview-slider-value">65 歲</div>
+            </div>
+            <div class="preview-slider-row">
+              <div class="preview-slider-label" style="font-size:10px;color:#8A8E96">月薪</div>
+              <div class="preview-slider-track">
+                <div class="preview-slider-fill" style="width:55%"></div>
+                <div class="preview-slider-thumb" style="left:calc(55% - 6px)"></div>
+              </div>
+              <div class="preview-slider-value">55k</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <div style="flex:1;background:#FEFEFE;border-radius:10px;padding:10px 12px;border:1px solid #DDD9CE">
+              <div style="font-size:9px;color:#8A8E96;font-weight:700;margin-bottom:6px">月領 vs 生活費</div>
+              <div class="preview-bar2" style="background:#DDD9CE">
+                <div style="width:72%;height:100%;background:#5BAD85;border-radius:4px"></div>
+              </div>
+              <div style="font-size:9px;color:#5BAD85;font-weight:700">覆蓋率 72%</div>
+            </div>
+            <div style="flex:1;background:#FEFEFE;border-radius:10px;padding:10px 12px;border:1px solid #DDD9CE">
+              <div style="font-size:9px;color:#8A8E96;font-weight:700;margin-bottom:6px">財務自由估算</div>
+              <div style="font-size:18px;font-weight:900;color:#2D4A6E;font-family:monospace">61 歲</div>
+              <div style="font-size:9px;color:#8A8E96">提早 4 年達標</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+
+<!-- ══ 快算工具區 ══ -->
+<section style="padding:80px 24px;background:#fff;border-top:1px solid var(--border);border-bottom:1px solid var(--border)" id="lp-quickcalc">
+  <div style="max-width:960px;margin:0 auto">
+    <div style="text-align:center;margin-bottom:48px">
+      <div class="section-eyebrow">快速試算</div>
+      <h2 class="section-title">30 秒算出你的數字</h2>
+      <p style="font-size:15px;color:var(--muted);max-width:400px;margin:0 auto">
+        不用登入，不用填很多欄位，先算一個感受看看。
+      </p>
+    </div>
+
+    <!-- 三個 tab -->
+    <div style="display:flex;justify-content:center;gap:8px;margin-bottom:32px;flex-wrap:wrap">
+      <button onclick="switchCalc('pension')" id="tab-pension"
+        style="padding:8px 20px;border-radius:20px;border:1.5px solid var(--navy);
+          font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;
+          background:var(--navy);color:#fff">
+        勞保年金
+      </button>
+      <button onclick="switchCalc('compound')" id="tab-compound"
+        style="padding:8px 20px;border-radius:20px;border:1.5px solid var(--border);
+          font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;
+          background:transparent;color:var(--muted)">
+        複利終值
+      </button>
+      <button onclick="switchCalc('gap')" id="tab-gap"
+        style="padding:8px 20px;border-radius:20px;border:1.5px solid var(--border);
+          font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;
+          background:transparent;color:var(--muted)">
+        退休缺口
+      </button>
+    </div>
+
+    <!-- 計算卡 -->
+    <div style="max-width:560px;margin:0 auto;background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:32px;box-shadow:0 8px 32px rgba(45,74,110,.08)">
+
+      <!-- 勞保年金 -->
+      <div id="calc-pension">
+        <p style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:1px;margin:0 0 20px;text-transform:uppercase">勞保老年年金估算</p>
+        <div style="display:flex;flex-direction:column;gap:16px;margin-bottom:24px">
+          <div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+              <label style="font-size:13px;font-weight:600;color:var(--text)">投保薪資</label>
+              <span id="p-salary-val" style="font-size:13px;font-weight:800;color:var(--navy);font-family:monospace">$45,800</span>
+            </div>
+            <input type="range" id="p-salary" min="0" max="10" step="1" value="10"
+              oninput="updateSalarySlider(this.value)"
+              style="width:100%">
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:3px">
+              <span>$29,500（第1級）</span><span>$45,800（第11級）</span>
+            </div>
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+              <label style="font-size:13px;font-weight:600;color:var(--text)">投保年資</label>
+              <span id="p-years-val" style="font-size:13px;font-weight:800;color:var(--navy);font-family:monospace">30 年</span>
+            </div>
+            <input type="range" id="p-years" min="5" max="40" step="1" value="30"
+              oninput="document.getElementById('p-years-val').textContent=this.value+' 年';updateSliderPct(this);calcPension()"
+              style="width:100%;accent-color:var(--navy)">
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:3px">
+              <span>5 年</span><span>40 年</span>
+            </div>
+          </div>
+        </div>
+        <div style="background:#fff;border-radius:12px;padding:18px 20px;border:1px solid var(--border);margin-bottom:20px">
+          <p style="font-size:11px;color:var(--muted);margin:0 0 4px">估算勞保月領（A/B 式擇優）</p>
+          <div style="display:flex;align-items:baseline;gap:8px">
+            <span id="p-result" style="font-size:40px;font-weight:900;color:var(--navy);font-family:monospace">$30,526</span>
+            <span style="font-size:13px;color:var(--muted)">/月</span>
+          </div>
+          <p id="p-formula" style="font-size:10px;color:var(--muted);margin:6px 0 0">A/B 式擇優</p>
+        </div>
+        <p style="font-size:10px;color:var(--muted);line-height:1.6;margin:0 0 16px">
+          ⚡ 此為概估值，實際金額依個人完整投保記錄計算。完整版可整合勞退+投資一起算。
+        </p>
+      </div>
+
+      <!-- 複利終值 -->
+      <div id="calc-compound" style="display:none">
+        <p style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:1px;margin:0 0 20px;text-transform:uppercase">每月定期定額複利試算</p>
+        <div style="display:flex;flex-direction:column;gap:16px;margin-bottom:24px">
+          <div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+              <label style="font-size:13px;font-weight:600;color:var(--text)">每月投入</label>
+              <span id="c-monthly-val" style="font-size:13px;font-weight:800;color:var(--navy);font-family:monospace">$10,000</span>
+            </div>
+            <input type="range" id="c-monthly" min="1000" max="50000" step="1000" value="10000"
+              oninput="document.getElementById('c-monthly-val').textContent='$'+parseInt(this.value).toLocaleString();updateSliderPct(this);calcCompound()"
+              style="width:100%;accent-color:var(--gold2)">
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+              <label style="font-size:13px;font-weight:600;color:var(--text)">年化報酬率</label>
+              <span id="c-rate-val" style="font-size:13px;font-weight:800;color:var(--navy);font-family:monospace">7%</span>
+            </div>
+            <input type="range" id="c-rate" min="1" max="15" step="0.5" value="7"
+              oninput="document.getElementById('c-rate-val').textContent=this.value+'%';updateSliderPct(this);calcCompound()"
+              style="width:100%;accent-color:var(--gold2)">
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+              <label style="font-size:13px;font-weight:600;color:var(--text)">投資年數</label>
+              <span id="c-years-val" style="font-size:13px;font-weight:800;color:var(--navy);font-family:monospace">25 年</span>
+            </div>
+            <input type="range" id="c-years" min="5" max="40" step="1" value="25"
+              oninput="document.getElementById('c-years-val').textContent=this.value+' 年';updateSliderPct(this);calcCompound()"
+              style="width:100%;accent-color:var(--gold2)">
+          </div>
+        </div>
+        <div style="background:#fff;border-radius:12px;padding:18px 20px;border:1px solid var(--border);margin-bottom:20px">
+          <p style="font-size:11px;color:var(--muted);margin:0 0 4px">25 年後資產池</p>
+          <div style="display:flex;align-items:baseline;gap:8px">
+            <span id="c-result" style="font-size:40px;font-weight:900;color:var(--gold2);font-family:monospace">810萬</span>
+          </div>
+          <p id="c-sub" style="font-size:10px;color:var(--muted);margin:6px 0 0">本金 $300萬 → 增值 $7,886萬</p>
+        </div>
+        <p style="font-size:10px;color:var(--muted);line-height:1.6;margin:0 0 16px">
+          ⚡ 完整版可模擬多個投資組合，並整合勞保勞退一起計算退休月領。
+        </p>
+      </div>
+
+      <!-- 退休缺口 -->
+      <div id="calc-gap" style="display:none">
+        <p style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:1px;margin:0 0 20px;text-transform:uppercase">退休缺口試算</p>
+        <div style="display:flex;flex-direction:column;gap:16px;margin-bottom:24px">
+          <div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+              <label style="font-size:13px;font-weight:600;color:var(--text)">目標退休月領</label>
+              <span id="g-target-val" style="font-size:13px;font-weight:800;color:var(--navy);font-family:monospace">$60,000</span>
+            </div>
+            <input type="range" id="g-target" min="20000" max="150000" step="5000" value="60000"
+              oninput="document.getElementById('g-target-val').textContent='$'+parseInt(this.value).toLocaleString();updateSliderPct(this);calcGap()"
+              style="width:100%;accent-color:#D95B5B">
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+              <label style="font-size:13px;font-weight:600;color:var(--text)">預估勞保+勞退月領</label>
+              <span id="g-base-val" style="font-size:13px;font-weight:800;color:var(--navy);font-family:monospace">$35,000</span>
+            </div>
+            <input type="range" id="g-base" min="10000" max="80000" step="1000" value="35000"
+              oninput="document.getElementById('g-base-val').textContent='$'+parseInt(this.value).toLocaleString();updateSliderPct(this);calcGap()"
+              style="width:100%;accent-color:#D95B5B">
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+              <label style="font-size:13px;font-weight:600;color:var(--text)">距退休年數</label>
+              <span id="g-years-val" style="font-size:13px;font-weight:800;color:var(--navy);font-family:monospace">25 年</span>
+            </div>
+            <input type="range" id="g-years" min="5" max="40" step="1" value="25"
+              oninput="document.getElementById('g-years-val').textContent=this.value+' 年';updateSliderPct(this);calcGap()"
+              style="width:100%;accent-color:#D95B5B">
+          </div>
+        </div>
+        <div style="background:#fff;border-radius:12px;padding:18px 20px;border:1px solid var(--border);margin-bottom:20px">
+          <p style="font-size:11px;color:var(--muted);margin:0 0 8px">每月需額外投資（年化 7%）</p>
+          <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">
+            <span id="g-result" style="font-size:40px;font-weight:900;color:#D95B5B;font-family:monospace">$11,234</span>
+            <span style="font-size:13px;color:var(--muted)">/月</span>
+          </div>
+          <div id="g-bar-wrap" style="height:8px;background:#f0ede8;border-radius:4px;overflow:hidden;margin-top:4px">
+            <div id="g-bar" style="height:100%;background:#5BAD85;border-radius:4px;transition:width .3s;width:58%"></div>
+          </div>
+          <p id="g-pct" style="font-size:10px;color:var(--muted);margin:4px 0 0">保底月領覆蓋率 58%</p>
+        </div>
+        <p style="font-size:10px;color:var(--muted);line-height:1.6;margin:0 0 16px">
+          ⚡ 完整版可精算你的實際勞保勞退金額，並試算不同投資策略的缺口補足方案。
+        </p>
+      </div>
+
+      <!-- CTA 按鈕 -->
+      <a class="btn-primary" style="width:100%;justify-content:center;font-size:14px;padding:13px" href="app.html">
+        進入完整版，精算我的退休規劃
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </a>
+    </div>
+  </div>
+</section>
+
+
+<section class="features" id="lp-features">
+  <div class="section-eyebrow">功能介紹</div>
+  <h2 class="section-title">四個模組<br>全面覆蓋退休規劃</h2>
+  <p class="section-desc">從法定給付到個人投資，一次試算清楚。</p>
+  <div class="feat-grid">
+
+    <div class="feat-card fc-green">
+      <div class="feat-icon-wrap" style="background:var(--green-bg); color:var(--green)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="22" x2="21" y2="22"/><line x1="6" y1="18" x2="6" y2="11"/><line x1="10" y1="18" x2="10" y2="11"/><line x1="14" y1="18" x2="14" y2="11"/><line x1="18" y1="18" x2="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg></div>
+      <div class="feat-title">基本盤精算</div>
+      <div class="feat-desc">勞保年金 A/B 式擇優、勞退新制動態除數、勞基法舊制年資，早領延領調整，依最新法令計算。</div>
+      <div class="feat-chips">
+        <span class="chip">勞保年金</span><span class="chip">勞退新制</span><span class="chip">早領 ±4%</span><span class="chip">舊制年資</span>
+      </div>
+    </div>
+
+    <div class="feat-card fc-gold">
+      <div class="feat-icon-wrap" style="background:var(--gold-bg); color:var(--gold2)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg></div>
+      <div class="feat-title">現有部位</div>
+      <div class="feat-desc">輸入股票、現金、企業福利信託，自動計算到退休時的複利終值與每月可提領金額。</div>
+      <div class="feat-chips">
+        <span class="chip">台股/美股</span><span class="chip">企業信託</span><span class="chip">複利終值</span>
+      </div>
+    </div>
+
+    <div class="feat-card fc-navy">
+      <div class="feat-icon-wrap" style="background:var(--navy-bg); color:var(--navy)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
+      <div class="feat-title">加碼計劃</div>
+      <div class="feat-desc">建立多個投資組合，設定每月定期定額與報酬率，視覺化複利成長曲線，模擬退休資產池目標。</div>
+      <div class="feat-chips">
+        <span class="chip">多組合</span><span class="chip">定期定額</span><span class="chip">成長曲線</span>
+      </div>
+    </div>
+
+    <div class="feat-card fc-purple">
+      <div class="feat-icon-wrap" style="background:rgba(124,111,191,.1); color:#7C6FBF"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
+      <div class="feat-title">戰況圖分析</div>
+      <div class="feat-desc">6 種圖表：資產累積曲線、月領來源、退休後現金流、報酬率情境、通膨侵蝕、健康期總領，另有缺口警示與財務自由年齡。</div>
+      <div class="feat-chips">
+        <span class="chip">6 種圖表</span><span class="chip">缺口警示</span><span class="chip">財務自由</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- TW Advantage -->
+
+<!-- 為什麼選我們 -->
+<section style="padding:80px 24px;max-width:960px;margin:0 auto" id="lp-why">
+  <div class="section-eyebrow">為什麼選早謀遠算</div>
+  <h2 class="section-title">不只是試算，<br>是你的退休顧問</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:0;margin-top:48px;border:1px solid var(--border);border-radius:16px;overflow:hidden;background:var(--surface)">
+
+    <!-- 一般計算機 -->
+    <div style="padding:28px;border-right:1px solid var(--border)">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:1px;margin-bottom:20px">一般退休試算工具</div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <div style="width:18px;height:18px;border-radius:50%;background:#fee;border:1.5px solid #fcc;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#e44" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </div>
+          <span style="font-size:13px;color:var(--muted)">固定 240 個月除數，不符合台灣生命表</span>
+        </div><div style="display:flex;align-items:flex-start;gap:10px">
+          <div style="width:18px;height:18px;border-radius:50%;background:#fee;border:1.5px solid #fcc;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#e44" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </div>
+          <span style="font-size:13px;color:var(--muted)">勞保投保薪資與月薪混用，計算不準確</span>
+        </div><div style="display:flex;align-items:flex-start;gap:10px">
+          <div style="width:18px;height:18px;border-radius:50%;background:#fee;border:1.5px solid #fcc;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#e44" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </div>
+          <span style="font-size:13px;color:var(--muted)">不考慮早領/延領對勞保年金的影響</span>
+        </div><div style="display:flex;align-items:flex-start;gap:10px">
+          <div style="width:18px;height:18px;border-radius:50%;background:#fee;border:1.5px solid #fcc;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#e44" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </div>
+          <span style="font-size:13px;color:var(--muted)">沒有投資組合複利模擬功能</span>
+        </div><div style="display:flex;align-items:flex-start;gap:10px">
+          <div style="width:18px;height:18px;border-radius:50%;background:#fee;border:1.5px solid #fcc;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#e44" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </div>
+          <span style="font-size:13px;color:var(--muted)">看不到退休後資金能撐幾年</span>
+        </div><div style="display:flex;align-items:flex-start;gap:10px">
+          <div style="width:18px;height:18px;border-radius:50%;background:#fee;border:1.5px solid #fcc;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#e44" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </div>
+          <span style="font-size:13px;color:var(--muted)">無法設定配偶雙薪家庭情境</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 早謀遠算 -->
+    <div style="padding:28px;background:linear-gradient(135deg,rgba(45,74,110,.03) 0%,rgba(232,184,75,.04) 100%)">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px">
+        <div style="font-size:12px;font-weight:700;color:var(--navy);letter-spacing:1px">早謀遠算</div>
+        <div style="background:var(--gold);color:var(--navy);font-size:9px;font-weight:800;padding:2px 8px;border-radius:8px">精算級</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <div style="width:18px;height:18px;border-radius:50%;background:var(--green-bg);border:1.5px solid rgba(91,173,133,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <span style="font-size:13px;color:var(--text)">依退休年齡與性別查生命表，算出提領月數</span>
+        </div><div style="display:flex;align-items:flex-start;gap:10px">
+          <div style="width:18px;height:18px;border-radius:50%;background:var(--green-bg);border:1.5px solid rgba(91,173,133,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <span style="font-size:13px;color:var(--text)">勞保投保薪資與勞退提繳工資分開計算</span>
+        </div><div style="display:flex;align-items:flex-start;gap:10px">
+          <div style="width:18px;height:18px;border-radius:50%;background:var(--green-bg);border:1.5px solid rgba(91,173,133,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <span style="font-size:13px;color:var(--text)">60~70 歲早領/延領 ±4%/年自動調整</span>
+        </div><div style="display:flex;align-items:flex-start;gap:10px">
+          <div style="width:18px;height:18px;border-radius:50%;background:var(--green-bg);border:1.5px solid rgba(91,173,133,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <span style="font-size:13px;color:var(--text)">多組合定期定額 + 現有資產複利模擬</span>
+        </div><div style="display:flex;align-items:flex-start;gap:10px">
+          <div style="width:18px;height:18px;border-radius:50%;background:var(--green-bg);border:1.5px solid rgba(91,173,133,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <span style="font-size:13px;color:var(--text)">退休後現金流模擬，看資金能撐幾歲</span>
+        </div><div style="display:flex;align-items:flex-start;gap:10px">
+          <div style="width:18px;height:18px;border-radius:50%;background:var(--green-bg);border:1.5px solid rgba(91,173,133,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <span style="font-size:13px;color:var(--text)">配偶獨立試算，合計雙薪退休月領</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section class="tw-section" id="lp-tw">
+  <div class="tw-inner">
+    <div class="section-eyebrow">台灣在地化</div>
+    <h2 class="section-title">不是黑盒子<br>每個數字都有法令依據</h2>
+    <div class="tw-grid">
+      <div class="tw-item">
+        <div class="tw-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
+        <div>
+          <div class="tw-title">生命表餘命</div>
+          <div class="tw-desc">依退休年齡與性別查表換算提領月數，比固定 240 個月更貼近實際餘命，也可自訂預期壽命</div>
+        </div>
+      </div>
+      <div class="tw-item">
+        <div class="tw-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+        <div>
+          <div class="tw-title">投保薪資 11 級分離</div>
+          <div class="tw-desc">勞保投保薪資與月薪分開設定，高薪者可正確反映投保上限差異，不混為一談</div>
+        </div>
+      </div>
+      <div class="tw-item">
+        <div class="tw-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg></div>
+        <div>
+          <div class="tw-title">115 年度最低生活費</div>
+          <div class="tw-desc">依衛福部與六都公告的最低生活費快選生活費級距，缺口計算更貼近各地生活成本</div>
+        </div>
+      </div>
+      <div class="tw-item">
+        <div class="tw-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V2"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="M4.22 4.22l2.83 2.83"/><path d="M16.95 16.95l2.83 2.83"/><path d="M4.22 19.78l2.83-2.83"/><path d="M16.95 7.05l2.83-2.83"/></svg></div>
+        <div>
+          <div class="tw-title">計算依據公開</div>
+          <div class="tw-desc">每個月領金額都附上公式與假設，程式碼公開可檢驗，不是黑盒子</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Trust CTA -->
+<section class="trust-cta">
+  <div class="trust-cta-glow"></div>
+  <div class="trust-cta-inner">
+    <h2>現在開始，<span style="color:var(--gold2)">提早謀算</span></h2>
+    <p>免費、免帳號、免安裝。<br>填入基本資料，30 秒看到你的退休月領。</p>
+    <a class="btn-primary" style="font-size:16px;padding:16px 44px" href="app.html">
+      立即免費試算
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg>
+    </a>
+    <div class="trust-badges">
+      <div class="trust-badge"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>完全免費</div>
+      <div class="trust-badge"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>無需帳號</div>
+      <div class="trust-badge"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>資料不離裝置</div>
+      <div class="trust-badge"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>台灣法令依據</div>
+      <div class="trust-badge"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>原始碼公開</div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div style="font-weight:700;color:#5A6470;margin-bottom:6px">SunDown Studio · 日落工作室 · 早謀遠算</div>
+  試算結果僅供參考，不構成理財建議
+</footer>
+
+</div>
+
+<!-- ══ 計算器頁 ══ -->
+
+<script type="module" src="js/landing.js"></script>
+</body>
+</html>
