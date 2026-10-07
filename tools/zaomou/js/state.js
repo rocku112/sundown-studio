@@ -1,6 +1,7 @@
 /* 早謀遠算 · 狀態：預設值、儲存、匯出入、舊版遷移 */
 
 export const STORAGE_KEY = 'zaomou_v2';
+export const SEED_KEY = 'zaomou_seed'; // 介紹頁迷你試算帶入完整版的數字（sessionStorage）
 const LEGACY_KEY = 'nuclear_retirement_v1';
 export const SCHEMA = 2;
 
@@ -131,6 +132,24 @@ export function load() {
     if (old) return migrateLegacy(JSON.parse(old));
   } catch { /* 無痕模式或資料損毀：用預設值 */ }
   return defaults();
+}
+
+/** 套用介紹頁帶來的年齡、月薪、每月投資，用過即刪 */
+export function applySeed(state, nowYear = new Date().getFullYear()) {
+  let seed = null;
+  try {
+    seed = JSON.parse(sessionStorage.getItem(SEED_KEY) || 'null');
+    sessionStorage.removeItem(SEED_KEY);
+  } catch { return false; }
+  if (!seed) return false;
+  if (Number.isFinite(seed.age)) state.self.birthYear = nowYear - seed.age;
+  if (Number.isFinite(seed.salary)) state.self.salary = seed.salary;
+  if (Number.isFinite(seed.invest)) {
+    const first = state.portfolios[0]?.assets[0];
+    if (first && state.portfolios.length === 1 && state.portfolios[0].assets.length === 1) first.monthly = seed.invest;
+    else state.portfolios = [{ id: uid('p'), name: '定期投資', assets: [{ id: uid('a'), name: '定期投資', monthly: seed.invest, rate: 6 }] }];
+  }
+  return true;
 }
 
 export function save(state) {

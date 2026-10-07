@@ -4,11 +4,14 @@
 
 import { compute, holdingValue, growLump } from './engine.js';
 import { legalPensionAge, INSURANCE_GRADES, MIN_LIVING, EXPENSE_LEVELS, RETURN_PRESETS, LIFE_TABLE, DATA_YEAR, PENSION_WAGE_MAX } from './data.js';
-import { load, save, defaults, parseImport, getPath, setPath, uid } from './state.js';
+import { load, save, defaults, parseImport, getPath, setPath, uid, applySeed, STORAGE_KEY } from './state.js';
 import { lineChart, donut, wan } from './charts.js';
 
 const NOW = new Date().getFullYear();
+const hadSaved = (() => { try { return !!(localStorage.getItem(STORAGE_KEY) || localStorage.getItem('nuclear_retirement_v1')); } catch { return false; } })();
 let state = load();
+const seeded = applySeed(state, NOW);
+if (seeded && !hadSaved) state.holdings = []; // 與介紹頁迷你試算的假設一致
 let R = compute(state, NOW);
 let tab = ['setup', 'floor', 'invest', 'plan', 'analysis'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'setup';
 
@@ -43,11 +46,22 @@ const icon = (k) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" 
 const badge = (k, bg, fg) => `<span class="badge-ic" style="background:${bg};color:${fg}">${icon(k)}</span>`;
 
 /* ── 表單元件（data-k 綁定狀態路徑） ─────────── */
-const numF = (k, label, o = {}) => `
+const numF = (k, label, o = {}) => {
+  const isMoney = o.unit === '元';
+  const v = getPath(state, k);
+  const t = isMoney ? (o.nullable ? 'moneynull' : 'money') : (o.nullable ? 'numnull' : 'num');
+  const attrs = isMoney
+    ? 'type="text" inputmode="numeric" autocomplete="off"'
+    : `type="number" inputmode="decimal" ${o.min !== undefined ? `min="${o.min}"` : ''} ${o.max !== undefined ? `max="${o.max}"` : ''} step="${o.step ?? 1}"`;
+  return `
   <label class="field"><span>${label}${o.em ? ` <em>${o.em}</em>` : ''}</span>
-    <span class="input-wrap"><input class="input num" type="number" inputmode="decimal" data-k="${k}" data-t="${o.nullable ? 'numnull' : 'num'}"
-      value="${getPath(state, k) ?? ''}" ${o.min !== undefined ? `min="${o.min}"` : ''} ${o.max !== undefined ? `max="${o.max}"` : ''} step="${o.step ?? 1}"
+    <span class="input-wrap"><input class="input num" ${attrs} data-k="${k}" data-t="${t}" value="${fmtInput(v, t)}"
       ${o.placeholder ? `placeholder="${esc(o.placeholder)}"` : ''} ${o.rerender ? 'data-rerender' : ''}>${o.unit ? `<span class="unit">${o.unit}</span>` : ''}</span></label>`;
+};
+function fmtInput(v, t) {
+  if (v === null || v === undefined || v === '') return '';
+  return t === 'money' || t === 'moneynull' ? Math.round(v).toLocaleString() : v;
+}
 const textF = (k, label) => `
   <label class="field"><span>${label}</span><input class="input txt" type="text" data-k="${k}" data-t="str" value="${esc(getPath(state, k))}" maxlength="30"></label>`;
 const rangeF = (k, label, min, max, step, o = {}) => `
@@ -131,7 +145,7 @@ function pageSetup() {
   const tbl = LIFE_TABLE[s.gender] || LIFE_TABLE.male;
   const region = MIN_LIVING.find((r) => r.name === state.region) || MIN_LIVING[6];
   return `
-  <h2 class="page-title">起點設定</h2>
+  <div class="page-head"><span class="step">STEP 01</span><h2 class="page-title">起點設定</h2></div>
   <p class="page-sub">填入基本資料，右側數字即時更新。資料只存在這台裝置的瀏覽器裡。</p>
 
   <section class="card"><div class="card-h"><h3>${badge('user', 'rgba(45,74,110,.1)', C.navy)}個人基本資料</h3></div>
@@ -239,7 +253,7 @@ function pageFloor() {
     : `年資未滿 15 年，只能請領一次金約 ${wan(ins.lump)}，以提領月數換算`;
   const row = (k, sub, v, tag = '') => `<div class="row"><div class="k">${k}${tag}<small>${sub}</small></div><div class="v">${money(v)}</div></div>`;
   return `
-  <h2 class="page-title">保底收入</h2>
+  <div class="page-head"><span class="step">STEP 02</span><h2 class="page-title">保底收入</h2></div>
   <p class="page-sub">法定退休給付與公司福利，是退休收入裡最穩的一塊。所有金額都是退休當年的名目月領。</p>
   <section class="card">
     <div class="rows">
@@ -251,7 +265,7 @@ function pageFloor() {
       ${R.holdingsMonthly ? row('現有資產', `現值 ${wan(R.holdingsNow)}，退休時 ${wan(R.holdingsPool)}`, R.holdingsMonthly) : ''}
       ${R.portfolioMonthly ? row('定期投資', `每月投入 ${money(R.monthlyInvest)}，退休時 ${wan(R.portfolioPool)}`, R.portfolioMonthly) : ''}
       ${R.spouse ? row(`${esc(state.spouse.name)}的保底月領`, `勞保 ${money(R.spouse.insMonthly)} + 勞退 ${money(R.spouse.laborRetire)}${R.spouse.oldMonthly ? ` + 舊制 ${money(R.spouse.oldMonthly)}` : ''}`, R.spouse.floor) : ''}
-      <div class="row sum total"><div class="k">退休月領總計<small>約當今日幣值 ${money(R.totalPV)}</small></div><div class="v">${money(R.total)}</div></div>
+      <div class="row total"><div class="k">退休月領總計<small>約當今日幣值 ${money(R.totalPV)}</small></div><div class="v">${money(R.total)}</div></div>
     </div>
   </section>
   <section class="card"><div class="card-h"><h3>${badge('landmark', 'rgba(63,154,110,.12)', C.green)}計算依據</h3></div>
@@ -302,7 +316,7 @@ function pageInvest() {
     </div>`).join('');
 
   return `
-  <h2 class="page-title">投資資產</h2>
+  <div class="page-head"><span class="step">STEP 03</span><h2 class="page-title">投資資產</h2></div>
   <p class="page-sub">現有資產以單筆複利、定期投資以每月期末投入計算，滾到退休時再依提領方式換算月領。</p>
   <section class="card"><div class="card-h"><h3>${badge('coins', 'rgba(232,184,75,.18)', '#9A7210')}現有資產</h3><span class="hint">${out('holdsum', outVal('holdsum'))}</span></div>
     ${h || '<p class="note" style="margin:0 0 10px">尚未加入資產。</p>'}
@@ -320,7 +334,7 @@ function pageInvest() {
 
 function pagePlan() {
   return `
-  <h2 class="page-title">目標反算</h2>
+  <div class="page-head"><span class="step">STEP 04</span><h2 class="page-title">目標反算</h2></div>
   <p class="page-sub">先決定退休後想過的生活，再算出現在每個月還要多投資多少。</p>
   <section class="card"><div class="card-h"><h3>${badge('target', 'rgba(201,74,74,.1)', C.red)}我的目標</h3></div>
     <div class="grid two">
@@ -402,7 +416,7 @@ function pageAnalysis() {
   const totH = R.total * 12 * healthY, totL = R.total * 12 * lifeY;
 
   return `
-  <h2 class="page-title">分析圖表</h2>
+  <div class="page-head"><span class="step">STEP 05</span><h2 class="page-title">分析圖表</h2></div>
   <section class="card"><div class="card-h"><h3>${badge('trend', 'rgba(58,95,138,.12)', C.navyL)}投資資產累積</h3></div>
     ${R.investPool > 0 ? growth : '<p class="note">尚未設定投資資產。</p>'}
     <div class="chart-legend"><span><i style="background:${C.navy}"></i>投資資產池（名目）</span>${needPool > 0 ? `<span><i style="background:${C.red}"></i>支應生活費缺口所需 ${wan(needPool)}</span>` : ''}</div>
@@ -468,14 +482,18 @@ function renderAside() {
       <div class="legend">${parts.map((p) => `<div><span><i style="background:${p[2]}"></i>${p[0]}</span><b>${money(p[1])}</b></div>`).join('')}</div>
     </div>
     <div class="card">
-      <div class="card-h" style="margin-bottom:8px"><h3 style="font-size:13px">月領 vs 生活費</h3><span class="hint">退休當年名目</span></div>
-      <div class="bar-row"><div class="lbl"><span>退休月領</span><b>${money(R.total)}</b></div>
-        <div class="meter"><i style="width:${Math.min(100, (R.total / Math.max(R.total, R.expenseAtRetire, 1)) * 100)}%;background:${covColor}"></i></div></div>
-      <div class="bar-row"><div class="lbl"><span>生活費（通膨後）</span><b>${money(R.expenseAtRetire)}</b></div>
-        <div class="meter"><i style="width:${Math.min(100, (R.expenseAtRetire / Math.max(R.total, R.expenseAtRetire, 1)) * 100)}%;background:${C.muted}"></i></div></div>
-      ${R.expenseToday <= 0 ? '<p class="note">尚未設定生活費。</p>' : gap >= 0
-        ? `<div class="alert good"><b>足以支應，每月多出 ${money(gap)}</b><p>覆蓋率 ${Math.round(cov * 100)}%</p></div>`
-        : `<div class="alert bad"><b>每月缺口 ${money(-gap)}</b><p>覆蓋率 ${Math.round(cov * 100)}%，可到「目標反算」看要補多少。</p></div>`}
+      <div class="card-h" style="margin-bottom:14px"><h3>月領 vs 生活費</h3><span class="hint">退休當年</span></div>
+      ${R.expenseToday <= 0 ? '<p class="note" style="margin:0">尚未設定生活費。</p>' : `
+      <div class="cover">
+        <div class="ring"><svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="15.915" fill="none" stroke="#EFE7D8" stroke-width="3.4"/>
+          <circle cx="18" cy="18" r="15.915" fill="none" stroke="${covColor}" stroke-width="3.4" stroke-linecap="round" stroke-dasharray="${Math.min(cov, 1) * 100} 100"/></svg>
+          <b style="color:${covColor}"><span>${Math.round(cov * 100)}%<small>覆蓋率</small></span></b></div>
+        <div class="cover-t">
+          <strong style="color:${gap >= 0 ? C.green : C.red}">${gap >= 0 ? `每月多出 ${money(gap)}` : `每月缺口 ${money(-gap)}`}</strong>
+          <p>月領 ${money(R.total)}<br>生活費 ${money(R.expenseAtRetire)}（通膨後）</p>
+          ${gap < 0 ? '<p><a href="#plan" data-tab="plan">看看要補多少 →</a></p>' : ''}
+        </div>
+      </div>`}
     </div>
     <div class="card" style="padding:12px 18px">
       <div class="kv"><span>距退休</span><b>${R.n} 年</b></div>
@@ -497,12 +515,20 @@ const PAGES = { setup: pageSetup, floor: pageFloor, invest: pageInvest, plan: pa
 const OUTPUT_ONLY = new Set(['floor', 'analysis', 'plan']);
 
 function renderTabs() {
-  $('#tabs').innerHTML = TABS.map(([k, l, ic]) =>
-    `<button type="button" class="tab" role="tab" aria-selected="${tab === k}" data-tab="${k}"><span class="ic">${icon(ic)}</span>${l}</button>`).join('');
+  $('#tabs').innerHTML = TABS.map(([k, l, ic], i) =>
+    `<button type="button" class="tab" role="tab" aria-selected="${tab === k}" data-tab="${k}"><span class="ic"><span>${i + 1}</span>${icon(ic)}</span>${l}</button>`).join('');
 }
 function renderPage() {
   const main = $('#main');
-  main.innerHTML = PAGES[tab]();
+  main.innerHTML = PAGES[tab]() + pager();
+}
+function pager() {
+  const i = TABS.findIndex((t) => t[0] === tab);
+  const prev = TABS[i - 1], next = TABS[i + 1];
+  return `<nav class="pager" aria-label="步驟切換">
+    ${prev ? `<button type="button" class="btn" data-tab="${prev[0]}">← ${prev[1]}</button>` : ''}
+    ${next ? `<button type="button" class="btn primary next" data-tab="${next[0]}">下一步：${next[1]} →</button>` : ''}
+  </nav>`;
 }
 function refreshOutputs() {
   for (const el of $$('[data-o]')) el.innerHTML = outVal(el.dataset.o);
@@ -510,8 +536,11 @@ function refreshOutputs() {
   for (const el of $$('[data-k]')) {
     if (el === document.activeElement) continue;
     const v = getPath(state, el.dataset.k);
-    if (el.type !== 'file' && String(el.value) !== String(v ?? '')) el.value = v ?? '';
+    const shown = fmtInput(v, el.dataset.t);
+    if (el.type !== 'file' && el.tagName !== 'SELECT' && String(el.value) !== String(shown)) el.value = shown;
+    else if (el.tagName === 'SELECT' && String(el.value) !== String(v)) el.value = v;
   }
+  for (const el of $$('input[type=range]')) fillRange(el);
   for (const el of $$('[data-set]')) el.setAttribute('aria-pressed', String(getPath(state, el.dataset.set)) === el.dataset.val);
 }
 
@@ -527,9 +556,17 @@ function update({ rerender = false } = {}) {
   renderAside();
 }
 
+function fillRange(el) {
+  el.style.setProperty('--fill', `${((+el.value - +el.min) / (+el.max - +el.min)) * 100}%`);
+}
 function parseVal(el) {
   const t = el.dataset.t;
   if (t === 'str') return el.value;
+  if (t === 'money' || t === 'moneynull') {
+    const raw = el.value.replace(/[^\d.]/g, '');
+    if (raw === '') return t === 'moneynull' ? null : 0;
+    return +raw || 0;
+  }
   if (t === 'numnull') return el.value === '' ? null : +el.value;
   const v = +el.value;
   return Number.isFinite(v) ? v : 0;
@@ -571,6 +608,8 @@ document.addEventListener('change', (e) => {
   }
 });
 document.addEventListener('focusout', (e) => {
+  // 金額欄位離開時補上千分位
+  if (e.target.matches?.('[data-t^="money"]')) e.target.value = fmtInput(getPath(state, e.target.dataset.k), e.target.dataset.t);
   // 離開欄位後，輸出分頁補一次整頁重繪
   if (e.target.matches?.('#main [data-k]') && OUTPUT_ONLY.has(tab)) setTimeout(() => {
     if (!$('#main').contains(document.activeElement)) { renderPage(); refreshOutputs(); }
@@ -688,3 +727,4 @@ renderTabs();
 renderPage();
 refreshOutputs();
 renderAside();
+if (seeded) { save(state); toast('已帶入介紹頁的年齡、月薪與每月投資'); }
