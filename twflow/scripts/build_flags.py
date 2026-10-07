@@ -187,27 +187,47 @@ def sbl(out, asof):
         asof.setdefault("sbl", s[-1][0])
 
 
+def bb_head(head, n):
+    """公開資訊觀測站庫藏股表有兩層表頭：「買回價格區間」「預定買回期間」各再分成兩欄。
+    資料列比表頭多 2 欄時展開，讓欄位對齊；表頭去掉空白與括號說明。"""
+    clean = [re.sub(r"\s+|\(.*?\)", "", h) for h in head]
+    if n != len(head) + 2:
+        return clean
+    out = []
+    for h in clean:
+        if "價格區間" in h:
+            out += ["買回價格最低", "買回價格最高"]
+        elif "預定買回期間" in h:
+            out += ["預定買回期間起", "預定買回期間迄"]
+        else:
+            out.append(h)
+    return out
+
+
+BB_KEEP = ("決議日期", "買回目的", "預定買回股數", "買回價格最低", "買回價格最高", "預定買回期間起", "預定買回期間迄", "是否執行完畢")
+
+
 def buyback(out, asof):
     cut = (date.today() - timedelta(days=120)).isoformat()
-    keep = ("決議", "期間", "區間", "股數", "價格", "執行", "目的")
     latest = None
     for p in sorted(glob.glob(os.path.join(EXTRA, "buyback_hist", "*.json.gz")))[-2:]:
         for ym, blk in sorted(load(p).items()):
-            head = blk.get("head") or []
+            head0 = blk.get("head") or []
             for r in blk.get("rows") or []:
                 row = r[1:]                              # 第一欄是 sii／otc
+                head = bb_head(head0, len(row))
                 ci = next((i for i, h in enumerate(head) if "代號" in h), None)
-                di = next((i for i, h in enumerate(head) if "決議" in h and "日" in h), None)
+                di = next((i for i, h in enumerate(head) if "決議日期" in h), None)
                 if ci is None or ci >= len(row):
                     continue
                 c = row[ci].strip()
                 d = roc(row[di]) if di is not None and di < len(row) else ym + "-01"
                 if not CODE_RE.match(c) or (d and d < cut):
                     continue
-                pairs = [[h, row[i]] for i, h in enumerate(head) if i < len(row) and any(k in h for k in keep) and row[i]]
+                pairs = [[k, row[i]] for k in BB_KEEP for i, h in enumerate(head) if h.endswith(k) and i < len(row) and row[i]]
                 prev = out.get(c, {}).get("_bbd")
                 if prev is None or d >= prev:
-                    out.setdefault(c, {})["bb"] = pairs[:7]
+                    out.setdefault(c, {})["bb"] = pairs
                     out[c]["_bbd"] = d
                 latest = max(latest or d, d)
     for v in out.values():
