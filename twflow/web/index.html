@@ -1056,8 +1056,32 @@ function openLite(key){
       仍可加入「持股健檢」計算損益。<br><a href="${link}" target="_blank" rel="noopener" style="color:var(--gold)">在 Yahoo 財經看更多 ↗</a></p>`;
   $('kp-body').onclick=null;
   $('kp-star').style.display='none';
-  if(tw) addNews(code);
+  if(tw){ addFlags(code); addNews(code); }
   show('stk-panel');
+}
+/* ══ 風險與籌碼旗標：董監質押、處置／注意股、借券、庫藏股（官方資料，只陳述現況）══ */
+let FLAGS=null;
+const flagsReady=()=>FLAGS?Promise.resolve(FLAGS)
+  :fetch('data/flags.json').then(r=>r.json()).then(j=>(FLAGS=j)).catch(()=>(FLAGS={codes:{}}));
+function addFlags(code){
+  const host=document.createElement('div'); host.id='kflags'; $('kp-body').appendChild(host);
+  flagsReady().then(F=>{
+    if(!document.body.contains(host)) return;
+    const e=(F.codes||{})[code]; if(!e) return;
+    const row=(k,v,warn)=>`<div class="kv" style="align-items:flex-start;gap:10px"><span>${k}</span><b style="white-space:normal;text-align:right;line-height:1.5${warn?';color:var(--gold)':''}">${v}</b></div>`;
+    let h='';
+    if(e.pn) h+=row('處置股',`處置中：${esc(e.pn[0])}<div class="rsub" style="font-size:11.5px;white-space:normal">${esc(e.pn[1])}</div>`,1);
+    if(e.pw) h+=row('處置預警',esc(e.pw)||'注意累計次數可能達處置標準',1);
+    if(e.nt) h+=row('注意股',`近 30 天 ${e.nt[0]} 天被列注意（最近 ${esc(e.nt[1].slice(5))}）<div class="rsub" style="font-size:11.5px;white-space:normal">${esc(e.nt[2])}</div>`,1);
+    if(e.pg) h+=row('董監設質比例',`${e.pg[0]}%<span class="rsub" style="font-size:11.5px">　${esc(e.pg[1]||'')}</span>`,e.pg[0]>=30);
+    if(e.sb){const [b,p,d]=e.sb, ch=p?((b-p)/p*100):null;
+      h+=row('借券賣出餘額',`${b.toLocaleString()} 張${ch!=null&&isFinite(ch)?`<span style="color:${col(ch)}">（5 日 ${ch>=0?'+':''}${ch.toFixed(0)}%）</span>`:''}<span class="rsub" style="font-size:11.5px">　${esc(d.slice(5))}</span>`);}
+    if(e.bb) h+=row('庫藏股買回',e.bb.map(([k,v])=>`<div style="font-size:12px"><span class="rsub">${esc(k)}</span> ${esc(v)}</div>`).join(''));
+    if(!h) return;
+    host.innerHTML=`<div class="stitle">風險與籌碼旗標</div>${h}
+      <p class="note" style="padding:6px 16px 14px;font-size:11.5px">資料來自證交所、櫃買中心與公開資訊觀測站。董監設質比例高代表大股東把股票拿去借錢，股價大跌時可能被迫賣出；
+        處置股交易受限制。這些旗標本身不代表會漲或會跌，有沒有預測力請看研究頁「新資料檢驗」。</p>`;
+  });
 }
 /* ══ 最新消息：重大訊息（官方）＋新聞標題（只放標題與原文連結）══ */
 let NEWS=null;
@@ -1107,6 +1131,7 @@ function openStock(code){
     if(b) openSector(sectors.find(s=>s.name===b.dataset.sec));
     const u=e.target.closest('[data-code]'); if(u) openStock(u.dataset.code);};
   $('kp-star').dataset.code=code; $('kp-star').style.display=''; refreshStars();
+  addFlags(code);
   addNews(code);
   show('stk-panel');
   histReady().then(h=>drawStockChart(code,h));
@@ -2021,7 +2046,45 @@ function litCard(){
         return `<tr><td style="min-width:160px"><b>${esc(t.name)}</b><div class="rsub" style="font-size:11.5px;white-space:normal">${esc(t.desc)}</div>
           <div class="note" style="font-size:11px">${esc(t.ref)}</div></td>${tiers.map(x=>`<td style="min-width:150px">${cell(g(k,x))}</td>`).join('')}</tr>`;}).join('')}</table></div>
     <p class="note" style="margin-top:8px;font-size:12.5px">讀法：論文做的是「多空對沖」、樣本期也不同，我們只做「買進前 20 檔」——結果不同不代表論文錯，而是告訴你這個方法對一般投資人在這十年是否有用。
-      已發表的因子平均在發表後報酬會少三到五成（McLean & Pontiff, 2016），所以就算成立也要打折看。不構成投資建議。</p></div>`;
+      已發表的因子平均在發表後報酬會少三到五成（McLean & Pontiff, 2016），所以就算成立也要打折看。不構成投資建議。</p>
+    ${litCombo()}</div>`;
+}
+function litCombo(){
+  const c=LIT.combo; if(!c||c.length<3) return '';
+  const [s,x,d]=c, f=v=>v==null?'—':(v>=0?'+':'')+v.toFixed(1);
+  return `<div class="stitle" style="margin-top:14px">疊加：中小型＋營收創新高（S）× 52 週新高</div>
+    <p style="font-size:13px;color:var(--s9);line-height:1.8">把壓力測試唯一通過的 S，候選股改用「離 52 週高點多近」來排序取前 20 檔，看疊加後有沒有比 S 本身更好。</p>
+    <div style="overflow-x:auto"><table class="st lft"><tr><th>做法</th><th>年化</th><th>同組等權</th><th>最大回撤</th><th>超額 t 值</th></tr>
+      <tr><td>S（營收年增率排序）</td><td>${s.cagr}%</td><td>${s.base}%</td><td>${s.mdd}%</td><td>${s.t??'—'}</td></tr>
+      <tr><td>S × 52 週新高</td><td>${x.cagr}%</td><td>${x.base}%</td><td>${x.mdd}%</td><td>${x.t??'—'}</td></tr></table></div>
+    <p style="font-size:13px;margin-top:8px">兩者相減：年化 ${f(d.excess)}%，差異的 t=${d.t??'—'}（前後半 ${(d.t_halves||[]).map(v=>v??'—').join('、')}）
+      <span class="vbadge ${(d.verdict||'').startsWith('比 S')?'mid':'no'}" style="margin-left:6px">${esc(d.verdict||'')}</span></p>
+    <p class="note" style="font-size:12px">兩個條件都是在同一份十年資料上找到的，疊加起來數字變好很常見，但這<b>不是</b>獨立驗證；差異沒有通過檢定就不改用。真正的考驗是前瞻紀錄。</p>`;
+}
+// 新資料檢驗：處置／注意股、庫藏股、借券、景氣燈號
+let EXL=null;
+const exlReady=()=>EXL?Promise.resolve(EXL)
+  :fetch('data/extra_lab.json').then(r=>r.json()).then(j=>(EXL=j)).catch(()=>null);
+const XV=v=>v.startsWith('照說法方向成立')||v.startsWith('比 0050 長抱好')?'ok':v.startsWith('有跡象')?'mid':v.startsWith('跟說法相反')||v.startsWith('比 0050 長抱差')?'rev':'no';
+function exlCard(){
+  if(!EXL) return '';
+  const ev=EXL.events||[], mc=EXL.macro||[];
+  const lamp=v=>v==null?'—':v<=16?'藍燈':v<=22?'黃藍燈':v<=31?'綠燈':v<=37?'黃紅燈':'紅燈';
+  return `<div class="card"><h3>新資料檢驗：處置股、注意股、庫藏股、借券、景氣燈號</h3>
+    <p style="font-size:13px;color:var(--s9);line-height:1.8">新加入的官方資料，把市場常見說法事先寫成規則再檢驗：公布當天收盤後才知道 → 隔天開盤進場、扣成本、和同一天所有股票的平均比、以月彙總、前後兩半都要同方向，
+      ${EXL.m?`${EXL.m} 個有資料的檢驗一起校正。`:''}歷史還在逐日回補的項目先標「資料累積中」。</p>
+    ${ev.map(r=>`<div class="erow"><div class="ehead"><b>${esc(r.name)}</b><span class="vbadge ${XV(r.verdict)}" style="margin:0">${esc(r.verdict)}</span></div>
+      <div class="rsub" style="font-size:12px;white-space:normal;margin-top:3px">說法：${esc(r.claim)}・${esc(r.source)}
+        ${r.events?`・${r.events} 次事件、${r.months} 個月（${r.period?r.period.join(' ～ '):''}）`:''}
+        ${r.t!=null?`・平均超額 ${r.excess>=0?'+':''}${r.excess}%，t=${r.t}，前後半 ${(r.t_halves||[]).map(v=>v??'—').join('、')}`:''}</div></div>`).join('')}
+    ${mc.length?`<div class="stitle" style="margin-top:14px">景氣燈號擇時（0050）</div>
+      <div style="overflow-x:auto"><table class="st lft"><tr><th>規則</th><th>年化</th><th>最大回撤</th><th>切換次數</th><th>結論</th></tr>
+        ${mc.map(r=>`<tr><td>${esc(r.name)}</td><td>${r.cagr}%</td><td>${r.mdd}%</td><td>${r.switches}</td><td><span class="vbadge ${XV(r.verdict)}" style="margin:0;white-space:normal">${esc(r.verdict)}</span></td></tr>`).join('')}
+        <tr><td>0050 長抱</td><td>${mc[0].base}%</td><td>${mc[0].base_mdd}%</td><td>0</td><td>—</td></tr></table></div>
+      <p class="note" style="font-size:12px">燈號每月約 27 日公布上個月，所以每月 10 日後調整時只能用前兩個月的燈號。十年裡藍燈、紅燈只出現少數幾次，檢定力很低。
+        ${EXL.ndc_latest?`最近公布：${EXL.ndc_latest.slice(-3).map(([m,v])=>`${m} ${v} 分（${lamp(v)}）`).join('、')}。`:''}</p>`
+      :`<p class="note" style="font-size:12px;margin-top:10px">景氣燈號：資料下載後才會出現擇時檢驗。</p>`}
+    <p class="note" style="margin-top:8px;font-size:12.5px">處置股在處置期間要分盤撮合、可能預收款項，實際成交比回測假設的「隔天開盤」更難。不構成投資建議。</p></div>`;
 }
 // 依持有時間分類：每一種操作節奏，本站檢驗到哪、結論是什麼
 function mapCard(){
@@ -2133,12 +2196,13 @@ function buildSwing(){
   if(!STR){ strReady().then(o=>{ if(o&&curView==='swing') buildSwing(); }); }
   if(!HZ){ hzReady().then(o=>{ if(o&&curView==='swing') buildSwing(); }); }
   if(!LIT){ litReady().then(o=>{ if(o&&curView==='swing') buildSwing(); }); }
+  if(!EXL){ exlReady().then(o=>{ if(o&&curView==='swing') buildSwing(); }); }
   if(!SW){ el.innerHTML='<div class="empty">載入中…</div>';
     swReady().then(d=>{ if(d) buildSwing(); else el.innerHTML='<div class="empty">波段回測資料尚未產生。每個交易日盤後更新。</div>'; }); return; }
   const ok=SW.strategies.filter(s=>s.verdict).length, b=SW.bench||{};
   const f=x=>x==null?'—':(x>=0?'+':'')+x.toFixed(2)+'%';
   const row=(lab,a,b_)=>`<tr><td>${lab}</td><td>${a}</td><td>${b_}</td></tr>`;
-  el.innerHTML=`${mapCard()}${stressCard()}${litCard()}${pfCard()}${fwdCard()}${horizonCard()}${oddsCard()}${rdcaCard()}${eviCard()}
+  el.innerHTML=`${mapCard()}${stressCard()}${litCard()}${exlCard()}${pfCard()}${fwdCard()}${horizonCard()}${oddsCard()}${rdcaCard()}${eviCard()}
     <div class="card"><h3>波段實驗室・${SW.period[0]} ～ ${SW.period[1]}</h3>
       <div class="big" style="font-size:20px">${ok?`${SW.strategies.length} 個策略中 ${ok} 個在樣本外通過檢驗`:`${SW.strategies.length} 個策略扣掉成本後，都沒有穩定贏過基準`}</div>
       ${SW.strategies.length>3?`<p class="note" style="margin-top:6px;font-size:12px">同時測的策略越多，靠運氣「看起來有效」的機會越大；${SW.strategies.length} 個策略裡出現 1 個 t≈2 的結果，本身就可能只是巧合。</p>`:''}
