@@ -2059,7 +2059,21 @@ function litCombo(){
       <tr><td>S × 52 週新高</td><td>${x.cagr}%</td><td>${x.base}%</td><td>${x.mdd}%</td><td>${x.t??'—'}</td></tr></table></div>
     <p style="font-size:13px;margin-top:8px">兩者相減：年化 ${f(d.excess)}%，差異的 t=${d.t??'—'}（前後半 ${(d.t_halves||[]).map(v=>v??'—').join('、')}）
       <span class="vbadge ${(d.verdict||'').startsWith('比 S')?'mid':'no'}" style="margin-left:6px">${esc(d.verdict||'')}</span></p>
-    <p class="note" style="font-size:12px">兩個條件都是在同一份十年資料上找到的，疊加起來數字變好很常見，但這<b>不是</b>獨立驗證；差異沒有通過檢定就不改用。真正的考驗是前瞻紀錄。</p>`;
+    <p class="note" style="font-size:12px">兩個條件都是在同一份十年資料上找到的，疊加起來數字變好很常見，但這<b>不是</b>獨立驗證；差異沒有通過檢定就不改用。真正的考驗是前瞻紀錄。</p>
+    ${litQuality()}`;
+}
+function litQuality(){
+  const q=LIT.quality; if(!q||q.length<2) return '';
+  const s=q[0], yrs=s.period?((new Date(s.period[1])-new Date(s.period[0]))/3.156e10).toFixed(1):'—';
+  return `<div class="stitle" style="margin-top:14px">再加獲利品質條件：ROE、負債比、毛利÷資產</div>
+    <p style="font-size:13px;color:var(--s9);line-height:1.8">S 的候選股再用財報過濾（門檻事先固定），和 S 本身比。資產負債表目前回補的長度只夠從 ${esc(s.period?s.period[0]:'')} 開始檢驗，
+      <b>只有約 ${yrs} 年</b>，三個條件一起校正；歷史每天往前補，資料變長後會自動重算。</p>
+    <div style="overflow-x:auto"><table class="st lft"><tr><th>條件</th><th>年化</th><th>最大回撤</th><th>與 S 的差異</th><th>結論</th></tr>
+      <tr><td>${esc(s.name)}</td><td>${s.cagr}%</td><td>${s.mdd}%</td><td>—</td><td>—</td></tr>
+      ${q.slice(1).map(r=>`<tr><td>${esc(r.name)}</td><td>${r.cagr}%</td><td>${r.mdd}%</td><td>${r.diff>=0?'+':''}${r.diff}%，t=${r.t??'—'}</td>
+        <td><span class="vbadge ${(r.verdict||'').startsWith('比 S 本身更好')?'ok':(r.verdict||'').startsWith('有跡象')?'mid':(r.verdict||'').startsWith('比 S 本身差')?'rev':'no'}" style="margin:0;white-space:normal">${esc(r.verdict||'')}</span></td></tr>`).join('')}</table></div>
+    <p class="note" style="font-size:12px">期間短的結果很容易被一兩段行情左右（例如這三年剛好是低負債公司表現好的時期），所以就算通過校正也<b>不改動 S 的規則與前瞻紀錄</b>，
+      等資產負債表補滿十年、結果仍成立，才會考慮納入。不構成投資建議。</p>`;
 }
 // 新資料檢驗：處置／注意股、庫藏股、借券、景氣燈號
 let EXL=null;
