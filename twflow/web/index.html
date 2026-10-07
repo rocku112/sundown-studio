@@ -2318,6 +2318,12 @@ const SDEF=[
     {f:'big',l:'千張大戶持股',t:'n',op:'>=',v:60,u:'%'},
     {f:'big_chg',l:'千張大戶週增減',t:'n',op:'>=',v:0.5,u:'百分點'},
   ]],
+  ['財報品質與風險',[
+    {f:'roe',l:'近四季 ROE',t:'n',op:'>=',v:8,u:'%'},
+    {f:'debt',l:'負債比',t:'n',op:'<=',v:60,u:'%'},
+    {f:'pledge',l:'董監設質比例',t:'n',op:'<=',v:30,u:'%'},
+    {f:'calm',l:'不在處置、處置預警，近 30 天未列注意股',t:'b'},
+  ]],
 ];
 const SFLD=Object.fromEntries(SDEF.flatMap(([g,a])=>a.map(d=>[d.f,{...d,g}])));
 const SPRE=[

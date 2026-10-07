@@ -10,6 +10,8 @@
   · 本益比／殖利率／淨值比、季報：swing/data/fund
   · 月營收：swing/data/revenue.json
   · 千張大戶：swing/data/tdcc（最近兩週）
+  · 資產負債表：swing/data/fund/balance.json（ROE、負債比）
+  · 董監質押、處置／注意股：swing/data/extra（與 twflow/scripts/build_flags.py 同一套整理）
 
 輸出：twflow/web/data/screen.json（欄位式：{"codes": [...], "cols": {欄位: [...]}}，缺值為 null）
 
@@ -247,6 +249,42 @@ def main():
                 put("big", c, a[c][0])
                 if c in b:
                     put("big_chg", c, r(a[c][0] - b[c][0]))
+
+    # ── 財報品質（資產負債表）：近四季 ROE、負債比 ─────────────────
+    bal = load(os.path.join(DATA, "fund", "balance.json"), {})
+    bq = sorted(bal)
+    if bq and qs:
+        b0 = bq[-1]
+        last4 = [x for x in qs if x <= b0][-4:]
+        for c in codes:
+            b = bal[b0].get(c)
+            if not b or not b[0] or b[0] <= 0:
+                continue
+            if b[1] is not None:
+                put("debt", c, r(b[1] / b[0] * 100, 1))
+            eq = b[3] or b[2]
+            ni = [single.get(x, {}).get(c, [None] * 5)[3] for x in last4]
+            if len(ni) == 4 and None not in ni and eq and eq > 0:
+                put("roe", c, r(sum(ni) / eq * 100, 1))
+
+    # ── 風險旗標（twflow/scripts/build_flags.py 的同一套整理）──────────
+    try:
+        sys.path.insert(0, os.path.join(REPO, "twflow", "scripts"))
+        import build_flags as BF
+        fl, _ = {}, {}
+        for fn in (BF.pledge, BF.punish, BF.notice):
+            try:
+                fn(fl, _)
+            except Exception as e:          # noqa: BLE001
+                print(f"  ⚠️ 旗標 {fn.__name__}：{e!r}")
+        if fl:
+            for c in codes:
+                e = fl.get(c, {})
+                if "pg" in e:
+                    put("pledge", c, e["pg"][0])
+                put("calm", c, not ("pn" in e or "pw" in e or "nt" in e))
+    except ImportError:
+        pass
 
     # ── 產業 ────────────────────────────────────────────────────
     for c in codes:
