@@ -103,9 +103,16 @@ jobs:
       - name: 文獻因子檢驗
         run: python -X utf8 swing/scripts/literature_lab.py
 
+      - name: 新資料檢驗（處置／注意、庫藏股、借券、景氣燈號）
+        run: python -X utf8 swing/scripts/extra_lab.py
+
       - name: 每檔股票最新消息（重大訊息＋新聞標題，試抓 20 檔）
         working-directory: twflow
         run: python -u -X utf8 scripts/fetch_news.py --top 20 --budget 1 || echo "::warning::新聞抓取失敗"
+
+      - name: 風險與籌碼旗標
+        working-directory: twflow
+        run: python -u -X utf8 scripts/build_flags.py
 
       - name: 智慧選股資料表
         run: python -X utf8 swing/scripts/build_screen.py
@@ -131,3 +138,5 @@ jobs:
             twflow/web/data/horizon.json
             twflow/web/data/literature.json
             twflow/web/data/news.json
+            twflow/web/data/flags.json
+            twflow/web/data/extra_lab.json

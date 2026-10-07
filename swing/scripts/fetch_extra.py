@@ -24,12 +24,14 @@
 """
 
 import argparse
+import csv
 import gzip
 import io
 import json
 import os
-import sys
+import re
 import time
+import zipfile
 from datetime import date, datetime, timedelta, timezone
 
 import requests
@@ -47,7 +49,7 @@ OPENAPI = {
 # 名稱 → 端點摘要須包含的關鍵字（任一）；排除字避免抓到不相干的
 WANT = {
     "news": (["重大訊息"], ["英文", "外國", "違反"]),
-    "buyback": (["庫藏股"], []),
+    "buyback": (["庫藏股", "買回本公司股份", "買回自己股份"], []),
     "pledge": (["質押", "董監事持股"], []),
     "punish": (["處置"], []),
     "notice": (["注意"], ["處置"]),
@@ -260,6 +262,155 @@ def ndc_cycle():
         print(f"  景氣燈號 {name}（{fmt}，{len(r.content)} bytes）開頭：{head[:160]!r}")
 
 
+def ndc_parse():
+    """解開國發會 ZIP，找出含「景氣對策信號」的 CSV，存 ndc/signal.json：{YYYY-MM: [燈號分數, 燈號文字]}。
+    欄位名稱不寫死：找含「信號」或「燈號」的欄位與日期欄位；每次印出檔名與表頭方便確認。"""
+    d = os.path.join(OUT, "ndc")
+    if not os.path.isdir(d):
+        return
+    out = {}
+    for fn in sorted(os.listdir(d)):
+        p = os.path.join(d, fn)
+        if not zipfile.is_zipfile(p):
+            continue
+        with zipfile.ZipFile(p) as z:
+            for name in z.namelist():
+                if not name.lower().endswith(".csv"):
+                    continue
+                raw = z.read(name)
+                for enc in ("utf-8-sig", "cp950", "big5"):
+                    try:
+                        text = raw.decode(enc)
+                        break
+                    except UnicodeDecodeError:
+                        continue
+                rows = list(csv.reader(io.StringIO(text)))
+                if not rows:
+                    continue
+                head = [h.strip() for h in rows[0]]
+                print(f"  景氣 ZIP {name}：{len(rows) - 1} 列，表頭 {head[:12]}")
+                si = next((i for i, h in enumerate(head) if "信號" in h and "分" in h), None)
+                si = si if si is not None else next((i for i, h in enumerate(head) if "信號" in h or "燈號" in h), None)
+                di = next((i for i, h in enumerate(head) if re.search(r"Date|日期|年月|時間", h, re.I)), 0)
+                if si is None:
+                    # 也可能是「長表」：一欄是指標名稱、一欄是數值
+                    ni = next((i for i, h in enumerate(head) if "指標" in h or "項目" in h or "Item" in h), None)
+                    vi = next((i for i, h in enumerate(head) if "值" in h or "Value" in h), None)
+                    if ni is None or vi is None:
+                        continue
+                    for r in rows[1:]:
+                        if len(r) > max(ni, vi, di) and "信號" in r[ni] and "分" in r[ni]:
+                            ym = ndc_month(r[di])
+                            if ym:
+                                out[ym] = num_or_none(r[vi])
+                    continue
+                for r in rows[1:]:
+                    if len(r) <= max(si, di):
+                        continue
+                    ym = ndc_month(r[di])
+                    if ym:
+                        out[ym] = num_or_none(r[si])
+    out = {k: v for k, v in sorted(out.items()) if v is not None}
+    if out:
+        with open(os.path.join(d, "signal.json"), "w", encoding="utf-8") as f:
+            json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
+        ks = list(out)
+        print(f"  景氣對策信號：{len(out)} 個月（{ks[0]}～{ks[-1]}），最近 {[(k, out[k]) for k in ks[-3:]]}")
+    else:
+        print("  ⚠️ 景氣 ZIP 裡沒找到景氣對策信號欄位")
+
+
+def ndc_month(s):
+    s = str(s).strip()
+    m = re.match(r"^(\d{4})[-/]?(\d{1,2})", s)
+    if m and 1950 < int(m.group(1)) < 2100 and 1 <= int(m.group(2)) <= 12:
+        return f"{m.group(1)}-{int(m.group(2)):02d}"
+    m = re.match(r"^(\d{2,3})[-/年](\d{1,2})", s)          # 民國
+    if m and 1 <= int(m.group(2)) <= 12:
+        return f"{int(m.group(1)) + 1911}-{int(m.group(2)):02d}"
+    return None
+
+
+def num_or_none(s):
+    try:
+        return float(str(s).replace(",", "").strip())
+    except ValueError:
+        return None
+
+
+MOPS_HOSTS = ["https://mopsov.twse.com.tw/mops/web/", "https://mops.twse.com.tw/mops/web/"]
+
+
+def html_tables(html):
+    from bs4 import BeautifulSoup
+    soup = BeautifulSoup(html, "lxml")
+    out = []
+    for tb in soup.find_all("table"):
+        trs = tb.find_all("tr")
+        rows = [[c.get_text(" ", strip=True) for c in tr.find_all(["th", "td"])] for tr in trs]
+        rows = [r for r in rows if r]
+        if len(rows) >= 2:
+            out.append(rows)
+    return out
+
+
+def buyback_history(years, budget_s, t0):
+    """公開資訊觀測站「庫藏股買回」（t35sc09，依董事會決議日期區間查詢，上市＋上櫃）。
+    存 buyback_hist/YYYY.json.gz：{YYYY-MM: {"head": 表頭, "rows": [...]}}；本月每次重抓。"""
+    m0 = date.today().replace(day=1)
+    done, fail = 0, 0
+    for k in range(years * 12):
+        if time.time() - t0 > budget_s:
+            print("  庫藏股歷史：時間預算用完")
+            break
+        y, m = m0.year, m0.month - k
+        while m <= 0:
+            y, m = y - 1, m + 12
+        start = date(y, m, 1)
+        end = date(y + (m == 12), m % 12 + 1, 1) - timedelta(days=1)
+        path = os.path.join(OUT, "buyback_hist", f"{y}.json.gz")
+        cur = load_json(path, {})
+        key = start.strftime("%Y-%m")
+        if key in cur and k > 0:
+            continue
+        got = {"head": None, "rows": []}
+        for typek in ("sii", "otc"):
+            data = {"encodeURIComponent": 1, "step": 1, "firstin": 1, "off": 1, "TYPEK": typek,
+                    "d1": f"{y - 1911}{m:02d}01", "d2": f"{end.year - 1911}{end.month:02d}{end.day:02d}", "RD": 1}
+            html = None
+            for h in MOPS_HOSTS:
+                try:
+                    r = requests.post(h + "ajax_t35sc09", data=data, headers=UA, timeout=30)
+                    if r.status_code == 200:
+                        r.encoding = "utf-8"
+                        html = r.text
+                        break
+                except Exception:               # noqa: BLE001
+                    continue
+            if html is None:
+                continue
+            tabs = [t for t in html_tables(html) if any("代號" in c for c in t[0])]
+            if done == 0 and typek == "sii":
+                txt = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", html))[:200]
+                print(f"  庫藏股 {key} {typek}：{len(tabs)} 個表；回應開頭 {txt!r}")
+                if tabs:
+                    print(f"    表頭 {tabs[0][0]}，例 {tabs[0][1][:12]}")
+            for t in tabs:
+                got["head"] = got["head"] or t[0]
+                got["rows"] += [[typek] + r for r in t[1:] if len(r) >= 3]
+            time.sleep(1.5)
+        if got["head"] is None:
+            fail += 1
+            if fail >= 3:
+                print("  ⚠️ 庫藏股：連續 3 個月抓不到表格，停止（請看上面的回應開頭）")
+                break
+            continue
+        cur[key] = got
+        save_gz(path, cur)
+        done += 1
+    print(f"  庫藏股歷史：本次補 {done} 個月")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--budget", type=float, default=10, help="分鐘")
@@ -275,6 +426,8 @@ def main():
     stat = snapshot(found, today)
     print("快照：", stat)
     ndc_cycle()
+    ndc_parse()
+    buyback_history(10, budget * 0.15, t0)
     # 歷史回補：處置／注意（每月一次請求，快）先做，再把剩下的預算給借券（每日一次請求）
     announce_history("punish", 10, budget * 0.3, t0)
     announce_history("notice", 10, budget * 0.5, t0)

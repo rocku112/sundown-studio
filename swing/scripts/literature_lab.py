@@ -180,6 +180,45 @@ def main():
                          "t": e["t"], "t_halves": e["t_halves"], "mdd": s_["mdd"], "period": s_["period"],
                          "turnover": round(float(np.mean(turns)) * 12 * 100), "p": round(p, 5),
                          "significant": bool(p < 0.05 / m and all((x or 0) * sign > 0 for x in e["t_halves"]))})
+    # 組合：唯一通過壓力測試的 S（中小型＋營收創新高）× 文獻唯一通過的 H52。
+    # 兩者都是在同一份資料上找到的，組合起來不算獨立驗證——只看「疊加後有沒有比 S 本身更好」，
+    # 結論以前瞻紀錄為準。事先固定：S 的候選（營收創 12 個月新高、年增為正）改依「離 52 週高點多近」取前 20 檔。
+    combo = []
+    lo, hi = TIERS[1][1], TIERS[1][2]
+
+    def ew_s(t):
+        mem = members(t, lo, hi)
+        return {k: 1.0 / len(mem) for k in mem} if mem else {CASH: 1.0}
+
+    def s_pick(order_key):
+        def tg(t):
+            mem = members(t, lo, hi)
+            if not mem:
+                return {CASH: 1.0}
+            ms, sig = set(mem), X.rev.get(t, {})
+            cand = [k for k in sig if k in ms]
+            if order_key == "yoy":
+                cand.sort(key=lambda k: -sig[k])
+            else:
+                h = score("H52", t)
+                cand = [k for k in cand if np.isfinite(h[k])]
+                cand.sort(key=lambda k: -h[k])
+            return P.slots(cand[:TOPN], ew_s(t), TOPN)
+        return tg
+    r_c = [t for t in rd if t + 1 < book.T]
+    nav_s, st_c, _ = P.simulate(book, r_c, s_pick("yoy"))
+    nav_c, _, turns_c = P.simulate(book, r_c, s_pick("h52"))
+    b_c, _, _ = P.simulate(book, r_c, ew_s)
+    for key, nav in (("S", nav_s), ("S×H52", nav_c)):
+        s_, sb_ = P.stats(nav, lab.dates, st_c), P.stats(b_c, lab.dates, st_c)
+        e = P.excess_t(nav, b_c, r_c)
+        combo.append({"key": key, "cagr": s_["cagr"], "base": sb_["cagr"], "excess": round(s_["cagr"] - sb_["cagr"], 1),
+                      "t": e["t"], "t_halves": e["t_halves"], "mdd": s_["mdd"], "period": s_["period"]})
+    d = P.excess_t(nav_c, nav_s, r_c)
+    combo.append({"key": "S×H52 − S", "excess": round(combo[1]["cagr"] - combo[0]["cagr"], 1),
+                  "t": d["t"], "t_halves": d["t_halves"],
+                  "verdict": ("比 S 本身更好（前後半都成立）" if (d["t"] or 0) > 2 and all((x or 0) > 0 for x in d["t_halves"])
+                              else "沒有比 S 本身明顯更好")})
     for r in rows:
         if r["significant"]:
             r["verdict"] = "照論文方向成立（通過校正）" if r["expect"] > 0 else "照論文方向成立：應該避開"
@@ -190,12 +229,15 @@ def main():
         else:
             r["verdict"] = "在我們的資料裡不明顯"
     doc = {"generated_at": datetime.now(timezone(timedelta(hours=8))).isoformat(timespec="seconds"),
-           "m": m, "topn": TOPN, "tests": rows, "gp_available": bool(gp)}
+           "m": m, "topn": TOPN, "tests": rows, "gp_available": bool(gp), "combo": combo}
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(doc, f, ensure_ascii=False, separators=(",", ":"))
     print(f"文獻檢驗：{len(rows)} 個（校正門檻 p < 0.05/{m}）{'' if gp else '；毛利÷資產等資產負債表補齊後才做'}")
     for r in rows:
         print(f"  {r['tier']} {r['key']:<5} {r['name']:<6} 年化 {r['cagr']:6.1f}%（同組 {r['base']}%）超額 {r['excess']:+.1f} t={r['t']} 前後半 {r['t_halves']} → {r['verdict']}")
+    print("組合（中小型）：")
+    for c in combo:
+        print("  ", c)
 
 
 if __name__ == "__main__":
