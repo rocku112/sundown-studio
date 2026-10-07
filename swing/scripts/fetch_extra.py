@@ -359,6 +359,8 @@ def buyback_history(years, budget_s, t0):
     存 buyback_hist/YYYY.json.gz：{YYYY-MM: {"head": 表頭, "rows": [...]}}；本月每次重抓。"""
     m0 = date.today().replace(day=1)
     done, fail = 0, 0
+    cnt = {"sii": [0, 0, 0], "otc": [0, 0, 0]}          # [連線失敗, 有表的月數, 列數]
+    shown = set()
     for k in range(years * 12):
         if time.time() - t0 > budget_s:
             print("  庫藏股歷史：時間預算用完")
@@ -388,13 +390,18 @@ def buyback_history(years, budget_s, t0):
                 except Exception:               # noqa: BLE001
                     continue
             if html is None:
+                cnt[typek][0] += 1
                 continue
             tabs = [t for t in html_tables(html) if any("代號" in c for c in t[0])]
-            if done == 0 and typek == "sii":
+            if typek not in shown and (tabs or done == 0):
                 txt = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", html))[:200]
                 print(f"  庫藏股 {key} {typek}：{len(tabs)} 個表；回應開頭 {txt!r}")
                 if tabs:
                     print(f"    表頭 {tabs[0][0]}，例 {tabs[0][1][:12]}")
+                    shown.add(typek)
+            if tabs:
+                cnt[typek][1] += 1
+                cnt[typek][2] += sum(len(t) - 1 for t in tabs)
             for t in tabs:
                 got["head"] = got["head"] or t[0]
                 got["rows"] += [[typek] + r for r in t[1:] if len(r) >= 3]
@@ -408,7 +415,7 @@ def buyback_history(years, budget_s, t0):
         cur[key] = got
         save_gz(path, cur)
         done += 1
-    print(f"  庫藏股歷史：本次補 {done} 個月")
+    print(f"  庫藏股歷史：本次補 {done} 個月；上市 [連線失敗, 有表月數, 列數]={cnt['sii']}、上櫃={cnt['otc']}")
 
 
 def main():
