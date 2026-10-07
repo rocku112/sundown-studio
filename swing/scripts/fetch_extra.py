@@ -429,8 +429,8 @@ def main():
     ndc_parse()
     buyback_history(10, max(90, budget * 0.15), time.time())   # 獨立預算：前面的快照可能已用掉不少時間
     # 歷史回補：處置／注意（每月一次請求，快）先做，再把剩下的預算給借券（每日一次請求）
-    announce_history("punish", 10, budget * 0.3, t0)
-    announce_history("notice", 10, budget * 0.5, t0)
+    announce_history("punish", 10, budget * 0.2, time.time())
+    announce_history("notice", 10, budget * 0.2, time.time())
     sbl_history(args.hist_days, budget, t0)
 
 
