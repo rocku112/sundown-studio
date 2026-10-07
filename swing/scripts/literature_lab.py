@@ -94,6 +94,54 @@ def gp_scores(lab, rdays):
     return out
 
 
+def quality_scores(lab, rdays):
+    """{t: {k: (ROE, 負債比, 毛利÷資產)}}：調整日當時已過法定期限的最近四季（單季值相加）與最近一季資產負債表。"""
+    ip = os.path.join(P.ROOT, "data", "fund", "income.json")
+    bp = os.path.join(P.ROOT, "data", "fund", "balance.json")
+    if not (os.path.exists(ip) and os.path.exists(bp)):
+        return {}
+    inc = json.load(open(ip, encoding="utf-8"))
+    bal = json.load(open(bp, encoding="utf-8"))
+
+    def single(key, c, j):
+        y, q = int(key[:4]), int(key[-1])
+        v = inc.get(key, {}).get(c)
+        if not v or v[j] is None:
+            return None
+        if q == 1:
+            return v[j]
+        pv = inc.get(f"{y}Q{q-1}", {}).get(c)
+        return None if not pv or pv[j] is None else v[j] - pv[j]
+
+    def due(key):
+        y, q = int(key[:4]), int(key[-1])
+        return {1: f"{y}-05-15", 2: f"{y}-08-14", 3: f"{y}-11-14", 4: f"{y+1}-03-31"}[q]
+    ikeys = sorted(inc)
+    kpos = {c: k for k, c in enumerate(lab.codes)}
+    out = {}
+    for t in rdays:
+        d = lab.dates[t]
+        bk = [k for k in sorted(bal) if due(k) < d]
+        ik = [k for k in ikeys if due(k) < d]
+        if not bk or len(ik) < 4 or bk[-1] != ik[-1]:
+            continue
+        last4 = ik[-4:]
+        s = {}
+        for c, b in bal[bk[-1]].items():
+            k = kpos.get(c)
+            if k is None or not b or not b[0] or b[0] <= 0:
+                continue
+            ni = [single(x, c, 3) for x in last4]
+            gp = [single(x, c, 1) for x in last4]
+            eq = b[3] if b[3] else b[2]
+            roe = sum(ni) / eq if None not in ni and eq and eq > 0 else None
+            dr = b[1] / b[0] if b[1] is not None else None
+            gpa = sum(gp) / b[0] if None not in gp else None
+            s[k] = (roe, dr, gpa)
+        out[t] = s
+    return out
+
+
 def main():
     X = P.prepare()
     lab, book, C, DV, rdays = X.lab, X.book, X.C, X.DV, X.rdays
@@ -219,6 +267,45 @@ def main():
                   "t": d["t"], "t_halves": d["t_halves"],
                   "verdict": ("比 S 本身更好（前後半都成立）" if (d["t"] or 0) > 2 and all((x or 0) > 0 for x in d["t_halves"])
                               else "沒有比 S 本身明顯更好")})
+    # 獲利品質條件（事先固定門檻；只在資產負債表涵蓋的期間比較，所以期間短、檢定力低）：
+    #   Q-ROE  只留近四季 ROE ≥ 8% 的候選   Q-DEBT  只留負債比 ≤ 60%   Q-GPA  只留毛利÷資產 在候選中前一半
+    qs = quality_scores(lab, rd)
+    quality = []
+    r_q = [t for t in rd if t in qs and t + 1 < book.T]
+    if len(r_q) >= 24:
+        def s_filt(fn):
+            def tg(t):
+                mem = members(t, lo, hi)
+                if not mem:
+                    return {CASH: 1.0}
+                ms, sig, q = set(mem), X.rev.get(t, {}), qs.get(t, {})
+                cand = sorted((k for k in sig if k in ms), key=lambda k: -sig[k])
+                return P.slots(fn(cand, q)[:TOPN], ew_s(t), TOPN)
+            return tg
+
+        def gpa_top(cand, q):
+            v = [q[k][2] for k in cand if k in q and q[k][2] is not None]
+            med = float(np.median(v)) if v else None
+            return [k for k in cand if med is not None and k in q and q[k][2] is not None and q[k][2] >= med]
+        variants = [("Q-ROE", "只留近四季 ROE ≥ 8%", lambda c, q: [k for k in c if k in q and q[k][0] is not None and q[k][0] >= 0.08]),
+                    ("Q-DEBT", "只留負債比 ≤ 60%", lambda c, q: [k for k in c if k in q and q[k][1] is not None and q[k][1] <= 0.6]),
+                    ("Q-GPA", "只留毛利÷資產在候選中前一半", gpa_top)]
+        nav_s2, st_q, _ = P.simulate(book, r_q, s_pick("yoy"))
+        b_q, _, _ = P.simulate(book, r_q, ew_s)
+        s0 = P.stats(nav_s2, lab.dates, st_q)
+        quality.append({"key": "S", "name": "S（不加條件）", "cagr": s0["cagr"], "mdd": s0["mdd"], "period": s0["period"],
+                        "base": P.stats(b_q, lab.dates, st_q)["cagr"]})
+        for key, name, fn in variants:
+            nav_v, _, _ = P.simulate(book, r_q, s_filt(fn))
+            sv = P.stats(nav_v, lab.dates, st_q)
+            d = P.excess_t(nav_v, nav_s2, r_q)
+            quality.append({"key": key, "name": name, "cagr": sv["cagr"], "mdd": sv["mdd"],
+                            "diff": round(sv["cagr"] - s0["cagr"], 1), "t": d["t"], "t_halves": d["t_halves"],
+                            "p": round(float(1 - norm.cdf(d["t"] or 0)), 4), "months": len(r_q)})
+        for q in quality[1:]:                     # 三個條件一起做 Bonferroni 校正
+            ok = q["p"] < 0.05 / 3 and all((x or 0) > 0 for x in q["t_halves"])
+            q["verdict"] = ("比 S 本身更好（通過校正）" if ok else "有跡象（未通過校正）" if (q["t"] or 0) > 2
+                            else "比 S 本身差" if (q["t"] or 0) < -2 else "跟 S 本身沒有明顯差別")
     for r in rows:
         if r["significant"]:
             r["verdict"] = "照論文方向成立（通過校正）" if r["expect"] > 0 else "照論文方向成立：應該避開"
@@ -229,12 +316,15 @@ def main():
         else:
             r["verdict"] = "在我們的資料裡不明顯"
     doc = {"generated_at": datetime.now(timezone(timedelta(hours=8))).isoformat(timespec="seconds"),
-           "m": m, "topn": TOPN, "tests": rows, "gp_available": bool(gp), "combo": combo}
+           "m": m, "topn": TOPN, "tests": rows, "gp_available": bool(gp), "combo": combo, "quality": quality}
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(doc, f, ensure_ascii=False, separators=(",", ":"))
     print(f"文獻檢驗：{len(rows)} 個（校正門檻 p < 0.05/{m}）{'' if gp else '；毛利÷資產等資產負債表補齊後才做'}")
     for r in rows:
         print(f"  {r['tier']} {r['key']:<5} {r['name']:<6} 年化 {r['cagr']:6.1f}%（同組 {r['base']}%）超額 {r['excess']:+.1f} t={r['t']} 前後半 {r['t_halves']} → {r['verdict']}")
+    print("獲利品質條件（S 的候選再過濾）：")
+    for q in quality:
+        print("  ", q)
     print("組合（中小型）：")
     for c in combo:
         print("  ", c)

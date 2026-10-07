@@ -239,7 +239,7 @@ def main():
     args = ap.parse_args()
 
     uni = [u for u in json.load(open(UNIVERSE, encoding="utf-8"))["symbols"]
-           if u["type"] == "stock" and not u.get("auto")]
+           if u["type"] == "stock"]          # 含自動加入的 S&P 500 成分股
     if args.only:
         want = set(args.only.split(","))
         uni = [u for u in uni if u["sym"] in want]
