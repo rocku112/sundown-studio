@@ -124,7 +124,9 @@ def incomplete(store, key, ratio=0.85):
 
 # ── 季報 ─────────────────────────────────────────────────────────────
 COLS = {"rev": ["營業收入", "收益", "收入合計"], "gp": ["營業毛利"], "op": ["營業利益"],
-        "ni": ["歸屬於母公司業主", "本期淨利", "本期稅後淨利"], "eps": ["基本每股盈餘"]}
+        "ni": ["歸屬於母公司業主", "本期淨利", "本期稅後淨利", "本期淨損益", "本期損益", "本期淨益", "淨利（淨損）", "淨利(淨損)"],
+        "eps": ["基本每股盈餘"]}
+_SHOWN = set()          # 已印過的「找不到欄位」表頭，避免重複
 
 
 def num(s):
@@ -157,6 +159,11 @@ def parse_income(html, cols=None):
                 if hit is not None:
                     idx[k] = hit
                     break
+        miss = [k for k in cols if k not in idx and k in ("ni", "ta", "tl")]
+        sig = (tuple(miss), tuple(head[:30]))
+        if miss and sig not in _SHOWN and len(_SHOWN) < 6:
+            _SHOWN.add(sig)
+            print(f"  ⚠️ 表格缺欄位 {miss}，表頭：{head}", flush=True)
         for tr in trs[1:]:
             td = [x.get_text(strip=True) for x in tr.find_all("td")]
             if len(td) < len(head) or not re.fullmatch(r"\d{4}", td[0]):
