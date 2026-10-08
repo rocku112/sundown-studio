@@ -3,7 +3,7 @@
    金額單位一律為新台幣元；「月領」皆為退休當年的名目金額，另附今日幣值換算。 */
 
 import {
-  INSURANCE_GRADES, PENSION_WAGE_MAX, EMPLOYER_RATE, NEW_SYSTEM_START,
+  INSURANCE_GRADES, PENSION_WAGE_MAX, EMPLOYER_RATE, NEW_SYSTEM_START, LABOR_PENSION_AGE,
   legalPensionAge, PENSION_ADJ_PER_YEAR, PENSION_ADJ_MAX_YEARS, PENSION_MIN_YEARS, LIFE_TABLE,
 } from './data.js';
 
@@ -155,13 +155,19 @@ function person(p, ctx) {
   const base = p.insMode === 'manual' ? baseNow : Math.round(avgInsuredSalary(p.salary, ctx.salaryGrowth, yearsToRetire));
   const insYears = Math.max(0, p.retireAge - p.workStartAge);
   const ins = laborInsurance({ base, years: insYears, birthYear: p.birthYear, claimAge: p.retireAge });
-  const insMonthly = ins.kind === 'annuity' ? ins.monthly : Math.round(payout.toMonthly(ins.lump));
+  // 勞保一次金同樣要到法定請領年齡才能領，以開始領取後的月數換算
+  const insStart = ins.kind === 'annuity' ? Math.max(p.retireAge, ins.startAge) : Math.max(p.retireAge, ins.legal);
+  const insMonthly = ins.kind === 'annuity' ? ins.monthly
+    : Math.round(makePayout(Math.max(12, Math.round((lifeAge - insStart) * 12)), ctx.payoutMode, ctx.postReturn).toMonthly(ins.lump));
 
   const acct = laborPensionAccount({
     salary: p.salary, growthPct: ctx.salaryGrowth, selfRate: p.selfRate, returnPct: p.laborReturn,
     workStartAge: p.workStartAge, age, retireAge: p.retireAge, nowYear: ctx.nowYear, balance: p.laborBalance,
   });
-  const laborRetire = Math.round(payout.toMonthly(acct.pool));
+  // 勞退要滿 60 歲才能領：提早退休時專戶繼續以基金收益滾存到 60 歲，再依剩餘月數換算
+  const laborStart = Math.max(p.retireAge, LABOR_PENSION_AGE);
+  const laborPool = growLump(acct.pool, laborStart - p.retireAge, p.laborReturn);
+  const laborRetire = Math.round(makePayout(Math.max(12, Math.round((lifeAge - laborStart) * 12)), ctx.payoutMode, ctx.postReturn).toMonthly(laborPool));
 
   const finalSalary = p.salary * Math.pow(1 + ctx.salaryGrowth / 100, yearsToRetire);
   const units = oldSystemUnits(p.oldSystemYears);
@@ -173,6 +179,20 @@ function person(p, ctx) {
     insBase: base, insBaseNow: baseNow, insGrade: insuranceGrade(baseNow).grade, insYears, ins, insMonthly,
     acct, laborRetire, oldUnits: units, oldLump, oldMonthly, finalSalary,
     floor: insMonthly + laborRetire + oldMonthly,
+    bridge: bridgeGap(p.retireAge, insStart, laborStart, insMonthly, laborRetire),
+  };
+}
+
+/**
+ * 空窗期：退休後到勞保、勞退開始給付前，少領的保底收入。
+ * missing 為空窗期間少領金額的總和（名目、不計報酬，偏保守），即退休時需額外準備的資金。
+ */
+function bridgeGap(retireAge, insStart, laborStart, insMonthly, laborMonthly) {
+  const insYears = Math.max(0, insStart - retireAge);
+  const laborYears = Math.max(0, laborStart - retireAge);
+  return {
+    years: Math.max(insYears, laborYears), insStart, laborStart, insYears, laborYears,
+    missing: Math.round(insMonthly * insYears * 12 + laborMonthly * laborYears * 12),
   };
 }
 

@@ -214,3 +214,20 @@ test('勞保平均投保薪資：隨薪資成長升級、上限 45,800', () => {
   s.self.insMode = 'manual'; s.self.insGrade = 2; // 30,300
   assert.ok(auto > compute(s, 2026).me.insMonthly);
 });
+
+test('提早退休空窗期：勞退滿 60、勞保最早提前 5 年', () => {
+  const s = defaults(2026);
+  s.self.retireAge = 55;
+  const r = compute(s, 2026);
+  assert.equal(r.me.bridge.laborStart, 60);
+  assert.equal(r.me.bridge.insStart, 60);                 // 1991 年生，法定 65，最早 60
+  assert.equal(r.me.bridge.years, 5);
+  assert.equal(r.me.bridge.missing, Math.round((r.me.insMonthly + r.me.laborRetire) * 5 * 12));
+  // 勞退專戶多滾 5 年、少領 5 年，月領應高於「55 歲直接攤提」
+  const naive = r.me.payout.toMonthly(r.me.acct.pool);
+  assert.ok(r.me.laborRetire > naive);
+  // 60 歲以後退休沒有空窗
+  s.self.retireAge = 65;
+  assert.equal(compute(s, 2026).me.bridge.years, 0);
+  assert.equal(compute(s, 2026).me.bridge.missing, 0);
+});

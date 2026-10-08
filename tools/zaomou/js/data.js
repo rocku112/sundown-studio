@@ -12,6 +12,7 @@ export const INSURANCE_MAX = 45800;
 export const PENSION_WAGE_MAX = 150000;
 export const EMPLOYER_RATE = 6; // 雇主法定提繳率 %
 export const NEW_SYSTEM_START = 2005.5; // 勞退新制 94 年 7 月 1 日施行
+export const LABOR_PENSION_AGE = 60; // 勞工退休金條例第 24 條：年滿 60 歲始得請領
 
 /* 勞保老年年金：法定請領年齡依出生年次（勞工保險條例第 58 條） */
 export function legalPensionAge(birthYear) {

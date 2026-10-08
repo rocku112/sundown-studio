@@ -84,7 +84,7 @@ function outVal(key) {
       const s = state.self;
       return `目前約 <b>${me.age}</b> 歲，距退休 <b>${R.n}</b> 年；勞保年資 <b>${me.insYears}</b> 年；
         依出生年次，勞保老年年金法定請領年齡為 <b>${legalPensionAge(s.birthYear)}</b> 歲。` +
-        (s.retireAge < 60 ? ' <span class="tag warn">勞保年金最早 60 歲、勞退最早 60 歲才能請領</span>' : '');
+        (me.bridge.years > 0 ? `<br><span class="tag warn" style="margin-left:0">空窗期 ${me.bridge.years} 年</span> 勞退 ${me.bridge.laborStart} 歲、勞保 ${me.bridge.insStart} 歲才能開始領，退休時需另外準備約 <b>${wan(me.bridge.missing)}</b> 撐過這段時間（詳見「保底收入」）。` : '');
     }
     case 'insgrade': {
       if (state.self.insMode === 'manual') return `投保薪資 <b>${money(me.insBase)}</b>（第 ${me.insGrade} 級）`;
@@ -259,7 +259,9 @@ function pageFloor() {
   <section class="card">
     <div class="rows">
       ${row('勞保老年給付', insNote, me.insMonthly, ins.kind === 'lump' ? '<span class="tag warn">一次金</span>' : `<span class="tag">${ins.formula} 式</span>`)}
-      ${row('勞退新制月領', `專戶退休時約 ${wan(me.acct.pool)} ÷ ${me.payoutMonths} 個月${state.payoutMode === 'annuity' ? '（年金化）' : ''}`, me.laborRetire)}
+      ${row('勞退新制月領', me.bridge.laborYears > 0
+        ? `專戶退休時約 ${wan(me.acct.pool)}，繼續滾存到 ${me.bridge.laborStart} 歲才開始領${state.payoutMode === 'annuity' ? '（年金化）' : ''}`
+        : `專戶退休時約 ${wan(me.acct.pool)} ÷ ${me.payoutMonths} 個月${state.payoutMode === 'annuity' ? '（年金化）' : ''}`, me.laborRetire)}
       ${me.oldUnits > 0 ? row('勞基法舊制', `${me.oldUnits} 基數，一次領約 ${wan(me.oldLump)}`, me.oldMonthly) : ''}
       ${state.benefit.enabled ? row(esc(state.benefit.name || '企業福利信託'), `每月 ${money(state.benefit.self + state.benefit.company)}，年化 ${pct(state.benefit.rate)}`, R.benefitMonthly) : ''}
       <div class="row sum"><div class="k">保底月領小計</div><div class="v">${money(R.floor)}</div></div>
@@ -269,6 +271,15 @@ function pageFloor() {
       <div class="row total"><div class="k">退休月領總計<small>約當今日幣值 ${money(R.totalPV)}</small></div><div class="v">${money(R.total)}</div></div>
     </div>
   </section>
+  ${me.bridge.years > 0 ? `<section class="card bridge"><div class="card-h"><h3>${badge('hourglass', 'rgba(194,69,61,.1)', C.red)}提早退休的空窗期</h3><span class="tag warn">${s.retireAge}–${s.retireAge + me.bridge.years} 歲</span></div>
+    <div class="stats">
+      <div class="stat"><small>勞保年金開始</small><strong>${me.bridge.insStart} 歲</strong><small>${me.bridge.insYears ? `空窗 ${me.bridge.insYears} 年，每月少 ${money(me.insMonthly)}` : '退休即可領'}</small></div>
+      <div class="stat"><small>勞退開始</small><strong>${me.bridge.laborStart} 歲</strong><small>${me.bridge.laborYears ? `空窗 ${me.bridge.laborYears} 年，每月少 ${money(me.laborRetire)}` : '退休即可領'}</small></div>
+      <div class="stat bad"><small>需另外準備</small><strong>${wan(me.bridge.missing)}</strong><small>空窗期少領的總和</small></div>
+    </div>
+    <p class="note">勞退須年滿 60 歲才能請領（勞工退休金條例第 24 條）；勞保老年年金最早可提前 5 年請領，但每提前 1 年減給 4%。空窗期的生活費只能靠投資、儲蓄或舊制退休金支應；上方「退休月領總計」是兩者都開始給付後的金額。需另外準備的金額未計投資報酬，偏保守。</p>
+  </section>` : ''}
+
   <section class="card"><div class="card-h"><h3>${badge('landmark', 'rgba(63,154,110,.12)', C.green)}計算依據</h3></div>
     <div class="rows" style="font-size:13px">
       <div class="row"><div class="k">勞保老年年金<small>A 式：平均月投保薪資 × 年資 × 0.775% + 3,000；B 式：平均月投保薪資 × 年資 × 1.55%，兩者擇優。法定請領年齡 ${legalPensionAge(s.birthYear)} 歲，每提前 1 年減給 4%、每延後 1 年增給 4%，各以 5 年為限。年資未滿 15 年改請領一次金。</small></div></div>
@@ -476,6 +487,7 @@ function pageAnalysis() {
       : { cls: '', k: '投資資產可撐到', v: '—', p: '尚未設定投資資產，退休收入全靠保底給付。' },
     { cls: 'gold', k: '最有感的調整', v: `${leverVal >= 0 ? '+' : '−'}${money(Math.abs(leverVal))}`,
       p: `${leverWhat}，是你能控制的條件中，對月領（今日幣值）影響最大的一項。` },
+    me.bridge.years > 0 ? { cls: 'bad', k: '提早退休空窗期', v: `${me.bridge.years} 年`, p: `${s.retireAge} 歲退休到勞保勞退開始給付前，需另外準備約 ${wan(me.bridge.missing)}。` } : null,
     top ? { cls: '', k: '最大收入來源', v: `${Math.round((top.value / R.total) * 100)}%`,
       p: `${top.label}每月 ${money(top.value)}，${top.value / R.total > 0.6 ? '來源過度集中，風險較高。' : '來源相對分散。'}` } : null,
   ].filter(Boolean);
