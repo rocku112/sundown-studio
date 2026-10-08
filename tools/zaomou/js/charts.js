@@ -48,7 +48,10 @@ export function lineChart({ series, xFmt = (x) => x, yFmt = wan, marks = [], wid
     }));
     tipAttr = ` data-tip="${encodeURIComponent(JSON.stringify({ w: width, top: T, bottom: height - B, rows }))}"`;
   }
-  let svg = `<svg class="chart" viewBox="0 0 ${width} ${height}" role="img"${tipAttr}>`;
+  // 螢幕閱讀器用的摘要：各序列名稱與起訖數值
+  const label = series.filter((sr) => sr.name && sr.points.length).map((sr) =>
+    `${sr.name}：${xFmt(sr.points[0].x)} ${yFmt(sr.points[0].y)}，${xFmt(sr.points[sr.points.length - 1].x)} ${yFmt(sr.points[sr.points.length - 1].y)}`).join('；');
+  let svg = `<svg class="chart" viewBox="0 0 ${width} ${height}" role="img"${label ? ` aria-label="${label}"` : ''}${tipAttr}>`;
   for (const t of ticks) svg += `<line class="grid-l" x1="${L}" x2="${width - R}" y1="${sy(t)}" y2="${sy(t)}"/><text x="${L - 6}" y="${sy(t) + 4}" text-anchor="end">${yFmt(t)}</text>`;
   for (const x of xs) svg += `<text x="${sx(x)}" y="${height - 6}" text-anchor="middle">${xFmt(x)}</text>`;
   for (const s of series) {
@@ -100,7 +103,7 @@ export function donut(items, size = 170) {
   if (total <= 0) return '';
   const c = size / 2, r = size / 2 - 4, ir = r * 0.58;
   let a = -Math.PI / 2;
-  let svg = `<svg viewBox="0 0 ${size} ${size}" role="img">`;
+  let svg = `<svg viewBox="0 0 ${size} ${size}" role="img" aria-label="${items.map((d) => `${d.label} ${Math.round((d.value / total) * 100)}%`).join('、')}">`;
   for (const d of items) {
     const frac = d.value / total;
     if (frac >= 0.9999) {

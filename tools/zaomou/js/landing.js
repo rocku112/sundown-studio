@@ -109,3 +109,8 @@ bind(['g-tgt', 'g-base', 'g-yrs'], () => {
 
 const nav = $('nav');
 window.addEventListener('scroll', () => nav.classList.toggle('scrolled', window.scrollY > 8), { passive: true });
+
+// 離線使用：註冊 service worker（本機 file:// 開啟時略過）
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  navigator.serviceWorker.register('sw.js').catch(() => { /* 不支援或被封鎖時不影響試算 */ });
+}

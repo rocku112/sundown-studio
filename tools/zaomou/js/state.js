@@ -152,6 +152,19 @@ export function applySeed(state, nowYear = new Date().getFullYear()) {
   return true;
 }
 
+/* ── 方案（多組設定另存，最多 5 組） ── */
+export const SCENARIO_KEY = 'zaomou_scenarios_v1';
+export const MAX_SCENARIOS = 5;
+export function loadScenarios() {
+  try {
+    const list = JSON.parse(localStorage.getItem(SCENARIO_KEY) || '[]');
+    return Array.isArray(list) ? list.filter((x) => x && x.id && x.data).map((x) => ({ ...x, data: normalize(x.data) })) : [];
+  } catch { return []; }
+}
+export function saveScenarios(list) {
+  try { localStorage.setItem(SCENARIO_KEY, JSON.stringify(list)); return true; } catch { return false; }
+}
+
 export function save(state) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch { /* 忽略 */ }
 }

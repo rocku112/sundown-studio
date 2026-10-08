@@ -4,7 +4,7 @@
 
 import {
   INSURANCE_GRADES, PENSION_WAGE_MAX, EMPLOYER_RATE, NEW_SYSTEM_START, LABOR_PENSION_AGE,
-  legalPensionAge, PENSION_ADJ_PER_YEAR, PENSION_ADJ_MAX_YEARS, PENSION_MIN_YEARS, LIFE_TABLE,
+  legalPensionAge, PENSION_ADJ_PER_YEAR, PENSION_ADJ_MAX_YEARS, PENSION_MIN_YEARS, LIFE_TABLE, TAX,
 } from './data.js';
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
@@ -465,4 +465,49 @@ export function validate(state, nowYear = new Date().getFullYear()) {
   const health = state.healthAgeOverride;
   if (health !== null && health !== undefined && life !== null && life !== undefined && health > life) add('healthAgeOverride', 'warn', '健康平均壽命大於預期壽命，請確認。');
   return out;
+}
+
+/** 方案比較用的摘要數字 */
+export function scenarioSummary(state, nowYear = new Date().getFullYear()) {
+  const r = compute(state, nowYear);
+  const lc = lifecycle(state, nowYear);
+  return {
+    retireAge: state.self.retireAge,
+    monthlyInvest: r.monthlyInvest,
+    total: r.total, totalPV: r.totalPV,
+    coverage: r.expenseToday > 0 ? r.coverage : null,
+    investPool: r.investPool,
+    runoutAge: lc.runoutAge,
+    hasInvest: r.investPool > 0,
+    fireAge: r.fireAge,
+    bridgeYears: r.me.bridge.years,
+  };
+}
+
+/* ── 勞退自提節稅 ─────────────────────────────── */
+
+/** 綜合所得稅應納稅額（依綜合所得淨額） */
+export function incomeTax(net) {
+  if (net <= 0) return 0;
+  let lower = 0;
+  for (const [upper, rate, base] of TAX.brackets) {
+    if (net <= upper) return Math.round(base + (net - lower) * rate);
+    lower = upper;
+  }
+  return 0;
+}
+
+/**
+ * 勞退自提節稅估算（勞工退休金條例第 14 條：自提部分自當年度綜合所得總額全數扣除）。
+ * 簡化：單身、只有薪資所得、年薪 = 月薪 × 12、使用標準扣除額。
+ */
+export function selfContributionTax(salary, selfRate) {
+  const annual = Math.max(0, salary) * 12;
+  const contrib = Math.round(Math.min(Math.max(0, salary), PENSION_WAGE_MAX) * selfRate / 100) * 12;
+  const net = (income) => income - TAX.exemption - TAX.standardSingle - Math.min(income, TAX.salaryDeduction);
+  const before = incomeTax(net(annual));
+  const after = incomeTax(net(annual - contrib));
+  const saving = before - after;
+  const marginal = (TAX.brackets.find(([u]) => net(annual) <= u) || TAX.brackets[0])[1];
+  return { contrib, saving, netCost: contrib - saving, marginal: net(annual) > 0 ? marginal : 0, taxYear: TAX.year };
 }

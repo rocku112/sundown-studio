@@ -1,8 +1,8 @@
 /* 早謀遠算 · 介紹頁 */
 :root {
   --paper: #F6F1E7; --paper-2: #EFE7D8; --card: #FFFDF8; --line: #E3D9C6; --line-2: #D6C9B1;
-  --ink: #16263B; --navy: #1E3554; --navy-2: #2D4A6E; --muted: #66707E; --faint: #98A0AA;
-  --gold: #E8B84B; --gold-d: #A87B12; --sun: #E59A4F; --green: #3F8F6A; --red: #C2453D;
+  --ink: #16263B; --navy: #1E3554; --navy-2: #2D4A6E; --muted: #5C6573; --faint: #636C79;
+  --gold: #E8B84B; --gold-d: #80600F; --sun: #E59A4F; --green: #2E7353; --red: #B23A33;
   --serif: 'Noto Serif TC', 'Songti TC', serif;
   --sans: 'Outfit', 'Noto Sans TC', system-ui, sans-serif;
   --r: 16px;
@@ -173,3 +173,7 @@ input[type=range]:focus-visible { outline: 3px solid var(--gold); outline-offset
   .layer-n { width: 38px; height: 38px; font-size: 17px; }
 }
 @media (max-width: 1000px) { .sun { width: 120%; right: -10%; opacity: .35; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}

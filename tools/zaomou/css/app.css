@@ -1,9 +1,9 @@
 /* 早謀遠算 · 試算介面 */
 :root {
   --bg: #F6F1E7; --bg-2: #EFE7D8; --surface: #FFFDF8; --border: #E3D9C6; --border-2: #D6C9B1; --line: rgba(30,53,84,.09);
-  --text: #16263B; --muted: #66707E; --faint: #98A0AA;
+  --text: #16263B; --muted: #5C6573; --faint: #636C79; /* 對比 ≥ 4.5（WCAG AA） */
   --navy: #1E3554; --navy2: #2D4A6E; --navyL: #3A5F8A;
-  --gold: #E8B84B; --gold2: #A87B12; --green: #3F8F6A; --green-l: #5BAD85; --red: #C2453D; --purple: #7A6BB8;
+  --gold: #E8B84B; --gold2: #80600F; --green: #2E7353; --green-l: #5BAD85; --red: #B23A33; --purple: #7A6BB8;
   --shadow: 0 1px 2px rgba(22,38,59,.04), 0 4px 16px rgba(22,38,59,.06);
   --radius: 16px;
   --serif: 'Noto Serif TC', 'Songti TC', serif;
@@ -240,9 +240,28 @@ dialog::backdrop { background: rgba(22,38,59,.55); }
   .row.total { margin: 8px -16px -16px; padding: 16px; }
   .toast { bottom: calc(80px + env(safe-area-inset-bottom)); }
 }
+/* ── 列印報告：螢幕上隱藏，列印時只印報告 ── */
+#report { display: none; }
 @media print {
-  .top, .mobile-sum, .btn, .chips, .seg, .pager { display: none !important; }
-  .layout { display: block; }
+  @page { size: A4; margin: 14mm; }
+  body { background: #fff; padding: 0; font-size: 11pt; }
+  body > *:not(#report) { display: none !important; }
+  #report { display: block; color: #000; }
+  .rp-h { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; border-bottom: 2px solid #1E3554; padding-bottom: 10px; margin-bottom: 14px; }
+  .rp-h h1 { font: 900 18pt var(--serif); margin: 0; color: #1E3554; }
+  .rp-h p { margin: 4px 0 0; font-size: 9pt; color: #555; }
+  .rp-total { text-align: right; }
+  .rp-total small { display: block; font-size: 9pt; color: #555; }
+  .rp-total b { display: block; font: 800 22pt var(--mono); color: #1E3554; }
+  .rp-total span { font-size: 9pt; color: #555; }
+  #report section { break-inside: avoid; margin-bottom: 12px; }
+  #report h2 { font-size: 11.5pt; margin: 0 0 4px; color: #1E3554; border-left: 3px solid #E8B84B; padding-left: 6px; }
+  #report table { width: 100%; border-collapse: collapse; }
+  #report th, #report td { text-align: left; padding: 4px 6px; border-bottom: 1px solid #ddd; font-size: 10pt; vertical-align: top; }
+  #report table:not(.rp-grid) th { width: 32%; font-weight: 500; color: #444; }
+  #report .rp-grid th { background: #f2f2f2; font-weight: 600; }
+  #report tr.sum td, #report tr.sum th { font-weight: 800; }
+  .rp-f { margin-top: 14px; font-size: 8.5pt; color: #666; line-height: 1.6; border-top: 1px solid #ccc; padding-top: 8px; }
 }
 
 /* ── 分析頁 ── */
@@ -317,3 +336,20 @@ details.yearly .tbl-wrap { max-height: 420px; overflow: auto; margin-top: 14px; 
 .issue:hover { border-color: currentColor; }
 .input[aria-invalid="true"] { border-color: var(--red); background: #FFF8F6; }
 .tab.has-issue .ic { box-shadow: 0 0 0 2px var(--red); }
+
+/* ── 方案比較 ── */
+.save-row { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.save-row .input { flex: 1; min-width: 180px; }
+.tbl.sc th small { display: block; font-size: 10px; font-weight: 400; color: var(--faint); }
+.tbl.sc td.best { color: var(--green); font-weight: 800; }
+.tbl.sc tr.acts td { border-bottom: 0; padding-top: 4px; }
+.tbl.sc tr.acts .btn { padding: 4px 8px; min-height: 30px; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+
+/* ── 參數過期提醒 ── */
+.stale { background: #FFF4D6; color: #6B4E00; border-bottom: 1px solid #F0DC9C; font-size: 13px; padding: 8px 24px; text-align: center; line-height: 1.6; }
+
+/* ── 減少動態 ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+}

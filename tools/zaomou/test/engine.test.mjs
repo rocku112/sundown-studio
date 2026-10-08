@@ -257,3 +257,52 @@ test('欄位檢查：預設值無錯誤、矛盾輸入被抓出', () => {
   const h = defaults(2026); h.spouse.enabled = true; h.spouse.salary = 0;
   assert.equal(lv(h, 'spouse.salary'), 'warn');
 });
+
+import { scenarioSummary } from '../js/engine.js';
+
+test('方案摘要：與 compute 一致、晚退休數字較高', () => {
+  const s = defaults(2026);
+  const a = scenarioSummary(s, 2026);
+  const r = compute(s, 2026);
+  assert.equal(a.total, r.total);
+  assert.equal(a.totalPV, r.totalPV);
+  assert.equal(a.monthlyInvest, 10000);
+  const b = JSON.parse(JSON.stringify(s)); b.self.retireAge = 67;
+  assert.ok(scenarioSummary(b, 2026).totalPV > a.totalPV);
+  s.monthlyExpense = 0;
+  assert.equal(scenarioSummary(s, 2026).coverage, null);
+});
+
+import { incomeTax, selfContributionTax } from '../js/engine.js';
+
+test('綜所稅級距（115 年度公告）', () => {
+  assert.equal(incomeTax(0), 0);
+  assert.equal(incomeTax(610000), 30500);
+  assert.equal(incomeTax(1380000), 30500 + 770000 * 0.12);       // = 122,900
+  assert.equal(incomeTax(1380000), 122900);
+  assert.equal(incomeTax(2770000), 400900);
+  assert.equal(incomeTax(5190000), 1126900);
+  assert.equal(incomeTax(6190000), 1126900 + 400000);
+});
+
+test('勞退自提節稅', () => {
+  // 月薪 5 萬、自提 6%：年提 36,000；淨額 600,000−101,000−136,000−227,000=136,000 → 5% 級距
+  const a = selfContributionTax(50000, 6);
+  assert.equal(a.contrib, 36000);
+  assert.equal(a.saving, 1800);
+  assert.equal(a.marginal, 0.05);
+  // 月薪 15 萬：淨額 1,800,000−464,000=1,336,000 → 12%；提撥 108,000 全落在 12% 級距
+  const b = selfContributionTax(150000, 6);
+  assert.equal(b.saving, Math.round(108000 * 0.12));
+  // 免稅：月薪 3 萬（淨額為負）
+  assert.equal(selfContributionTax(30000, 6).saving, 0);
+  // 提繳工資上限 15 萬
+  assert.equal(selfContributionTax(300000, 6).contrib, 108000);
+});
+
+import { dataStale, DATA_YEAR } from '../js/data.js';
+
+test('參數年度過期判斷', () => {
+  assert.equal(dataStale(DATA_YEAR + 1911), false);
+  assert.equal(dataStale(DATA_YEAR + 1912), true);
+});
