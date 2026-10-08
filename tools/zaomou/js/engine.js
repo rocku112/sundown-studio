@@ -95,7 +95,7 @@ export function laborInsurance({ base, years, birthYear, claimAge }) {
 }
 
 /** 勞退新制個人專戶：估算到退休時的累積金額 */
-export function laborPensionAccount({ salary, growthPct, selfRate, returnPct, workStartAge, age, retireAge, nowYear, balance }) {
+export function laborPensionAccount({ salary, growthPct, selfRate, returnPct, workStartAge, age, retireAge, nowYear, balance, pastInsYears = null }) {
   const rate = (EMPLOYER_RATE + selfRate) / 100;
   const r = returnPct / 100 / 12;
   const g = Math.pow(1 + growthPct / 100, 1 / 12);
@@ -106,8 +106,9 @@ export function laborPensionAccount({ salary, growthPct, selfRate, returnPct, wo
   if (balance !== null && balance !== undefined && balance !== '') {
     acc = Math.max(0, num(balance));
   } else {
-    // 未提供餘額：依新制施行後的已工作年數倒推估算
-    pastYears = Math.max(0, Math.min(age - workStartAge, nowYear - NEW_SYSTEM_START));
+    // 未提供餘額：依新制施行後的已工作年數倒推估算；有中斷時改用使用者填的已累積年資
+    const worked = pastInsYears === null || pastInsYears === undefined ? age - workStartAge : num(pastInsYears);
+    pastYears = Math.max(0, Math.min(worked, nowYear - NEW_SYSTEM_START));
     acc = 0;
     const pastMonths = Math.round(pastYears * 12);
     for (let m = pastMonths; m > 0; m--) acc = (acc + wage(salary / Math.pow(g, m)) * rate) * (1 + r);
@@ -183,6 +184,13 @@ export function investPoolAt(state, t, rateDelta = 0, currentAge) {
 
 /* ── 單人計算 ─────────────────────────────────── */
 
+/** 到目前為止的勞保年資：有填「已累積年資」就用它（工作有中斷、打工時有用），否則視為開始投保後沒有中斷 */
+export function pastInsured(p, age) {
+  const span = Math.max(0, age - p.workStartAge);
+  if (p.pastInsYears === null || p.pastInsYears === undefined || p.pastInsYears === '') return span;
+  return clamp(num(p.pastInsYears), 0, Math.max(0, age - 15));
+}
+
 function person(p, ctx) {
   const age = ctx.nowYear - p.birthYear;
   const yearsToRetire = Math.max(0, p.retireAge - age);
@@ -195,7 +203,10 @@ function person(p, ctx) {
   const baseNow = p.insMode === 'manual' ? INSURANCE_GRADES[clamp(p.insGrade, 1, INSURANCE_GRADES.length) - 1] : insuranceGrade(p.salary).salary;
   // 自動模式：投保薪資跟著薪資成長升級；手動模式：使用者指定的級距維持不變
   const base = p.insMode === 'manual' ? baseNow : Math.round(avgInsuredSalary(p.salary, ctx.salaryGrowth, yearsToRetire));
-  const insYears = Math.max(0, p.retireAge - p.workStartAge);
+  // 勞保年資：已累積（有填就用，否則視為開始投保後沒有中斷）＋ 從現在到退休
+  const past = pastInsured(p, age);
+  const future = Math.max(0, p.retireAge - Math.max(age, p.workStartAge));
+  const insYears = past + future;
   // 勞保請領年齡：未指定時同退休年齡；不能早於退休（仍在職投保時不能請領）
   const claimAge = Math.max(p.retireAge, p.insClaimAge ?? p.retireAge);
   const ins = laborInsurance({ base, years: insYears, birthYear: p.birthYear, claimAge });
@@ -208,13 +219,16 @@ function person(p, ctx) {
 
   const acct = laborPensionAccount({
     salary: p.salary, growthPct: ctx.salaryGrowth, selfRate: p.selfRate, returnPct: p.laborReturn,
-    workStartAge: p.workStartAge, age, retireAge: p.retireAge, nowYear: ctx.nowYear, balance: p.laborBalance,
+    workStartAge: p.workStartAge, age, retireAge: p.retireAge, nowYear: ctx.nowYear, balance: p.laborBalance, pastInsYears: p.pastInsYears,
   });
   // 勞退要滿 60 歲才能領：提早退休時專戶繼續以基金收益滾存到 60 歲
   const laborStart = Math.max(p.retireAge, LABOR_PENSION_AGE);
   const laborPool = growLump(acct.pool, laborStart - p.retireAge, p.laborReturn);
   // 新制年資（94 年 7 月起）滿 15 年才能月領，否則只能一次領
-  const newYears = Math.max(0, p.retireAge - Math.max(p.workStartAge, NEW_SYSTEM_START - p.birthYear));
+  const pastNew = p.pastInsYears === null || p.pastInsYears === undefined
+    ? Math.max(0, age - Math.max(p.workStartAge, NEW_SYSTEM_START - p.birthYear))
+    : Math.min(past, Math.max(0, ctx.nowYear - NEW_SYSTEM_START));
+  const newYears = Math.max(0, pastNew + future);
   const official = laborMonthlyOfficial(laborPool, laborStart);
   const laborEligible = newYears >= LABOR_MONTHLY.minYears;
   // 可月領時採勞保局官方算法；只能一次領時，依使用者的提領方式把一次金換算成月領
@@ -525,6 +539,10 @@ export function validate(state, nowYear = new Date().getFullYear()) {
     }
     if (p.workStartAge >= p.retireAge) add(`${prefix}.workStartAge`, 'error', `${who}開始投保年齡（${p.workStartAge}）不小於退休年齡（${p.retireAge}），投保年資會是 0。`);
     else if (p.workStartAge > age) add(`${prefix}.workStartAge`, 'info', `${who}尚未開始工作，試算將從 ${p.workStartAge} 歲開始投保。`);
+    if (p.pastInsYears !== null && p.pastInsYears !== undefined) {
+      if (p.pastInsYears > Math.max(0, age - 15)) add(`${prefix}.pastInsYears`, 'error', `${who}已累積勞保年資 ${p.pastInsYears} 年，超過 15 歲到現在的年數（${Math.max(0, age - 15)} 年）。`);
+      else if (p.pastInsYears > Math.max(0, age - p.workStartAge)) add(`${prefix}.pastInsYears`, 'warn', `${who}已累積勞保年資 ${p.pastInsYears} 年，比開始投保（${p.workStartAge} 歲）到現在還多，請把「開始投保年齡」改成第一次投保（含打工）的年齡。`);
+    }
     if (p.retireAge <= age) add(`${prefix}.retireAge`, 'warn', `${who}退休年齡（${p.retireAge}）不大於目前年齡（${age}），已視為現在退休、不再累積。`);
     if (p.salary <= 0) add(`${prefix}.salary`, 'warn', `${who}月薪為 0，勞保與勞退都無法累積。`);
     else if (p.salary < INSURANCE_GRADES[0]) add(`${prefix}.salary`, 'info', `${who}月薪低於勞保第 1 級 ${INSURANCE_GRADES[0].toLocaleString()} 元，全時工作者至少以第 1 級投保。`);
@@ -744,7 +762,7 @@ export function planPath(state, nowYear = new Date().getFullYear()) {
   for (let t = 0; t <= r.n; t++) {
     const acct = laborPensionAccount({
       salary: state.self.salary, growthPct: num(state.salaryGrowth), selfRate: num(state.self.selfRate), returnPct: num(state.self.laborReturn),
-      workStartAge: state.self.workStartAge, age: r.me.age, retireAge: r.me.age + t, nowYear, balance: state.self.laborBalance,
+      workStartAge: state.self.workStartAge, age: r.me.age, retireAge: r.me.age + t, nowYear, balance: state.self.laborBalance, pastInsYears: state.self.pastInsYears,
     });
     path.push({ year: nowYear + t, invest: Math.max(0, investPoolAt(state, t, 0, r.me.age)), labor: acct.pool });
   }
@@ -900,8 +918,9 @@ export function insuranceLumpVsAnnuity(state, nowYear = new Date().getFullYear()
   const eligible = firstInsuredYear < 2009 && r.me.ins.kind === 'annuity';
   if (!eligible) return { eligible: false, firstInsuredYear };
   const years = r.me.insYears;
-  const pre60 = Math.max(0, Math.min(years, 60 - p.workStartAge));
-  const post60 = Math.min(5, Math.max(0, years - pre60));
+  const after60 = Math.min(years, Math.max(0, p.retireAge - Math.max(60, p.workStartAge, r.me.age)));
+  const pre60 = years - after60;
+  const post60 = Math.min(5, after60);
   const counted = Math.floor(pre60 + post60);
   let months = counted <= 15 ? counted : 15 + 2 * (counted - 15);
   months = Math.min(months, post60 > 0 ? 50 : 45);
@@ -1241,7 +1260,7 @@ export function laborEarlyClaim(state, nowYear = new Date().getFullYear()) {
   if (!me.laborOfficial.eligible) return null;
   const acct60 = laborPensionAccount({
     salary: p.salary, growthPct: num(state.salaryGrowth), selfRate: p.selfRate, returnPct: p.laborReturn,
-    workStartAge: p.workStartAge, age: me.age, retireAge: Math.max(me.age, LABOR_PENSION_AGE), nowYear, balance: p.laborBalance,
+    workStartAge: p.workStartAge, age: me.age, retireAge: Math.max(me.age, LABOR_PENSION_AGE), nowYear, balance: p.laborBalance, pastInsYears: p.pastInsYears,
   });
   const pool60 = acct60.pool;
   const m60 = laborMonthlyOfficial(pool60, LABOR_PENSION_AGE);

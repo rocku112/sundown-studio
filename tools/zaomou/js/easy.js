@@ -60,6 +60,23 @@ const STEPS = [
     body: () => moneyField('salary', '每月薪水', [30000, 45000, 60000, 80000, 100000]),
   },
   {
+    id: 'work', icon: 'clock', q: '你的勞保年資有多久？', hint: '年資會直接影響勞保和勞退能領多少。換過工作、中間沒投保、早年打工都算。',
+    body: () => {
+      const age = NOW - ans.birthYear;
+      const broken = ans.pastInsYears !== null;
+      return `
+      <label class="ez-field"><span>第一次有勞保是幾歲？（含打工）</span><input class="ez-input num" type="number" inputmode="numeric" data-a="workStartAge" min="15" max="${Math.max(15, age)}" value="${ans.workStartAge}"></label>
+      <div class="ez-seg" role="group" aria-label="中間有沒有中斷">
+        <button type="button" data-work="cont" aria-pressed="${!broken}">一直都有投保</button>
+        <button type="button" data-work="broken" aria-pressed="${broken}">中間有中斷過</button>
+      </div>
+      ${broken ? `<label class="ez-field"><span>到現在累計大概幾年？</span><input class="ez-input num" type="number" inputmode="decimal" step="0.5" data-a="pastInsYears" min="0" max="${Math.max(0, age - 15)}" value="${ans.pastInsYears}"></label>`
+        : `<p class="ez-sub" id="ez-wy">從 ${ans.workStartAge} 歲到現在，累計 ${Math.max(0, age - ans.workStartAge)} 年</p>`}
+      <label class="ez-field"><span>勞退專戶目前有多少？（不知道可以留白）</span><span class="ez-money"><b>$</b><input class="ez-input num" type="text" inputmode="numeric" data-a="laborBalance" data-money data-null value="${ans.laborBalance === null ? '' : ans.laborBalance.toLocaleString()}" placeholder="留白就幫你估算"></span></label>
+      <p class="ez-sub">投保年資和勞退餘額，都可以在勞保局網站的 e 化服務或「勞動保障卡」App 查到。</p>`;
+    },
+  },
+  {
     id: 'assets', icon: 'wallet', q: '現在有多少存款和投資？', hint: '大概的數字就好，之後隨時可以改。',
     body: () => moneyField('cash', '銀行存款', null) + moneyField('invest', '股票、基金、ETF（市值）', null) +
       `<p class="ez-sub">存款當作緊急預備金；股票基金以年化 ${state.investReturn}% 估算。</p>`,
@@ -167,7 +184,7 @@ function renderResult() {
     <section class="ez-card ez-assume">
       <h2 class="ez-h">這個結果怎麼算的？</h2>
       <ul>
-        <li>你 ${age} 歲、月薪 ${money(ans.salary)}、${ans.retireAge} 歲退休；勞保、勞退依現行法規與勞保局公式計算。${ans.retireAge < legal ? `勞保 ${legal} 歲才能領全額，${ans.retireAge} 歲就領每年少 4%${legal - ans.retireAge > 5 ? `，最早只能提前 5 年（${legal - 5} 歲）` : ''}。` : ''}</li>
+        <li>你 ${age} 歲、月薪 ${money(ans.salary)}、${ans.retireAge} 歲退休；勞保年資到退休共 ${R.me.insYears.toFixed(1).replace(/\.0$/, '')} 年${ans.pastInsYears !== null ? `（到現在累計 ${ans.pastInsYears} 年，依你填的）` : ''}${ans.laborBalance === null ? '，勞退專戶依年資估算' : `，勞退專戶以目前 ${wan(ans.laborBalance)} 起算`}；勞保、勞退依現行法規與勞保局公式計算。${ans.retireAge < legal ? `勞保 ${legal} 歲才能領全額，${ans.retireAge} 歲就領每年少 4%${legal - ans.retireAge > 5 ? `，最早只能提前 5 年（${legal - 5} 歲）` : ''}。` : ''}</li>
         <li>存款 ${wan(ans.cash)}、投資 ${wan(ans.invest)}，每月再投資 ${money(ans.monthly)}，股票基金以年化 ${state.investReturn}%、通膨 ${state.cpi}% 估算。</li>
         <li>所有金額都換算成「今天的購買力」，方便和現在的生活比較。</li>
       </ul>
@@ -187,7 +204,9 @@ document.addEventListener('input', (e) => {
   const el = e.target.closest('[data-a]');
   if (!el) return;
   const k = el.dataset.a;
-  ans[k] = el.dataset.money !== undefined ? parseMoney(el.value) : +el.value;
+  ans[k] = el.dataset.null !== undefined && String(el.value).trim() === '' ? null
+    : el.dataset.money !== undefined ? parseMoney(el.value) : +el.value;
+  if (k === 'workStartAge' && $('#ez-wy')) $('#ez-wy').textContent = `從 ${ans.workStartAge} 歲到現在，累計 ${Math.max(0, NOW - ans.birthYear - ans.workStartAge)} 年`;
   if (el.type === 'range') {
     fill(el);
     $('#ez-rv').textContent = `${ans.retireAge} 歲`;
@@ -198,12 +217,20 @@ document.addEventListener('input', (e) => {
 });
 document.addEventListener('focusout', (e) => {
   const el = e.target.closest('[data-money]');
-  if (el) el.value = ans[el.dataset.a].toLocaleString();
+  if (el) el.value = ans[el.dataset.a] === null ? '' : ans[el.dataset.a].toLocaleString();
 });
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && e.target.closest('.ez-input')) { e.preventDefault(); go(1); }
 });
 document.addEventListener('click', (e) => {
+  const wk = e.target.closest('[data-work]');
+  if (wk) {
+    const age = NOW - ans.birthYear;
+    ans.pastInsYears = wk.dataset.work === 'broken' ? Math.max(0, age - ans.workStartAge) : null;
+    render();
+    if (wk.dataset.work === 'broken') document.querySelector('[data-a="pastInsYears"]')?.focus();
+    return;
+  }
   const pick = e.target.closest('[data-pick]');
   if (pick) {
     const k = pick.dataset.pick;
@@ -253,6 +280,8 @@ function check(id) {
   const age = NOW - ans.birthYear;
   if (id === 'about' && (!(ans.birthYear >= 1940) || age < 15)) return `出生年請填 1940 到 ${NOW - 15} 之間的西元年`;
   if (id === 'retire' && ans.retireAge <= age && age < 70) return '退休年齡要大於現在的年齡';
+  if (id === 'work' && (ans.workStartAge < 15 || ans.workStartAge > Math.max(15, age))) return `第一次投保年齡請填 15 到 ${Math.max(15, age)} 歲`;
+  if (id === 'work' && ans.pastInsYears !== null && (ans.pastInsYears < 0 || ans.pastInsYears > Math.max(0, age - 15))) return `累計年資請填 0 到 ${Math.max(0, age - 15)} 年`;
   if (id === 'salary' && ans.salary <= 0) return '請填每月薪水；還沒工作可以填預計的起薪';
   if (id === 'expense' && ans.expense <= 0) return '請填退休後每月大概要花多少';
   return '';

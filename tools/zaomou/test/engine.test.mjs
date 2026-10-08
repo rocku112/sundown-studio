@@ -766,3 +766,35 @@ test('簡單版：答案與完整設定互通，只改有變動的部分', () =>
   assert.deepEqual(easyAnswers(b), { ...a, invest: 1000000, monthly: 0, expense: 40000 });
   assert.equal(compute(b, 2026).holdingsNow, 1500000);
 });
+
+import { pastInsured } from '../js/engine.js';
+test('勞保年資有中斷：37 歲、29 歲正式入職、早年打工 2 年', () => {
+  const s = defaults(2026);
+  s.self.birthYear = 2026 - 37; s.self.retireAge = 65;
+  // 只填開始投保年齡 29：視為沒有中斷，已累積 8 年
+  s.self.workStartAge = 29;
+  const r1 = compute(s, 2026);
+  assert.equal(r1.me.insYears, 8 + 28);
+  // 早年 20 歲打工有投保，累計 10 年：填第一次投保年齡 20 ＋ 已累積 10 年
+  s.self.workStartAge = 20; s.self.pastInsYears = 10;
+  assert.equal(pastInsured(s.self, 37), 10);
+  const r2 = compute(s, 2026);
+  assert.equal(r2.me.insYears, 10 + 28);
+  // 沒填已累積年資時會被當成 17 年，年資與勞退都偏高
+  s.self.pastInsYears = null;
+  const r3 = compute(s, 2026);
+  assert.equal(r3.me.insYears, 17 + 28);
+  assert.ok(r3.me.acct.pool > r2.me.acct.pool);
+  assert.ok(r2.me.acct.pool > r1.me.acct.pool);
+  // 檢查：年資比 15 歲到現在還多是錯誤
+  s.self.pastInsYears = 30;
+  assert.ok(validate(s, 2026).some((x) => x.field === 'self.pastInsYears' && x.level === 'error'));
+});
+test('簡單版：工作經歷（中斷的年資、勞退餘額）寫回完整設定', () => {
+  const s = defaults(2026);
+  const a = { ...easyAnswers(s), workStartAge: 20, pastInsYears: 10, laborBalance: 350000 };
+  const b = applyEasy(s, a);
+  assert.deepEqual([b.self.workStartAge, b.self.pastInsYears, b.self.laborBalance], [20, 10, 350000]);
+  const c = applyEasy(b, { ...easyAnswers(b), pastInsYears: null, laborBalance: null });
+  assert.deepEqual([c.self.pastInsYears, c.self.laborBalance], [null, null]);
+});

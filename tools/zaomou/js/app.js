@@ -2,7 +2,7 @@
    畫面分兩種：含輸入欄位的分頁（起點設定、投資資產、目標與行動）只在結構改變時重繪，
    數字靠 data-o 局部更新，避免打字時失焦；純輸出的分頁與側欄則每次重算後整頁重繪。 */
 
-import { compute, holdingValue, growLump, growMonthly, lifecycle, sensitivity, retireAgeOptions, goalPlan, validate, scenarioSummary, selfContributionTax, monteCarlo, actionPlan, planPath, trackProgress, laborLumpVsMonthly, selfContributionAnalysis, insuranceClaimOptions, insCpiFactor, insuranceLumpVsAnnuity, withdrawalStrategies, selfRateDelayOptions, stateDiff, householdTimeline, selfRateFit, insClaimFit, insLumpFit, laborChoiceFit, laborEarlyClaim, retirementTax, reviewIcs } from './engine.js';
+import { compute, holdingValue, growLump, growMonthly, lifecycle, sensitivity, retireAgeOptions, goalPlan, validate, scenarioSummary, selfContributionTax, monteCarlo, actionPlan, planPath, trackProgress, laborLumpVsMonthly, selfContributionAnalysis, insuranceClaimOptions, insCpiFactor, insuranceLumpVsAnnuity, withdrawalStrategies, selfRateDelayOptions, stateDiff, pastInsured, householdTimeline, selfRateFit, insClaimFit, insLumpFit, laborChoiceFit, laborEarlyClaim, retirementTax, reviewIcs } from './engine.js';
 import { LABOR_MONTHLY, LABOR_FUND, legalPensionAge, INSURANCE_GRADES, MIN_LIVING, EXPENSE_LEVELS, RETURN_PRESETS, LIFE_TABLE, DATA_YEAR, PENSION_WAGE_MAX, dataStale, TAX } from './data.js';
 import { load, save, defaults, parseImport, getPath, setPath, uid, applySeed, STORAGE_KEY, normalize, loadScenarios, saveScenarios, MAX_SCENARIOS, templates, SHARE_PREFIX, encodeShare, decodeShare } from './state.js';
 import { lineChart, donut, wan, attachTooltips } from './charts.js';
@@ -118,6 +118,11 @@ function outVal(key) {
         (me.insBaseNow >= 45800 ? '（已達上限）' : '') +
         `；依薪資年增率推估，退休前 60 個月平均投保薪資約 <b>${money(me.insBase)}</b>，勞保年金以此計算。`;
     }
+    case 'workinfo': {
+      const past = pastInsured(state.self, me.age);
+      return `到現在累計勞保年資 <b>${past.toFixed(1).replace(/\.0$/, '')} 年</b>${state.self.pastInsYears === null ? `（從 ${state.self.workStartAge} 歲起沒有中斷；換過工作、中間沒投保或早年打工，請填實際年資）` : '（依你填的年資）'}，` +
+        `退休時共 <b>${me.insYears.toFixed(1).replace(/\.0$/, '')} 年</b>${me.insYears < 15 ? '，<b>未滿 15 年只能領一次金</b>' : ''}。勞保局網站的 e 化服務可以查到投保年資與勞退專戶餘額。`;
+    }
     case 'laborinfo': return `每月提繳 <b>${money(me.acct.monthlyContrib)}</b>（雇主 6% + 自提 ${pct(state.self.selfRate, 1)}，提繳工資上限 ${money(PENSION_WAGE_MAX)}）。` +
       (state.self.laborBalance === null ? `未填餘額，依新制施行後約 <b>${me.acct.estimatedPast.toFixed(1)}</b> 年年資回推估算。` : '') +
       ` 退休時專戶約 <b>${wan(me.acct.pool)}</b>，依勞保局月退算法約月領 <b>${money(me.laborRetire)}</b>${me.laborOfficial.eligible ? `，領到 ${me.laborOfficial.endAge} 歲` : '（年資未滿 15 年只能一次領）'}。`;
@@ -212,7 +217,7 @@ function pageSetup() {
     <div class="tpls">${templates(NOW).map((t) => `<button type="button" class="tpl-b" data-act="template" data-id="${t.id}"><b>${t.name}</b><small>${t.desc}</small></button>`).join('')}</div>
   </section>
 
-  <section class="card core"><div class="card-h"><h3>${badge('user', 'rgba(45,74,110,.1)', C.navy)}先填這 6 項就能算</h3><span class="hint">其他都有合理預設</span></div>
+  <section class="card core"><div class="card-h"><h3>${badge('user', 'rgba(45,74,110,.1)', C.navy)}先填這幾項就能算</h3><span class="hint">其他都有合理預設</span></div>
     <div class="grid">
       ${numF('self.birthYear', '出生年（西元）', { min: 1940, max: NOW - 15 })}
       ${numF('self.retireAge', '預計退休年齡', { min: 50, max: 75, unit: '歲', rerender: true })}
@@ -221,6 +226,13 @@ function pageSetup() {
       ${rangeF('self.selfRate', '勞退自提', 0, 6, 0.5, { em: '（0–6%，不確定就填 0）' })}
       ${numF('monthlyExpense', '退休後每月生活費', { min: 0, step: 1000, unit: '元', em: '（以今天的物價）' })}
     </div>
+    <h4 class="sub4">工作經歷 <small class="hint">年資會直接影響勞保與勞退</small></h4>
+    <div class="grid">
+      ${numF('self.workStartAge', '第一次投保勞保的年齡', { min: 15, max: 60, unit: '歲', em: '（含打工）' })}
+      ${numF('self.pastInsYears', '到現在累計的勞保年資', { nullable: true, min: 0, max: 50, step: 0.5, unit: '年', placeholder: `沒中斷就留白（${Math.max(0, R.me.age - s.workStartAge)} 年）`, em: '（中斷過才填）' })}
+      ${numF('self.laborBalance', '勞退專戶目前餘額', { nullable: true, min: 0, step: 10000, unit: '元', placeholder: '不確定可留白', em: '（選填，最準）' })}
+    </div>
+    <p class="note">${out('workinfo', outVal('workinfo'))}</p>
     <p class="note">${out('ageinfo', outVal('ageinfo'))}</p>
   </section>
 
@@ -230,7 +242,6 @@ function pageSetup() {
   <section class="card"><div class="card-h"><h3>${badge('briefcase', 'rgba(45,74,110,.1)', C.navy)}薪資與勞保</h3>
       ${seg('self.insMode', [['auto', '依月薪自動'], ['manual', '手動選級距']], { label: '投保薪資設定方式' })}</div>
     <div class="grid two">
-      ${numF('self.workStartAge', '開始投保年齡', { min: 15, max: 60, unit: '歲' })}
       ${numF('self.bonusMonths', '年終與獎金', { min: 0, max: 24, step: 0.5, unit: '個月', em: '（用於估算稅率）' })}
       ${rangeF('salaryGrowth', '薪資年增率', 0, 6, 0.5)}
       ${numF('self.insClaimAge', '勞保請領年齡', { nullable: true, min: 55, max: 75, unit: '歲', placeholder: '同退休年齡', em: '（選填，可晚於退休）' })}
@@ -250,7 +261,6 @@ function pageSetup() {
     <div class="grid two">
       <div class="field">${rangeF('self.laborReturn', '勞退基金年化收益', 1, 10, 0.1).replace(/^\s*<label class="field">|<\/label>\s*$/g, '')}
         <div class="chips">${RETURN_PRESETS.map((p) => `<button type="button" class="chip" data-set="self.laborReturn" data-val="${p.v}" aria-pressed="${s.laborReturn === p.v}">${p.label}</button>`).join('')}</div></div>
-      ${numF('self.laborBalance', '目前專戶累積金額', { nullable: true, min: 0, step: 10000, unit: '元', placeholder: '不確定可留白', em: '（選填）' })}
     </div>
     <p class="note">${out('laborinfo', outVal('laborinfo'))} 專戶餘額可至勞保局 e 化服務系統或「勞動保障卡」App 查詢，填入後估算最準。</p>
     <div class="calc">${out('taxinfo', outVal('taxinfo'))}<br><small>依 115 年度綜所稅級距、單身、年薪以月薪 ×（12 + 年終月數）計、使用標準扣除額估算；有配偶合併申報、年終獎金或列舉扣除時會不同。</small></div>
@@ -274,7 +284,8 @@ function pageSetup() {
     ${sp.enabled ? `<div class="grid">
       ${textF('spouse.name', '稱呼')}
       ${numF('spouse.birthYear', '出生年（西元）', { min: 1940, max: NOW - 15 })}
-      ${numF('spouse.workStartAge', '開始投保年齡', { min: 15, max: 60, unit: '歲' })}
+      ${numF('spouse.workStartAge', '第一次投保年齡', { min: 15, max: 60, unit: '歲' })}
+      ${numF('spouse.pastInsYears', '累計勞保年資', { nullable: true, min: 0, max: 50, step: 0.5, unit: '年', placeholder: '沒中斷就留白', em: '（中斷過才填）' })}
       ${numF('spouse.retireAge', '預計退休年齡', { min: 50, max: 75, unit: '歲' })}
       ${numF('spouse.salary', '目前月薪', { min: 0, step: 1000, unit: '元' })}
       ${numF('spouse.selfRate', '勞退自提率', { min: 0, max: 6, step: 0.5, unit: '%' })}

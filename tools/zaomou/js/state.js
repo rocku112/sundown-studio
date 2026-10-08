@@ -15,10 +15,11 @@ export function defaults(nowYear = new Date().getFullYear()) {
       birthYear: nowYear - 35, gender: 'male', workStartAge: 23, retireAge: 65,
       salary: 45000, insMode: 'auto', insGrade: 11,
       selfRate: 0, laborReturn: 4, laborBalance: null, oldSystemYears: 0, insClaimAge: null, bonusMonths: 0, taxRateOverride: null,
+      pastInsYears: null, // 已累積勞保年資（選填）：工作中斷或打工時填，留白表示開始投保後沒有中斷
     },
     spouse: {
       enabled: false, name: '配偶', birthYear: nowYear - 35, gender: 'female', workStartAge: 23, retireAge: 65,
-      salary: 40000, insMode: 'auto', insGrade: 11, selfRate: 0, laborReturn: 4, laborBalance: null, oldSystemYears: 0, insClaimAge: null,
+      salary: 40000, insMode: 'auto', insGrade: 11, selfRate: 0, laborReturn: 4, laborBalance: null, oldSystemYears: 0, insClaimAge: null, pastInsYears: null,
     },
     salaryGrowth: 2,
     cpi: 2,
@@ -106,7 +107,7 @@ export function normalize(raw) {
     ...merge({ id: uid('p'), name: '投資組合', assets: [] }, p),
     assets: (p.assets || []).map((a) => merge({ id: uid('a'), name: '標的', monthly: 0, rate: 0 }, a)),
   }));
-  for (const k of ['laborBalance', 'insClaimAge', 'taxRateOverride']) {
+  for (const k of ['laborBalance', 'insClaimAge', 'taxRateOverride', 'pastInsYears']) {
     for (const who of ['self', 'spouse']) {
       const v = raw?.[who]?.[k];
       s[who][k] = v === null || v === undefined || v === '' || !Number.isFinite(+v) ? null : +v;
@@ -197,6 +198,7 @@ export function easyAnswers(s) {
   const monthly = s.portfolios.reduce((t, p) => t + p.assets.reduce((u, a) => u + (+a.monthly || 0), 0), 0);
   return {
     birthYear: s.self.birthYear, gender: s.self.gender, retireAge: s.self.retireAge, salary: s.self.salary,
+    workStartAge: s.self.workStartAge, pastInsYears: s.self.pastInsYears ?? null, laborBalance: s.self.laborBalance ?? null,
     cash: Math.round(cash), invest: Math.round(invest), monthly: Math.round(monthly), expense: s.monthlyExpense,
   };
 }
@@ -208,6 +210,7 @@ export function applyEasy(s, a) {
   const next = JSON.parse(JSON.stringify(s));
   const cur = easyAnswers(s);
   Object.assign(next.self, { birthYear: a.birthYear, gender: a.gender, retireAge: a.retireAge, salary: a.salary });
+  if ('workStartAge' in a) Object.assign(next.self, { workStartAge: a.workStartAge, pastInsYears: a.pastInsYears ?? null, laborBalance: a.laborBalance ?? null });
   if (a.cash !== cur.cash || a.invest !== cur.invest) {
     next.holdings = [
       ...(a.cash > 0 ? [{ id: 'h-easy-cash', name: '銀行存款', kind: 'cash', shares: 0, price: 0, amount: a.cash, rate: 1.5 }] : []),
