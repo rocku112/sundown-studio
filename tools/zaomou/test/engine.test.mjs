@@ -506,7 +506,7 @@ test('勞退自提決策分析', () => {
   const u = defaults(2026); u.self.salary = 30000;
   near(selfContributionAnalysis(u, 2026).breakEven, u.self.laborReturn, 1e-6);
   // 鎖定到 60 歲以後
-  assert.equal(a.lockedYears, 30);
+  assert.equal(a.lockedYears, 25); // 35 歲，滿 60 歲（仍在職也可）就能領
 });
 
 import { insuranceClaimOptions } from '../js/engine.js';
@@ -708,4 +708,45 @@ test('自提適合度：沒繳稅時判定不適合，高稅率且有預備金�
   assert.ok(c.every((p, i) => i === 0 || p.v > c[i - 1].v));
   const at = (x) => { const i = c.findIndex((p) => p.r >= x); return c[i].v; };
   assert.ok(at(f.a.breakEven + 0.5) >= f.a.viaPension && at(Math.max(0, f.a.breakEven - 0.5)) <= f.a.viaPension);
+});
+
+import { insClaimFit, insLumpFit, laborChoiceFit, laborEarlyClaim, retirementTax, reviewIcs } from '../js/engine.js';
+test('決策評分卡：三張卡都回傳逐項判斷與一致的結論', () => {
+  const s = defaults(2026);
+  for (const f of [insClaimFit(s, 2026), laborChoiceFit(s, 2026)]) {
+    assert.ok(f.items.length >= 3);
+    assert.equal(f.yes, f.items.filter((x) => x.ok === true).length);
+    assert.equal(f.level, f.yes > f.no ? 'high' : f.no > f.yes ? 'low' : 'mid');
+  }
+  assert.equal(insLumpFit(s, 2026), null); // 98 年後才投保，不能選一次請領
+  const old = defaults(2026); old.self.birthYear = 1968; old.self.workStartAge = 22;
+  const l = insLumpFit(old, 2026);
+  assert.ok(l && l.curve[0].annuity === 0 && l.curve[0].lump === l.c.lump);
+  // 勞退累計曲線：月領到 endAge 後不再增加
+  const lc = laborChoiceFit(s, 2026);
+  const end = lc.curve.find((p) => p.age === lc.c.endAge), after = lc.curve.find((p) => p.age === lc.c.endAge + 3);
+  assert.equal(end.monthly, after.monthly);
+});
+test('勞退 60 歲先領：只在 60 歲後退休時出現，續提為正', () => {
+  const s = defaults(2026);
+  const e = laborEarlyClaim(s, 2026);
+  assert.equal(e.waitYears, 5);
+  assert.ok(e.early.continued > 0 && e.early.monthly < e.wait.monthly);
+  assert.ok(Math.abs(e.early.beforeRetire - e.early.monthly * 60) < 1);
+  s.self.retireAge = 60;
+  assert.equal(laborEarlyClaim(s, 2026), null);
+});
+test('退休後的稅：勞退月領在免稅額內不用繳稅', () => {
+  const t = retirementTax(defaults(2026), 2026);
+  assert.equal(t.exempt, 894000);
+  assert.equal(t.excess, 0);
+  assert.equal(t.tax, 0);
+  assert.ok(t.monthlyRoom > 0);
+});
+test('年度檢視提醒：iCalendar 格式、每年重複、每行不超過 75 位元組', () => {
+  const ics = reviewIcs({ date: '2027-01-15', url: 'https://rocku112.github.io/sundown-studio/tools/zaomou/app.html' });
+  assert.match(ics, /^BEGIN:VCALENDAR\r\n/);
+  assert.match(ics, /DTSTART;VALUE=DATE:20270115\r\n/);
+  assert.match(ics, /RRULE:FREQ=YEARLY/);
+  for (const line of ics.split('\r\n')) assert.ok(new TextEncoder().encode(line).length <= 75, line);
 });

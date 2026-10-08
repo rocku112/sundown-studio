@@ -836,7 +836,8 @@ export function selfContributionAnalysis(state, nowYear = new Date().getFullYear
   }
   return {
     rate, monthly, afterTaxMonthly, annualSaving: tax.saving, totalSaving: tax.saving * n, marginal: tax.marginal, manualTax: tax.manual,
-    years: n, lockedYears: Math.max(0, start - r.me.age), startAge: start,
+    years: n, // 年滿 60 歲不論是否仍在職即可請領，所以「動不到」的時間只到 60 歲
+    lockedYears: Math.max(0, LABOR_PENSION_AGE - r.me.age), accessAge: LABOR_PENSION_AGE, startAge: start,
     viaPension, viaPensionFloor, selfInvest, breakEven,
     laborReturn: num(s.laborReturn), investReturn: num(state.investReturn), minGuarantee: LABOR_FUND.minGuarantee,
   };
@@ -1118,7 +1119,7 @@ export function selfRateFit(state, nowYear = new Date().getFullYear()) {
         : `你設定的 ${num(a.investReturn)}% 高於打平點 ${a.breakEven.toFixed(1)}%，但沒有保證` },
     { id: 'lock', icon: 'hourglass', title: '鎖定時間',
       ok: a.lockedYears <= 15 ? true : a.lockedYears > 25 ? false : null,
-      detail: `要再等 ${a.lockedYears} 年（${a.startAge} 歲）才能領${a.lockedYears > 25 ? '，期間很長、變數多' : a.lockedYears <= 15 ? '，時間不算長' : ''}` },
+      detail: `要再等 ${a.lockedYears} 年（${a.accessAge} 歲，仍在職也能領）才能動用${a.lockedYears > 25 ? '，期間很長、變數多' : a.lockedYears <= 15 ? '，時間不算長' : ''}` },
     { id: 'monthly', icon: 'landmark', title: '能不能月領',
       ok: r.me.laborOfficial.eligible ? true : null,
       detail: r.me.laborOfficial.eligible ? `新制年資約 ${Math.round(r.me.laborOfficial.newYears)} 年，可以選月領或一次領` : '新制年資未滿 15 年，只能一次領' },
@@ -1129,4 +1130,177 @@ export function selfRateFit(state, nowYear = new Date().getFullYear()) {
   const curve = [];
   for (let p = 0; p <= 12; p += 0.5) curve.push({ r: p, v: fv(a.afterTaxMonthly, p) });
   return { a, items, yes, no, level, curve };
+}
+
+/* ── 決策評分卡：把各項條件整理成 ✓（有利）／✕（不利）／–（中性），再給一句結論 ── */
+function fitLevel(items) {
+  const yes = items.filter((x) => x.ok === true).length, no = items.filter((x) => x.ok === false).length;
+  const level = yes > no ? 'high' : no > yes ? 'low' : 'mid';
+  return { items, yes, no, level };
+}
+/** 退休後不靠某項給付時，其他收入（今日幣值）是否仍足以支應生活費 */
+function coversWithout(r, state, monthlyNominal) {
+  const expense = num(state.monthlyExpense);
+  if (expense <= 0) return null;
+  return (r.total - monthlyNominal) * r.pvFactor >= expense;
+}
+
+/** 勞保：延後請領適不適合 */
+export function insClaimFit(state, nowYear = new Date().getFullYear()) {
+  const o = insuranceClaimOptions(state, nowYear);
+  if (!o || o.opts.length < 2) return null;
+  const r = compute(state, nowYear);
+  const cover = coversWithout(r, state, r.me.insMonthly);
+  const items = [
+    { id: 'life', icon: 'hourglass', title: '預期壽命',
+      ok: o.best > o.legal ? true : o.best < o.legal ? false : null,
+      detail: `活到 ${o.lifeAge.toFixed(0)} 歲時，${o.best} 歲開始領累計最多` },
+    { id: 'cover', icon: 'wallet', title: '延後期間的生活費',
+      ok: cover,
+      detail: cover === null ? '未填生活費，無法判斷' : cover ? '不靠勞保，其他收入也夠支應生活費' : '勞保是重要收入，延後期間要另外準備' },
+    { id: 'retire', icon: 'briefcase', title: '退休時間',
+      ok: state.self.retireAge >= o.legal ? true : state.self.retireAge < o.legal - 2 ? false : null,
+      detail: state.self.retireAge >= o.legal ? `${state.self.retireAge} 歲才退休，延後請領不會多出空窗` : `${state.self.retireAge} 歲退休，越晚領空窗期越長` },
+    { id: 'cut', icon: 'shield', title: '給付調降的疑慮',
+      ok: num(state.insHaircut) > 0 ? false : null,
+      detail: num(state.insHaircut) > 0 ? `你設定勞保打 ${100 - num(state.insHaircut)}% 的壓力測試，早領先拿到手較安心` : '未設定勞保打折壓力測試' },
+  ];
+  return { ...fitLevel(items), o };
+}
+
+/** 勞保：年金 vs 一次請領 */
+export function insLumpFit(state, nowYear = new Date().getFullYear()) {
+  const c = insuranceLumpVsAnnuity(state, nowYear);
+  if (!c.eligible) return null;
+  const r = compute(state, nowYear);
+  const cover = coversWithout(r, state, r.me.insMonthly);
+  const items = [
+    { id: 'life', icon: 'hourglass', title: '預期壽命 vs 回本',
+      ok: c.breakEvenAge !== null && c.lifeAge > c.breakEvenAge,
+      detail: `年金領到 ${c.breakEvenAge.toFixed(1)} 歲追上一次領；你的預期壽命 ${c.lifeAge.toFixed(1)} 歲` },
+    { id: 'invest', icon: 'trend', title: '一次領拿去投資',
+      ok: c.breakEvenDiscounted === null ? false : c.lifeAge > c.breakEvenDiscounted,
+      detail: c.breakEvenDiscounted === null ? `以年化 ${num(state.postReturn)}% 投資，年金一直追不上` : `以年化 ${num(state.postReturn)}% 投資時，年金要領到 ${c.breakEvenDiscounted.toFixed(1)} 歲才追上` },
+    { id: 'cover', icon: 'wallet', title: '其他收入夠不夠',
+      ok: cover === null ? null : cover ? null : true,
+      detail: cover === null ? '未填生活費，無法判斷' : cover ? '其他收入已夠生活，一次領的彈性較有價值' : '勞保是主要收入，年金按月入帳較保險' },
+    { id: 'cut', icon: 'shield', title: '給付調降的疑慮',
+      ok: num(state.insHaircut) > 0 ? false : null,
+      detail: num(state.insHaircut) > 0 ? '你設定了勞保打折，擔心調降的人常選一次領' : '未設定勞保打折壓力測試' },
+  ];
+  // 累計領取：年金逐年累加、一次領為定額、一次領拿去投資則逐年滾存
+  const g = num(state.postReturn) / 100;
+  const curve = [];
+  for (let age = c.claimAge; age <= 100; age++) {
+    const t = age - c.claimAge;
+    curve.push({ age, annuity: c.annuity * 12 * t, lump: c.lump, invested: c.lump * Math.pow(1 + g, t) });
+  }
+  return { ...fitLevel(items), c, curve };
+}
+
+/** 勞退：月領 vs 一次領 */
+export function laborChoiceFit(state, nowYear = new Date().getFullYear()) {
+  const c = laborLumpVsMonthly(state, nowYear);
+  if (c.pool <= 0 || !c.eligible) return null;
+  const r = compute(state, nowYear);
+  const cover = coversWithout(r, state, r.me.laborRetire);
+  const items = [
+    { id: 'life', icon: 'hourglass', title: '月領能不能領到老',
+      ok: c.outlive <= 0,
+      detail: c.outlive <= 0 ? `月領到 ${c.endAge} 歲，涵蓋你的預期壽命` : `月領到 ${c.endAge} 歲就結束，比預期壽命早 ${c.outlive.toFixed(1)} 年` },
+    { id: 'rate', icon: 'trend', title: '自己管理要多少報酬',
+      ok: c.needRate === null ? true : c.needRate > c.officialRate,
+      detail: c.needRate === null ? '自己投資報酬再高也撐不到預期壽命' : `一次領出要年化 ${c.needRate.toFixed(2)}% 才能每月同額領到老` },
+    { id: 'self', icon: 'sliders', title: '你設定的退休後報酬',
+      ok: c.needRate === null ? null : c.selfInvest.rate >= c.needRate ? false : true,
+      detail: c.selfInvest.lastsUntil >= 100 ? `以 ${c.selfInvest.rate}% 自己管理可領到 100 歲以上` : `以 ${c.selfInvest.rate}% 自己管理約領到 ${c.selfInvest.lastsUntil.toFixed(1)} 歲` },
+    { id: 'cover', icon: 'wallet', title: '其他收入夠不夠',
+      ok: cover === null ? null : cover ? null : true,
+      detail: cover === null ? '未填生活費，無法判斷' : cover ? '其他收入已夠生活，一次領可保留彈性與傳承' : '勞退是重要收入，月領可避免花太快' },
+  ];
+  // 累計領到的錢：月領到 endAge 停止；一次領自己管理、每月領同額直到用完
+  const j = Math.pow(1 + c.selfInvest.rate / 100, 1 / 12) - 1;
+  const curve = [];
+  let bal = c.pool, got = 0;
+  for (let age = c.startAge; age <= 100; age++) {
+    curve.push({ age, monthly: c.monthly * 12 * Math.max(0, Math.min(age, c.endAge) - c.startAge), self: got });
+    for (let k = 0; k < 12 && bal > 0; k++) { const pay = Math.min(bal, c.monthly); got += pay; bal = (bal - pay) * (1 + j); }
+  }
+  return { ...fitLevel(items), c, curve };
+}
+
+/**
+ * 勞退滿 60 歲先領（仍在職也可以，勞保局：年滿 60 歲不論是否在職即可請領；之後雇主續提，每年可再請領一次）。
+ * 只在 60 歲後才退休時有意義。比較「60 歲先領」與「退休時才領」。
+ */
+export function laborEarlyClaim(state, nowYear = new Date().getFullYear()) {
+  const p = state.self;
+  if (p.retireAge <= LABOR_PENSION_AGE) return null;
+  const r = compute(state, nowYear);
+  const me = r.me;
+  if (!me.laborOfficial.eligible) return null;
+  const acct60 = laborPensionAccount({
+    salary: p.salary, growthPct: num(state.salaryGrowth), selfRate: p.selfRate, returnPct: p.laborReturn,
+    workStartAge: p.workStartAge, age: me.age, retireAge: Math.max(me.age, LABOR_PENSION_AGE), nowYear, balance: p.laborBalance,
+  });
+  const pool60 = acct60.pool;
+  const m60 = laborMonthlyOfficial(pool60, LABOR_PENSION_AGE);
+  const waitYears = p.retireAge - LABOR_PENSION_AGE;
+  // 60 歲後的提撥（續提）：退休時專戶總額扣掉「60 歲餘額自行滾存」的部分
+  const continued = Math.max(0, me.laborPool - growLump(pool60, waitYears, p.laborReturn));
+  const life = me.lifeAge;
+  const early = {
+    monthly: m60.monthly, endAge: m60.endAge, beforeRetire: m60.monthly * 12 * waitYears, continued,
+    toLife: m60.monthly * 12 * Math.max(0, Math.min(life, m60.endAge) - LABOR_PENSION_AGE) + continued,
+  };
+  const wait = {
+    monthly: me.laborRetire, endAge: me.laborOfficial.endAge,
+    toLife: me.laborRetire * 12 * Math.max(0, Math.min(life, me.laborOfficial.endAge) - p.retireAge),
+  };
+  return { pool60, waitYears, early, wait, lifeAge: life, retireAge: p.retireAge };
+}
+
+/**
+ * 退休後的稅：勞保年金屬保險給付免稅；勞退月退屬退職所得，每年 TAX.pensionExempt 以內免稅（115 年度）。
+ * 以今日幣值、單身、只有這筆所得的情況估算超過免稅額的稅額。投資收益與健保費未計入。
+ */
+export function retirementTax(state, nowYear = new Date().getFullYear()) {
+  const r = compute(state, nowYear);
+  const laborYear = r.me.laborRetire * 12 * r.pvFactor;
+  const excess = Math.max(0, laborYear - TAX.pensionExempt);
+  const net = excess - TAX.exemption - TAX.standardSingle;
+  return {
+    insYear: r.me.insMonthly * 12 * r.pvFactor, laborYear, exempt: TAX.pensionExempt, excess,
+    tax: incomeTax(net), monthlyRoom: Math.max(0, TAX.pensionExempt / 12 - r.me.laborRetire * r.pvFactor),
+    laborEligible: r.me.laborOfficial.eligible,
+  };
+}
+
+/** iCalendar 每行不超過 75 位元組（RFC 5545），超過時折行並以空白開頭續行 */
+function foldIcs(line) {
+  const enc = new TextEncoder();
+  const out = [];
+  let cur = '', size = 0;
+  for (const ch of line) {
+    const n = enc.encode(ch).length;
+    if (size + n > (out.length ? 74 : 75)) { out.push(cur); cur = ''; size = 0; }
+    cur += ch; size += n;
+  }
+  out.push(cur);
+  return out.join('\r\n ');
+}
+/** 年度檢視提醒：每年同一天的全天行事曆事件（iCalendar），不需帳號或推播 */
+export function reviewIcs({ date, url, uidSeed = 'zaomou' }) {
+  const d = date.replace(/-/g, '');
+  const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
+  const esc = (s) => s.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+  const desc = `打開早謀遠算，更新今年的月薪、勞退專戶餘額與投資資產，並在「目標與行動」記錄進度。\n${url}`;
+  return [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//SunDown Studio//zaomou//ZH-TW', 'CALSCALE:GREGORIAN',
+    'BEGIN:VEVENT', `UID:${uidSeed}-${d}@sundown-studio`, `DTSTAMP:${stamp}`,
+    `DTSTART;VALUE=DATE:${d}`, 'RRULE:FREQ=YEARLY', `SUMMARY:${esc('退休計畫年度檢視（早謀遠算）')}`,
+    `DESCRIPTION:${esc(desc)}`, `URL:${url}`,
+    'BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${esc('退休計畫年度檢視')}`, 'TRIGGER:PT9H', 'END:VALARM',
+    'END:VEVENT', 'END:VCALENDAR',
+  ].map(foldIcs).join('\r\n') + '\r\n';
 }

@@ -567,3 +567,17 @@ details.adv > summary:focus-visible { outline: 3px solid var(--gold); outline-of
 .insight.gold .ins-ic { color: var(--gold2); background: rgba(232,184,75,.16); }
 .opt-n { width: 30px; height: 30px; border-radius: 9px; background: var(--ink-bg); }
 .opt-n svg { width: 16px; height: 16px; }
+
+/* ── 決策卡共用：目前設定／最多標籤、改用連結、行內圖示 ── */
+.hbar-h em { font-style: normal; font-size: 11px; font-weight: 700; margin-left: 6px; padding: 1px 7px; border-radius: 99px; background: var(--bg-2); color: var(--muted); }
+.hbar-h em.best { background: rgba(46,115,83,.12); color: var(--green); }
+.linkbtn { background: none; border: 0; padding: 0 2px; color: var(--navy2); font-size: 12px; font-weight: 700; text-decoration: underline; cursor: pointer; }
+.ic-inline { width: 16px; height: 16px; vertical-align: -3px; margin-right: 6px; color: var(--navy2); }
+.remind-b { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+.remind-b .field { min-width: 180px; }
+/* 側欄通膨快切 */
+.cpi-q { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0 10px; border-bottom: 1px solid var(--line); font-size: 13px; }
+.cpi-q > span:first-child small { display: block; font-size: 11px; color: var(--faint); }
+.cpi-b { display: flex; gap: 4px; }
+.cpi-q button { border: 1px solid var(--border-2); background: var(--field); color: var(--text); border-radius: 99px; padding: 3px 9px; font: 600 12px var(--mono); }
+.cpi-q button[aria-pressed="true"] { background: var(--ink-bg); border-color: var(--ink-bg); color: #fff; }

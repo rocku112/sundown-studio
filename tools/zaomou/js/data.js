@@ -75,6 +75,7 @@ export const RETURN_PRESETS = [
    來源：財政部 114 年 11 月 27 日台財稅字第 11404664070 號公告（行政院公報第 31 卷第 224 期） */
 export const TAX = {
   year: 115,
+  pensionExempt: 894000,      // 退職所得（分期領取）每年免稅額（115 年度）
   exemption: 101000,          // 一般免稅額（每人）
   standardSingle: 136000,     // 標準扣除額（單身）
   salaryDeduction: 227000,    // 薪資所得特別扣除額（每人上限）

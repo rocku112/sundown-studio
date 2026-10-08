@@ -2,8 +2,8 @@
    畫面分兩種：含輸入欄位的分頁（起點設定、投資資產、目標與行動）只在結構改變時重繪，
    數字靠 data-o 局部更新，避免打字時失焦；純輸出的分頁與側欄則每次重算後整頁重繪。 */
 
-import { compute, holdingValue, growLump, growMonthly, lifecycle, sensitivity, retireAgeOptions, goalPlan, validate, scenarioSummary, selfContributionTax, monteCarlo, actionPlan, planPath, trackProgress, laborLumpVsMonthly, selfContributionAnalysis, insuranceClaimOptions, insCpiFactor, insuranceLumpVsAnnuity, withdrawalStrategies, selfRateDelayOptions, stateDiff, householdTimeline, selfRateFit } from './engine.js';
-import { LABOR_MONTHLY, LABOR_FUND, legalPensionAge, INSURANCE_GRADES, MIN_LIVING, EXPENSE_LEVELS, RETURN_PRESETS, LIFE_TABLE, DATA_YEAR, PENSION_WAGE_MAX, dataStale } from './data.js';
+import { compute, holdingValue, growLump, growMonthly, lifecycle, sensitivity, retireAgeOptions, goalPlan, validate, scenarioSummary, selfContributionTax, monteCarlo, actionPlan, planPath, trackProgress, laborLumpVsMonthly, selfContributionAnalysis, insuranceClaimOptions, insCpiFactor, insuranceLumpVsAnnuity, withdrawalStrategies, selfRateDelayOptions, stateDiff, householdTimeline, selfRateFit, insClaimFit, insLumpFit, laborChoiceFit, laborEarlyClaim, retirementTax, reviewIcs } from './engine.js';
+import { LABOR_MONTHLY, LABOR_FUND, legalPensionAge, INSURANCE_GRADES, MIN_LIVING, EXPENSE_LEVELS, RETURN_PRESETS, LIFE_TABLE, DATA_YEAR, PENSION_WAGE_MAX, dataStale, TAX } from './data.js';
 import { load, save, defaults, parseImport, getPath, setPath, uid, applySeed, STORAGE_KEY, normalize, loadScenarios, saveScenarios, MAX_SCENARIOS, templates, SHARE_PREFIX, encodeShare, decodeShare } from './state.js';
 import { lineChart, donut, wan, attachTooltips } from './charts.js';
 
@@ -60,6 +60,8 @@ const ICON = {
 // 重點摘要與補足方式的圖示：一眼分辨每張卡在講什麼
 const INSIGHT_IC = { 計畫成功率: 'target', 生活費覆蓋率: 'wallet', 投資資產可撐到: 'hourglass', 最有感的調整: 'sliders', 勞保壓力測試: 'shield', 提早退休空窗期: 'hourglass', 最大收入來源: 'chart' };
 const OPT_IC = ['coins', 'wallet', 'briefcase', 'trend', 'piggy', 'target'];
+// 本地日期（YYYY-MM-DD）；toISOString 是 UTC，台灣清晨會變成前一天
+const localDate = (addYears = 0) => { const d = new Date(); d.setFullYear(d.getFullYear() + addYears); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const icon = (k) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`;
 const badge = (k, bg, fg) => `<span class="badge-ic" style="background:${bg};color:${fg}">${icon(k)}</span>`;
 
@@ -538,6 +540,11 @@ function pagePlan() {
   </section>
 
   ${actionsCard()}
+  <section class="card remind"><div class="card-h"><h3>${badge('history', 'rgba(232,184,75,.18)', '#9A7210')}每年提醒自己回來檢視</h3></div>
+    <div class="remind-b"><label class="field"><span>第一次提醒日期</span><input class="input" type="date" id="ics-date" value="${localDate(1)}"></label>
+      <button type="button" class="btn primary" data-act="ics">${icon('save').replace('<svg', '<svg width="15" height="15"')}下載行事曆提醒</button></div>
+    <p class="note">下載的 .ics 檔可加入 Google 日曆、iPhone 行事曆或 Outlook，之後每年同一天提醒你更新月薪、勞退餘額並記錄進度。不需要帳號，也不會收到推播。</p>
+  </section>
 
   ${trackingCard()}
 
@@ -766,22 +773,60 @@ function tourCard() {
   </div>`;
 }
 
+/* 決策評分卡：左邊圓環分數＋結論，右邊逐項 ✓／✕／– */
+const FIT_MARK = { true: ['ok', '✓', '有利'], false: ['no', '✕', '不利'], null: ['mid', '–', '中性'] };
+function fitBlock(f, labels, sub = '') {
+  const LV = { high: [labels[0], 'good'], mid: [labels[1], 'mid'], low: [labels[2], 'bad'] }[f.level];
+  const known = f.items.filter((x) => x.ok !== null).length;
+  const ring = known ? Math.round((f.yes / known) * 100) : 0;
+  return `<div class="fit">
+      <div class="fit-score ${LV[1]}" style="--p:${ring}">
+        <div class="fit-ring"><strong>${f.yes}<small>/${known}</small></strong></div>
+        <div><b>${LV[0]}</b><span class="fit-sub">有利 ${f.yes} 項・不利 ${f.no} 項・中性 ${f.items.length - known} 項</span>${sub ? `<span class="fit-sub">${sub}</span>` : ''}</div>
+      </div>
+      <ul class="fit-items">${f.items.map((x) => { const m = FIT_MARK[x.ok]; return `<li class="${m[0]}">
+        <span class="fit-ic">${icon(x.icon)}</span><div><b>${x.title}</b><small>${x.detail}</small></div><i class="fit-m ${m[0]}" aria-label="${m[2]}">${m[1]}</i></li>`; }).join('')}</ul>
+    </div>`;
+}
+const FIT_LABELS = {
+  claim: ['可以延後領', '照法定年齡領', '不建議延後'],
+  inslump: ['選年金較好', '兩者差不多', '可考慮一次領'],
+  labor: ['選月領較好', '各有利弊', '可考慮一次領'],
+  self: ['適合自提', '可以考慮', '不急著自提'],
+};
+const chartSize = () => (window.innerWidth < 640 ? { width: 380, height: 210 } : { width: 680, height: 220 });
+
 function insLumpCard() {
-  const c = insuranceLumpVsAnnuity(state, NOW);
-  if (!c.eligible) return '';
-  const better = c.breakEvenAge !== null && c.lifeAge > c.breakEvenAge ? 'annuity' : 'lump';
+  const f = memo('inslumpfit', insLumpFit);
+  if (!f) return '';
+  const c = f.c;
+  const marks = [
+    ...(c.breakEvenAge !== null && c.breakEvenAge <= 100 ? [{ x: Math.round(c.breakEvenAge), label: `回本 ${c.breakEvenAge.toFixed(0)} 歲`, color: C.green }] : []),
+    { x: Math.round(c.lifeAge), label: `預期壽命 ${c.lifeAge.toFixed(0)}`, color: C.muted },
+  ];
+  const chart = lineChart({
+    series: [
+      { name: '年金累計', points: f.curve.map((p) => ({ x: p.age, y: p.annuity })), color: C.green, fill: 'rgba(46,115,83,.08)' },
+      { name: '一次請領', points: f.curve.map((p) => ({ x: p.age, y: p.lump })), color: C.gold2 },
+      { name: `一次領拿去投資 ${pct(state.postReturn)}`, points: f.curve.map((p) => ({ x: p.age, y: p.invested })), color: C.gold2, dash: true },
+    ],
+    ...chartSize(), xFmt: (x) => `${x}歲`, marks,
+    tip: { title: (x) => `${x} 歲`, fmt: wan },
+  });
   return `<section class="card"><div class="card-h"><h3>${badge('landmark', 'rgba(232,184,75,.18)', '#9A7210')}勞保：年金還是一次請領？</h3><span class="hint">${c.firstInsuredYear} 年起投保，可二選一</span></div>
-    <p class="note" style="margin-top:0">98 年 1 月 1 日前已有勞保年資的人，可選擇一次請領老年給付（勞工保險條例第 58 條），核付後不能變更。</p>
+    ${fitBlock(f, FIT_LABELS.inslump, '98 年前已有年資才能選；核付後不能變更')}
     <div class="vs">
       <div><small>老年年金</small><strong>${money(c.annuity)}／月</strong><span>${c.claimAge} 歲起按月領，物價累計漲 5% 會調整</span></div>
       <div><small>一次請領</small><strong>${wan(c.lump)}</strong><span>${c.months} 個月 × 退保前 3 年平均投保薪資 ${money(c.base3)}</span></div>
     </div>
+    <h4 class="sub4">活到幾歲，年金才追上一次領？</h4>
+    ${chart}
+    <div class="chart-legend"><span><i style="background:${C.green}"></i>年金累計</span><span><i style="background:${C.gold2}"></i>一次請領</span><span><i style="background:${C.gold2};opacity:.6"></i>一次領拿去投資（虛線）</span></div>
     <ul class="pts">
-      <li>年金要領到 <b>${c.breakEvenAge.toFixed(1)} 歲</b>，累計才追上一次請領${c.breakEvenDiscounted ? `；若把一次領的錢以年化 ${pct(state.postReturn)} 投資，則要領到 <b>${c.breakEvenDiscounted.toFixed(1)} 歲</b>` : ''}。</li>
-      <li>你的預期壽命約 ${c.lifeAge.toFixed(1)} 歲，${better === 'annuity' ? '<b>依平均壽命，年金累計較多</b>；而且活得越久、年金越划算，等於買了長壽保險。' : '<b>依平均壽命，一次請領較多</b>；但若活得比平均久，年金會反超。'}</li>
-      <li>一次請領適合：健康狀況不佳、有明確大額資金用途、或擔心未來給付被調降的人。年金適合：擔心活太久錢不夠、不想自己管理一大筆錢的人。</li>
+      <li>一次請領適合：健康狀況不佳、有明確大額資金用途、或擔心未來給付被調降的人。</li>
+      <li>年金適合：擔心活太久錢不夠、不想自己管理一大筆錢的人——活得越久越划算，等於買了長壽保險。</li>
     </ul>
-    <p class="note">一次請領計算：年資 ${c.counted} 年，每滿 1 年給 1 個月、超過 15 年部分每年 2 個月，上限 45 個月；60 歲後年資最多計 5 年、合併上限 50 個月（第 59 條）。平均投保薪資：年金取最高 60 個月、一次請領取退保前 3 年（第 19 條）。</p>
+    <p class="note">一次請領計算：年資 ${c.counted} 年，每滿 1 年給 1 個月、超過 15 年部分每年 2 個月，上限 45 個月；60 歲後年資最多計 5 年、合併上限 50 個月（第 59 條）。平均投保薪資：年金取最高 60 個月、一次請領取退保前 3 年（第 19 條）。資格依第 58 條。</p>
   </section>`;
 }
 
@@ -823,42 +868,62 @@ function householdCard() {
   </section>`, verdict);
 }
 
+function retireTaxCard() {
+  const t = memo('rtax', retirementTax);
+  const tiles = [
+    { icon: 'landmark', title: '勞保年金', ok: true, detail: `每年約 ${wan(t.insYear)}，屬保險給付，免稅` },
+    t.laborEligible
+      ? { icon: 'piggy', title: '勞退月領', ok: t.excess === 0, detail: t.excess === 0 ? `每年約 ${wan(t.laborYear)}，在退職所得免稅額 ${wan(t.exempt)} 以內` : `每年約 ${wan(t.laborYear)}，超過免稅額 ${wan(t.excess)}，約繳稅 ${money(t.tax)}／年` }
+      : { icon: 'piggy', title: '勞退一次領', ok: null, detail: '一次領的退職所得有另外的免稅額算法，這裡未估算' },
+    { icon: 'coins', title: '投資收益', ok: null, detail: '股利、利息每年要計入所得，可能被扣二代健保補充保費；依個人狀況，未計入' },
+  ];
+  const f = { items: tiles, yes: tiles.filter((x) => x.ok === true).length, no: tiles.filter((x) => x.ok === false).length };
+  return `<section class="card"><div class="card-h"><h3>${badge('receipt', 'rgba(45,74,110,.1)', C.navy)}退休後還要繳稅嗎？</h3><span class="hint">今日幣值・${TAX.year} 年度</span></div>
+    <ul class="fit-items">${tiles.map((x) => { const m = FIT_MARK[x.ok]; return `<li class="${m[0]}"><span class="fit-ic">${icon(x.icon)}</span><div><b>${x.title}</b><small>${x.detail}</small></div><i class="fit-m ${m[0]}" aria-label="${m[2]}">${m[1]}</i></li>`; }).join('')}</ul>
+    ${t.laborEligible && t.excess === 0 ? `<p class="note">勞退月領每月還有約 ${money(t.monthlyRoom)} 的免稅空間。` : '<p class="note">'}稅額以單身、只有這筆所得、扣除一般免稅額與標準扣除額粗估；退休後的健保費依投保身分而定，官方 ${TAX.year} 年數字尚未查證，暫不計入。</p>
+  </section>`;
+}
+
 function foldedDecisions() {
   const out = [];
   const co = insuranceClaimOptions(state, NOW);
-  if (co && co.opts.length >= 2) out.push(fold('claim', claimAgeCard(), `依你的預期壽命，<b>${co.best} 歲</b>開始領勞保累計最多；目前設定 ${R.me.ins.startAge} 歲。`));
+  const cf = memo('claimfit', insClaimFit);
+  if (cf) out.push(fold('claim', claimAgeCard(), `<b>${FIT_LABELS.claim[['high', 'mid', 'low'].indexOf(cf.level)]}</b>・依你的預期壽命，${co.best} 歲開始領累計最多；目前設定 ${R.me.ins.startAge} 歲。`));
   const il = insuranceLumpVsAnnuity(state, NOW);
-  if (il.eligible) out.push(fold('inslump', insLumpCard(), `一次請領 ${wan(il.lump)}；年金要領到 ${il.breakEvenAge.toFixed(1)} 歲才追上，${il.lifeAge > il.breakEvenAge ? '依平均壽命<b>年金較多</b>' : '依平均壽命<b>一次請領較多</b>'}。`));
+  const ilf = memo('inslumpfit', insLumpFit);
+  if (il.eligible) out.push(fold('inslump', insLumpCard(), `<b>${FIT_LABELS.inslump[['high', 'mid', 'low'].indexOf(ilf.level)]}</b>・一次請領 ${wan(il.lump)}；年金要領到 ${il.breakEvenAge.toFixed(1)} 歲才追上，${il.lifeAge > il.breakEvenAge ? '依平均壽命<b>年金較多</b>' : '依平均壽命<b>一次請領較多</b>'}。`));
   const lc = laborLumpVsMonthly(state, NOW);
+  const lf = memo('laborfit', laborChoiceFit);
   if (lc.pool > 0) out.push(fold('laborchoice', laborChoiceCard(), lc.eligible
-    ? `月領 ${money(lc.monthly)} 到 ${lc.endAge} 歲${lc.outlive > 0 ? `，<b>比你的預期壽命早 ${lc.outlive.toFixed(1)} 年領完</b>` : '，已涵蓋你的預期壽命'}；一次領 ${wan(lc.pool)}。`
+    ? `<b>${FIT_LABELS.labor[['high', 'mid', 'low'].indexOf(lf.level)]}</b>・月領 ${money(lc.monthly)} 到 ${lc.endAge} 歲${lc.outlive > 0 ? `，<b>比你的預期壽命早 ${lc.outlive.toFixed(1)} 年領完</b>` : '，已涵蓋你的預期壽命'}；一次領 ${wan(lc.pool)}。`
     : `新制年資未滿 15 年，<b>只能一次領</b> ${wan(lc.pool)}。`));
   if (state.self.salary > 0) {
     const f = memo('selffit', selfRateFit), a = f.a;
-    const lv = { high: '適合自提', mid: '可以考慮', low: '不急著自提' }[f.level];
+    const lv = FIT_LABELS.self[['high', 'mid', 'low'].indexOf(f.level)];
     out.push(fold('selfrate', selfRateCard(), `<b>${lv}</b>（${f.yes} 項有利、${f.no} 項不利）・` + (a.marginal === 0
       ? '你目前不用繳綜所稅，自提沒有節稅效果。'
       : `每年少繳稅 ${money(a.annualSaving)}；自己投資要年化超過 ${a.breakEven.toFixed(2)}% 才打平。`)));
   }
+  const rt = memo('rtax', retirementTax);
+  out.push(fold('rtax', retireTaxCard(), rt.excess === 0 ? '勞保年金免稅；勞退月領在退職所得免稅額內，<b>大致不用繳稅</b>。' : `勞退月領超過退職所得免稅額，每年約繳稅 <b>${money(rt.tax)}</b>。`));
   return out.length ? `<div class="sub-h"><h3>${badge('sliders', 'rgba(45,74,110,.1)', C.navy)}關鍵決策</h3><span class="hint">點開看計算與正反比較</span></div>${out.join('')}` : '';
 }
 
 function claimAgeCard() {
-  const o = insuranceClaimOptions(state, NOW);
-  if (!o || o.opts.length < 2) return '';
+  const f = memo('claimfit', insClaimFit);
+  if (!f) return '';
+  const o = f.o;
   const cur = R.me.ins.startAge;
   const best = o.opts.find((x) => x.age === o.best);
   const curOpt = o.opts.find((x) => x.age === cur);
+  const max = Math.max(...o.opts.map((x) => x.cumToLife), 1);
   return `<section class="card"><div class="card-h"><h3>${badge('landmark', 'rgba(63,143,106,.12)', C.green)}勞保幾歲開始領最划算？</h3><span class="hint">法定請領年齡 ${o.legal} 歲</span></div>
-    <p class="note" style="margin-top:0">提前請領每年減給 4%、延後每年增給 4%，各以 5 年為限（勞工保險條例第 58 條）。晚領每月較多，但少領幾年；要活過「回本歲數」，晚領才划算。</p>
-    <div class="tbl-wrap"><table class="tbl">
-      <thead><tr><th>請領年齡</th><th>每月</th><th>累計到 ${o.lifeAge.toFixed(0)} 歲</th><th>與 ${o.legal} 歲比的回本歲數</th><th></th></tr></thead>
-      <tbody>${o.opts.map((x) => `<tr class="${x.age === cur ? 'cur' : ''}"><td>${x.age} 歲${x.age === o.legal ? '（法定）' : ''}</td><td>${money(x.monthly)}</td>
-        <td class="${x.age === o.best ? 'good' : ''}">${wan(x.cumToLife)}${x.age === o.best ? ' ★' : ''}</td>
-        <td>${x.breakEven === null ? '—' : x.age > o.legal ? `活過 ${x.breakEven.toFixed(1)} 歲才划算` : `${x.breakEven.toFixed(1)} 歲前較划算`}</td>
-        <td>${x.age === cur ? '' : `<button type="button" class="btn ghost" style="color:var(--navy2)" data-set="self.insClaimAge" data-val="${x.age}">改用</button>`}</td></tr>`).join('')}</tbody>
-    </table></div>
-    <p class="note">依你的預期壽命 ${o.lifeAge.toFixed(1)} 歲，累計領最多的是 <b>${o.best} 歲</b>開始領（約 ${wan(best.cumToLife)}）${curOpt && o.best !== cur ? `，比目前設定的 ${cur} 歲多 ${wan(best.cumToLife - curOpt.cumToLife)}` : ''}。這是未折現的名目累計；若重視「早拿到的錢可以先用或投資」、健康狀況不確定，或需要錢支應空窗期，早一點領也合理。延後請領期間沒有勞保收入，會列入空窗期。</p>
+    ${fitBlock(f, FIT_LABELS.claim, `提前每年少 4%、延後每年多 4%，各以 5 年為限`)}
+    <h4 class="sub4">每個請領年齡，活到 ${o.lifeAge.toFixed(0)} 歲累計領多少？</h4>
+    <div class="hbars">${o.opts.map((x) => `<div class="hbar${x.age === cur ? ' cur' : ''}"><div class="hbar-h"><span>${x.age} 歲起領${x.age === o.legal ? '（法定）' : ''}${x.age === cur ? '<em>目前設定</em>' : ''}${x.age === o.best ? '<em class="best">累計最多</em>' : ''}</span><b class="num">${wan(x.cumToLife)}</b></div>
+      <div class="hbar-t"><i style="width:${Math.max(2, (x.cumToLife / max) * 100)}%;background:${x.age === o.best ? C.green : x.age === cur ? C.navy : C.greenL}"></i></div>
+      <small>每月 ${money(x.monthly)}${x.breakEven === null ? '' : x.age > o.legal ? `・活過 ${x.breakEven.toFixed(1)} 歲才比法定年齡划算` : `・${x.breakEven.toFixed(1)} 歲前比法定年齡划算`}${x.age === cur ? '' : ` <button type="button" class="linkbtn" data-set="self.insClaimAge" data-val="${x.age}">改用</button>`}</small></div>`).join('')}</div>
+    <p class="note">依你的預期壽命 ${o.lifeAge.toFixed(1)} 歲，累計領最多的是 <b>${o.best} 歲</b>開始領（約 ${wan(best.cumToLife)}）${curOpt && o.best !== cur ? `，比目前設定的 ${cur} 歲多 ${wan(best.cumToLife - curOpt.cumToLife)}` : ''}。這是未折現的名目累計；若重視「早拿到的錢可以先用或投資」、健康狀況不確定，或需要錢支應空窗期，早一點領也合理。延後請領期間沒有勞保收入，會列入空窗期（勞工保險條例第 58 條）。</p>
   </section>`;
 }
 
@@ -879,10 +944,6 @@ function selfRateCard() {
   const a = f.a;
   const cur = state.self.selfRate;
   const mRate = Math.round(a.marginal * 100);
-  const LV = { high: ['適合自提', 'good', '多數條件對自提有利'], mid: ['可以考慮', 'mid', '有利有弊，看你重視什麼'], low: ['不急著自提', 'bad', '目前條件對自提不利'] }[f.level];
-  const mark = (ok) => ok === true ? '<i class="fit-m ok" aria-label="有利">✓</i>' : ok === false ? '<i class="fit-m no" aria-label="不利">✕</i>' : '<i class="fit-m mid" aria-label="中性">–</i>';
-  const known = f.items.filter((x) => x.ok !== null).length;
-  const ring = known ? Math.round((f.yes / known) * 100) : 0;
 
   // 三條路的終值，用長條直接比大小
   const bars = [
@@ -912,14 +973,7 @@ function selfRateCard() {
   const li = (ic, b, t) => `<li>${icon(ic)}<div><b>${b}</b>${t}</div></li>`;
   return `<section class="card"><div class="card-h"><h3>${badge('piggy', 'rgba(232,184,75,.18)', '#9A7210')}勞退自提：值不值得？</h3><span class="hint">${cur > 0 ? `目前自提 ${pct(cur)}` : '以自提 6% 試算'}</span></div>
 
-    <div class="fit">
-      <div class="fit-score ${LV[1]}" style="--p:${ring}">
-        <div class="fit-ring"><strong>${f.yes}<small>/${known}</small></strong></div>
-        <div><b>${LV[0]}</b><span>${LV[2]}</span><span class="fit-sub">有利 ${f.yes} 項・不利 ${f.no} 項・中性 ${f.items.length - known} 項</span><span class="fit-sub">${a.marginal ? `每提 100 元，當年少繳約 ${mRate} 元稅` : '你目前不用繳綜所稅，自提沒有節稅效果'}</span></div>
-      </div>
-      <ul class="fit-items">${f.items.map((x) => `<li class="${x.ok === true ? 'ok' : x.ok === false ? 'no' : 'mid'}">
-        <span class="fit-ic">${icon(x.icon)}</span><div><b>${x.title}</b><small>${x.detail}</small></div>${mark(x.ok)}</li>`).join('')}</ul>
-    </div>
+    ${fitBlock(f, FIT_LABELS.self, a.marginal ? `每提 100 元，當年少繳約 ${mRate} 元稅` : '你目前不用繳綜所稅，自提沒有節稅效果')}
 
     <div class="assume">
       <div class="grid">
@@ -938,7 +992,7 @@ function selfRateCard() {
       <div class="stat"><small>每月提撥</small><strong>${money(a.monthly)}</strong><small>不計入薪資所得課稅</small></div>
       <div class="stat good"><small>每年少繳稅</small><strong>${money(a.annualSaving)}</strong><small>${a.manualTax ? `以 ${mRate}% 級距計算` : '依 115 年度級距估算'}</small></div>
       <div class="stat good"><small>${a.years} 年累積少繳稅</small><strong>${wan(a.totalSaving)}</strong><small>以目前薪資與級距估算</small></div>
-      <div class="stat"><small>鎖定到 ${a.startAge} 歲</small><strong>${a.lockedYears} 年</strong><small>期間不能動用</small></div>
+      <div class="stat"><small>鎖定到 ${a.accessAge} 歲</small><strong>${a.lockedYears} 年</strong><small>滿 60 歲仍在職也能領</small></div>
     </div>
 
     <h4 class="sub4">同樣的錢，${a.startAge} 歲時各有多少？</h4>
@@ -964,7 +1018,7 @@ function selfRateCard() {
         ${li('history', '強迫儲蓄、可隨時調整', '從薪水直接扣、不會被花掉；自提率可以隨時向公司申請調整或停止。')}
       </ul></div>
       <div class="cons"><h4>缺點與風險</h4><ul class="pc">
-        ${li('hourglass', '流動性差', `要到 ${a.startAge} 歲才能領（第 24 條），這 ${a.lockedYears} 年間急用、買房都動不到。先有緊急預備金再自提。`)}
+        ${li('hourglass', '流動性差', `要滿 ${a.accessAge} 歲才能領（第 24 條；仍在職也可以請領），這 ${a.lockedYears} 年間急用、買房都動不到。先有緊急預備金再自提。`)}
         ${li('sliders', '報酬不能自己選', `長期平均收益率 ${LABOR_FUND.longAvg.rate}%（${LABOR_FUND.longAvg.from}–${LABOR_FUND.longAvg.to} 年），也曾出現虧損年度；投資紀律好的人，自己長期投資的期望報酬可能較高。`)}
         ${li('landmark', '月領只到平均餘命', '選月領的話領到官方平均餘命為止（見上方月領 vs 一次領）。')}
         ${li('building', '政策可能調整', '收益分配、請領規定可能隨法規修正而改變。')}
@@ -985,7 +1039,19 @@ function laborChoiceCard() {
       <p>勞工退休金條例第 24 條：年滿 60 歲、工作年資滿 15 年才可選擇月領。</p></div>${src}</section>`;
   }
   const self = c.selfInvest;
+  const f = memo('laborfit', laborChoiceFit);
+  const e = memo('labor60', laborEarlyClaim);
+  const chart = f ? lineChart({
+    series: [
+      { name: '月領累計', points: f.curve.map((p) => ({ x: p.age, y: p.monthly })), color: C.green, fill: 'rgba(46,115,83,.08)' },
+      { name: `一次領自己管理（${pct(self.rate)}）`, points: f.curve.map((p) => ({ x: p.age, y: p.self })), color: C.gold2, dash: true },
+    ],
+    ...chartSize(), xFmt: (x) => `${x}歲`,
+    marks: [{ x: c.endAge, label: `月領結束 ${c.endAge}`, color: C.red }, { x: Math.round(c.lifeAge), label: `預期壽命 ${c.lifeAge.toFixed(0)}`, color: C.muted }],
+    tip: { title: (x) => `${x} 歲`, fmt: wan },
+  }) : '';
   return `<section class="card">${head}
+    ${f ? fitBlock(f, FIT_LABELS.labor, '每月領的金額相同，比較誰撐得比較久') : ''}
     <div class="stats">
       <div class="stat"><small>月領（勞保局算法）</small><strong>${money(c.monthly)}</strong><small>每月，領 ${c.years} 年到 ${c.endAge} 歲</small></div>
       <div class="stat"><small>一次領</small><strong>${wan(c.pool)}</strong><small>${c.startAge} 歲一次拿到</small></div>
@@ -999,6 +1065,15 @@ function laborChoiceCard() {
       ${c.needRate !== null ? `<li>要用一次領的錢，每月領 ${money(c.monthly)} 一直領到預期壽命 ${c.lifeAge.toFixed(0)} 歲，自己投資需要年化約 <b>${c.needRate.toFixed(2)}%</b>${c.needRate > c.officialRate ? `，高於月退採用的 ${c.officialRate.toFixed(4)}%，代表要承擔投資風險` : `，低於月退採用的 ${c.officialRate.toFixed(4)}%`}。</li>` : ''}
       <li>月領由勞保局代管、沒有投資風險；一次領彈性大、可傳承，但要自己承擔市場波動與花太快的風險。</li>
     </ul>
+    ${chart ? `<h4 class="sub4">每月領同樣的錢，累計能領到多少？</h4>${chart}
+    <div class="chart-legend"><span><i style="background:${C.green}"></i>月領（到 ${c.endAge} 歲停止）</span><span><i style="background:${C.gold2}"></i>一次領自己管理，領完為止</span></div>` : ''}
+    ${e ? `<h4 class="sub4">${icon('briefcase').replace('<svg', '<svg class="ic-inline"')}滿 60 歲先領？（仍在職也可以）</h4>
+    <p class="note" style="margin-top:0">勞保局說明：年滿 60 歲不論是否仍在職即可請領；之後繼續工作，雇主仍要提繳，續提的部分每年可再請領一次。你設定 ${e.retireAge} 歲退休，比 60 歲晚 ${e.waitYears} 年。</p>
+    <div class="vs">
+      <div><small>60 歲先領</small><strong>${money(e.early.monthly)}／月</strong><span>領到 ${e.early.endAge} 歲；退休前已領 ${wan(e.early.beforeRetire)}<br>60 歲後續提的 ${wan(e.early.continued)} 另外領回</span></div>
+      <div><small>${e.retireAge} 歲退休才領</small><strong>${money(e.wait.monthly)}／月</strong><span>領到 ${e.wait.endAge} 歲；專戶多滾 ${e.waitYears} 年<br>每月較多，但較晚開始</span></div>
+    </div>
+    <p class="note">活到預期壽命 ${e.lifeAge.toFixed(0)} 歲，累計約：60 歲先領 <b>${wan(e.early.toLife)}</b>（含續提）、退休才領 <b>${wan(e.wait.toLife)}</b>（名目、未折現）。先領的好處是錢早點到手、可以自己運用；晚領則讓專戶以 ${pct(state.self.laborReturn)} 多滾幾年。試算的主結果仍以「退休時才領」計算。</p>` : ''}
     ${src}
   </section>`;
 }
@@ -1013,7 +1088,7 @@ function trackingCard() {
   }
   const rows = trackProgress(tr);
   const last = rows[rows.length - 1];
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDate();
   const yr = (d) => (new Date(d) - new Date(tr.baseline.createdAt)) / (365.25 * 864e5);
   const baseYear = new Date(tr.baseline.createdAt).getFullYear();
   // 只畫到最新記錄後 3 年（至少 5 年），讓近期的記錄點看得清楚
@@ -1233,7 +1308,7 @@ function exportCsv() {
   const blob = new Blob(['﻿' + [head.join(','), ...body].join('\r\n')], { type: 'text/csv;charset=utf-8' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `早謀遠算_逐年明細_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.download = `早謀遠算_逐年明細_${localDate()}.csv`;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
@@ -1270,6 +1345,7 @@ function renderAside() {
       </div>`}
     </div>
     <div class="card" style="padding:12px 18px">
+      <div class="cpi-q" role="group" aria-label="通膨假設"><span>通膨假設<small>改了會影響今日購買力</small></span><span class="cpi-b">${[1.5, 2, 2.5, 3].map((v) => `<button type="button" data-set="cpi" data-val="${v}" aria-pressed="${state.cpi === v}">${v}%</button>`).join('')}</span></div>
       <div class="kv"><span>距離退休</span><b>${R.n} 年</b></div>
       <div class="kv"><span>退休金要撐多久<small>退休到預期壽命 ${me.lifeAge.toFixed(0)} 歲</small></span><b>${(me.payoutMonths / 12).toFixed(1)} 年</b></div>
       <div class="kv"><span>退休後還能自由活動<small>到健康平均壽命 ${me.healthAge.toFixed(0)} 歲，旅遊宜趁早</small></span><b>${Math.max(0, me.healthAge - state.self.retireAge).toFixed(1)} 年</b></div>
@@ -1558,6 +1634,16 @@ document.addEventListener('click', (e) => {
   else if (act === 'export') return exportFile();
   else if (act === 'csv') return exportCsv();
   else if (act === 'share-link') return shareLink();
+  else if (act === 'ics') {
+    const date = $('#ics-date')?.value;
+    if (!date) return toast('請選擇提醒日期');
+    const blob = new Blob([reviewIcs({ date, url: `${location.origin}${location.pathname}` })], { type: 'text/calendar' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = '早謀遠算_年度檢視.ics';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    return toast('已下載行事曆檔，打開後加入你的行事曆即可');
+  }
   else if (act === 'template') {
     const tp = templates(NOW).find((x) => x.id === id);
     if (!tp || !confirm(`套用「${tp.name}」範本會取代目前的設定（進度追蹤紀錄會保留）。確定套用？`)) return;
@@ -1568,7 +1654,7 @@ document.addEventListener('click', (e) => {
   }
   else if (act === 'track-baseline' || act === 'track-reset') {
     if (act === 'track-reset' && !confirm('以目前設定重新建立基準？過去的記錄會保留，但改和新基準比較。')) return;
-    state.tracking = { ...(state.tracking || { checkins: [] }), baseline: { createdAt: new Date().toISOString().slice(0, 10), path: planPath(state, NOW) } };
+    state.tracking = { ...(state.tracking || { checkins: [] }), baseline: { createdAt: localDate(), path: planPath(state, NOW) } };
     toast('已建立基準計畫');
   } else if (act === 'track-add') {
     const n = (sel) => +($(sel).value || '').replace(/[^\d.]/g, '') || 0;
@@ -1635,7 +1721,7 @@ function exportFile() {
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `早謀遠算_設定_${new Date().toISOString().slice(0, 10)}.json`;
+  a.download = `早謀遠算_設定_${localDate()}.json`;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
