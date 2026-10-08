@@ -100,3 +100,8 @@ body.easy .toast { white-space: normal; max-width: calc(100vw - 32px); text-alig
   .ez-btn { padding: 0 18px; font-size: 16px; }
   .ez-actions .ez-btn { flex: 1 1 100%; }
 }
+
+.ez-bli { border: 1px dashed var(--border-2); border-radius: 14px; padding: 12px 14px; background: var(--bg); }
+.ez-bli summary { cursor: pointer; font-weight: 800; color: var(--navy2); }
+.ez-bli[open] { display: flex; flex-direction: column; gap: 10px; }
+.ez-text { font: 14px/1.5 var(--mono); min-height: 96px; resize: vertical; }

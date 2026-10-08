@@ -1323,3 +1323,101 @@ export function reviewIcs({ date, url, uidSeed = 'zaomou' }) {
     'END:VEVENT', 'END:VCALENDAR',
   ].map(foldIcs).join('\r\n') + '\r\n';
 }
+
+/**
+ * 由勞退明細解析結果產生建議套用的欄位（只列出與目前設定不同的），預設勾選可靠的項目；
+ * 收益率只供參考、預設不勾。
+ */
+export function laborStatementSuggestions(r, state, nowYear = new Date().getFullYear()) {
+  if (!r) return [];
+  const p = state.self;
+  const roc = (x) => `${x.year} 年 ${x.month} 月`;
+  const out = [];
+  const add = (path, label, from, to, value, checked = true, note = '') => {
+    if (value === null || value === undefined || Number.isNaN(value) || from === to) return;
+    out.push({ path, label, from, to, value, checked, note });
+  };
+  const money = (v) => `$${Math.round(v).toLocaleString()}`;
+  if (r.balance !== null) add('self.laborBalance', '勞退專戶目前餘額', p.laborBalance === null ? '依年資估算' : money(p.laborBalance), money(r.balance), r.balance, true, r.last ? `截至 ${roc(r.last)}，不含尚未分配的收益` : '');
+  if (r.years !== null) {
+    const y = Math.round(r.years * 4) / 4;
+    add('self.pastInsYears', '累計年資', p.pastInsYears === null ? '視為沒中斷' : `${p.pastInsYears} 年`, `${y} 年`, y, true, '以勞退提繳年資代入勞保年資；兩者通常接近，可再對照勞保投保紀錄');
+  }
+  if (r.selfRate !== null && r.selfRate !== num(p.selfRate)) add('self.selfRate', '勞退自提率', `${num(p.selfRate)}%`, `${r.selfRate}%`, r.selfRate);
+  if (r.wage && Math.abs(r.wage - p.salary) / Math.max(1, p.salary) > 0.03) add('self.salary', '月薪', money(p.salary), money(r.wage), r.wage, true, '以最近一個月的提繳工資代入（依分級表，接近實際月薪）');
+  if (r.complete && r.first) {
+    const age = r.first.year + 1911 - p.birthYear - (r.first.month < 7 ? 0.5 : 0);
+    const a = Math.max(15, Math.round(age));
+    add('self.workStartAge', '第一次投保年齡', `${p.workStartAge} 歲`, `${a} 歲`, a, true, `第一筆提繳在 ${roc(r.first)}`);
+  }
+  if (r.growth !== null && Math.abs(r.growth - num(state.salaryGrowth)) >= 0.5) {
+    const g = Math.round(r.growth * 2) / 2;
+    add('salaryGrowth', '薪資年增率', `${num(state.salaryGrowth)}%`, `${g}%`, g, false, `${r.wages[0].year}–${r.wages[r.wages.length - 1].year} 年提繳工資平均每年成長 ${r.growth.toFixed(1)}%；未來不一定維持，預設不套用`);
+  }
+  if (r.avgReturn !== null) add('self.laborReturn', '勞退收益假設', `${num(p.laborReturn)}%`, `${(Math.round(r.avgReturn * 10) / 10)}%`, Math.round(r.avgReturn * 10) / 10, false, `你的專戶 ${r.returns[0].year}–${r.returns[r.returns.length - 1].year} 年已分配收益約年化 ${r.avgReturn.toFixed(1)}%（概估）；含近年大多頭，預設不套用`);
+  return out;
+}
+
+/**
+ * 解析勞保局「勞工退休金個人專戶明細資料」的文字（使用者從 PDF 全選複製貼上，只在瀏覽器內處理）。
+ * 回傳專戶餘額、提繳年資、最近提繳工資與自提率、第一次提繳年月、各年提繳工資與已分配收益。
+ * 容許換行或空白分隔；表頭與明細任一缺漏時，能算的照算。
+ */
+export function parseLaborStatement(text) {
+  const t = String(text || '').replace(/[　 ]/g, ' ').replace(/，/g, ',');
+  const n = (s) => +String(s).replace(/[,\s]/g, '');
+  const head = (label) => { const m = t.match(new RegExp(`${label}\\s*[：:]\\s*(-?[\\d,]+)`)); return m ? n(m[1]) : null; };
+  const ym = t.match(/累計提繳年資\s*[：:]\s*(\d+)\s*年\s*(\d+)\s*月/);
+  const parts = ['雇主提繳累計', '個人提繳累計', '雇主提繳收益累計', '個人提繳收益累計'].map(head);
+  const rows = [];
+  const re = /(?:^|\s)(\d{3})(\d{2})?\s+(雇主提繳|個人提繳|雇提收益|個提收益)\s+(?:(\S*?)\s+)??(-?[\d,]+)\s+(-?[\d,]+)(?=\s|$)/g;
+  let m;
+  while ((m = re.exec(t))) {
+    const year = +m[1], month = m[2] ? +m[2] : null;
+    if (year < 94 || year > 200 || (month !== null && (month < 1 || month > 12))) continue;
+    rows.push({ year, month, kind: m[3], amount: n(m[5]), running: n(m[6]) });
+  }
+  if (!rows.length && parts.every((x) => x === null)) return null;
+  const emp = rows.filter((r) => r.kind === '雇主提繳' && r.month);
+  const own = rows.filter((r) => r.kind === '個人提繳' && r.month);
+  const key = (r) => r.year * 100 + r.month;
+  const last = emp.length ? emp.reduce((a, b) => (key(b) > key(a) ? b : a)) : null;
+  const first = emp.length ? emp.reduce((a, b) => (key(b) < key(a) ? b : a)) : null;
+  const lastOwn = last ? own.find((r) => key(r) === key(last)) : null;
+  // 各年平均提繳工資（雇主 6%），只取滿 12 個月的年度
+  const byYear = {};
+  for (const r of emp) (byYear[r.year] ||= []).push(r.amount / (EMPLOYER_RATE / 100));
+  const wages = Object.entries(byYear).filter(([, v]) => v.length === 12).map(([y, v]) => ({ year: +y, avg: v.reduce((a, b) => a + b, 0) / 12 }));
+  let growth = null;
+  if (wages.length >= 3) {
+    const a = wages[0], b = wages[wages.length - 1];
+    growth = (Math.pow(b.avg / a.avg, 1 / (b.year - a.year)) - 1) * 100;
+  }
+  // 已分配收益的年化（以年初餘額＋當年提繳一半為基礎概估，僅供參考）
+  const years = [...new Set(rows.map((r) => r.year))].sort((a, b) => a - b);
+  // 明細可能只從某年開始（前面合併成「以前年度」），以第一筆的累計金額回推起始餘額
+  let bal = rows.length ? rows[0].running - rows[0].amount : 0;
+  const returns = [];
+  for (const y of years) {
+    const contrib = rows.filter((r) => r.year === y && r.month).reduce((s, r) => s + r.amount, 0);
+    const inc = rows.filter((r) => r.year === y && !r.month).reduce((s, r) => s + r.amount, 0);
+    const base = bal + contrib / 2;
+    if (base > 0 && inc !== 0) returns.push({ year: y, rate: (inc / base) * 100 });
+    bal += contrib + inc;
+  }
+  const geo = returns.length >= 3 ? (Math.exp(returns.reduce((s, r) => s + Math.log(1 + r.rate / 100), 0) / returns.length) - 1) * 100 : null;
+  const headerTotal = parts.every((x) => x !== null) ? parts.reduce((a, b) => a + b, 0) : null;
+  const lastRunning = rows.length ? rows[rows.length - 1].running : null;
+  return {
+    balance: headerTotal ?? lastRunning,
+    years: ym ? +ym[1] + +ym[2] / 12 : null,
+    employer: parts[0], own: parts[1], income: parts[2] !== null && parts[3] !== null ? parts[2] + parts[3] : null,
+    wage: last ? Math.round(last.amount / (EMPLOYER_RATE / 100)) : null,
+    selfRate: last ? Math.round(((lastOwn ? lastOwn.amount : 0) / last.amount) * EMPLOYER_RATE * 2) / 2 : null,
+    first: first && { year: first.year, month: first.month },
+    last: last && { year: last.year, month: last.month },
+    wages, growth, returns, avgReturn: geo, rows: rows.length,
+    consistent: headerTotal !== null && lastRunning !== null ? headerTotal === lastRunning : null,
+    complete: rows.length ? rows[0].running === rows[0].amount : false, // 從第一筆提繳開始（沒有「以前年度」合併列）
+  };
+}

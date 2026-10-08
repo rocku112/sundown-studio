@@ -798,3 +798,56 @@ test('簡單版：工作經歷（中斷的年資、勞退餘額）寫回完整�
   const c = applyEasy(b, { ...easyAnswers(b), pastInsYears: null, laborBalance: null });
   assert.deepEqual([c.self.pastInsYears, c.self.laborBalance], [null, null]);
 });
+
+import { parseLaborStatement, laborStatementSuggestions } from '../js/engine.js';
+// 測試用假資料（格式同勞保局「勞工退休金個人專戶明細資料」，數字為虛構）
+function fakeStatement(sep) {
+  const rows = [];
+  let run = 0, i = 0;
+  const push = (period, kind, unit, amt) => { run += amt; rows.push([++i, period, kind, unit, amt.toLocaleString(), run.toLocaleString()].filter((x) => x !== null).join(sep)); };
+  for (let y = 110; y <= 112; y++) {
+    const wage = { 110: 30300, 111: 31800, 112: 33300 }[y];
+    for (let m = 1; m <= 12; m++) {
+      const p = `${y}${String(m).padStart(2, '0')}`;
+      push(p, '雇主提繳', '某某股份有限公司', wage * 0.06);
+      push(p, '個人提繳', '某某股份有限公司', wage * 0.03);
+    }
+    push(String(y), '雇提收益', null, 1000 * (y - 109));
+    push(String(y), '個提收益', null, 500 * (y - 109));
+  }
+  const emp = 12 * 0.06 * (30300 + 31800 + 33300), own = emp / 2;
+  const head = [`累計提繳年資： 3 年 0 月 ( 含舊制 00 年 00 月)`, `雇主提繳累計： ${emp.toLocaleString()} 元`, `個人提繳累計： ${own.toLocaleString()} 元`,
+    `雇主提繳收益累計： 6,000 元`, `個人提繳收益累計： 3,000`, '元'];
+  return { text: ['勞工退休金個人專戶明細資料', ...head, '序號', '資料時段', '摘要說明', '提繳單位名稱', '金額', '累計金額', ...rows].join(sep), total: run };
+}
+test('勞退明細解析：換行與空白兩種貼上格式都能讀出餘額、年資、工資與自提率', () => {
+  for (const sep of ['\n', ' ']) {
+    const { text, total } = fakeStatement(sep);
+    const r = parseLaborStatement(text);
+    assert.equal(r.rows, 78);
+    assert.equal(r.balance, total);
+    assert.equal(r.consistent, true);
+    assert.equal(r.years, 3);
+    assert.equal(r.wage, 33300);
+    assert.equal(r.selfRate, 3);
+    assert.deepEqual(r.first, { year: 110, month: 1 });
+    assert.deepEqual(r.last, { year: 112, month: 12 });
+    assert.ok(Math.abs(r.growth - (Math.sqrt(33300 / 30300) - 1) * 100) < 1e-9);
+    assert.equal(r.returns.length, 3);
+  }
+  assert.equal(parseLaborStatement('隨便一段文字'), null);
+});
+test('勞退明細建議：只列出和目前不同的欄位，收益率與薪資成長預設不勾', () => {
+  const { text } = fakeStatement('\n');
+  const s = defaults(2026); s.self.birthYear = 1990;
+  const sug = laborStatementSuggestions(parseLaborStatement(text), s, 2026);
+  const by = Object.fromEntries(sug.map((x) => [x.path, x]));
+  assert.equal(by['self.laborBalance'].checked, true);
+  assert.equal(by['self.pastInsYears'].value, 3);
+  assert.equal(by['self.selfRate'].value, 3);
+  assert.equal(by['self.workStartAge'].value, 31); // 110 年 1 月 = 2021 年初，1990 年生
+  assert.equal(by['self.laborReturn'].checked, false);
+  // 已一致的欄位不再列出
+  s.self.selfRate = 3;
+  assert.ok(!laborStatementSuggestions(parseLaborStatement(text), s, 2026).some((x) => x.path === 'self.selfRate'));
+});

@@ -1,5 +1,5 @@
 /* 早謀遠算 · 簡單版：一次一題，最後只回答「夠不夠、錢從哪來、怎麼補」 */
-import { compute, goalPlan, actionPlan } from './engine.js';
+import { compute, goalPlan, actionPlan, parseLaborStatement } from './engine.js';
 import { load, save, applySeed, easyAnswers, applyEasy } from './state.js';
 import { legalPensionAge, MIN_LIVING, EXPENSE_LEVELS } from './data.js';
 
@@ -73,7 +73,12 @@ const STEPS = [
       ${broken ? `<label class="ez-field"><span>到現在累計大概幾年？</span><input class="ez-input num" type="number" inputmode="decimal" step="0.5" data-a="pastInsYears" min="0" max="${Math.max(0, age - 15)}" value="${ans.pastInsYears}"></label>`
         : `<p class="ez-sub" id="ez-wy">從 ${ans.workStartAge} 歲到現在，累計 ${Math.max(0, age - ans.workStartAge)} 年</p>`}
       <label class="ez-field"><span>勞退專戶目前有多少？（不知道可以留白）</span><span class="ez-money"><b>$</b><input class="ez-input num" type="text" inputmode="numeric" data-a="laborBalance" data-money data-null value="${ans.laborBalance === null ? '' : ans.laborBalance.toLocaleString()}" placeholder="留白就幫你估算"></span></label>
-      <p class="ez-sub">投保年資和勞退餘額，都可以在勞保局網站的 e 化服務或「勞動保障卡」App 查到。</p>`;
+      <p class="ez-sub">投保年資和勞退餘額，都可以在勞保局網站的 e 化服務或「勞動保障卡」App 查到。</p>
+      <details class="ez-bli"><summary>有勞退明細 PDF？貼上自動填（最準）</summary>
+        <p class="ez-sub">打開「勞工退休金個人專戶明細」PDF，全選、複製，貼到下面。只在你的瀏覽器處理，不會上傳。</p>
+        <textarea class="ez-input ez-text" id="ez-bli" rows="4" placeholder="貼上明細文字…"></textarea>
+        <button type="button" class="ez-btn ghost" data-bli>讀取明細</button>
+      </details>`;
     },
   },
   {
@@ -223,6 +228,18 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && e.target.closest('.ez-input')) { e.preventDefault(); go(1); }
 });
 document.addEventListener('click', (e) => {
+  if (e.target.closest('[data-bli]')) {
+    const r = parseLaborStatement($('#ez-bli').value);
+    if (!r || r.balance === null) { toast('讀不到明細，請確認貼上的是「勞工退休金個人專戶明細資料」整份文字'); return; }
+    const done = [];
+    ans.laborBalance = r.balance; done.push(`勞退餘額 ${money(r.balance)}`);
+    if (r.years !== null) { ans.pastInsYears = Math.round(r.years * 4) / 4; done.push(`年資 ${ans.pastInsYears} 年`); }
+    if (r.complete && r.first) { ans.workStartAge = Math.max(15, Math.round(r.first.year + 1911 - ans.birthYear - (r.first.month < 7 ? 0.5 : 0))); done.push(`${ans.workStartAge} 歲開始投保`); }
+    if (r.selfRate !== null && r.selfRate !== state.self.selfRate) { state.self.selfRate = r.selfRate; done.push(`自提 ${r.selfRate}%`); }
+    commit(); render();
+    toast(`已從明細帶入：${done.join('、')}`);
+    return;
+  }
   const wk = e.target.closest('[data-work]');
   if (wk) {
     const age = NOW - ans.birthYear;

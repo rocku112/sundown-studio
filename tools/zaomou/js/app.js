@@ -2,7 +2,7 @@
    畫面分兩種：含輸入欄位的分頁（起點設定、投資資產、目標與行動）只在結構改變時重繪，
    數字靠 data-o 局部更新，避免打字時失焦；純輸出的分頁與側欄則每次重算後整頁重繪。 */
 
-import { compute, holdingValue, growLump, growMonthly, lifecycle, sensitivity, retireAgeOptions, goalPlan, validate, scenarioSummary, selfContributionTax, monteCarlo, actionPlan, planPath, trackProgress, laborLumpVsMonthly, selfContributionAnalysis, insuranceClaimOptions, insCpiFactor, insuranceLumpVsAnnuity, withdrawalStrategies, selfRateDelayOptions, stateDiff, pastInsured, householdTimeline, selfRateFit, insClaimFit, insLumpFit, laborChoiceFit, laborEarlyClaim, retirementTax, reviewIcs } from './engine.js';
+import { compute, holdingValue, growLump, growMonthly, lifecycle, sensitivity, retireAgeOptions, goalPlan, validate, scenarioSummary, selfContributionTax, monteCarlo, actionPlan, planPath, trackProgress, laborLumpVsMonthly, selfContributionAnalysis, insuranceClaimOptions, insCpiFactor, insuranceLumpVsAnnuity, withdrawalStrategies, selfRateDelayOptions, stateDiff, pastInsured, parseLaborStatement, laborStatementSuggestions, householdTimeline, selfRateFit, insClaimFit, insLumpFit, laborChoiceFit, laborEarlyClaim, retirementTax, reviewIcs } from './engine.js';
 import { LABOR_MONTHLY, LABOR_FUND, legalPensionAge, INSURANCE_GRADES, MIN_LIVING, EXPENSE_LEVELS, RETURN_PRESETS, LIFE_TABLE, DATA_YEAR, PENSION_WAGE_MAX, dataStale, TAX } from './data.js';
 import { load, save, defaults, parseImport, getPath, setPath, uid, applySeed, STORAGE_KEY, normalize, loadScenarios, saveScenarios, MAX_SCENARIOS, templates, SHARE_PREFIX, encodeShare, decodeShare } from './state.js';
 import { lineChart, donut, wan, attachTooltips } from './charts.js';
@@ -124,7 +124,7 @@ function outVal(key) {
         `退休時共 <b>${me.insYears.toFixed(1).replace(/\.0$/, '')} 年</b>${me.insYears < 15 ? '，<b>未滿 15 年只能領一次金</b>' : ''}。勞保局網站的 e 化服務可以查到投保年資與勞退專戶餘額。`;
     }
     case 'laborinfo': return `每月提繳 <b>${money(me.acct.monthlyContrib)}</b>（雇主 6% + 自提 ${pct(state.self.selfRate, 1)}，提繳工資上限 ${money(PENSION_WAGE_MAX)}）。` +
-      (state.self.laborBalance === null ? `未填餘額，依新制施行後約 <b>${me.acct.estimatedPast.toFixed(1)}</b> 年年資回推估算。` : '') +
+      (state.self.laborBalance === null ? `未填餘額，依新制施行後約 <b>${me.acct.estimatedPast.toFixed(1)}</b> 年年資回推估算（假設過去薪資每年成長 ${pct(state.salaryGrowth)}、自提率和現在相同，可能有明顯誤差；填實際餘額或貼上勞退明細最準）。` : '') +
       ` 退休時專戶約 <b>${wan(me.acct.pool)}</b>，依勞保局月退算法約月領 <b>${money(me.laborRetire)}</b>${me.laborOfficial.eligible ? `，領到 ${me.laborOfficial.endAge} 歲` : '（年資未滿 15 年只能一次領）'}。`;
     case 'taxinfo': {
       const cur = state.self.selfRate;
@@ -232,6 +232,12 @@ function pageSetup() {
       ${numF('self.pastInsYears', '到現在累計的勞保年資', { nullable: true, min: 0, max: 50, step: 0.5, unit: '年', placeholder: `沒中斷就留白（${Math.max(0, R.me.age - s.workStartAge)} 年）`, em: '（中斷過才填）' })}
       ${numF('self.laborBalance', '勞退專戶目前餘額', { nullable: true, min: 0, step: 10000, unit: '元', placeholder: '不確定可留白', em: '（選填，最準）' })}
     </div>
+    <details class="bli" data-fold="bli"><summary>${icon('receipt').replace('<svg', '<svg class="ic-inline"')}有勞保局的勞退明細？貼上來自動填入（最準）</summary>
+      <ol class="bli-how"><li>到勞保局 e 化服務（或「勞動保障卡」App）查詢「勞工退休金個人專戶明細」，下載 PDF。</li><li>打開 PDF，全選（Ctrl+A）、複製（Ctrl+C），貼到下面。</li></ol>
+      <textarea class="input bli-text" id="bli-text" rows="5" placeholder="把明細的文字整份貼在這裡…"></textarea>
+      <div class="btn-row"><button type="button" class="btn primary" data-act="bli-parse">讀取明細</button><span class="hint">只在你的瀏覽器裡處理，不會上傳；身分證號、姓名不會被存下來。</span></div>
+      <div id="bli-out"></div>
+    </details>
     <p class="note">${out('workinfo', outVal('workinfo'))}</p>
     <p class="note">${out('ageinfo', outVal('ageinfo'))}</p>
   </section>
@@ -750,6 +756,7 @@ function pageAnalysis() {
 }
 
 /* 可收合的深度分析卡：預設只顯示標題與一句結論，展開狀態記在這台裝置 */
+let bliPending = []; // 勞退明細解析後、等待使用者勾選套用的項目
 const UI_KEY = 'zaomou_ui';
 const uiPrefs = (() => { try { return JSON.parse(localStorage.getItem(UI_KEY) || '{}'); } catch { return {}; } })();
 function fold(id, html, verdict) {
@@ -1646,6 +1653,24 @@ document.addEventListener('click', (e) => {
   else if (act === 'export') return exportFile();
   else if (act === 'csv') return exportCsv();
   else if (act === 'share-link') return shareLink();
+  else if (act === 'bli-parse') {
+    const r = parseLaborStatement($('#bli-text').value);
+    $('#bli-text').value = ''; // 解析完就清掉，不留個資在畫面上
+    if (!r) { $('#bli-out').innerHTML = '<p class="alert bad">讀不到明細內容。請確認貼上的是「勞工退休金個人專戶明細資料」整份文字。</p>'; return; }
+    bliPending = laborStatementSuggestions(r, state, NOW);
+    const sum = `讀到 ${r.rows} 筆明細${r.balance !== null ? `，專戶 ${money(r.balance)}` : ''}${r.years !== null ? `、提繳年資 ${Math.floor(r.years)} 年 ${Math.round((r.years % 1) * 12)} 月` : ''}${r.consistent === false ? '（表頭與明細累計不一致，請確認貼上的是完整內容）' : ''}。`;
+    $('#bli-out').innerHTML = !bliPending.length ? `<p class="alert good">${sum}目前設定已經和明細一致。</p>` : `<div class="bli-res"><p>${sum}勾選要套用的項目：</p>
+      <ul>${bliPending.map((x, i) => `<li><label><input type="checkbox" data-bli="${i}" ${x.checked ? 'checked' : ''}><span><b>${x.label}</b>：${x.from} → <b>${x.to}</b>${x.note ? `<small>${x.note}</small>` : ''}</span></label></li>`).join('')}</ul>
+      <button type="button" class="btn primary" data-act="bli-apply">套用勾選的項目</button></div>`;
+    return;
+  } else if (act === 'bli-apply') {
+    const picked = bliPending.filter((_, i) => $(`[data-bli="${i}"]`)?.checked);
+    if (!picked.length) return toast('沒有勾選任何項目');
+    for (const x of picked) setPath(state, x.path, x.value);
+    bliPending = [];
+    $('#bli-out').innerHTML = '';
+    toast(`已套用 ${picked.length} 項明細資料，可按「復原」取消`);
+  }
   else if (act === 'ics') {
     const date = $('#ics-date')?.value;
     if (!date) return toast('請選擇提醒日期');
