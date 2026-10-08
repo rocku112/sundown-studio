@@ -1004,3 +1004,40 @@ export function selfRateDelayOptions(state, nowYear = new Date().getFullYear(), 
     return { delay: d, startAge: age + d, fv, inHand: a.afterTaxMonthly * 12 * d, taxLost: a.annualSaving * d };
   }).map((o, _, arr) => ({ ...o, loss: arr[0].fv - o.fv }));
 }
+
+/**
+ * 匯入前預覽：比較兩份設定的主要欄位，只回傳有變動的項目。
+ * 每項 { label, from, to }，from/to 為已格式化的文字。
+ */
+export function stateDiff(a, b) {
+  const money = (v) => `$${Math.round(num(v)).toLocaleString()}`;
+  const pct = (v) => `${num(v)}%`;
+  const yr = (v) => `${v} 年`;
+  const age = (v) => `${v} 歲`;
+  const g = (v) => (v === 'female' ? '女' : '男');
+  const assets = (s) => (s.holdings || []).reduce((t, h) => t + holdingValue(h, s.fx), 0);
+  const monthly = (s) => (s.portfolios || []).reduce((t, p) => t + p.assets.reduce((u, x) => u + num(x.monthly), 0), 0);
+  const fields = [
+    ['出生年', (s) => s.self.birthYear, yr],
+    ['性別', (s) => s.self.gender, g],
+    ['退休年齡', (s) => s.self.retireAge, age],
+    ['月薪', (s) => s.self.salary, money],
+    ['勞退自提', (s) => s.self.selfRate, pct],
+    ['勞退專戶餘額', (s) => s.self.laborBalance, (v) => (v === null || v === undefined ? '依年資估算' : money(v))],
+    ['配偶', (s) => !!s.spouse?.enabled, (v) => (v ? '一起試算' : '不納入')],
+    ['現有資產', assets, money],
+    ['每月定期投資', monthly, money],
+    ['退休後生活費', (s) => s.monthlyExpense, money],
+    ['目標每月可用', (s) => s.targetMonthly, money],
+    ['新增投資報酬', (s) => s.investReturn, pct],
+    ['通膨', (s) => s.cpi, pct],
+    ['人生事件', (s) => (s.events || []).length, (v) => `${v} 筆`],
+    ['進度追蹤紀錄', (s) => s.tracking?.checkins?.length || 0, (v) => `${v} 筆`],
+  ];
+  const out = [];
+  for (const [label, get, fmt] of fields) {
+    const x = get(a), y = get(b);
+    if (x !== y && !(typeof x === 'number' && typeof y === 'number' && Math.abs(x - y) < 0.5e-6)) out.push({ label, from: fmt(x), to: fmt(y) });
+  }
+  return out;
+}

@@ -496,3 +496,14 @@ details.adv > summary:focus-visible { outline: 3px solid var(--gold); outline-of
 .kv { align-items: flex-start; }
 .insight strong { word-break: keep-all; }
 .insight.txt strong { font-size: 18px; font-family: inherit; }
+
+/* ── 第一次使用導覽 ── */
+.tour { position: relative; margin: 0 0 18px; padding: 16px 18px; border-radius: 14px; background: var(--ink-bg); color: #fff; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 6px; }
+.tour-h { display: flex; justify-content: space-between; align-items: center; }
+.tour-n { font: 700 12px var(--mono); letter-spacing: .08em; color: var(--gold); }
+.tour-x { background: none; border: 0; color: rgba(255,255,255,.75); font-size: 13px; padding: 4px 8px; border-radius: 6px; }
+.tour-x:hover { color: #fff; background: rgba(255,255,255,.1); }
+.tour b { font-size: 17px; }
+.tour p { margin: 0 0 6px; font-size: 14px; line-height: 1.7; color: rgba(255,255,255,.85); }
+.tour .btn { align-self: flex-start; background: var(--gold); color: #16263B; border-color: var(--gold); }
+@media print { .tour { display: none; } }

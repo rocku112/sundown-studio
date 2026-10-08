@@ -2,7 +2,7 @@
    畫面分兩種：含輸入欄位的分頁（起點設定、投資資產、目標與行動）只在結構改變時重繪，
    數字靠 data-o 局部更新，避免打字時失焦；純輸出的分頁與側欄則每次重算後整頁重繪。 */
 
-import { compute, holdingValue, growLump, growMonthly, lifecycle, sensitivity, retireAgeOptions, goalPlan, validate, scenarioSummary, selfContributionTax, monteCarlo, actionPlan, planPath, trackProgress, laborLumpVsMonthly, selfContributionAnalysis, insuranceClaimOptions, insCpiFactor, insuranceLumpVsAnnuity, withdrawalStrategies, selfRateDelayOptions } from './engine.js';
+import { compute, holdingValue, growLump, growMonthly, lifecycle, sensitivity, retireAgeOptions, goalPlan, validate, scenarioSummary, selfContributionTax, monteCarlo, actionPlan, planPath, trackProgress, laborLumpVsMonthly, selfContributionAnalysis, insuranceClaimOptions, insCpiFactor, insuranceLumpVsAnnuity, withdrawalStrategies, selfRateDelayOptions, stateDiff } from './engine.js';
 import { LABOR_MONTHLY, LABOR_FUND, legalPensionAge, INSURANCE_GRADES, MIN_LIVING, EXPENSE_LEVELS, RETURN_PRESETS, LIFE_TABLE, DATA_YEAR, PENSION_WAGE_MAX, dataStale } from './data.js';
 import { load, save, defaults, parseImport, getPath, setPath, uid, applySeed, STORAGE_KEY, normalize, loadScenarios, saveScenarios, MAX_SCENARIOS, templates } from './state.js';
 import { lineChart, donut, wan, attachTooltips } from './charts.js';
@@ -198,7 +198,7 @@ function pageSetup() {
   const region = MIN_LIVING.find((r) => r.name === state.region) || MIN_LIVING[6];
   return `
   <div class="page-head"><span class="step">STEP 01</span><h2 class="page-title">起點設定</h2></div>
-  <p class="page-sub">填入基本資料，右側數字即時更新。資料只存在這台裝置的瀏覽器裡。</p>
+  <p class="page-sub">填入基本資料，「退休後每月可用」會即時更新。資料只存在這台裝置的瀏覽器裡。</p>
   ${out('issues', outVal('issues'))}
 
   <section class="card tpl"><div class="card-h"><h3>${badge('sliders', 'rgba(232,184,75,.18)', '#9A7210')}快速開始：選一個最像你的情況</h3><span class="hint">套用後可再逐項調整</span></div>
@@ -320,6 +320,7 @@ function pageSetup() {
       <button type="button" class="btn" data-act="export">匯出設定檔</button>
       <label class="btn">匯入設定檔<input type="file" accept=".json,application/json" data-act="import" hidden></label>
       <button type="button" class="btn ghost" data-act="reset">全部重設</button>
+      <button type="button" class="btn ghost" data-act="tour-restart">重新看使用導覽</button>
     </div>
     <p class="note">設定自動存在這台裝置的瀏覽器。換裝置時匯出 JSON 檔再匯入即可；舊版「退休試算設定.json」也能匯入。</p>
   </section>`;
@@ -737,6 +738,25 @@ document.addEventListener('toggle', (e) => {
   uiPrefs.open = { ...(uiPrefs.open || {}), [d.dataset.fold]: d.open };
   try { localStorage.setItem(UI_KEY, JSON.stringify(uiPrefs)); } catch { /* 忽略 */ }
 }, true);
+function saveUi() { try { localStorage.setItem(UI_KEY, JSON.stringify(uiPrefs)); } catch { /* 忽略 */ } }
+
+/* 第一次使用導覽：三步驟，各自出現在對應分頁頂端，可隨時略過 */
+const TOUR = [
+  { tab: 'setup', t: '先填 6 項，或選一個最像你的範本', p: '下面的「快速開始」範本能一鍵帶入常見情況；也可以直接改出生年、月薪等 6 個欄位。「退休後每月可用」的金額會跟著即時更新，都是以今天的購買力計算。' },
+  { tab: 'floor', t: '看政府給你的保底收入', p: '勞保年金與勞退是退休後最穩定的收入。展開下方「關鍵決策」，可以比較延後請領、勞退自提、一次領或月領哪個比較划算。' },
+  { tab: 'plan', t: '看還差多少、今年該做什麼', p: '設定目標後，這裡列出補足缺口的幾種方式（可一鍵套用），以及依你的狀況產生的行動清單。做完一項就勾起來。' },
+];
+if (!hadSaved && uiPrefs.tour === undefined) { uiPrefs.tour = 0; saveUi(); }
+function tourCard() {
+  const i = uiPrefs.tour;
+  if (typeof i !== 'number' || !TOUR[i] || TOUR[i].tab !== tab) return '';
+  const last = i === TOUR.length - 1;
+  return `<div class="tour" role="region" aria-label="使用導覽">
+    <div class="tour-h"><span class="tour-n">導覽 ${i + 1}／${TOUR.length}</span><button type="button" class="tour-x" data-act="tour-skip" aria-label="略過導覽">略過</button></div>
+    <b>${TOUR[i].t}</b><p>${TOUR[i].p}</p>
+    <button type="button" class="btn primary" data-act="tour-next">${last ? '知道了' : `下一步：${TABS.find((x) => x[0] === TOUR[i + 1].tab)[1]} →`}</button>
+  </div>`;
+}
 
 function insLumpCard() {
   const c = insuranceLumpVsAnnuity(state, NOW);
@@ -1182,7 +1202,7 @@ function renderTabs() {
 }
 function renderPage() {
   const main = $('#main');
-  main.innerHTML = PAGES[tab]() + pager();
+  main.innerHTML = tourCard() + PAGES[tab]() + pager();
   main.setAttribute('aria-labelledby', `tab-${tab}`);
 }
 function pager() {
@@ -1348,8 +1368,20 @@ document.addEventListener('change', (e) => {
   if (el.dataset.act === 'import' && el.files[0]) {
     const f = el.files[0];
     f.text().then((t) => {
-      try { state = parseImport(t); save(state); update({ rerender: true }); toast('已匯入設定'); }
-      catch { toast('檔案格式不正確，請確認是早謀遠算匯出的設定檔'); }
+      let next;
+      try { next = parseImport(t); } catch { return toast('檔案格式不正確，請確認是早謀遠算匯出的設定檔'); }
+      // 匯入前先列出會改變的主要欄位與結果，避免誤蓋掉目前的資料
+      const diff = stateDiff(state, next);
+      if (!diff.length && JSON.stringify(next) === JSON.stringify(state)) return toast('檔案內容和目前設定相同，不需要匯入');
+      const pv = compute(next, NOW).totalPV;
+      const lines = diff.slice(0, 12).map((d) => `・${d.label}：${d.from} → ${d.to}`);
+      if (diff.length > 12) lines.push(`・…另有 ${diff.length - 12} 項`);
+      if (!diff.length) lines.push('・主要欄位相同，只有細項設定不同');
+      const msg = [`匯入「${f.name}」會取代目前的設定：`, '', ...lines, '',
+        `退休後每月可用（今日幣值）：${money(R.totalPV)} → ${money(pv)}`, '',
+        '確定匯入？匯入後仍可按「復原」回到現在的設定。'].join('\n');
+      if (!confirm(msg)) return;
+      state = next; save(state); update({ rerender: true }); toast('已匯入設定');
     });
     el.value = '';
   }
@@ -1393,6 +1425,15 @@ document.addEventListener('click', (e) => {
   }
   const act = t.dataset.act;
   const { id, pid } = t.dataset;
+  if (act === 'tour-next' || act === 'tour-skip' || act === 'tour-restart') {
+    const i = act === 'tour-restart' ? 0 : act === 'tour-skip' ? 'done' : uiPrefs.tour + 1;
+    uiPrefs.tour = TOUR[i] ? i : 'done'; saveUi();
+    if (TOUR[i]) { tab = TOUR[i].tab; history.replaceState(null, '', `#${tab}`); }
+    renderTabs(); renderPage(); refreshOutputs();
+    window.scrollTo({ top: 0 });
+    if (act === 'tour-skip') toast('已略過導覽，之後可在「起點設定」頁底部重新開啟');
+    return;
+  }
   if (act === 'add-holding') state.holdings.push({ id: uid('h'), name: '新資產', kind: 'tw', shares: 1, price: 100, amount: 0, rate: 5 });
   else if (act === 'del-holding') state.holdings = state.holdings.filter((x) => x.id !== id);
   else if (act === 'add-portfolio') state.portfolios.push({ id: uid('p'), name: `投資組合 ${state.portfolios.length + 1}`, assets: [{ id: uid('a'), name: '新標的', monthly: 3000, rate: 5 }] });

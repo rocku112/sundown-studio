@@ -24,6 +24,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/landing.css">
+<script>/* 先套用使用者指定的主題，避免載入時閃一下 */try{var t=JSON.parse(localStorage.getItem('zaomou_ui')||'{}').theme;if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;}catch(e){}</script>
 </head>
 <body>
 
@@ -39,6 +40,7 @@
       <a href="#method">計算依據</a>
       <a href="#faq">常見問題</a>
     </nav>
+    <button type="button" class="theme-btn" id="btn-theme" title="切換主題" aria-label="切換主題：自動"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/></svg></button>
     <a class="btn btn-ink btn-sm" href="app.html">開始完整試算</a>
   </div>
 </header>

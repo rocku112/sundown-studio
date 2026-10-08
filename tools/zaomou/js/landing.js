@@ -106,6 +106,25 @@ bind(['g-tgt', 'g-base', 'g-yrs'], () => {
     : '保底收入已足以支應目標。';
 });
 
+/* ── 主題：與試算頁共用 zaomou_ui.theme ── */
+const UI_KEY = 'zaomou_ui';
+const THEMES = [['auto', '自動'], ['dark', '深色'], ['light', '淺色']];
+function readUi() { try { return JSON.parse(localStorage.getItem(UI_KEY) || '{}'); } catch { return {}; } }
+function applyTheme(t) {
+  if (t === 'auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = t;
+  const name = THEMES.find((x) => x[0] === t)[1];
+  $('btn-theme').setAttribute('aria-label', `切換主題：目前${name}`);
+  $('btn-theme').title = `主題：${name}（點擊切換）`;
+}
+applyTheme(readUi().theme || 'auto');
+$('btn-theme').addEventListener('click', () => {
+  const ui = readUi();
+  const i = THEMES.findIndex((x) => x[0] === (ui.theme || 'auto'));
+  ui.theme = THEMES[(i + 1) % THEMES.length][0];
+  try { localStorage.setItem(UI_KEY, JSON.stringify(ui)); } catch { /* 無痕模式：只套用本頁 */ }
+  applyTheme(ui.theme);
+});
+
 const nav = $('nav');
 window.addEventListener('scroll', () => nav.classList.toggle('scrolled', window.scrollY > 8), { passive: true });
 

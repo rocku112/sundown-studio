@@ -632,3 +632,17 @@ test('自提節稅：可指定稅率級距、累積節稅', () => {
   assert.equal(b.marginal, 0.12);
   assert.ok(b.breakEven > a.breakEven, '稅率越高，自己投資要打平越難');
 });
+
+import { stateDiff } from '../js/engine.js';
+test('匯入預覽：只列出有變動的主要欄位', () => {
+  const a = defaults(2026);
+  assert.deepEqual(stateDiff(a, structuredClone(a)), []);
+  const b = structuredClone(a);
+  b.self.salary = 60000; b.self.laborBalance = 300000; b.holdings = []; b.events.push({ id: 'e', name: '買車', age: 40, amount: 800000, kind: 'out' });
+  const d = stateDiff(a, b);
+  assert.deepEqual(d.map((x) => x.label), ['月薪', '勞退專戶餘額', '現有資產', '人生事件']);
+  assert.deepEqual(d[0], { label: '月薪', from: '$45,000', to: '$60,000' });
+  assert.equal(d[1].from, '依年資估算');
+  assert.equal(d[2].from, '$800,000'); // 2 張 ×150 ×1000 + 50 萬存款
+  assert.equal(d[2].to, '$0');
+});
