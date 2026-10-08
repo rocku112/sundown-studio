@@ -581,3 +581,7 @@ details.adv > summary:focus-visible { outline: 3px solid var(--gold); outline-of
 .cpi-b { display: flex; gap: 4px; }
 .cpi-q button { border: 1px solid var(--border-2); background: var(--field); color: var(--text); border-radius: 99px; padding: 3px 9px; font: 600 12px var(--mono); }
 .cpi-q button[aria-pressed="true"] { background: var(--ink-bg); border-color: var(--ink-bg); color: #fff; }
+
+/* 頁首：回簡單版 */
+.to-easy { font-size: 13px; font-weight: 700; color: var(--navy2); text-decoration: none; padding: 6px 12px; border-radius: 99px; border: 1px solid var(--border-2); white-space: nowrap; }
+.to-easy:hover { border-color: var(--navy2); }

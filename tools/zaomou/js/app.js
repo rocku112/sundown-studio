@@ -393,8 +393,9 @@ function pageInvest() {
         <label class="field"><span>類型</span><select class="input txt" data-k="holdings.${state.holdings.indexOf(x)}.kind" data-t="str" data-rerender>
           <option value="tw" ${x.kind === 'tw' ? 'selected' : ''}>台股（張）</option>
           <option value="us" ${x.kind === 'us' ? 'selected' : ''}>美股（股，美元）</option>
-          <option value="cash" ${x.kind === 'cash' ? 'selected' : ''}>現金／其他（金額）</option></select></label>
-        ${x.kind === 'cash'
+          <option value="fund" ${x.kind === 'fund' ? 'selected' : ''}>基金／ETF（市值金額）</option>
+          <option value="cash" ${x.kind === 'cash' ? 'selected' : ''}>現金／存款（金額）</option></select></label>
+        ${x.kind === 'cash' || x.kind === 'fund'
           ? numF(`holdings.${state.holdings.indexOf(x)}.amount`, '金額', { min: 0, step: 10000, unit: '元' })
           : numF(`holdings.${state.holdings.indexOf(x)}.shares`, x.kind === 'tw' ? '持有張數' : '持有股數', { min: 0, step: x.kind === 'tw' ? 1 : 1, unit: x.kind === 'tw' ? '張' : '股' }) +
             numF(`holdings.${state.holdings.indexOf(x)}.price`, x.kind === 'tw' ? '股價（元）' : '股價（美元）', { min: 0, step: 0.01 })}

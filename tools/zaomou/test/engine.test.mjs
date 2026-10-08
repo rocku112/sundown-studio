@@ -750,3 +750,19 @@ test('年度檢視提醒：iCalendar 格式、每年重複、每行不超過 75 
   assert.match(ics, /RRULE:FREQ=YEARLY/);
   for (const line of ics.split('\r\n')) assert.ok(new TextEncoder().encode(line).length <= 75, line);
 });
+
+import { easyAnswers, applyEasy } from '../js/state.js';
+test('簡單版：答案與完整設定互通，只改有變動的部分', () => {
+  const s = defaults(2026);
+  const a = easyAnswers(s);
+  assert.deepEqual([a.cash, a.invest, a.monthly], [500000, 300000, 10000]);
+  // 原封不動套回去：資產與投資明細不變
+  assert.deepEqual(applyEasy(s, a).holdings, s.holdings);
+  // 改投資金額：明細換成存款＋股票基金兩筆，基金不算進緊急預備金
+  const b = applyEasy(s, { ...a, invest: 1000000, monthly: 0, expense: 40000 });
+  assert.deepEqual(b.holdings.map((h) => [h.kind, h.amount]), [['cash', 500000], ['fund', 1000000]]);
+  assert.deepEqual(b.portfolios, []);
+  assert.equal(b.targetMonthly, 40000);
+  assert.deepEqual(easyAnswers(b), { ...a, invest: 1000000, monthly: 0, expense: 40000 });
+  assert.equal(compute(b, 2026).holdingsNow, 1500000);
+});

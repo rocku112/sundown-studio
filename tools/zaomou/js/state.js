@@ -59,7 +59,7 @@ export function templates(nowYear = new Date().getFullYear()) {
   const base = () => defaults(nowYear);
   const pf = (monthly) => (monthly > 0 ? [{ id: 'p1', name: '定期投資', assets: [{ id: 'a1', name: '市值型 ETF', monthly, rate: 6 }] }] : []);
   const cash = (amount) => ({ id: 'h-cash', name: '銀行存款', kind: 'cash', shares: 0, price: 0, amount, rate: 1.5 });
-  const etf = (amount) => ({ id: 'h-etf', name: '已持有 ETF', kind: 'cash', shares: 0, price: 0, amount, rate: 6 });
+  const etf = (amount) => ({ id: 'h-etf', name: '已持有 ETF', kind: 'fund', shares: 0, price: 0, amount, rate: 6 });
   const list = [
     { id: 'fresh', name: '社會新鮮人', desc: '25 歲、月薪 3.2 萬、剛開始存錢', make: () => {
       const s = base(); Object.assign(s.self, { birthYear: nowYear - 25, workStartAge: 23, salary: 32000, selfRate: 0, bonusMonths: 1 });
@@ -186,6 +186,39 @@ export function applySeed(state, nowYear = new Date().getFullYear()) {
     else state.portfolios = [{ id: uid('p'), name: '定期投資', assets: [{ id: uid('a'), name: '定期投資', monthly: seed.invest, rate: 6 }] }];
   }
   return true;
+}
+
+/* ── 簡單版：6 個問題對應到完整設定（兩邊共用同一份資料） ── */
+const amountOf = (h, fx) => (h.kind === 'cash' || h.kind === 'fund' ? Math.max(0, +h.amount || 0)
+  : h.kind === 'us' ? Math.max(0, (+h.shares || 0) * (+h.price || 0) * (+fx || 32)) : Math.max(0, (+h.shares || 0) * 1000 * (+h.price || 0)));
+export function easyAnswers(s) {
+  const cash = s.holdings.filter((h) => h.kind === 'cash').reduce((t, h) => t + amountOf(h, s.fx), 0);
+  const invest = s.holdings.filter((h) => h.kind !== 'cash').reduce((t, h) => t + amountOf(h, s.fx), 0);
+  const monthly = s.portfolios.reduce((t, p) => t + p.assets.reduce((u, a) => u + (+a.monthly || 0), 0), 0);
+  return {
+    birthYear: s.self.birthYear, gender: s.self.gender, retireAge: s.self.retireAge, salary: s.self.salary,
+    cash: Math.round(cash), invest: Math.round(invest), monthly: Math.round(monthly), expense: s.monthlyExpense,
+  };
+}
+/**
+ * 套用簡單版答案。只改動答案有變的部分：存款／投資金額有變才把資產明細換成兩筆，
+ * 每月投資有變才換成單一定期投資；生活費同時當作目標，結果頁直接回答「夠不夠用」。
+ */
+export function applyEasy(s, a) {
+  const next = JSON.parse(JSON.stringify(s));
+  const cur = easyAnswers(s);
+  Object.assign(next.self, { birthYear: a.birthYear, gender: a.gender, retireAge: a.retireAge, salary: a.salary });
+  if (a.cash !== cur.cash || a.invest !== cur.invest) {
+    next.holdings = [
+      ...(a.cash > 0 ? [{ id: 'h-easy-cash', name: '銀行存款', kind: 'cash', shares: 0, price: 0, amount: a.cash, rate: 1.5 }] : []),
+      ...(a.invest > 0 ? [{ id: 'h-easy-fund', name: '股票與基金', kind: 'fund', shares: 0, price: 0, amount: a.invest, rate: next.investReturn }] : []),
+    ];
+  }
+  if (a.monthly !== cur.monthly) {
+    next.portfolios = a.monthly > 0 ? [{ id: 'p-easy', name: '定期投資', assets: [{ id: 'a-easy', name: '每月定期投資', monthly: a.monthly, rate: next.investReturn }] }] : [];
+  }
+  if (a.expense !== cur.expense) { next.monthlyExpense = a.expense; next.targetMonthly = a.expense; }
+  return next;
 }
 
 /* ── 方案（多組設定另存，最多 5 組） ── */

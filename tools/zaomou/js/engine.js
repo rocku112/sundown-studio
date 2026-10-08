@@ -140,7 +140,7 @@ export function oldSystemUnits(years) {
 /* ── 投資資產 ─────────────────────────────────── */
 
 export function holdingValue(h, fx) {
-  if (h.kind === 'cash') return Math.max(0, num(h.amount));
+  if (h.kind === 'cash' || h.kind === 'fund') return Math.max(0, num(h.amount)); // fund：基金、ETF 等以市值金額輸入
   if (h.kind === 'us') return Math.max(0, num(h.shares) * num(h.price) * num(fx, 32));
   return Math.max(0, num(h.shares) * 1000 * num(h.price)); // 台股以「張」計
 }

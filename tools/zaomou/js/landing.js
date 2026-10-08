@@ -43,7 +43,7 @@ $('m-go').addEventListener('click', () => {
   try {
     sessionStorage.setItem(SEED_KEY, JSON.stringify({ age: +$('m-age').value, salary: +$('m-sal').value, invest: +$('m-inv').value }));
   } catch { /* 無痕模式：直接前往 */ }
-  location.href = 'app.html';
+  location.href = 'easy.html';
 });
 
 /* ── 快速試算分頁 ── */
