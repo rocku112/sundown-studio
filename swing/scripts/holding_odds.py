@@ -23,6 +23,8 @@ from datetime import datetime, timedelta, timezone
 import numpy as np
 import requests
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
 OUT = os.path.join(REPO, "twflow", "web", "data", "odds.json")
@@ -33,6 +35,27 @@ HORIZONS = [(5, "1 週"), (21, "1 個月"), (63, "3 個月"), (126, "半年"), (
 
 
 def fetch(code):
+    """優先用證交所官方資料（fetch_official.py 補齊後），否則退回 Yahoo；兩者都有時印出交叉比對。"""
+    import fetch_official as OFF
+    off = OFF.series(code)
+    try:
+        yrows, has_adj = fetch_yahoo(code)
+    except Exception as e:                       # noqa: BLE001
+        if not off:
+            raise
+        print(f"  {code} Yahoo 失敗（{e!r}），使用官方資料", file=sys.stderr)
+        yrows, has_adj = None, True
+    if off:
+        rows = [(d, a) for d, _, _, a in off]
+        if yrows:
+            OFF.compare(code, rows, yrows)
+        print(f"  {code}：使用證交所官方含息還原（{rows[0][0]} 起）")
+        return check(code, rows), True
+    print(f"  {code}：官方長歷史尚未補齊，暫用 Yahoo")
+    return yrows, has_adj
+
+
+def fetch_yahoo(code):
     # ⚠️ 不能用 range=max：Yahoo 對 max 會悄悄改回「月線」，持有「5 個交易日」就變成 5 個月，
     #    第一版就這樣算出「持有一週中位數 +5.8%」的荒謬結果。改給明確的起訖時間才會是日線。
     r = requests.get(f"https://query1.finance.yahoo.com/v8/finance/chart/{code}.TW",

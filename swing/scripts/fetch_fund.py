@@ -112,9 +112,27 @@ def month_ends(days):
     return out
 
 
+def ni_gap(store, key, j=3, limit=0.05):
+    """淨利（第 j 欄）空白的公司超過 5%：舊版解析只取第一個符合的欄位造成的缺漏，需要重抓。"""
+    v = store.get(key) or {}
+    return bool(v) and sum(1 for x in v.values() if x[j] is None) > limit * len(v)
+
+
+def incomplete(store, key, ratio=0.85):
+    """某季家數明顯少於相鄰季（例：上櫃那次沒抓到，只剩上市約一半）→ 視為不完整、需要重抓。"""
+    if key not in store:
+        return True
+    ks = sorted(store)
+    i = ks.index(key)
+    nb = [len(store[k]) for k in ks[max(0, i - 1):i + 2] if k != key]
+    return bool(nb) and len(store[key]) < ratio * max(nb)
+
+
 # ── 季報 ─────────────────────────────────────────────────────────────
 COLS = {"rev": ["營業收入", "收益", "收入合計"], "gp": ["營業毛利"], "op": ["營業利益"],
-        "ni": ["歸屬於母公司業主", "本期淨利", "本期稅後淨利"], "eps": ["基本每股盈餘"]}
+        "ni": ["歸屬於母公司業主", "本期淨利", "本期稅後淨利", "本期淨損益", "本期損益", "本期淨益", "淨利（淨損）", "淨利(淨損)"],
+        "eps": ["基本每股盈餘"]}
+_SHOWN = set()          # 已印過的「找不到欄位」表頭，避免重複
 
 
 def num(s):
@@ -142,16 +160,24 @@ def parse_income(html, cols=None):
             continue
         idx = {}
         for k, pats in cols.items():
-            for p in pats:          # 依優先順序找第一個符合的欄位
-                hit = next((i for i, h in enumerate(head) if p in h), None)
-                if hit is not None:
-                    idx[k] = hit
-                    break
+            # 依優先順序列出所有符合的欄位；每一列取第一個有值的
+            # （同一張表常同時有「歸屬於母公司業主」與「本期淨利」，沒有子公司的公司前者是空白）
+            cand = []
+            for p in pats:
+                cand += [i for i, h in enumerate(head) if p in h and i not in cand]
+            if cand:
+                idx[k] = cand
+        miss = [k for k in cols if k not in idx and k in ("ni", "ta", "tl")]
+        sig = (tuple(miss), tuple(head[:30]))
+        if miss and sig not in _SHOWN and len(_SHOWN) < 6:
+            _SHOWN.add(sig)
+            print(f"  ⚠️ 表格缺欄位 {miss}，表頭：{head}", flush=True)
         for tr in trs[1:]:
             td = [x.get_text(strip=True) for x in tr.find_all("td")]
             if len(td) < len(head) or not re.fullmatch(r"\d{4}", td[0]):
                 continue
-            out[td[0]] = [num(td[idx[k]]) if k in idx else None for k in cols]
+            out[td[0]] = [next((v for v in (num(td[i]) for i in idx[k]) if v is not None), None) if k in idx else None
+                          for k in cols]
     return out
 
 
@@ -233,7 +259,7 @@ def main():
     failed, streak = [], 0
     for i, (y, q) in reversed(list(enumerate(qs))):   # 新的先抓，再往回補
         key = f"{y}Q{q}"
-        if key in inc and i < len(qs) - 1:
+        if not incomplete(inc, key) and not ni_gap(inc, key) and i < len(qs) - 1:
             continue
         if over():
             print("  時間預算用完，季報下次接著補", flush=True)
@@ -248,7 +274,8 @@ def main():
             except Exception as e:
                 failed.append(str(e)[:150])
         streak = 0 if rows else streak + 1
-        if len(rows) > 500:
+        filled = lambda d: sum(1 for x in d.values() if x[3] is not None)      # noqa: E731
+        if len(rows) > 500 and (len(rows) > len(inc.get(key, {})) or filled(rows) > filled(inc.get(key, {}))):
             inc[key] = rows
             if len(inc) == 1 or i == len(qs) - 1:
                 print(f"  季報樣本 {key}：{len(rows)} 家，例 2330 → {rows.get('2330')}")
@@ -262,7 +289,7 @@ def main():
     bfail, streak = [], 0
     for i, (y, q) in reversed(list(enumerate(qs))):
         key = f"{y}Q{q}"
-        if key in bal and i < len(qs) - 1:
+        if not incomplete(bal, key) and i < len(qs) - 1:
             continue
         if over():
             print("  時間預算用完，資產負債表下次接著補", flush=True)
@@ -277,7 +304,7 @@ def main():
             except Exception as e:
                 bfail.append(str(e)[:150])
         streak = 0 if rows else streak + 1
-        if len(rows) > 500:
+        if len(rows) > 500 and len(rows) > len(bal.get(key, {})):
             bal[key] = rows
             if len(bal) == 1 or i == len(qs) - 1:
                 print(f"  資產負債表樣本 {key}：{len(rows)} 家，例 2330 → {rows.get('2330')}")
