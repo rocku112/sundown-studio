@@ -22,7 +22,6 @@ function memo(name, fn, args = []) {
 const hadSaved = (() => { try { return !!(localStorage.getItem(STORAGE_KEY) || localStorage.getItem('nuclear_retirement_v1')); } catch { return false; } })();
 let state = load();
 const seeded = applySeed(state, NOW);
-if (seeded && !hadSaved) state.holdings = []; // 與介紹頁迷你試算的假設一致
 let R = compute(state, NOW);
 let tab = ['setup', 'floor', 'invest', 'plan', 'analysis'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'setup';
 
@@ -206,20 +205,25 @@ function pageSetup() {
     <div class="tpls">${templates(NOW).map((t) => `<button type="button" class="tpl-b" data-act="template" data-id="${t.id}"><b>${t.name}</b><small>${t.desc}</small></button>`).join('')}</div>
   </section>
 
-  <section class="card"><div class="card-h"><h3>${badge('user', 'rgba(45,74,110,.1)', C.navy)}個人基本資料</h3></div>
+  <section class="card core"><div class="card-h"><h3>${badge('user', 'rgba(45,74,110,.1)', C.navy)}先填這 6 項就能算</h3><span class="hint">其他都有合理預設</span></div>
     <div class="grid">
       ${numF('self.birthYear', '出生年（西元）', { min: 1940, max: NOW - 15 })}
-      ${numF('self.workStartAge', '開始投保年齡', { min: 15, max: 60, unit: '歲' })}
       ${numF('self.retireAge', '預計退休年齡', { min: 50, max: 75, unit: '歲', rerender: true })}
-      <div class="field"><span>生理性別 <em>（影響生命表餘命）</em></span>${seg('self.gender', [['male', '男性'], ['female', '女性']])}</div>
+      <div class="field"><span>生理性別 <em>（影響預期壽命）</em></span>${seg('self.gender', [['male', '男性'], ['female', '女性']])}</div>
+      ${numF('self.salary', '目前月薪', { min: 0, step: 1000, unit: '元' })}
+      ${rangeF('self.selfRate', '勞退自提', 0, 6, 0.5, { em: '（0–6%，不確定就填 0）' })}
+      ${numF('monthlyExpense', '退休後每月生活費', { min: 0, step: 1000, unit: '元', em: '（以今天的物價）' })}
     </div>
     <p class="note">${out('ageinfo', outVal('ageinfo'))}</p>
   </section>
 
+  <details class="adv" data-fold="setup-adv" ${uiPrefs.open?.['setup-adv'] ? 'open' : ''}>
+    <summary><span>進階設定</span><small>投保年資、年終、勞保細節與壓力測試、勞退收益與餘額、舊制、配偶、照護、通膨、提領方式——想更精準再展開</small></summary>
+
   <section class="card"><div class="card-h"><h3>${badge('briefcase', 'rgba(45,74,110,.1)', C.navy)}薪資與勞保</h3>
       ${seg('self.insMode', [['auto', '依月薪自動'], ['manual', '手動選級距']], { label: '投保薪資設定方式' })}</div>
     <div class="grid two">
-      ${numF('self.salary', '目前月薪', { min: 0, step: 1000, unit: '元' })}
+      ${numF('self.workStartAge', '開始投保年齡', { min: 15, max: 60, unit: '歲' })}
       ${numF('self.bonusMonths', '年終與獎金', { min: 0, max: 24, step: 0.5, unit: '個月', em: '（用於估算稅率）' })}
       ${rangeF('salaryGrowth', '薪資年增率', 0, 6, 0.5)}
       ${numF('self.insClaimAge', '勞保請領年齡', { nullable: true, min: 55, max: 75, unit: '歲', placeholder: '同退休年齡', em: '（選填，可晚於退休）' })}
@@ -237,7 +241,6 @@ function pageSetup() {
 
   <section class="card"><div class="card-h"><h3>${badge('piggy', 'rgba(63,154,110,.12)', C.green)}勞退新制個人專戶</h3></div>
     <div class="grid two">
-      ${rangeF('self.selfRate', '個人自提率', 0, 6, 0.5, { em: '（免稅，0–6%）' })}
       <div class="field">${rangeF('self.laborReturn', '勞退基金年化收益', 1, 10, 0.1).replace(/^\s*<label class="field">|<\/label>\s*$/g, '')}
         <div class="chips">${RETURN_PRESETS.map((p) => `<button type="button" class="chip" data-set="self.laborReturn" data-val="${p.v}" aria-pressed="${s.laborReturn === p.v}">${p.label}</button>`).join('')}</div></div>
       ${numF('self.laborBalance', '目前專戶累積金額', { nullable: true, min: 0, step: 10000, unit: '元', placeholder: '不確定可留白', em: '（選填）' })}
@@ -277,7 +280,6 @@ function pageSetup() {
 
   <section class="card"><div class="card-h"><h3>${badge('receipt', 'rgba(201,74,74,.1)', C.red)}生活費與通膨</h3></div>
     <div class="grid two">
-      ${numF('monthlyExpense', '退休後每月生活費（今日幣值）', { min: 0, step: 1000, unit: '元' })}
       ${rangeF('cpi', '通膨率（CPI）', 0, 5, 0.1)}
     </div>
     <div class="field" style="margin-top:14px"><span>依居住地最低生活費快選 <em>（衛福部及直轄市 ${DATA_YEAR} 年度公告）</em></span>
@@ -310,6 +312,8 @@ function pageSetup() {
     </div>
     <p class="note">${out('payout', outVal('payout'))}<br>勞退、舊制、企業信託與投資資產都用同一種方式把「一筆錢」換算成月領；勞保年金本身就是按月給付，不受影響。</p>
   </section>
+
+  </details>
 
   <section class="card"><div class="card-h"><h3>${badge('save', 'rgba(45,74,110,.08)', C.navyL)}資料備份</h3></div>
     <div class="btn-row">
@@ -574,7 +578,9 @@ function pageAnalysis() {
   const lever = sens.find((r) => r.key !== 'cpi'); // 通膨是外部風險、不是能調的槓桿
   const leverHigh = lever.high >= lever.low; // 一律呈現「能改善」的那個方向
   const leverVal = leverHigh ? lever.high : lever.low;
-  const leverWhat = `${lever.label}${leverHigh ? lever.highLabel : lever.lowLabel}`;
+  // 用「做什麼 → 得到什麼」的白話句型
+  const LEVER_TEXT = { retire: '晚 2 年退休', invest: '每月多投資 5,000 元', return: '投資報酬率提高 1%', selfRate: '勞退自提提高到 6%', growth: '薪資年增率提高 1%', ins: '勞保照現制給付' };
+  const leverWhat = leverHigh && LEVER_TEXT[lever.key] ? LEVER_TEXT[lever.key] : `${lever.label}${leverHigh ? lever.highLabel : lever.lowLabel}`;
   const run = base.runoutAge;
   const insights = [
     mc ? { cls: mc.success >= 0.85 ? 'good' : mc.success >= 0.7 ? 'gold' : 'bad', k: '計畫成功率', v: `${Math.round(mc.success * 100)}%`,
@@ -587,8 +593,8 @@ function pageAnalysis() {
       ? { cls: run && run < me.lifeAge ? 'bad' : 'good', k: '投資資產可撐到', v: run ? `${run} 歲` : '100 歲以上',
           p: run && run < me.lifeAge ? `比預期壽命 ${me.lifeAge.toFixed(0)} 歲早用完，晚年只剩勞保勞退。` : `涵蓋預期壽命 ${me.lifeAge.toFixed(0)} 歲。` }
       : { cls: '', k: '投資資產可撐到', v: '—', p: '尚未設定投資資產，退休收入全靠保底給付。' },
-    { cls: 'gold', k: '最有感的調整', v: `${leverVal >= 0 ? '+' : '−'}${money(Math.abs(leverVal))}`,
-      p: `${leverWhat}，是你能控制的條件中，對月領（今日幣值）影響最大的一項。` },
+    { cls: 'gold txt', k: '最有感的調整', v: `${leverWhat}`,
+      p: `→ 每月可用多 <b>${money(Math.abs(leverVal))}</b>（今天的購買力）。這是你能控制的條件中效果最大的一項。` },
     R.care ? { cls: R.care.gap > 0 ? 'bad' : 'good', k: `照護期（${R.care.startAge} 歲起）`, v: R.care.gap > 0 ? `缺 ${money(R.care.gap)}` : '足以支應',
       p: R.care.gap > 0 ? `每月需 ${money(R.care.need)}（名目），月領不足的部分由投資資產支出。` : `每月需 ${money(R.care.need)}，月領可以支應。` } : null,
     state.insHaircut ? { cls: 'bad', k: '勞保壓力測試', v: `打 ${discount(state.insHaircut)} 折`, p: `目前結果已假設勞保給付減少 ${state.insHaircut}%，每月少領 ${money(me.insFull - me.insMonthly)}。` } : null,
@@ -979,7 +985,7 @@ function mcCard(mc, size) {
     ],
     bands: [{ points: mc.band.map((b) => ({ x: b.age, lo: b.p10, hi: b.p90 })), fill: 'rgba(45,74,110,.10)' }],
     ...size, xFmt: (x) => `${x}歲`,
-    yCap: Math.max(...mc.band.map((b) => b.p50), mc.atRetire?.p90 ?? 0) * 1.25,
+    yLog: true,
     marks: [{ x: state.self.retireAge, label: '退休', color: C.gold2 }, ...(mc.lifeEnd < 100 ? [{ x: mc.lifeEnd, label: '預期壽命', color: C.muted }] : [])],
     tip: { title: (x) => `${x} 歲`, fmt: wan },
   });
@@ -991,7 +997,7 @@ function mcCard(mc, size) {
         <p>在 1,000 種隨機市場情境中，有 ${Math.round(mc.success * 1000)} 種到 ${mc.lifeEnd} 歲投資資產仍未用完；活到 90 歲的成功率為 ${Math.round(mc.success90 * 100)}%。</p></div>
     </div>
     ${chart}
-    <div class="chart-legend"><span><i style="background:${C.navy}"></i>中位數</span><span><i style="background:rgba(45,74,110,.25);height:10px"></i>80% 的情境落在這個範圍（P10–P90，超出圖表的部分貼齊上緣）</span></div>
+    <div class="chart-legend"><span><i style="background:${C.navy}"></i>中位數</span><span><i style="background:rgba(45,74,110,.25);height:10px"></i>80% 的情境落在這個範圍（P10–P90）</span><span>縱軸為對數刻度：每格是倍數關係，高處的差距看起來較小；落到底線代表資產用完</span></div>
     <div class="stats" style="margin-top:12px">
       <div class="stat bad"><small>退休時 · 悲觀 P10</small><strong>${wan(mc.atRetire?.p10 ?? 0)}</strong></div>
       <div class="stat"><small>退休時 · 中位數</small><strong>${wan(mc.atRetire?.p50 ?? 0)}</strong></div>
@@ -1054,7 +1060,7 @@ function printReport() {
   ].filter((x) => x[1] !== 0);
   const html = `
   <header class="rp-h"><div><h1>早謀遠算 · 退休試算報告</h1><p>SunDown Studio 日落工作室　${new Date().toLocaleDateString('zh-TW')} 產出</p></div>
-    <div class="rp-total"><small>退休月領總額</small><b>${money(R.total)}</b><span>約當今日幣值 ${money(R.totalPV)}／月</span></div></header>
+    <div class="rp-total"><small>退休後每月可用（今日購買力）</small><b>${money(R.totalPV)}</b><span>退休當年實際入帳約 ${money(R.total)}／月</span></div></header>
 
   <section><h2>重點</h2><table>
     ${tr('生活費覆蓋率', R.expenseToday > 0 ? `${Math.round(R.coverage * 100)}%（月領 ${money(R.total)}／通膨後生活費 ${money(R.expenseAtRetire)}）` : '未設定生活費')}
@@ -1130,11 +1136,11 @@ function renderAside() {
   const gap = R.total - R.expenseAtRetire;
   $('#aside').innerHTML = `
     <div class="hero">
-      <small>退休月領總額</small>
-      <div class="big">${money(R.total)}</div>
-      <div class="pv">約當今日幣值 ${money(R.totalPV)}／月</div>
+      <small>退休後每月可用・以今天的購買力計</small>
+      <div class="big">${money(R.totalPV)}</div>
+      <div class="pv">退休當年（${NOW + R.n} 年）實際入帳約 ${money(R.total)}，因通膨購買力約為今天的 ${Math.round(R.pvFactor * 100)}%</div>
       <div class="stack">${parts.map((p) => `<i style="flex:${p[1]};background:${p[2]}"></i>`).join('')}</div>
-      <div class="legend">${parts.map((p) => `<div><span><i style="background:${p[2]}"></i>${p[0]}</span><b>${money(p[1])}</b></div>`).join('')}${R.eventsMonthly < 0 ? `<div><span><i style="background:${C.red}"></i>人生事件</span><b>−${money(-R.eventsMonthly)}</b></div>` : ''}</div>
+      <div class="legend">${parts.map((p) => `<div><span><i style="background:${p[2]}"></i>${p[0]}</span><b>${money(p[1] * R.pvFactor)}</b></div>`).join('')}${R.eventsMonthly < 0 ? `<div><span><i style="background:${C.red}"></i>人生事件</span><b>−${money(-R.eventsMonthly * R.pvFactor)}</b></div>` : ''}</div>
     </div>
     <div class="card">
       <div class="card-h" style="margin-bottom:14px"><h3>月領 vs 生活費</h3><span class="hint">退休當年</span></div>
@@ -1151,19 +1157,19 @@ function renderAside() {
       </div>`}
     </div>
     <div class="card" style="padding:12px 18px">
-      <div class="kv"><span>距退休</span><b>${R.n} 年</b></div>
-      <div class="kv"><span>提領月數</span><b>${me.payoutMonths} 個月</b></div>
-      <div class="kv"><span>健康期（退休後）</span><b>${Math.max(0, me.healthAge - state.self.retireAge).toFixed(1)} 年</b></div>
-      <div class="kv"><span>財務自由年齡</span><b>${R.fireAge === null ? '—' : `${R.fireAge} 歲`}</b></div>
+      <div class="kv"><span>距離退休</span><b>${R.n} 年</b></div>
+      <div class="kv"><span>退休金要撐多久<small>退休到預期壽命 ${me.lifeAge.toFixed(0)} 歲</small></span><b>${(me.payoutMonths / 12).toFixed(1)} 年</b></div>
+      <div class="kv"><span>退休後還能自由活動<small>到健康平均壽命 ${me.healthAge.toFixed(0)} 歲，旅遊宜趁早</small></span><b>${Math.max(0, me.healthAge - state.self.retireAge).toFixed(1)} 年</b></div>
+      <div class="kv"><span>不工作也夠用的年齡<small>投資資產足以支應生活費（財務自由）</small></span><b>${R.fireAge === null ? '—' : `${R.fireAge} 歲`}</b></div>
     </div>
     <button type="button" class="btn" style="justify-content:center" data-act="print">列印／存成 PDF 報告</button>
     <button type="button" class="btn gold" style="justify-content:center" data-act="share">${icon('share').replace('<svg', '<svg width="15" height="15"')}產生結果圖卡</button>
     <p class="disclaimer">試算結果僅供參考，不構成理財建議。<br>勞保、勞退實際金額以勞保局核定為準。</p>`;
-  $('#mtotal').textContent = money(R.total);
-  $('#mpv').textContent = `約當今日 ${money(R.totalPV)}`;
-  $('#mfloor').textContent = money(R.floor + R.spouseTotal);
-  $('#minvest').textContent = money(R.investMonthly);
-  $('#ttotal').textContent = money(R.total);
+  $('#mtotal').textContent = money(R.totalPV);
+  $('#mpv').textContent = `${NOW + R.n} 年實際入帳 ${money(R.total)}`;
+  $('#mfloor').textContent = money((R.floor + R.spouseTotal) * R.pvFactor);
+  $('#minvest').textContent = money(R.investMonthly * R.pvFactor);
+  $('#ttotal').textContent = money(R.totalPV);
 }
 
 /* ── 繪製與更新 ───────────────────────────── */
@@ -1361,7 +1367,10 @@ document.addEventListener('click', (e) => {
   const f = e.target.closest('[data-focus]');
   if (f) {
     const el = $(`[data-k="${f.dataset.focus}"]`);
-    if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.focus({ preventScroll: true }); }
+    if (el) {
+      const d = el.closest('details'); if (d && !d.open) d.open = true; // 欄位在收合的進階設定裡時先展開
+      el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.focus({ preventScroll: true });
+    }
     return;
   }
   const t = e.target.closest('[data-tab],[data-set],[data-toggle],[data-act]');
@@ -1502,11 +1511,11 @@ function drawCard() {
   x.fillStyle = '#E8B84B'; x.fillRect(0, 0, W, 5);
   x.fillStyle = '#FEFEFE'; x.font = `800 30px ${F}`; x.fillText('早謀遠算', 48, 70);
   x.fillStyle = '#8A8E96'; x.font = `14px ${F}`; x.fillText('SunDown Studio · 台灣退休規劃試算', 48, 96);
-  x.fillStyle = '#E8B84B'; x.font = `700 14px ${F}`; x.fillText(`${state.self.retireAge} 歲退休 · 每月可領`, 48, 150);
-  x.fillStyle = '#FFFFFF'; x.font = `800 64px ${F}`; x.fillText(money(R.total), 48, 222);
-  x.fillStyle = '#5BAD85'; x.font = `15px ${F}`; x.fillText(`約當今日幣值 ${money(R.totalPV)}／月`, 48, 254);
+  x.fillStyle = '#E8B84B'; x.font = `700 14px ${F}`; x.fillText(`${state.self.retireAge} 歲退休 · 每月可用（以今天的購買力計）`, 48, 150);
+  x.fillStyle = '#FFFFFF'; x.font = `800 64px ${F}`; x.fillText(money(R.totalPV), 48, 222);
+  x.fillStyle = '#5BAD85'; x.font = `15px ${F}`; x.fillText(`退休當年實際入帳約 ${money(R.total)}／月`, 48, 254);
   x.strokeStyle = 'rgba(255,255,255,.12)'; x.beginPath(); x.moveTo(48, 284); x.lineTo(W - 48, 284); x.stroke();
-  [['保底收入', money(R.floor + R.spouseTotal)], ['投資月領', money(R.investMonthly)], ['生活費覆蓋率', `${Math.round(R.coverage * 100)}%`]].forEach(([l, v], i) => {
+  [['保底收入（今日幣值）', money((R.floor + R.spouseTotal) * R.pvFactor)], ['投資月領（今日幣值）', money(R.investMonthly * R.pvFactor)], ['生活費覆蓋率', `${Math.round(R.coverage * 100)}%`]].forEach(([l, v], i) => {
     const px = 48 + 240 * i;
     x.fillStyle = '#8A8E96'; x.font = `13px ${F}`; x.fillText(l, px, 320);
     x.fillStyle = '#FEFEFE'; x.font = `700 24px ${F}`; x.fillText(v, px, 352);
@@ -1589,7 +1598,13 @@ if (dataStale(NOW)) {
   bar.innerHTML = `本工具的勞保分級表、最低生活費、稅率等參數為民國 ${DATA_YEAR} 年度，今年是 ${NOW - 1911} 年，部分數字可能已調整，試算結果請保守看待。`;
   $('.top').after(bar);
 }
-if (seeded) { save(state); toast('已帶入介紹頁的年齡、月薪與每月投資'); }
+if (seeded) {
+  save(state);
+  // 之前存過自己的資料時，其餘設定（現有資產、配偶等）沿用，結果會和介紹頁不同，要說清楚
+  toast(hadSaved
+    ? '已帶入年齡、月薪與每月投資；其他設定沿用你之前存的資料，所以結果可能和介紹頁不同'
+    : '已帶入介紹頁的年齡、月薪與每月投資');
+}
 
 // 離線使用：註冊 service worker（本機 file:// 開啟時略過）
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {

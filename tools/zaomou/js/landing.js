@@ -24,7 +24,6 @@ function miniState() {
   const s = defaults(NOW);
   s.self.birthYear = NOW - +$('m-age').value;
   s.self.salary = +$('m-sal').value;
-  s.holdings = [];
   s.portfolios = [{ id: 'p1', name: '定期投資', assets: [{ id: 'a1', name: '定期投資', monthly: +$('m-inv').value, rate: 6 }] }];
   return s;
 }
@@ -33,9 +32,9 @@ function mini() {
   $('m-sal-v').textContent = money(+$('m-sal').value);
   $('m-inv-v').textContent = money(+$('m-inv').value);
   const r = compute(miniState(), NOW);
-  $('m-total').textContent = money(r.total);
-  $('m-pv').textContent = `約當今日幣值 ${money(r.totalPV)}／月`;
-  const parts = [['勞保', r.me.insMonthly, '#5BAD85'], ['勞退', r.me.laborRetire, '#8FB3DA'], ['投資', r.investMonthly, '#E8B84B']];
+  $('m-total').textContent = money(r.totalPV);
+  $('m-pv').textContent = `${NOW + r.n} 年實際入帳約 ${money(r.total)}／月（因通膨，購買力約為今天的 ${Math.round(r.pvFactor * 100)}%）`;
+  const parts = [['勞保', r.me.insMonthly * r.pvFactor, '#5BAD85'], ['勞退', r.me.laborRetire * r.pvFactor, '#8FB3DA'], ['投資', r.investMonthly * r.pvFactor, '#E8B84B']];
   $('m-stack').innerHTML = parts.filter((p) => p[1] > 0).map((p) => `<i style="flex-grow:${p[1]};background:${p[2]}"></i>`).join('');
   $('m-legend').innerHTML = parts.map((p) => `<li><i style="background:${p[2]}"></i>${p[0]}<b>${money(p[1])}</b></li>`).join('');
 }

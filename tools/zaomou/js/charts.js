@@ -24,17 +24,39 @@ function niceTicks(max, count = 4) {
  * series: [{ points: [{x, y}], color, fill?, dash? }]
  * marks:  [{ x, label, color }] 垂直標記
  */
-export function lineChart({ series, bands = [], xFmt = (x) => x, yFmt = wan, marks = [], width = 640, height = 230, xStep, tip, yCap }) {
+export function lineChart({ series, bands = [], xFmt = (x) => x, yFmt = wan, marks = [], width = 640, height = 230, xStep, tip, yCap, yLog = false }) {
   const L = 52, R = 14, T = 12, B = 26;
   const all = series.flatMap((s) => s.points);
   if (!all.length) return '';
   const x0 = Math.min(...all.map((p) => p.x)), x1 = Math.max(...all.map((p) => p.x), x0 + 1);
   const bandMax = Math.max(0, ...bands.flatMap((b) => b.points.map((p) => p.hi)));
   // yCap：縱軸上限（極端值會貼齊頂端，避免少數路徑把主要曲線壓扁）
-  const ticks = niceTicks(yCap || Math.max(...all.map((p) => p.y), bandMax, 1));
-  const yMax = ticks[ticks.length - 1] || 1;
+  let ticks, sy;
   const sx = (x) => L + ((x - x0) / (x1 - x0)) * (width - L - R);
-  const sy = (y) => height - B - (Math.min(Math.max(0, y), yMax) / yMax) * (height - T - B);
+  if (yLog) {
+    // 對數刻度：1、2、5 × 10^k；0 或極小值貼齊底線（代表用完）
+    const vals = [...all.map((p) => p.y), ...bands.flatMap((b) => b.points.flatMap((p) => [p.lo, p.hi]))].filter((v) => v > 0);
+    const hi = Math.max(...vals, 10);
+    const lo = Math.max(hi / 1e4, Math.min(...vals) / 1.5);
+    const k0 = Math.floor(Math.log10(lo)), k1 = Math.ceil(Math.log10(hi));
+    ticks = [];
+    for (let k = k0; k <= k1 + 1; k++) {
+      for (const m of [1, 2, 5]) {
+        const v = m * 10 ** k;
+        if (v < lo) continue;
+        ticks.push(v);
+        if (v >= hi) break; // 多放一格高於最大值的刻度當上緣
+      }
+      if (ticks.length && ticks[ticks.length - 1] >= hi) break;
+    }
+    const yMin = ticks[0] ?? lo;
+    const top = ticks[ticks.length - 1] ?? hi;
+    sy = (y) => height - B - ((Math.log10(Math.max(y, yMin)) - Math.log10(yMin)) / (Math.log10(top) - Math.log10(yMin))) * (height - T - B);
+  } else {
+    ticks = niceTicks(yCap || Math.max(...all.map((p) => p.y), bandMax, 1));
+    const yMax = ticks[ticks.length - 1] || 1;
+    sy = (y) => height - B - (Math.min(Math.max(0, y), yMax) / yMax) * (height - T - B);
+  }
   const span = x1 - x0;
   const step = xStep || (span <= 12 ? 2 : span <= 30 ? 5 : 10);
   const xs = [];

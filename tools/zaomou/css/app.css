@@ -478,3 +478,21 @@ details.fold > summary:focus-visible { outline: 3px solid var(--gold); outline-o
 /* ── 自提卡：假設調整區 ── */
 .assume { margin-top: 12px; padding: 14px 16px; border-radius: 12px; background: var(--bg); }
 .assume .grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+
+/* ── 起點設定：核心＋進階 ── */
+.card.core { border: 1.5px solid var(--gold); }
+details.adv { display: flex; flex-direction: column; gap: 16px; }
+details.adv > summary { list-style: none; cursor: pointer; display: flex; flex-direction: column; gap: 2px; padding: 16px 20px; border: 1.5px dashed var(--border-2); border-radius: var(--radius); background: var(--surface); position: relative; }
+details.adv > summary::-webkit-details-marker { display: none; }
+details.adv > summary span { font-weight: 700; font-size: 15px; color: var(--navy); }
+details.adv > summary span::after { content: '　展開 ▾'; font-size: 13px; font-weight: 600; color: var(--navy2); }
+details.adv[open] > summary span::after { content: '　收合 ▴'; }
+details.adv > summary small { font-size: 13px; color: var(--muted); line-height: 1.6; }
+details.adv[open] > summary { margin-bottom: 16px; }
+details.adv > section + section { margin-top: 16px; }
+details.adv > summary:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+
+.kv span small { display: block; font-size: 12px; color: var(--faint); margin-top: 1px; }
+.kv { align-items: flex-start; }
+.insight strong { word-break: keep-all; }
+.insight.txt strong { font-size: 18px; font-family: inherit; }
