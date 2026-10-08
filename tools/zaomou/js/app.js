@@ -2,9 +2,9 @@
    畫面分兩種：含輸入欄位的分頁（起點設定、投資資產、目標與行動）只在結構改變時重繪，
    數字靠 data-o 局部更新，避免打字時失焦；純輸出的分頁與側欄則每次重算後整頁重繪。 */
 
-import { compute, holdingValue, growLump, growMonthly, lifecycle, sensitivity, retireAgeOptions, goalPlan, validate, scenarioSummary, selfContributionTax, monteCarlo, actionPlan, planPath, trackProgress, laborLumpVsMonthly, selfContributionAnalysis, insuranceClaimOptions, insCpiFactor, insuranceLumpVsAnnuity, withdrawalStrategies, selfRateDelayOptions, stateDiff } from './engine.js';
+import { compute, holdingValue, growLump, growMonthly, lifecycle, sensitivity, retireAgeOptions, goalPlan, validate, scenarioSummary, selfContributionTax, monteCarlo, actionPlan, planPath, trackProgress, laborLumpVsMonthly, selfContributionAnalysis, insuranceClaimOptions, insCpiFactor, insuranceLumpVsAnnuity, withdrawalStrategies, selfRateDelayOptions, stateDiff, householdTimeline } from './engine.js';
 import { LABOR_MONTHLY, LABOR_FUND, legalPensionAge, INSURANCE_GRADES, MIN_LIVING, EXPENSE_LEVELS, RETURN_PRESETS, LIFE_TABLE, DATA_YEAR, PENSION_WAGE_MAX, dataStale } from './data.js';
-import { load, save, defaults, parseImport, getPath, setPath, uid, applySeed, STORAGE_KEY, normalize, loadScenarios, saveScenarios, MAX_SCENARIOS, templates } from './state.js';
+import { load, save, defaults, parseImport, getPath, setPath, uid, applySeed, STORAGE_KEY, normalize, loadScenarios, saveScenarios, MAX_SCENARIOS, templates, SHARE_PREFIX, encodeShare, decodeShare } from './state.js';
 import { lineChart, donut, wan, attachTooltips } from './charts.js';
 
 const NOW = new Date().getFullYear();
@@ -320,9 +320,10 @@ function pageSetup() {
       <button type="button" class="btn" data-act="export">匯出設定檔</button>
       <label class="btn">匯入設定檔<input type="file" accept=".json,application/json" data-act="import" hidden></label>
       <button type="button" class="btn ghost" data-act="reset">全部重設</button>
+      <button type="button" class="btn" data-act="share-link">複製分享連結</button>
       <button type="button" class="btn ghost" data-act="tour-restart">重新看使用導覽</button>
     </div>
-    <p class="note">設定自動存在這台裝置的瀏覽器。換裝置時匯出 JSON 檔再匯入即可；舊版「退休試算設定.json」也能匯入。</p>
+    <p class="note">設定自動存在這台裝置的瀏覽器。換裝置時匯出 JSON 檔再匯入即可；也可以複製分享連結傳給家人或理財顧問一起看（設定放在網址 # 後面，不會傳到任何伺服器，也不含追蹤紀錄）。舊版「退休試算設定.json」也能匯入。</p>
   </section>`;
 }
 
@@ -349,10 +350,12 @@ function pageFloor() {
       ${R.holdingsMonthly ? row('現有資產', `現值 ${wan(R.holdingsNow)}，退休時 ${wan(R.holdingsPool)}`, R.holdingsMonthly) : ''}
       ${R.eventsMonthly ? row('人生重大事件', `退休前的一次性收支，使退休時資產池 ${R.eventsPool >= 0 ? '增加' : '減少'} ${wan(Math.abs(R.eventsPool))}`, R.eventsMonthly) : ''}
       ${R.portfolioMonthly ? row('定期投資', `每月投入 ${money(R.monthlyInvest)}，退休時 ${wan(R.portfolioPool)}`, R.portfolioMonthly) : ''}
-      ${R.spouse ? row(`${esc(state.spouse.name)}的保底月領`, `勞保 ${money(R.spouse.insMonthly)} + 勞退 ${money(R.spouse.laborRetire)}${R.spouse.oldMonthly ? ` + 舊制 ${money(R.spouse.oldMonthly)}` : ''}`, R.spouse.floor) : ''}
+      ${R.spouse ? row(`${esc(state.spouse.name)}的保底月領`, `勞保 ${money(R.spouse.insMonthly)} + 勞退 ${money(R.spouse.laborRetire)}${R.spouse.oldMonthly ? ` + 舊制 ${money(R.spouse.oldMonthly)}` : ''}` +
+        (R.spouse.yearsToRetire !== R.n ? `；${esc(state.spouse.name)} ${NOW + R.spouse.yearsToRetire} 年退休時實領 ${money(R.spouse.floor)}，這裡換算成你退休當年的幣值` : ''), R.spouseTotal) : ''}
       <div class="row total"><div class="k">退休月領總計<small>約當今日幣值 ${money(R.totalPV)}</small></div><div class="v">${money(R.total)}</div></div>
     </div>
   </section>
+  ${householdCard()}
   ${foldedDecisions()}
 
   ${me.bridge.years > 0 ? `<section class="card bridge"><div class="card-h"><h3>${badge('hourglass', 'rgba(194,69,61,.1)', C.red)}提早退休的空窗期</h3><span class="tag warn">${s.retireAge}–${s.retireAge + me.bridge.years} 歲</span></div>
@@ -775,6 +778,44 @@ function insLumpCard() {
     </ul>
     <p class="note">一次請領計算：年資 ${c.counted} 年，每滿 1 年給 1 個月、超過 15 年部分每年 2 個月，上限 45 個月；60 歲後年資最多計 5 年、合併上限 50 個月（第 59 條）。平均投保薪資：年金取最高 60 個月、一次請領取退保前 3 年（第 19 條）。</p>
   </section>`;
+}
+
+/* 家庭退休時間軸：兩人退休、開始領取、預期壽命錯開時，每個階段的家庭保底收入（今日幣值） */
+function householdCard() {
+  const h = memo('household', householdTimeline);
+  if (!h) return '';
+  const [a, b] = h.people;
+  const nm = ['你', esc(b.name)];
+  const ST = { work: '工作中', gap: '已退休、還沒開始領', part: '開始領一部分', full: '勞保勞退都在領', gone: '—' };
+  const expense = R.expenseToday;
+  const size = window.innerWidth < 640 ? { width: 380, height: 210 } : { width: 680, height: 220 };
+  const chart = lineChart({
+    series: [
+      { name: '家庭保底收入', points: h.years.map((y) => ({ x: y.year, y: y.income })), color: C.purple, fill: 'rgba(122,107,184,.1)' },
+      ...(expense > 0 ? [{ name: '生活費', points: [{ x: h.years[0].year, y: expense }, { x: h.years.at(-1).year, y: expense }], color: C.red, dash: true }] : []),
+    ],
+    ...size, xFmt: (x) => `${x}`, yFmt: (v) => `${Math.round(v / 1000)}k`,
+    marks: [{ x: a.lifeYear, label: '你的預期壽命', color: C.muted }, { x: b.lifeYear, label: `${nm[1]}的預期壽命`, color: C.muted }].filter((m) => m.x <= h.years.at(-1).year),
+    tip: { title: (x) => `${x} 年`, fmt: money },
+  });
+  const ms = (x) => [['退休', x.retireYear], ['勞保開始', x.insYear], ['勞退開始', x.laborYear], ['預期壽命', x.lifeYear]]
+    .map(([k, y]) => `<td>${y}<small>${y - x.birthYear} 歲</small></td>`).join('');
+  const phases = h.phases.filter((p) => p.st.some((x) => x !== 'work'));
+  const sv = h.survivor;
+  const verdict = sv
+    ? `預期約 ${sv.from} 年起只剩${sv.name === '本人' ? '你' : nm[1]}一人約 ${sv.years} 年，保底收入剩 ${money(sv.income)}（今日幣值）`
+    : '兩人預期壽命相同';
+  return fold('household', `<section class="card"><div class="card-h"><h3>${badge('users', 'rgba(122,107,184,.12)', C.purple)}家庭退休時間軸</h3><span class="hint">今日幣值・不含投資</span></div>
+    <div class="tbl-wrap"><table class="tbl hh"><thead><tr><th></th><th>退休</th><th>勞保開始</th><th>勞退開始</th><th>預期壽命</th></tr></thead>
+      <tbody><tr><th>你</th>${ms(a)}</tr><tr><th>${nm[1]}</th>${ms(b)}</tr></tbody></table></div>
+    ${chart}
+    <ol class="phases">${phases.map((p) => `<li><span class="ph-y">${p.from}–${p.to - 1}</span>
+      <span class="ph-s">你：${ST[p.st[0]]}・${nm[1]}：${ST[p.st[1]]}</span>
+      <b class="num${expense > 0 && p.income < expense ? ' neg' : ''}">${money(p.income)}／月</b></li>`).join('')}</ol>
+    ${sv ? `<div class="alert ${h.bothFull && sv.income < h.bothFull * 0.6 ? 'bad' : 'good'}"><b>只剩一人的時候：${sv.name === '本人' ? '你' : nm[1]}預期多活約 ${sv.years} 年，保底收入只剩自己的 ${money(sv.income)}／月${h.bothFull ? `，是兩人都在領時（${money(h.bothFull)}）的 ${Math.round((sv.income / h.bothFull) * 100)}%` : ''}。</b>
+      <p>一個人的生活費通常不會減半（房租、水電等固定支出還在），這段期間最需要投資資產支撐。這裡未計入遺屬給付，條件與金額依勞保局核定。</p></div>` : ''}
+    <p class="note">各人的勞保、勞退月領以各自退休當年換算成今日幣值；勞退月領依官方算法只領到平均餘命。生活費虛線為目前設定的 ${money(expense)}／月（兩人合計）。</p>
+  </section>`, verdict);
 }
 
 function foldedDecisions() {
@@ -1370,22 +1411,44 @@ document.addEventListener('change', (e) => {
     f.text().then((t) => {
       let next;
       try { next = parseImport(t); } catch { return toast('檔案格式不正確，請確認是早謀遠算匯出的設定檔'); }
-      // 匯入前先列出會改變的主要欄位與結果，避免誤蓋掉目前的資料
-      const diff = stateDiff(state, next);
-      if (!diff.length && JSON.stringify(next) === JSON.stringify(state)) return toast('檔案內容和目前設定相同，不需要匯入');
-      const pv = compute(next, NOW).totalPV;
-      const lines = diff.slice(0, 12).map((d) => `・${d.label}：${d.from} → ${d.to}`);
-      if (diff.length > 12) lines.push(`・…另有 ${diff.length - 12} 項`);
-      if (!diff.length) lines.push('・主要欄位相同，只有細項設定不同');
-      const msg = [`匯入「${f.name}」會取代目前的設定：`, '', ...lines, '',
-        `退休後每月可用（今日幣值）：${money(R.totalPV)} → ${money(pv)}`, '',
-        '確定匯入？匯入後仍可按「復原」回到現在的設定。'].join('\n');
-      if (!confirm(msg)) return;
-      state = next; save(state); update({ rerender: true }); toast('已匯入設定');
+      replaceWith(next, `匯入「${f.name}」`, '已匯入設定');
     });
     el.value = '';
   }
 });
+/* 匯入檔案或開啟分享連結：先列出會改變的主要欄位與結果，確認後才取代，之後仍可復原 */
+function replaceWith(next, what, done) {
+  const diff = stateDiff(state, next);
+  if (!diff.length && JSON.stringify(next) === JSON.stringify(state)) { toast('內容和目前設定相同，不需要套用'); return false; }
+  const pv = compute(next, NOW).totalPV;
+  const lines = diff.slice(0, 12).map((d) => `・${d.label}：${d.from} → ${d.to}`);
+  if (diff.length > 12) lines.push(`・…另有 ${diff.length - 12} 項`);
+  if (!diff.length) lines.push('・主要欄位相同，只有細項設定不同');
+  const msg = [`${what}會取代目前的設定：`, '', ...lines, '',
+    `退休後每月可用（今日幣值）：${money(R.totalPV)} → ${money(pv)}`, '',
+    '確定套用？套用後仍可按「復原」回到現在的設定。'].join('\n');
+  if (!confirm(msg)) return false;
+  const keep = state.tracking;
+  state = next;
+  if (!next.tracking?.checkins?.length && keep?.checkins?.length) state.tracking = keep; // 分享連結不帶追蹤紀錄，保留自己的
+  save(state); update({ rerender: true }); toast(done);
+  return true;
+}
+async function shareLink() {
+  try {
+    const url = `${location.origin}${location.pathname}#${SHARE_PREFIX}${await encodeShare(state)}`;
+    await navigator.clipboard.writeText(url);
+    toast('已複製分享連結：對方開啟後會先看到差異再決定是否套用（不含你的追蹤紀錄）');
+  } catch { toast('這個瀏覽器無法複製連結，請改用「匯出設定檔」'); }
+}
+async function openShared() {
+  const code = location.hash.slice(1 + SHARE_PREFIX.length);
+  history.replaceState(null, '', `#${tab}`); // 處理後清掉網址上的設定，避免重新整理時再問一次
+  let next;
+  try { next = await decodeShare(code); } catch { return toast('分享連結不完整或已損壞，請對方重新複製一次'); }
+  replaceWith(next, '開啟的分享連結', '已套用分享的設定');
+}
+
 document.addEventListener('focusout', (e) => {
   // 金額欄位離開時補上千分位
   if (e.target.matches?.('[data-t^="money"]')) e.target.value = fmtInput(getPath(state, e.target.dataset.k), e.target.dataset.t);
@@ -1442,6 +1505,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'del-asset') { const p = state.portfolios.find((x) => x.id === pid); if (p) p.assets = p.assets.filter((a) => a.id !== id); }
   else if (act === 'export') return exportFile();
   else if (act === 'csv') return exportCsv();
+  else if (act === 'share-link') return shareLink();
   else if (act === 'template') {
     const tp = templates(NOW).find((x) => x.id === id);
     if (!tp || !confirm(`套用「${tp.name}」範本會取代目前的設定（進度追蹤紀錄會保留）。確定套用？`)) return;
@@ -1646,6 +1710,10 @@ if (seeded) {
     ? '已帶入年齡、月薪與每月投資；其他設定沿用你之前存的資料，所以結果可能和介紹頁不同'
     : '已帶入介紹頁的年齡、月薪與每月投資');
 }
+
+if (location.hash.startsWith(`#${SHARE_PREFIX}`)) openShared();
+// 已開著試算頁時貼上分享連結，只會改變 hash、不會重新載入
+window.addEventListener('hashchange', () => { if (location.hash.startsWith(`#${SHARE_PREFIX}`)) openShared(); });
 
 // 離線使用：註冊 service worker（本機 file:// 開啟時略過）
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {

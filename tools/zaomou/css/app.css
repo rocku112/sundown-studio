@@ -507,3 +507,14 @@ details.adv > summary:focus-visible { outline: 3px solid var(--gold); outline-of
 .tour p { margin: 0 0 6px; font-size: 14px; line-height: 1.7; color: rgba(255,255,255,.85); }
 .tour .btn { align-self: flex-start; background: var(--gold); color: #16263B; border-color: var(--gold); }
 @media print { .tour { display: none; } }
+
+/* ── 家庭退休時間軸 ── */
+.tbl.hh { min-width: 420px; }
+.tbl.hh th:first-child { text-align: left; }
+.tbl.hh td small { display: block; font-size: 12px; color: var(--muted); }
+.phases { list-style: none; padding: 0; margin: 10px 0 12px; display: flex; flex-direction: column; gap: 6px; }
+.phases li { display: grid; grid-template-columns: 96px 1fr auto; gap: 10px; align-items: center; padding: 8px 12px; border-radius: 10px; background: var(--bg); font-size: 14px; }
+.ph-y { font: 700 13px var(--mono); color: var(--muted); }
+.ph-s { color: var(--text); }
+.phases b.neg { color: var(--red); }
+@media (max-width: 640px) { .phases li { grid-template-columns: 1fr auto; } .ph-y { grid-column: 1 / -1; } }

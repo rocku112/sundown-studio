@@ -299,7 +299,8 @@ export function compute(state, nowYear = new Date().getFullYear()) {
 
   // 配偶（各自以本人年齡、生命表計算）
   const spouse = state.spouse.enabled ? person(state.spouse, { ...ctx, lifeAge: null, healthAge: null }) : null;
-  const spouseTotal = spouse ? spouse.floor : 0;
+  // 配偶的月領是配偶退休當年的名目金額；換算成本人退休當年的幣值才能相加
+  const spouseTotal = spouse ? Math.round(spouse.floor * Math.pow(1 + cpi, n - spouse.yearsToRetire)) : 0;
 
   const floor = me.floor + benefitMonthly;
   const selfTotal = floor + investMonthly;
@@ -1040,4 +1041,51 @@ export function stateDiff(a, b) {
     if (x !== y && !(typeof x === 'number' && typeof y === 'number' && Math.abs(x - y) < 0.5e-6)) out.push({ label, from: fmt(x), to: fmt(y) });
   }
   return out;
+}
+
+/**
+ * 家庭時間軸（有配偶時）：逐年列出兩人的工作／領取狀態與家庭保底月領（今日幣值），
+ * 並整理成階段，另估「只剩一人」的年數與保底收入。各人的月領以各自退休當年換算今日幣值。
+ */
+export function householdTimeline(state, nowYear = new Date().getFullYear()) {
+  const r = compute(state, nowYear);
+  if (!r.spouse) return null;
+  const cpi = num(state.cpi) / 100;
+  const mk = (p, P, name) => {
+    const f = Math.pow(1 + cpi, -P.yearsToRetire);
+    return {
+      name, birthYear: p.birthYear,
+      retireYear: p.birthYear + p.retireAge,
+      insYear: p.birthYear + P.bridge.insStart,
+      laborYear: p.birthYear + P.bridge.laborStart,
+      lifeYear: p.birthYear + Math.round(P.lifeAge),
+      ins: P.insMonthly * f, labor: P.laborRetire * f, old: P.oldMonthly * f,
+      floorPV: Math.round(P.floor * f),
+    };
+  };
+  const people = [mk(state.self, r.me, '本人'), mk(state.spouse, r.spouse, state.spouse.name || '配偶')];
+  const from = Math.min(...people.map((x) => x.retireYear)), to = Math.max(...people.map((x) => x.lifeYear));
+  const status = (x, y) => (y >= x.lifeYear ? 'gone' : y < x.retireYear ? 'work' : y < Math.min(x.insYear, x.laborYear) ? 'gap' : y < Math.max(x.insYear, x.laborYear) ? 'part' : 'full');
+  const years = [];
+  for (let y = from; y < to; y++) {
+    const income = people.reduce((t, x) => t + (status(x, y) === 'gone' ? 0
+      : (y >= x.insYear ? x.ins : 0) + (y >= x.laborYear ? x.labor : 0) + (y >= x.retireYear ? x.old : 0)), 0);
+    years.push({ year: y, income: Math.round(income), st: people.map((x) => status(x, y)) });
+  }
+  const phases = [];
+  for (const row of years) {
+    const last = phases[phases.length - 1];
+    const key = row.st.join('|');
+    if (last && last.key === key && Math.abs(last.income - row.income) < 1) last.to = row.year + 1;
+    else phases.push({ key, from: row.year, to: row.year + 1, st: row.st, income: row.income });
+  }
+  // 只剩一人：較晚過世的一方獨自生活的年數與自己的保底收入
+  const [a, b] = people;
+  const survivor = a.lifeYear === b.lifeYear ? null : a.lifeYear > b.lifeYear ? a : b;
+  const both = years.find((x) => x.st.every((s) => s === 'full'));
+  return {
+    people, years, phases: phases.map(({ key, ...p }) => p),
+    bothFull: both ? both.income : null,
+    survivor: survivor && { name: survivor.name, years: Math.abs(a.lifeYear - b.lifeYear), from: Math.min(a.lifeYear, b.lifeYear), income: survivor.floorPV },
+  };
 }

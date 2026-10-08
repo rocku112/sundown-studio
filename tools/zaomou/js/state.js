@@ -224,3 +224,28 @@ export function setPath(obj, path, val) {
   const tgt = ks.reduce((o, k) => o[k], obj);
   tgt[last] = val;
 }
+
+/* ── 分享連結：設定壓縮後放在網址 #share=…（hash 不會送到伺服器） ── */
+export const SHARE_PREFIX = 'share=';
+const b64url = {
+  enc: (bytes) => { let s = ''; for (const b of bytes) s += String.fromCharCode(b); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); },
+  dec: (str) => { const s = atob(str.replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(s, (c) => c.charCodeAt(0)); },
+};
+async function pipe(bytes, stream) {
+  return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer());
+}
+/** 分享時不帶個人進度（追蹤紀錄、行動勾選），只帶試算設定 */
+export function shareable(state) {
+  const s = JSON.parse(JSON.stringify(state));
+  s.tracking = { baseline: null, checkins: [] };
+  s.actionsDone = {};
+  return s;
+}
+export async function encodeShare(state) {
+  const raw = new TextEncoder().encode(JSON.stringify(shareable(state)));
+  return b64url.enc(await pipe(raw, new CompressionStream('deflate-raw')));
+}
+export async function decodeShare(code) {
+  const raw = await pipe(b64url.dec(code), new DecompressionStream('deflate-raw'));
+  return parseImport(new TextDecoder().decode(raw));
+}

@@ -646,3 +646,47 @@ test('匯入預覽：只列出有變動的主要欄位', () => {
   assert.equal(d[2].from, '$800,000'); // 2 張 ×150 ×1000 + 50 萬存款
   assert.equal(d[2].to, '$0');
 });
+
+import { encodeShare, decodeShare } from '../js/state.js';
+test('分享連結：壓縮編碼可還原設定，且不帶追蹤紀錄與行動勾選', async () => {
+  const s = defaults(2026);
+  s.self.salary = 52000; s.events.push({ id: 'e', name: '買房', age: 40, amount: 3000000, kind: 'out' });
+  s.tracking.checkins.push({ id: 'c', date: '2026-01-01', invest: 1, labor: 2 }); s.actionsDone = { invest: true };
+  const code = await encodeShare(s);
+  assert.match(code, /^[A-Za-z0-9_-]+$/);
+  assert.ok(code.length < 2000, `連結長度 ${code.length}`);
+  const back = await decodeShare(code);
+  assert.equal(back.self.salary, 52000);
+  assert.equal(back.events[0].name, '買房');
+  assert.deepEqual(back.tracking.checkins, []);
+  assert.deepEqual(back.actionsDone, {});
+  await assert.rejects(decodeShare('not-valid'));
+});
+
+import { householdTimeline } from '../js/engine.js';
+test('配偶月領換算到本人退休當年幣值：同年退休時不變，晚退休時折回', () => {
+  const s = defaults(2026); s.spouse.enabled = true; s.spouse.birthYear = s.self.birthYear;
+  const r = compute(s, 2026);
+  assert.equal(r.spouseTotal, r.spouse.floor);
+  s.spouse.birthYear = s.self.birthYear + 5; // 小 5 歲、同樣 65 歲退休 → 晚 5 年
+  const r2 = compute(s, 2026);
+  assert.equal(r2.spouseTotal, Math.round(r2.spouse.floor / Math.pow(1.02, 5)));
+});
+test('家庭時間軸：階段連續、只剩一人的年數與收入', () => {
+  const s = defaults(2026);
+  assert.equal(householdTimeline(s, 2026), null);
+  s.spouse.enabled = true; s.spouse.birthYear = s.self.birthYear + 3; // 男 / 女，女方小 3 歲
+  const h = householdTimeline(s, 2026);
+  const [me, sp] = h.people;
+  assert.equal(h.phases[0].from, Math.min(me.retireYear, sp.retireYear));
+  for (let i = 1; i < h.phases.length; i++) assert.equal(h.phases[i].from, h.phases[i - 1].to);
+  assert.equal(h.phases.at(-1).to, Math.max(me.lifeYear, sp.lifeYear));
+  // 女性預期壽命較長又較年輕 → 配偶獨自生活
+  assert.equal(h.survivor.name, '配偶');
+  assert.equal(h.survivor.years, sp.lifeYear - me.lifeYear);
+  assert.equal(h.survivor.income, sp.floorPV);
+  // 兩人都全額領取時 ≈ 兩人保底（今日幣值）相加
+  assert.ok(Math.abs(h.bothFull - (me.floorPV + sp.floorPV)) <= 1);
+  // 本人工作中、配偶尚未退休的年份不計收入
+  assert.ok(h.years.every((y) => y.st.some((x) => x !== 'work') || y.income === 0));
+});
