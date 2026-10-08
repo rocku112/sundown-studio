@@ -244,3 +244,44 @@ dialog::backdrop { background: rgba(22,38,59,.55); }
   .top, .mobile-sum, .btn, .chips, .seg, .pager { display: none !important; }
   .layout { display: block; }
 }
+
+/* ── 分析頁 ── */
+.chart-tip { position: absolute; left: 0; top: 0; z-index: 90; pointer-events: none; background: var(--text); color: #fff; border-radius: 10px; padding: 8px 12px; font-size: 12px; min-width: 150px; box-shadow: 0 8px 24px rgba(0,0,0,.2); opacity: 0; transition: opacity .12s; }
+.chart-tip.show { opacity: 1; }
+.chart-tip b { display: block; font-size: 12px; color: var(--gold); margin-bottom: 4px; }
+.chart-tip div { display: flex; align-items: center; gap: 6px; line-height: 1.7; }
+.chart-tip i { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+.chart-tip span { margin-left: auto; padding-left: 12px; font-family: var(--mono); font-weight: 700; }
+svg.chart[data-tip] { cursor: crosshair; touch-action: pan-y; }
+.insights { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+.insight { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; border-left: 4px solid var(--navy2); }
+.insight.good { border-left-color: var(--green); } .insight.bad { border-left-color: var(--red); } .insight.gold { border-left-color: var(--gold); }
+.insight small { display: block; font-size: 12px; color: var(--muted); letter-spacing: .04em; }
+.insight strong { display: block; font-size: 22px; font-family: var(--mono); color: var(--navy); line-height: 1.3; margin: 2px 0 4px; }
+.insight p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.65; }
+.tornado { display: grid; grid-template-columns: 110px 1fr; gap: 10px 14px; align-items: center; }
+.tornado .t-l { font-size: 14px; font-weight: 600; }
+.tornado .t-bar { position: relative; height: 34px; }
+.tornado .t-bar::before { content: ''; position: absolute; left: 50%; top: -5px; bottom: -5px; width: 1px; background: var(--border-2); }
+.tornado .t-neg, .tornado .t-pos { position: absolute; top: 5px; height: 24px; display: flex; align-items: center; font: 600 12px var(--mono); white-space: nowrap; }
+.tornado .t-neg { right: 50%; background: rgba(194,69,61,.32); border-radius: 6px 0 0 6px; justify-content: flex-start; color: var(--red); }
+.tornado .t-pos { left: 50%; background: rgba(63,143,106,.34); border-radius: 0 6px 6px 0; justify-content: flex-end; color: var(--green); }
+.tornado .t-neg span, .tornado .t-pos span { position: absolute; padding: 0 6px; }
+.tornado .t-neg span { right: 100%; } .tornado .t-pos span { left: 100%; }
+.tornado .t-neg.in span { right: auto; left: 0; } .tornado .t-pos.in span { left: auto; right: 0; }
+.tornado .t-cap { grid-column: 2; display: flex; justify-content: space-between; font-size: 12px; color: var(--faint); margin-top: -4px; }
+.tbl-wrap { overflow-x: auto; margin: 0 -4px; }
+table.tbl { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 480px; }
+.tbl th, .tbl td { padding: 10px 10px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.tbl th { font-size: 12px; font-weight: 600; color: var(--muted); background: var(--bg); position: sticky; top: 0; }
+.tbl th:first-child, .tbl td:first-child { text-align: left; }
+.tbl td { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.tbl tr.cur td { background: rgba(232,184,75,.14); font-weight: 700; }
+.tbl tr.cur td:first-child::after { content: '目前設定'; font: 700 10px var(--sans, inherit); color: var(--gold2); margin-left: 6px; }
+.tbl .good { color: var(--green); } .tbl .bad { color: var(--red); }
+details.yearly summary { cursor: pointer; font-weight: 700; font-size: 15px; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+details.yearly summary::-webkit-details-marker { display: none; }
+details.yearly summary::after { content: '展開'; font-size: 13px; color: var(--navy2); font-weight: 600; }
+details.yearly[open] summary::after { content: '收合'; }
+details.yearly .tbl-wrap { max-height: 420px; overflow: auto; margin-top: 14px; }
+@media (max-width: 720px) { .tornado { grid-template-columns: 1fr; gap: 2px; } .tornado .t-cap { grid-column: 1; margin-bottom: 8px; } }

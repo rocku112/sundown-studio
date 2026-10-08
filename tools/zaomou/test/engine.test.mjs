@@ -124,3 +124,42 @@ test('狀態：normalize 補齊欄位、舊版遷移、匯入', () => {
   assert.equal(parseImport(JSON.stringify(defaults(2026))).schema, 2);
   assert.throws(() => parseImport('{"foo":1}'));
 });
+
+import { lifecycle, sensitivity, retireAgeOptions } from '../js/engine.js';
+
+test('全生命週期：退休前遞增、與 compute 的資產池一致', () => {
+  const s = defaults(2026);
+  const lc = lifecycle(s, 2026);
+  const save = lc.points.filter((p) => p.phase === 'save');
+  assert.equal(save[0].age, 35);
+  assert.equal(save[save.length - 1].age, 65);
+  for (let i = 1; i < save.length; i++) assert.ok(save[i].pool >= save[i - 1].pool);
+  near(save[save.length - 1].pool, compute(s, 2026).investPool, 1);
+  // 悲觀情境資產池較小
+  assert.ok(lifecycle(s, 2026, -2).pool < lc.pool);
+});
+
+test('敏感度：方向正確、依影響排序', () => {
+  const s = defaults(2026);
+  s.self.selfRate = 3;
+  const rows = sensitivity(s, 2026);
+  const by = Object.fromEntries(rows.map((r) => [r.key, r]));
+  assert.ok(by.invest.high > 0 && by.invest.low < 0);
+  assert.ok(by.return.high > 0 && by.return.low < 0);
+  assert.ok(by.selfRate.high > 0 && by.selfRate.low < 0);
+  assert.ok(by.retire.high > 0, '晚退休月領應增加');
+  assert.ok(by.cpi.high < 0, '通膨變高，今日幣值月領應下降');
+  const span = (r) => Math.max(Math.abs(r.low), Math.abs(r.high));
+  for (let i = 1; i < rows.length; i++) assert.ok(span(rows[i - 1]) >= span(rows[i]));
+  // 不改動原狀態
+  assert.equal(s.portfolios.length, 1);
+});
+
+test('退休年齡比較：只列未來年齡、標出目前設定', () => {
+  const s = defaults(2026);
+  s.self.birthYear = 1964; // 62 歲
+  const opts = retireAgeOptions(s, 2026);
+  assert.deepEqual(opts.map((o) => o.retireAge), [65, 67, 70]);
+  assert.ok(opts.find((o) => o.retireAge === 65).current);
+  assert.ok(opts[2].totalPV > opts[0].totalPV);
+});

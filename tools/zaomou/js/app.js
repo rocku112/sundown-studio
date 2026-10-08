@@ -2,10 +2,10 @@
    畫面分兩種：含輸入欄位的分頁（起點設定、投資資產、目標反算）只在結構改變時重繪，
    數字靠 data-o 局部更新，避免打字時失焦；純輸出的分頁與側欄則每次重算後整頁重繪。 */
 
-import { compute, holdingValue, growLump } from './engine.js';
+import { compute, holdingValue, growLump, lifecycle, sensitivity, retireAgeOptions } from './engine.js';
 import { legalPensionAge, INSURANCE_GRADES, MIN_LIVING, EXPENSE_LEVELS, RETURN_PRESETS, LIFE_TABLE, DATA_YEAR, PENSION_WAGE_MAX } from './data.js';
 import { load, save, defaults, parseImport, getPath, setPath, uid, applySeed, STORAGE_KEY } from './state.js';
-import { lineChart, donut, wan } from './charts.js';
+import { lineChart, donut, wan, attachTooltips } from './charts.js';
 
 const NOW = new Date().getFullYear();
 const hadSaved = (() => { try { return !!(localStorage.getItem(STORAGE_KEY) || localStorage.getItem('nuclear_retirement_v1')); } catch { return false; } })();
@@ -366,102 +366,175 @@ function pagePlan() {
 
 function pageAnalysis() {
   const me = R.me, s = state.self;
-  const size = window.innerWidth < 640 ? { width: 380, height: 220 } : {};
-  // 1. 資產累積
-  const needPool = me.payout.toPool(Math.max(0, R.expenseAtRetire - R.floor - R.spouseTotal));
-  const growth = lineChart({
-    series: [
-      { points: R.growth.map((g) => ({ x: g.age, y: g.pool })), color: C.navy, fill: 'rgba(45,74,110,.08)' },
-      ...(needPool > 0 ? [{ points: [{ x: me.age, y: needPool }, { x: s.retireAge, y: needPool }], color: C.red, dash: true }] : []),
-    ],
-    xFmt: (x) => `${x}歲`, ...size,
-  });
-  // 2. 月領來源
+  const size = window.innerWidth < 640 ? { width: 380, height: 230 } : { width: 680, height: 260 };
+  const scen = [[-2, '悲觀', C.red], [0, '基準', C.navy], [2, '樂觀', C.green]].map(([d, l, c]) => ({ d, l, c, lc: lifecycle(state, NOW, d) }));
+  const base = scen[1].lc;
+  const sens = sensitivity(state, NOW);
+  const ages = retireAgeOptions(state, NOW);
+  const hasInvest = R.investPool > 0;
+
+  // 月領來源
   const parts = [
-    { label: '勞保', value: me.insMonthly, color: C.greenL },
-    { label: '勞退', value: me.laborRetire, color: C.navy },
-    { label: '舊制', value: me.oldMonthly, color: '#8FB9A3' },
+    { label: '勞保年金', value: me.insMonthly, color: C.greenL },
+    { label: '勞退新制', value: me.laborRetire, color: C.navy },
+    { label: '勞基法舊制', value: me.oldMonthly, color: '#8FB9A3' },
     { label: esc(state.benefit.name || '企業信託'), value: R.benefitMonthly, color: C.purple },
     { label: '現有資產', value: R.holdingsMonthly, color: C.gold },
     { label: '定期投資', value: R.portfolioMonthly, color: C.navyL },
     { label: esc(state.spouse.name), value: R.spouseTotal, color: '#C79BB8' },
   ].filter((d) => d.value > 0);
-  // 3. 退休後資產池
-  const cf = lineChart({
-    series: [{ points: R.cashflow.map((d) => ({ x: d.age, y: d.pool })), color: C.red, fill: 'rgba(201,74,74,.08)' }],
-    xFmt: (x) => `${x}歲`, ...size,
-    marks: [{ x: Math.min(me.lifeAge, R.cashflow[R.cashflow.length - 1].age), label: `預期壽命 ${me.lifeAge.toFixed(0)}`, color: C.muted }],
-  });
-  // 4. 三情境
-  const scen = R.scenarios;
-  const scenColors = [C.red, C.navy, C.green];
-  const scenChart = lineChart({
-    series: [-2, 0, 2].map((d, i) => ({
-      points: Array.from({ length: R.n + 1 }, (_, t) => ({ x: me.age + t, y: investAt(t, d) })), color: scenColors[i], dash: d !== 0,
+  const top = [...parts].sort((a, b) => b.value - a.value)[0];
+
+  // 重點摘要
+  const cov = R.coverage;
+  const lever = sens.find((r) => r.key !== 'cpi'); // 通膨是外部風險、不是能調的槓桿
+  const leverHigh = Math.abs(lever.high) >= Math.abs(lever.low);
+  const leverVal = leverHigh ? lever.high : lever.low;
+  const leverWhat = `${lever.label}${leverHigh ? lever.highLabel : lever.lowLabel}`;
+  const run = base.runoutAge;
+  const insights = [
+    R.expenseToday > 0
+      ? { cls: cov >= 1 ? 'good' : 'bad', k: '生活費覆蓋率', v: `${Math.round(cov * 100)}%`,
+          p: cov >= 1 ? `退休當年月領 ${money(R.total)}，比通膨後生活費多 ${money(R.total - R.expenseAtRetire)}。` : `每月還差 ${money(R.expenseAtRetire - R.total)}，到「目標反算」看要怎麼補。` }
+      : { cls: '', k: '生活費覆蓋率', v: '—', p: '在「起點設定」填入退休後生活費，才能判斷夠不夠用。' },
+    hasInvest
+      ? { cls: run && run < me.lifeAge ? 'bad' : 'good', k: '投資資產可撐到', v: run ? `${run} 歲` : '100 歲以上',
+          p: run && run < me.lifeAge ? `比預期壽命 ${me.lifeAge.toFixed(0)} 歲早用完，晚年只剩勞保勞退。` : `涵蓋預期壽命 ${me.lifeAge.toFixed(0)} 歲。` }
+      : { cls: '', k: '投資資產可撐到', v: '—', p: '尚未設定投資資產，退休收入全靠保底給付。' },
+    { cls: 'gold', k: '最有感的調整', v: `${leverVal >= 0 ? '+' : '−'}${money(Math.abs(leverVal))}`,
+      p: `${leverWhat}，是你能控制的條件中，對月領（今日幣值）影響最大的一項。` },
+    top ? { cls: '', k: '最大收入來源', v: `${Math.round((top.value / R.total) * 100)}%`,
+      p: `${top.label}每月 ${money(top.value)}，${top.value / R.total > 0.6 ? '來源過度集中，風險較高。' : '來源相對分散。'}` } : null,
+  ].filter(Boolean);
+
+  // 全生命週期資產池
+  const lifeChart = lineChart({
+    series: scen.map((x) => ({
+      name: `${x.l}（${x.d > 0 ? '+' : ''}${x.d}%）`, points: x.lc.points.map((p) => ({ x: p.age, y: p.pool })),
+      color: x.c, dash: x.d !== 0, fill: x.d === 0 ? 'rgba(30,53,84,.07)' : undefined,
     })),
     xFmt: (x) => `${x}歲`, ...size,
+    marks: [{ x: s.retireAge, label: '退休', color: C.gold2 }, ...(me.lifeAge < 100 ? [{ x: Math.round(me.lifeAge), label: '預期壽命', color: C.muted }] : [])],
+    tip: { title: (x) => `${x} 歲（${NOW + x - me.age} 年）`, fmt: wan },
   });
-  // 5. 通膨購買力
+
+  // 敏感度（龍捲風圖）
+  const maxAbs = Math.max(1, ...sens.flatMap((r) => [Math.abs(r.low), Math.abs(r.high)]));
+  const signed = (v) => `${v >= 0 ? '+' : '−'}${money(Math.abs(v))}`;
+  const tornado = sens.map((r) => {
+    const negIsLow = r.low <= r.high;
+    const neg = Math.min(r.low, r.high, 0), pos = Math.max(r.low, r.high, 0);
+    const negLabel = negIsLow ? r.lowLabel : r.highLabel, posLabel = negIsLow ? r.highLabel : r.lowLabel;
+    return `<div class="t-l">${r.label}</div>
+      <div><div class="t-bar" role="img" aria-label="${r.label}：${negLabel} ${signed(neg)}，${posLabel} ${signed(pos)}">
+        <div class="t-neg" style="width:${(Math.abs(neg) / maxAbs) * 50}%"></div><div class="t-pos" style="width:${(pos / maxAbs) * 50}%"></div></div>
+      <div class="t-cap"><span>${negLabel} <b style="color:var(--red)">${signed(neg)}</b></span><span>${posLabel} <b style="color:var(--green)">${signed(pos)}</b></span></div></div>`;
+  }).join('');
+
+  // 通膨購買力
   const yrs = Math.max(1, Math.round(me.lifeAge - s.retireAge));
   const cpi = state.cpi / 100;
   const real = Array.from({ length: yrs + 1 }, (_, k) => ({ x: s.retireAge + k, y: R.total / Math.pow(1 + cpi, k) }));
   const halfIdx = real.findIndex((p) => p.y <= R.total / 2);
   const realChart = lineChart({
-    series: [{ points: real, color: '#E07A50', fill: 'rgba(224,122,80,.1)' }],
+    series: [{ name: '實質購買力', points: real, color: '#C0622A', fill: 'rgba(192,98,42,.08)' }],
     ...size, xFmt: (x) => `${x}歲`, yFmt: (v) => `${Math.round(v / 1000)}k`,
     marks: halfIdx > 0 ? [{ x: real[halfIdx].x, label: '購買力減半', color: C.red }] : [],
+    tip: { title: (x) => `${x} 歲`, fmt: money },
   });
-  // 6. 健康期 vs 全壽命
+
+  // 健康期 vs 全壽命
   const healthY = Math.max(0, me.healthAge - s.retireAge), lifeY = Math.max(0, me.lifeAge - s.retireAge);
   const totH = R.total * 12 * healthY, totL = R.total * 12 * lifeY;
 
   return `
   <div class="page-head"><span class="step">STEP 05</span><h2 class="page-title">分析圖表</h2></div>
-  <section class="card"><div class="card-h"><h3>${badge('trend', 'rgba(58,95,138,.12)', C.navyL)}投資資產累積</h3></div>
-    ${R.investPool > 0 ? growth : '<p class="note">尚未設定投資資產。</p>'}
-    <div class="chart-legend"><span><i style="background:${C.navy}"></i>投資資產池（名目）</span>${needPool > 0 ? `<span><i style="background:${C.red}"></i>支應生活費缺口所需 ${wan(needPool)}</span>` : ''}</div>
+  <p class="page-sub">把數字翻成結論：夠不夠、撐多久、調整哪裡最有效。圖表可用滑鼠或手指查看每一歲的數值。</p>
+
+  <section class="insights" aria-label="重點摘要">
+    ${insights.map((i) => `<div class="insight ${i.cls}"><small>${i.k}</small><strong>${i.v}</strong><p>${i.p}</p></div>`).join('')}
   </section>
+
+  <section class="card"><div class="card-h"><h3>${badge('trend', 'rgba(58,95,138,.12)', C.navyL)}全生命週期：投資資產池</h3><span class="hint">名目金額</span></div>
+    ${hasInvest ? `${lifeChart}
+    <div class="chart-legend">${scen.map((x) => `<span><i style="background:${x.c}"></i>${x.l}（報酬 ${x.d > 0 ? '+' : ''}${x.d}%）</span>`).join('')}</div>
+    <div class="stats" style="margin-top:14px">${scen.map((x) => `<div class="stat"><small style="color:${x.c};font-weight:700">${x.l}月領</small><strong>${money(x.lc.total)}</strong><small>退休時 ${wan(x.lc.pool)} · ${x.lc.runoutAge ? `${x.lc.runoutAge} 歲用完` : '撐過 100 歲'}</small></div>`).join('')}</div>
+    <p class="note">退休前每月投入、複利累積；退休後每年提領投資月領 × 12，剩餘資產以年化 ${pct(state.postReturn)} 滾存。三情境把所有投資的報酬率同時調低或調高 2 個百分點。</p>`
+    : '<p class="note" style="margin:0">尚未設定投資資產。到「投資資產」加入現有資產或定期投資後，這裡會畫出從現在到 100 歲的資產走勢。</p>'}
+  </section>
+
+  <section class="card"><div class="card-h"><h3>${badge('sliders', 'rgba(232,184,75,.18)', '#9A7210')}敏感度：什麼最影響你的月領</h3><span class="hint">今日幣值，與目前 ${money(R.totalPV)} 比較</span></div>
+    <div class="tornado">${tornado}</div>
+    <p class="note">一次只改一個條件，其他維持目前設定。排在越上面的影響越大：可控制的項目值得優先調整；通膨屬於外部風險，只能靠提高安全邊際因應。</p>
+  </section>
+
+  <section class="card"><div class="card-h"><h3>${badge('hourglass', 'rgba(45,74,110,.1)', C.navy)}幾歲退休比較</h3></div>
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>退休年齡</th><th>月領（名目）</th><th>今日幣值</th><th>勞保年金</th><th>生活費覆蓋率</th><th></th></tr></thead>
+      <tbody>${ages.map((a) => `<tr class="${a.current ? 'cur' : ''}"><td>${a.retireAge} 歲</td><td>${money(a.total)}</td><td>${money(a.totalPV)}</td><td>${money(a.ins)}</td>
+        <td class="${a.coverage >= 1 ? 'good' : 'bad'}">${R.expenseToday > 0 ? `${Math.round(a.coverage * 100)}%` : '—'}</td>
+        <td>${a.current ? '' : `<button type="button" class="btn ghost" style="color:var(--navy2)" data-set="self.retireAge" data-val="${a.retireAge}">改用</button>`}</td></tr>`).join('')}</tbody>
+    </table></div>
+    <p class="note">晚退休有三重效果：多累積幾年、勞保年金延後增給（每年 4%，最多 20%）、提領年數變短。</p>
+  </section>
+
   <section class="card"><div class="card-h"><h3>${badge('chart', 'rgba(232,184,75,.18)', '#9A7210')}月領來源</h3><span class="hint">合計 ${money(R.total)}</span></div>
     <div class="donut-wrap">${donut(parts)}
-      <div class="lg">${parts.map((d) => `<div class="bar-row"><div class="lbl"><span><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${d.color};margin-right:6px"></i>${d.label}</span><b>${money(d.value)}</b></div>
+      <div class="lg">${parts.map((d) => `<div class="bar-row"><div class="lbl"><span><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${d.color};margin-right:6px"></i>${d.label}</span><b>${money(d.value)} <small style="color:var(--muted);font-weight:500">${Math.round((d.value / R.total) * 100)}%</small></b></div>
         <div class="meter" style="margin:0"><i style="width:${(d.value / Math.max(...parts.map((p) => p.value))) * 100}%;background:${d.color}"></i></div></div>`).join('')}</div></div>
   </section>
-  <section class="card"><div class="card-h"><h3>${badge('hourglass', 'rgba(201,74,74,.1)', C.red)}退休後投資資產池</h3>
-      <span class="hint">${R.investMonthly <= 0 ? '無投資提領' : R.runoutAge ? `<b style="color:var(--red)">約 ${R.runoutAge} 歲用完</b>` : '<b style="color:var(--green)">可支撐到 100 歲以上</b>'}</span></div>
-    ${R.investPool > 0 ? cf : '<p class="note">尚未設定投資資產。</p>'}
-    <p class="note">每年固定提領投資月領 ${money(R.investMonthly)} × 12，剩餘資產以年化 ${pct(state.postReturn)} 滾存。</p>
-  </section>
-  <section class="card"><div class="card-h"><h3>${badge('trend', 'rgba(122,107,184,.12)', C.purple)}報酬率情境比較</h3></div>
-    <div class="stats">${scen.map((x, i) => `<div class="stat"><small style="color:${scenColors[i]};font-weight:700">${x.delta < 0 ? '悲觀' : x.delta > 0 ? '樂觀' : '基準'}（${x.delta > 0 ? '+' : ''}${x.delta}%）</small><strong>${money(x.monthly)}</strong><small>資產池 ${wan(x.pool)}</small></div>`).join('')}</div>
-    ${R.investPool > 0 ? scenChart : ''}
-    <p class="note">所有投資資產的預期報酬同時調低或調高 2 個百分點；保底收入不變。</p>
-  </section>
-  <section class="card"><div class="card-h"><h3>${badge('receipt', 'rgba(224,122,80,.12)', '#C0622A')}通膨侵蝕：月領的實質購買力</h3></div>
+
+  <section class="card"><div class="card-h"><h3>${badge('receipt', 'rgba(192,98,42,.12)', '#C0622A')}通膨侵蝕：月領的實質購買力</h3></div>
     <div class="stats">
       <div class="stat"><small>退休當年</small><strong>${money(R.total)}</strong></div>
       <div class="stat"><small>${halfIdx > 0 ? `${real[halfIdx].x} 歲減半` : '購買力減半'}</small><strong>${money(R.total / 2)}</strong></div>
       <div class="stat bad"><small>${Math.round(me.lifeAge)} 歲時</small><strong>${money(real[real.length - 1].y)}</strong></div>
     </div>
     ${realChart}
-    <p class="note">假設月領金額固定不變、通膨 ${pct(state.cpi)}。實際上勞保年金會在累計 CPI 成長達 5% 時調整，可抵銷部分侵蝕。</p>
+    <p class="note">假設月領金額固定不變、通膨 ${pct(state.cpi)}。勞保年金會在累計 CPI 成長達 5% 時調整，可抵銷部分侵蝕。</p>
   </section>
-  <section class="card"><div class="card-h"><h3>${badge('user', 'rgba(63,154,110,.12)', C.green)}健康期與全壽命總領</h3></div>
+
+  <section class="card"><div class="card-h"><h3>${badge('user', 'rgba(63,143,106,.12)', C.green)}健康期與全壽命總領</h3></div>
     ${[[`健康期（${s.retireAge}–${me.healthAge.toFixed(0)} 歲）`, totH, healthY], [`全壽命（${s.retireAge}–${me.lifeAge.toFixed(0)} 歲）`, totL, lifeY]].map(([l, v, y]) => `
       <div class="bar-row"><div class="lbl"><span>${l}</span><b>${wan(v)}</b></div>
       <div class="meter"><i style="width:${totL ? (v / totL) * 100 : 0}%;background:${C.green}"></i></div>
       <p class="note" style="margin:-6px 0 0">${y.toFixed(1)} 年 × ${money(R.total)} × 12 個月</p></div>`).join('')}
-    <p class="note">能自由活動的健康期，比全部餘命短得多；旅遊等開銷宜集中規劃在前段。</p>
+    <p class="note">能自由活動的健康期比全部餘命短得多；旅遊等開銷宜集中規劃在前段。</p>
+  </section>
+
+  <section class="card">
+    <details class="yearly"><summary>逐年明細表</summary>
+      <div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>年齡</th><th>西元</th><th>階段</th><th>當年投入／提領</th><th>年底資產池</th><th>生活費（月）</th></tr></thead>
+        <tbody>${yearlyRows(base).map((r) => `<tr><td>${r.age}</td><td>${r.year}</td><td>${r.phase}</td><td class="${r.flow < 0 ? 'bad' : ''}">${r.flow < 0 ? '−' : ''}${money(Math.abs(r.flow))}</td><td>${money(r.pool)}</td><td>${money(r.expense)}</td></tr>`).join('')}</tbody>
+      </table></div>
+      <div class="btn-row" style="margin-top:12px"><button type="button" class="btn" data-act="csv">下載 CSV</button></div>
+    </details>
   </section>`;
 }
 
-function investAt(t, d) {
-  let pool = 0;
-  for (const h of state.holdings) pool += growLump(holdingValue(h, state.fx), t, h.rate + d);
-  for (const p of state.portfolios) for (const a of p.assets) {
-    const r = (a.rate + d) / 100 / 12, n = 12 * t;
-    pool += a.monthly <= 0 || t <= 0 ? 0 : r === 0 ? a.monthly * n : a.monthly * (Math.pow(1 + r, n) - 1) / r;
-  }
-  return pool;
+function yearlyRows(lc) {
+  const me = R.me, cpi = state.cpi / 100;
+  return lc.points.map((p) => {
+    const t = p.age - me.age;
+    return {
+      age: p.age, year: NOW + t, phase: p.phase === 'save' ? '累積' : '提領',
+      flow: p.phase === 'save' ? (t === 0 ? 0 : R.monthlyInvest * 12) : -R.investMonthly * 12,
+      pool: p.pool, expense: R.expenseToday * Math.pow(1 + cpi, t),
+    };
+  });
+}
+
+function exportCsv() {
+  const rows = yearlyRows(lifecycle(state, NOW));
+  const head = ['年齡', '西元', '階段', '當年投入或提領', '年底資產池', '生活費（月）'];
+  const body = rows.map((r) => [r.age, r.year, r.phase, Math.round(r.flow), Math.round(r.pool), Math.round(r.expense)].join(','));
+  const blob = new Blob(['﻿' + [head.join(','), ...body].join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `早謀遠算_逐年明細_${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
 /* ── 側欄摘要 ─────────────────────────────── */
@@ -644,6 +717,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'add-asset') state.portfolios.find((p) => p.id === pid)?.assets.push({ id: uid('a'), name: '新標的', monthly: 3000, rate: 5 });
   else if (act === 'del-asset') { const p = state.portfolios.find((x) => x.id === pid); if (p) p.assets = p.assets.filter((a) => a.id !== id); }
   else if (act === 'export') return exportFile();
+  else if (act === 'csv') return exportCsv();
   else if (act === 'reset') { if (!confirm('清除所有設定，回到預設值？')) return; state = defaults(NOW); }
   else if (act === 'share') return openShare();
   else if (act === 'close-dialog') return t.closest('dialog').close();
@@ -727,4 +801,5 @@ renderTabs();
 renderPage();
 refreshOutputs();
 renderAside();
+attachTooltips(document);
 if (seeded) { save(state); toast('已帶入介紹頁的年齡、月薪與每月投資'); }

@@ -265,3 +265,82 @@ export function compute(state, nowYear = new Date().getFullYear()) {
   };
 }
 
+
+/* ── 分析：全生命週期、敏感度、退休年齡比較 ─────────── */
+
+/** 深拷貝狀態（狀態只有純資料） */
+const cloneState = (s) => JSON.parse(JSON.stringify(s));
+
+/** 所有投資資產報酬率同時加減 delta 個百分點 */
+function shiftReturns(s, delta) {
+  for (const h of s.holdings) h.rate = num(h.rate) + delta;
+  for (const p of s.portfolios) for (const a of p.assets) a.rate = num(a.rate) + delta;
+  return s;
+}
+
+/**
+ * 投資資產池從現在到 100 歲的逐年走勢：退休前累積，退休後每年提領固定的投資月領 × 12，
+ * 剩餘資產以退休後報酬滾存。rateDelta 同時套用在累積期與退休後報酬。
+ */
+export function lifecycle(state, nowYear = new Date().getFullYear(), rateDelta = 0) {
+  const s = shiftReturns(cloneState(state), rateDelta);
+  s.postReturn = num(s.postReturn) + (s.payoutMode === 'annuity' ? rateDelta : 0);
+  const r = compute(s, nowYear);
+  const pts = [];
+  for (let t = 0; t <= r.n; t++) pts.push({ age: r.me.age + t, pool: investPoolAt(s, t), phase: 'save' });
+  let pool = r.investPool;
+  const post = num(state.postReturn) / 100 + (rateDelta / 100);
+  let runoutAge = null;
+  for (let age = s.self.retireAge + 1; age <= 100; age++) {
+    pool = pool * (1 + post) - r.investMonthly * 12;
+    if (pool <= 0) { pts.push({ age, pool: 0, phase: 'spend' }); if (r.investMonthly > 0) runoutAge = age; break; }
+    pts.push({ age, pool, phase: 'spend' });
+  }
+  return { points: pts, runoutAge, total: r.total, totalPV: r.totalPV, investMonthly: r.investMonthly, pool: r.investPool };
+}
+
+/**
+ * 敏感度：一次只動一個變數，看退休月領（今日幣值）變多少。
+ * 回傳依影響幅度排序的 [{ key, label, lowLabel, highLabel, low, high }]，low/high 為與基準的差額。
+ */
+export function sensitivity(state, nowYear = new Date().getFullYear()) {
+  const base = compute(state, nowYear).totalPV;
+  const pv = (mut) => { const s = cloneState(state); mut(s); return compute(s, nowYear).totalPV - base; };
+  const monthlyTotal = state.portfolios.reduce((t, p) => t + p.assets.reduce((u, a) => u + num(a.monthly), 0), 0);
+  const addMonthly = (s, d) => {
+    if (d > 0) {
+      s.portfolios.push({ id: 'sens', name: 'sens', assets: [{ id: 'sens', name: 'sens', monthly: d, rate: num(state.investReturn) }] });
+    } else if (monthlyTotal > 0) {
+      const f = Math.max(0, monthlyTotal + d) / monthlyTotal;
+      for (const p of s.portfolios) for (const a of p.assets) a.monthly = num(a.monthly) * f;
+    }
+  };
+  const rows = [
+    { key: 'retire', label: '退休年齡', lowLabel: '早 2 年', highLabel: '晚 2 年',
+      low: pv((s) => { s.self.retireAge = Math.max(50, s.self.retireAge - 2); }),
+      high: pv((s) => { s.self.retireAge = Math.min(75, s.self.retireAge + 2); }) },
+    { key: 'invest', label: '每月投資', lowLabel: '少 5,000', highLabel: '多 5,000',
+      low: pv((s) => addMonthly(s, -5000)), high: pv((s) => addMonthly(s, 5000)) },
+    { key: 'return', label: '投資報酬率', lowLabel: '−1%', highLabel: '+1%',
+      low: pv((s) => shiftReturns(s, -1)), high: pv((s) => shiftReturns(s, 1)) },
+    { key: 'selfRate', label: '勞退自提', lowLabel: '0%', highLabel: '6%',
+      low: pv((s) => { s.self.selfRate = 0; }), high: pv((s) => { s.self.selfRate = 6; }) },
+    { key: 'growth', label: '薪資年增率', lowLabel: '−1%', highLabel: '+1%',
+      low: pv((s) => { s.salaryGrowth = Math.max(0, num(s.salaryGrowth) - 1); }), high: pv((s) => { s.salaryGrowth = num(s.salaryGrowth) + 1; }) },
+    { key: 'cpi', label: '通膨率', lowLabel: '−1%', highLabel: '+1%',
+      low: pv((s) => { s.cpi = Math.max(0, num(s.cpi) - 1); }), high: pv((s) => { s.cpi = num(s.cpi) + 1; }) },
+  ];
+  return rows.sort((a, b) => Math.max(Math.abs(b.low), Math.abs(b.high)) - Math.max(Math.abs(a.low), Math.abs(a.high)));
+}
+
+/** 不同退休年齡的結果比較（只列比目前年齡大的） */
+export function retireAgeOptions(state, nowYear = new Date().getFullYear(), ages = [60, 62, 65, 67, 70]) {
+  const age = nowYear - state.self.birthYear;
+  const list = [...new Set([...ages, state.self.retireAge])].filter((a) => a > age).sort((x, y) => x - y);
+  return list.map((retireAge) => {
+    const s = cloneState(state);
+    s.self.retireAge = retireAge;
+    const r = compute(s, nowYear);
+    return { retireAge, total: r.total, totalPV: r.totalPV, coverage: r.coverage, pool: r.investPool, ins: r.me.insMonthly, current: retireAge === state.self.retireAge };
+  });
+}

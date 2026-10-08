@@ -24,7 +24,7 @@ function niceTicks(max, count = 4) {
  * series: [{ points: [{x, y}], color, fill?, dash? }]
  * marks:  [{ x, label, color }] 垂直標記
  */
-export function lineChart({ series, xFmt = (x) => x, yFmt = wan, marks = [], width = 640, height = 230, xStep }) {
+export function lineChart({ series, xFmt = (x) => x, yFmt = wan, marks = [], width = 640, height = 230, xStep, tip }) {
   const L = 52, R = 14, T = 12, B = 26;
   const all = series.flatMap((s) => s.points);
   if (!all.length) return '';
@@ -38,7 +38,17 @@ export function lineChart({ series, xFmt = (x) => x, yFmt = wan, marks = [], wid
   const xs = [];
   for (let x = Math.ceil(x0 / step) * step; x <= x1; x += step) xs.push(x);
 
-  let svg = `<svg class="chart" viewBox="0 0 ${width} ${height}" role="img">`;
+  // tip: { title: (x) => 字串, fmt: (v) => 字串 }；把每個 x 的各序列數值嵌進 data-tip，供 attachTooltips 使用
+  let tipAttr = '';
+  if (tip) {
+    const xsAll = [...new Set(all.map((p) => p.x))].sort((a, b) => a - b);
+    const rows = xsAll.map((x) => ({
+      x, px: +sx(x).toFixed(1), t: tip.title(x),
+      v: series.map((s) => { const p = s.points.find((q) => q.x === x); return p && s.name ? [s.name, s.color, tip.fmt(p.y)] : null; }).filter(Boolean),
+    }));
+    tipAttr = ` data-tip="${encodeURIComponent(JSON.stringify({ w: width, top: T, bottom: height - B, rows }))}"`;
+  }
+  let svg = `<svg class="chart" viewBox="0 0 ${width} ${height}" role="img"${tipAttr}>`;
   for (const t of ticks) svg += `<line class="grid-l" x1="${L}" x2="${width - R}" y1="${sy(t)}" y2="${sy(t)}"/><text x="${L - 6}" y="${sy(t) + 4}" text-anchor="end">${yFmt(t)}</text>`;
   for (const x of xs) svg += `<text x="${sx(x)}" y="${height - 6}" text-anchor="middle">${xFmt(x)}</text>`;
   for (const s of series) {
@@ -51,7 +61,37 @@ export function lineChart({ series, xFmt = (x) => x, yFmt = wan, marks = [], wid
     svg += `<line x1="${x}" x2="${x}" y1="${T}" y2="${height - B}" stroke="${m.color}" stroke-width="1.5" stroke-dasharray="3 3"/>`;
     svg += `<text x="${x + 4}" y="${T + 10}" style="fill:${m.color};font-weight:700">${m.label}</text>`;
   }
+  if (tip) svg += `<line class="hover-l" x1="0" x2="0" y1="${T}" y2="${height - B}" stroke="#1E3554" stroke-width="1" opacity="0"/>`;
   return svg + '</svg>';
+}
+
+/** 折線圖滑鼠／觸控提示：在 root 上委派事件，只需呼叫一次 */
+export function attachTooltips(root = document) {
+  let box = document.querySelector('.chart-tip');
+  if (!box) { box = document.createElement('div'); box.className = 'chart-tip'; box.setAttribute('role', 'status'); document.body.appendChild(box); }
+  const hide = (svg) => { box.classList.remove('show'); svg?.querySelector('.hover-l')?.setAttribute('opacity', '0'); };
+  const move = (e) => {
+    const svg = e.target.closest?.('svg.chart[data-tip]');
+    if (!svg) return;
+    const d = svg._tip || (svg._tip = JSON.parse(decodeURIComponent(svg.dataset.tip)));
+    const rect = svg.getBoundingClientRect();
+    const vx = ((e.clientX - rect.left) / rect.width) * d.w;
+    let best = d.rows[0];
+    for (const r of d.rows) if (Math.abs(r.px - vx) < Math.abs(best.px - vx)) best = r;
+    const line = svg.querySelector('.hover-l');
+    line.setAttribute('x1', best.px); line.setAttribute('x2', best.px); line.setAttribute('opacity', '.35');
+    box.innerHTML = `<b>${best.t}</b>` + best.v.map(([n, c, v]) => `<div><i style="background:${c}"></i>${n}<span>${v}</span></div>`).join('');
+    const left = rect.left + (best.px / d.w) * rect.width;
+    box.classList.add('show');
+    const bw = box.offsetWidth;
+    const x = Math.min(window.innerWidth - bw - 8, Math.max(8, left - bw / 2));
+    const h = box.offsetHeight;
+    const y = e.clientY - h - 14 > 8 ? e.clientY - h - 14 : e.clientY + 18; // 上方放不下就放到游標下方
+    box.style.transform = `translate(${x}px, ${y + window.scrollY}px)`;
+  };
+  root.addEventListener('pointermove', move);
+  root.addEventListener('pointerdown', move);
+  root.addEventListener('pointerout', (e) => { const svg = e.target.closest?.('svg.chart[data-tip]'); if (svg && !svg.contains(e.relatedTarget)) hide(svg); });
 }
 
 /** 環圈圖 */
