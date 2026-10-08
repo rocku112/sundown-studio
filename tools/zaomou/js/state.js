@@ -45,7 +45,42 @@ export function defaults(nowYear = new Date().getFullYear()) {
     region: '',
     targetMonthly: 50000,
     investReturn: 6,
+    insHaircut: 0, // 勞保給付打折壓力測試（%）
+    volatility: 12, // 蒙地卡羅：投資年化波動度假設（%）
+    care: { enabled: false, startAge: 80, monthly: 30000 }, // 晚年照護支出（今日幣值）
+    events: [], // 人生重大事件 { id, name, age, amount（今日幣值）, kind: 'out'|'in' }
+    actionsDone: {}, // 行動清單勾選狀態 { id: true }
+    tracking: { baseline: null, checkins: [] }, // 年度進度追蹤：基準計畫與每次實際記錄
   };
+}
+
+/* ── 快速開始範本（數字為示意，套用後可再調整） ── */
+export function templates(nowYear = new Date().getFullYear()) {
+  const base = () => defaults(nowYear);
+  const pf = (monthly) => (monthly > 0 ? [{ id: 'p1', name: '定期投資', assets: [{ id: 'a1', name: '市值型 ETF', monthly, rate: 6 }] }] : []);
+  const cash = (amount) => ({ id: 'h-cash', name: '銀行存款', kind: 'cash', shares: 0, price: 0, amount, rate: 1.5 });
+  const etf = (amount) => ({ id: 'h-etf', name: '已持有 ETF', kind: 'cash', shares: 0, price: 0, amount, rate: 6 });
+  const list = [
+    { id: 'fresh', name: '社會新鮮人', desc: '25 歲、月薪 3.2 萬、剛開始存錢', make: () => {
+      const s = base(); Object.assign(s.self, { birthYear: nowYear - 25, workStartAge: 23, salary: 32000, selfRate: 0 });
+      s.holdings = [cash(100000)]; s.portfolios = pf(3000); s.monthlyExpense = 25000; s.targetMonthly = 40000; return s; } },
+    { id: 'single', name: '單身上班族', desc: '35 歲、月薪 5 萬、每月投資 1 萬', make: () => {
+      const s = base(); Object.assign(s.self, { birthYear: nowYear - 35, workStartAge: 23, salary: 50000, selfRate: 0 });
+      s.holdings = [cash(600000), etf(400000)]; s.portfolios = pf(10000); s.monthlyExpense = 31000; s.targetMonthly = 50000; return s; } },
+    { id: 'family', name: '雙薪家庭', desc: '40 歲、夫妻月薪 6 萬＋5 萬、有子女教育支出', make: () => {
+      const s = base(); Object.assign(s.self, { birthYear: nowYear - 40, workStartAge: 24, salary: 60000, selfRate: 3 });
+      Object.assign(s.spouse, { enabled: true, name: '配偶', birthYear: nowYear - 38, gender: 'female', workStartAge: 24, salary: 50000, selfRate: 0 });
+      s.holdings = [cash(1000000), etf(800000)]; s.portfolios = pf(15000); s.monthlyExpense = 50000; s.targetMonthly = 80000;
+      s.events = [{ id: 'e1', name: '子女大學學費', age: 50, amount: 1000000, kind: 'out' }]; return s; } },
+    { id: 'near', name: '接近退休', desc: '55 歲、勞退累積 250 萬、想確認夠不夠', make: () => {
+      const s = base(); Object.assign(s.self, { birthYear: nowYear - 55, workStartAge: 25, salary: 70000, selfRate: 6, laborBalance: 2500000 });
+      s.holdings = [cash(3000000), etf(2000000)]; s.portfolios = pf(20000); s.monthlyExpense = 40000; s.targetMonthly = 55000;
+      s.care = { enabled: true, startAge: 80, monthly: 30000 }; return s; } },
+    { id: 'fire', name: '提早退休', desc: '35 歲、月薪 8 萬、每月投資 4 萬、50 歲退休', make: () => {
+      const s = base(); Object.assign(s.self, { birthYear: nowYear - 35, workStartAge: 23, salary: 80000, selfRate: 6, retireAge: 50 });
+      s.holdings = [cash(800000), etf(2500000)]; s.portfolios = pf(40000); s.monthlyExpense = 40000; s.targetMonthly = 50000; return s; } },
+  ];
+  return list.map((t) => ({ ...t, make: () => normalize(t.make()) }));
 }
 
 /* 以預設值為骨架合併，缺漏欄位補齊、型別不符者丟棄 */
@@ -66,6 +101,7 @@ export function normalize(raw) {
   const s = merge(defaults(), raw || {});
   s.schema = SCHEMA;
   s.holdings = s.holdings.map((h) => merge({ id: uid('h'), name: '資產', kind: 'tw', shares: 0, price: 0, amount: 0, rate: 0 }, h));
+  s.events = s.events.map((e) => merge({ id: uid('e'), name: '事件', age: 50, amount: 0, kind: 'out' }, e));
   s.portfolios = s.portfolios.map((p) => ({
     ...merge({ id: uid('p'), name: '投資組合', assets: [] }, p),
     assets: (p.assets || []).map((a) => merge({ id: uid('a'), name: '標的', monthly: 0, rate: 0 }, a)),

@@ -24,15 +24,17 @@ function niceTicks(max, count = 4) {
  * series: [{ points: [{x, y}], color, fill?, dash? }]
  * marks:  [{ x, label, color }] 垂直標記
  */
-export function lineChart({ series, xFmt = (x) => x, yFmt = wan, marks = [], width = 640, height = 230, xStep, tip }) {
+export function lineChart({ series, bands = [], xFmt = (x) => x, yFmt = wan, marks = [], width = 640, height = 230, xStep, tip, yCap }) {
   const L = 52, R = 14, T = 12, B = 26;
   const all = series.flatMap((s) => s.points);
   if (!all.length) return '';
   const x0 = Math.min(...all.map((p) => p.x)), x1 = Math.max(...all.map((p) => p.x), x0 + 1);
-  const ticks = niceTicks(Math.max(...all.map((p) => p.y), 1));
+  const bandMax = Math.max(0, ...bands.flatMap((b) => b.points.map((p) => p.hi)));
+  // yCap：縱軸上限（極端值會貼齊頂端，避免少數路徑把主要曲線壓扁）
+  const ticks = niceTicks(yCap || Math.max(...all.map((p) => p.y), bandMax, 1));
   const yMax = ticks[ticks.length - 1] || 1;
   const sx = (x) => L + ((x - x0) / (x1 - x0)) * (width - L - R);
-  const sy = (y) => height - B - (Math.max(0, y) / yMax) * (height - T - B);
+  const sy = (y) => height - B - (Math.min(Math.max(0, y), yMax) / yMax) * (height - T - B);
   const span = x1 - x0;
   const step = xStep || (span <= 12 ? 2 : span <= 30 ? 5 : 10);
   const xs = [];
@@ -54,10 +56,17 @@ export function lineChart({ series, xFmt = (x) => x, yFmt = wan, marks = [], wid
   let svg = `<svg class="chart" viewBox="0 0 ${width} ${height}" role="img"${label ? ` aria-label="${label}"` : ''}${tipAttr}>`;
   for (const t of ticks) svg += `<line class="grid-l" x1="${L}" x2="${width - R}" y1="${sy(t)}" y2="${sy(t)}"/><text x="${L - 6}" y="${sy(t) + 4}" text-anchor="end">${yFmt(t)}</text>`;
   for (const x of xs) svg += `<text x="${sx(x)}" y="${height - 6}" text-anchor="middle">${xFmt(x)}</text>`;
+  // 區間帶（例如蒙地卡羅 P10–P90）畫在折線下方
+  for (const b of bands) {
+    const up = b.points.map((p) => `${sx(p.x).toFixed(1)},${sy(p.hi).toFixed(1)}`);
+    const down = [...b.points].reverse().map((p) => `${sx(p.x).toFixed(1)},${sy(p.lo).toFixed(1)}`);
+    svg += `<polygon points="${[...up, ...down].join(' ')}" fill="${b.fill}"/>`;
+  }
   for (const s of series) {
     const pts = s.points.map((p) => `${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join(' ');
     if (s.fill) svg += `<polygon points="${sx(s.points[0].x)},${sy(0)} ${pts} ${sx(s.points[s.points.length - 1].x)},${sy(0)}" fill="${s.fill}"/>`;
-    svg += `<polyline points="${pts}" fill="none" stroke="${s.color}" stroke-width="2.4" stroke-linejoin="round" ${s.dash ? 'stroke-dasharray="6 4"' : ''}/>`;
+    if (!s.dotsOnly) svg += `<polyline points="${pts}" fill="none" stroke="${s.color}" stroke-width="2.4" stroke-linejoin="round" ${s.dash ? 'stroke-dasharray="6 4"' : ''}/>`;
+    if (s.dots || s.dotsOnly) for (const p of s.points) svg += `<circle cx="${sx(p.x).toFixed(1)}" cy="${sy(p.y).toFixed(1)}" r="5" fill="${s.color}" stroke="#fff" stroke-width="2"/>`;
   }
   for (const m of marks) {
     const x = sx(m.x);

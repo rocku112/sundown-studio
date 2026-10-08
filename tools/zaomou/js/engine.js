@@ -131,12 +131,40 @@ export function holdingValue(h, fx) {
   return Math.max(0, num(h.shares) * 1000 * num(h.price)); // 台股以「張」計
 }
 
-/** 年 t 時投資資產池（現有資產 + 定期投入），rateDelta 用於情境分析 */
-export function investPoolAt(state, t, rateDelta = 0) {
+/**
+ * 人生重大事件：某年齡的一次性支出（out）或收入（in），以今日幣值輸入、依通膨推到當年。
+ * 回傳該事件的名目金額（支出為負）。
+ */
+export function eventAmount(state, ev, currentAge) {
+  const sign = ev.kind === 'in' ? 1 : -1;
+  return sign * Math.max(0, num(ev.amount)) * Math.pow(1 + num(state.cpi) / 100, Math.max(0, num(ev.age) - currentAge));
+}
+
+/** 退休前（含退休當年）的事件對 t 年後資產池的影響：錢被提走或存入後，以「新增投資報酬」複利 */
+export function eventsPoolAt(state, t, rateDelta = 0, currentAge) {
+  if (currentAge === undefined || !state.events?.length) return 0;
+  let sum = 0;
+  for (const ev of state.events) {
+    const te = num(ev.age) - currentAge;
+    if (te < 0 || te > t || num(ev.age) > state.self.retireAge) continue;
+    sum += growLump(Math.abs(eventAmount(state, ev, currentAge)), t - te, num(state.investReturn) + rateDelta) * Math.sign(eventAmount(state, ev, currentAge));
+  }
+  return sum;
+}
+
+/** 退休後某年齡的事件淨額（名目） */
+function eventsFlowAt(state, age, currentAge) {
+  let sum = 0;
+  for (const ev of state.events || []) if (num(ev.age) === age && age > state.self.retireAge) sum += eventAmount(state, ev, currentAge);
+  return sum;
+}
+
+/** 年 t 時投資資產池（現有資產 + 定期投入 + 退休前人生事件），rateDelta 用於情境分析 */
+export function investPoolAt(state, t, rateDelta = 0, currentAge) {
   let pool = 0;
   for (const h of state.holdings) pool += growLump(holdingValue(h, state.fx), t, num(h.rate) + rateDelta);
   for (const p of state.portfolios) for (const a of p.assets) pool += growMonthly(num(a.monthly), t, num(a.rate) + rateDelta);
-  return pool;
+  return pool + eventsPoolAt(state, t, rateDelta, currentAge);
 }
 
 /* ── 單人計算 ─────────────────────────────────── */
@@ -157,8 +185,10 @@ function person(p, ctx) {
   const ins = laborInsurance({ base, years: insYears, birthYear: p.birthYear, claimAge: p.retireAge });
   // 勞保一次金同樣要到法定請領年齡才能領，以開始領取後的月數換算
   const insStart = ins.kind === 'annuity' ? Math.max(p.retireAge, ins.startAge) : Math.max(p.retireAge, ins.legal);
-  const insMonthly = ins.kind === 'annuity' ? ins.monthly
+  const insFull = ins.kind === 'annuity' ? ins.monthly
     : Math.round(makePayout(Math.max(12, Math.round((lifeAge - insStart) * 12)), ctx.payoutMode, ctx.postReturn).toMonthly(ins.lump));
+  // 壓力測試：假設勞保給付打折（制度改革或財務吃緊）
+  const insMonthly = Math.round(insFull * (1 - clamp(num(ctx.insHaircut), 0, 100) / 100));
 
   const acct = laborPensionAccount({
     salary: p.salary, growthPct: ctx.salaryGrowth, selfRate: p.selfRate, returnPct: p.laborReturn,
@@ -176,7 +206,7 @@ function person(p, ctx) {
 
   return {
     age, yearsToRetire, lifeAge, healthAge, payout, payoutMonths,
-    insBase: base, insBaseNow: baseNow, insGrade: insuranceGrade(baseNow).grade, insYears, ins, insMonthly,
+    insFull, insBase: base, insBaseNow: baseNow, insGrade: insuranceGrade(baseNow).grade, insYears, ins, insMonthly,
     acct, laborRetire, oldUnits: units, oldLump, oldMonthly, finalSalary,
     floor: insMonthly + laborRetire + oldMonthly,
     bridge: bridgeGap(p.retireAge, insStart, laborStart, insMonthly, laborRetire),
@@ -196,6 +226,13 @@ function bridgeGap(retireAge, insStart, laborStart, insMonthly, laborMonthly) {
   };
 }
 
+/** 晚年照護支出：某年齡那一年的名目年度金額（今日幣值依通膨推到該年） */
+export function careCostAt(state, age, currentAge) {
+  const c = state.care;
+  if (!c || !c.enabled || age < c.startAge) return 0;
+  return num(c.monthly) * 12 * Math.pow(1 + num(state.cpi) / 100, Math.max(0, age - currentAge));
+}
+
 /* ── 主計算 ───────────────────────────────────── */
 
 export function compute(state, nowYear = new Date().getFullYear()) {
@@ -206,6 +243,7 @@ export function compute(state, nowYear = new Date().getFullYear()) {
     postReturn: num(state.postReturn),
     lifeAge: state.lifeAgeOverride ?? null,
     healthAge: state.healthAgeOverride ?? null,
+    insHaircut: num(state.insHaircut),
   };
   const me = person(state.self, ctx);
   const n = me.yearsToRetire;
@@ -230,10 +268,12 @@ export function compute(state, nowYear = new Date().getFullYear()) {
   });
   const portfolioPool = portfolioRows.reduce((s, p) => s + p.pool, 0);
   const monthlyInvest = state.portfolios.reduce((s, p) => s + p.assets.reduce((t, a) => t + num(a.monthly), 0), 0);
-  const investPool = holdingsPool + portfolioPool;
+  const eventsPool = eventsPoolAt(state, n, 0, me.age);
+  const investPool = Math.max(0, holdingsPool + portfolioPool + eventsPool); // 事件支出大於資產時以 0 計
   const holdingsMonthly = Math.round(me.payout.toMonthly(holdingsPool));
   const portfolioMonthly = Math.round(me.payout.toMonthly(portfolioPool));
-  const investMonthly = holdingsMonthly + portfolioMonthly;
+  const investMonthly = Math.round(me.payout.toMonthly(investPool));
+  const eventsMonthly = investMonthly - holdingsMonthly - portfolioMonthly; // 人生事件對月領的影響（通常為負）
 
   // 配偶（各自以本人年齡、生命表計算）
   const spouse = state.spouse.enabled ? person(state.spouse, { ...ctx, lifeAge: null, healthAge: null }) : null;
@@ -263,12 +303,13 @@ export function compute(state, nowYear = new Date().getFullYear()) {
   for (let k = 0; k <= runYears; k++) {
     cashflow.push({ age: state.self.retireAge + k, pool: Math.max(0, pool) });
     if (pool <= 0 && k > 0 && investMonthly > 0) { runoutAge = state.self.retireAge + k; break; }
-    pool = pool * (1 + num(state.postReturn) / 100) - investMonthly * 12;
+    const nextAge = state.self.retireAge + k + 1;
+    pool = pool * (1 + num(state.postReturn) / 100) - investMonthly * 12 - careCostAt(state, nextAge, me.age) + eventsFlowAt(state, nextAge, me.age);
   }
 
   // 資產累積曲線與目標池
   const growth = [];
-  for (let t = 0; t <= n; t++) growth.push({ age: me.age + t, pool: investPoolAt(state, t) });
+  for (let t = 0; t <= n; t++) growth.push({ age: me.age + t, pool: investPoolAt(state, t, 0, me.age) });
 
   // 財務自由：投資資產池足以單獨支應「通膨後生活費」直到預期壽命
   let fireAge = null;
@@ -278,20 +319,28 @@ export function compute(state, nowYear = new Date().getFullYear()) {
       const ageT = me.age + t;
       const months = Math.max(12, Math.round((me.lifeAge - ageT) * 12));
       const need = makePayout(months, 'annuity', realR * 100).toPool(expenseToday * Math.pow(1 + cpi, t));
-      if (investPoolAt(state, t) >= need) { fireAge = ageT; break; }
+      if (investPoolAt(state, t, 0, me.age) >= need) { fireAge = ageT; break; }
     }
   }
 
   // 三情境：所有投資資產報酬率 −2 / ±0 / +2 個百分點
   const scenarios = [-2, 0, 2].map((d) => {
-    const p = investPoolAt(state, n, d);
+    const p = Math.max(0, investPoolAt(state, n, d, me.age));
     return { delta: d, pool: p, monthly: Math.round(me.payout.toMonthly(p)) + floor + spouseTotal };
   });
 
+  // 照護期：開始那年的生活費＋照護費（名目）對比固定月領
+  let care = null;
+  if (state.care?.enabled) {
+    const yrs = Math.max(0, state.care.startAge - me.age);
+    const need = (expenseToday + num(state.care.monthly)) * Math.pow(1 + cpi, yrs);
+    care = { startAge: state.care.startAge, need, gap: need - total, monthlyAtStart: num(state.care.monthly) * Math.pow(1 + cpi, yrs), years: Math.max(0, me.lifeAge - state.care.startAge) };
+  }
+
   return {
-    me, spouse, n, pvFactor,
+    me, spouse, n, pvFactor, care,
     benefitPool, benefitMonthly,
-    holdingsNow, holdingsPool, holdingsMonthly, portfolioRows, portfolioPool, portfolioMonthly,
+    holdingsNow, holdingsPool, holdingsMonthly, portfolioRows, portfolioPool, portfolioMonthly, eventsPool, eventsMonthly,
     monthlyInvest, investPool, investMonthly,
     floor, selfTotal, spouseTotal, total, totalPV: Math.round(total * pvFactor),
     expenseToday, expenseAtRetire, coverage,
@@ -322,12 +371,12 @@ export function lifecycle(state, nowYear = new Date().getFullYear(), rateDelta =
   s.postReturn = num(s.postReturn) + (s.payoutMode === 'annuity' ? rateDelta : 0);
   const r = compute(s, nowYear);
   const pts = [];
-  for (let t = 0; t <= r.n; t++) pts.push({ age: r.me.age + t, pool: investPoolAt(s, t), phase: 'save' });
+  for (let t = 0; t <= r.n; t++) pts.push({ age: r.me.age + t, pool: Math.max(0, investPoolAt(s, t, 0, r.me.age)), phase: 'save' });
   let pool = r.investPool;
   const post = num(state.postReturn) / 100 + (rateDelta / 100);
   let runoutAge = null;
   for (let age = s.self.retireAge + 1; age <= 100; age++) {
-    pool = pool * (1 + post) - r.investMonthly * 12;
+    pool = pool * (1 + post) - r.investMonthly * 12 - careCostAt(s, age, r.me.age) + eventsFlowAt(s, age, r.me.age);
     if (pool <= 0) { pts.push({ age, pool: 0, phase: 'spend' }); if (r.investMonthly > 0) runoutAge = age; break; }
     pts.push({ age, pool, phase: 'spend' });
   }
@@ -362,6 +411,8 @@ export function sensitivity(state, nowYear = new Date().getFullYear()) {
       low: pv((s) => { s.self.selfRate = 0; }), high: pv((s) => { s.self.selfRate = 6; }) },
     { key: 'growth', label: '薪資年增率', lowLabel: '−1%', highLabel: '+1%',
       low: pv((s) => { s.salaryGrowth = Math.max(0, num(s.salaryGrowth) - 1); }), high: pv((s) => { s.salaryGrowth = num(s.salaryGrowth) + 1; }) },
+    { key: 'ins', label: '勞保給付', lowLabel: '打 8 折', highLabel: '照現制',
+      low: pv((s) => { s.insHaircut = Math.min(100, num(s.insHaircut) + 20); }), high: pv((s) => { s.insHaircut = 0; }) },
     { key: 'cpi', label: '通膨率', lowLabel: '−1%', highLabel: '+1%',
       low: pv((s) => { s.cpi = Math.max(0, num(s.cpi) - 1); }), high: pv((s) => { s.cpi = num(s.cpi) + 1; }) },
   ];
@@ -460,6 +511,11 @@ export function validate(state, nowYear = new Date().getFullYear()) {
   };
   check(state.self, '', 'self');
   if (state.spouse.enabled) check(state.spouse, `${state.spouse.name || '配偶'}的`, 'spouse');
+  const curAge = nowYear - state.self.birthYear;
+  for (const ev of state.events || []) {
+    if (ev.age < curAge) add('events', 'warn', `人生事件「${ev.name}」的年齡（${ev.age}）已經過去，不會計入。`);
+    else if (ev.age > 100) add('events', 'warn', `人生事件「${ev.name}」的年齡（${ev.age}）超過 100 歲，不會計入。`);
+  }
   const life = state.lifeAgeOverride;
   if (life !== null && life !== undefined && life <= state.self.retireAge) add('lifeAgeOverride', 'error', `預期壽命（${life}）不大於退休年齡，無法計算提領月數。`);
   const health = state.healthAgeOverride;
@@ -510,4 +566,177 @@ export function selfContributionTax(salary, selfRate) {
   const saving = before - after;
   const marginal = (TAX.brackets.find(([u]) => net(annual) <= u) || TAX.brackets[0])[1];
   return { contrib, saving, netCost: contrib - saving, marginal: net(annual) > 0 ? marginal : 0, taxYear: TAX.year };
+}
+
+/* ── 蒙地卡羅模擬 ─────────────────────────────── */
+
+/** 可重現的亂數（mulberry32）與常態分布（Box–Muller） */
+function rng(seed) {
+  let a = seed >>> 0;
+  const uni = () => {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  return () => {
+    let u = 0, v = 0;
+    while (u === 0) u = uni();
+    while (v === 0) v = uni();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  };
+}
+
+/**
+ * 蒙地卡羅：每年投資報酬 ~ 常態(μ, σ)，μ = 加權預期報酬 g + σ²/2，使長期複利中位數約等於 g。
+ * 退休前每年投入「每月投資 × 12」，退休後每年依計畫提領投資月領 × 12，並扣照護費、加減人生事件。
+ * 成功＝在預期壽命（四捨五入）前投資資產沒有用完。
+ */
+export function monteCarlo(state, nowYear = new Date().getFullYear(), { sims = 2000, vol = num(state.volatility, 12), seed = 20261008 } = {}) {
+  const r = compute(state, nowYear);
+  const age0 = r.me.age;
+  const retire = state.self.retireAge;
+  const lifeEnd = Math.round(r.me.lifeAge);
+  // 加權預期報酬：以各資產退休時的終值加權
+  let wsum = 0, gsum = 0;
+  for (const h of state.holdings) { const w = growLump(holdingValue(h, state.fx), r.n, num(h.rate)); wsum += w; gsum += w * num(h.rate); }
+  for (const p of state.portfolios) for (const a of p.assets) { const w = growMonthly(num(a.monthly), r.n, num(a.rate)); wsum += w; gsum += w * num(a.rate); }
+  if (wsum <= 0) return null;
+  const g = gsum / wsum / 100;
+  const sigma = Math.max(0, vol) / 100;
+  const mu = g + sigma * sigma / 2;
+  const yearlyIn = r.monthlyInvest * 12;
+  const draw = r.investMonthly * 12;
+  const ages = [];
+  for (let a = age0; a <= 100; a++) ages.push(a);
+  const paths = ages.map(() => new Float64Array(sims));
+  const normal = rng(seed);
+  let ok = 0, ok90 = 0;
+  const depletedAt = [];
+  for (let i = 0; i < sims; i++) {
+    let pool = r.holdingsNow, dead = null;
+    paths[0][i] = pool;
+    for (let k = 1; k < ages.length; k++) {
+      const a = ages[k];
+      const ret = mu + sigma * normal();
+      pool = pool * (1 + ret);
+      if (a <= retire) pool += yearlyIn;
+      else pool -= draw + careCostAt(state, a, age0);
+      for (const ev of state.events || []) if (num(ev.age) === a) pool += eventAmount(state, ev, age0);
+      if (pool <= 0 && a > retire && dead === null) dead = a;
+      if (pool < 0) pool = 0;
+      paths[k][i] = pool;
+    }
+    if (dead === null || dead > lifeEnd) ok++;
+    if (dead === null || dead > 90) ok90++;
+    depletedAt.push(dead);
+  }
+  const pct = (arr, q) => { const s = Array.from(arr).sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.floor(q * s.length))]; };
+  const band = ages.map((a, k) => ({ age: a, p10: pct(paths[k], 0.1), p50: pct(paths[k], 0.5), p90: pct(paths[k], 0.9) }));
+  const kRet = ages.indexOf(retire);
+  return {
+    success: ok / sims, success90: ok90 / sims, sims, vol, g: g * 100, lifeEnd,
+    band, atRetire: kRet >= 0 ? band[kRet] : null,
+  };
+}
+
+/* ── 行動清單 ─────────────────────────────────── */
+
+/**
+ * 依試算結果產生建議行動（依重要性排序）。
+ * 每項 { id, level: 'high'|'mid'|'low', title, detail, apply? }；apply 為可一鍵套用的設定 { path, value } 或特殊動作。
+ */
+export function actionPlan(state, nowYear = new Date().getFullYear(), mc = null) {
+  const r = compute(state, nowYear);
+  const g = goalPlan(state, nowYear);
+  const list = [];
+  const add = (x) => list.push(x);
+  const money = (v) => `$${Math.round(v).toLocaleString()}`;
+  const wan = (v) => (Math.abs(v) >= 1e8 ? `${(v / 1e8).toFixed(2)}億` : `${Math.round(v / 1e4).toLocaleString()}萬`);
+
+  if (g.gapPV > 0 && Number.isFinite(g.extraMonthly)) {
+    const amt = Math.ceil(g.extraMonthly / 100) * 100;
+    add({ id: 'gap', level: 'high', title: `每月多投資 ${money(amt)}，補足退休目標`,
+      detail: `目前規劃只達成目標的 ${Math.round(g.progress * 100)}%，以年化 ${num(state.investReturn)}% 投入 ${g.n} 年可補足。也可改用延後退休或一次投入（見下方補足方式）。`,
+      apply: { act: 'apply-extra', value: amt } });
+  }
+  if (num(state.self.selfRate) < 6 && state.self.salary > 0) {
+    const t = selfContributionTax(state.self.salary, 6);
+    const now = selfContributionTax(state.self.salary, num(state.self.selfRate));
+    add({ id: 'selfRate', level: 'high', title: '勞退自提提高到 6%',
+      detail: `每月多提撥 ${money((t.contrib - now.contrib) / 12)}，${t.saving - now.saving > 0 ? `每年約少繳稅 ${money(t.saving - now.saving)}，` : ''}${g.selfRate6 ? `月領（今日幣值）增加 ${money(g.selfRate6.gain)}` : ''}。向公司人資申請即可，隨時可調整。`,
+      apply: { path: 'self.selfRate', value: 6 } });
+  }
+  const cash = state.holdings.filter((h) => h.kind === 'cash').reduce((s, h) => s + holdingValue(h, state.fx), 0);
+  const need6 = num(state.monthlyExpense) * 6;
+  if (need6 > 0 && cash < need6) {
+    add({ id: 'emergency', level: 'high', title: `準備 6 個月緊急預備金（還差 ${money(need6 - cash)}）`,
+      detail: `以每月生活費 ${money(state.monthlyExpense)} 計，建議至少 ${money(need6)} 放在活存或定存，避免急用時被迫在低點賣出投資。` });
+  }
+  if (r.me.bridge.years > 0) {
+    add({ id: 'bridge', level: 'high', title: `為 ${r.me.bridge.years} 年空窗期準備 ${wan(r.me.bridge.missing)}`,
+      detail: `${state.self.retireAge} 歲退休後，勞退 ${r.me.bridge.laborStart} 歲、勞保 ${r.me.bridge.insStart} 歲才開始領，這段期間要靠自己的資產。` });
+  }
+  if (mc && mc.success < 0.85) {
+    add({ id: 'mc', level: mc.success < 0.7 ? 'high' : 'mid', title: `提高安全邊際（目前成功率 ${Math.round(mc.success * 100)}%）`,
+      detail: '市場不好時有機會提早把錢用完。可考慮：多存一點、晚一兩年退休、降低退休後提領，或改用波動較低的資產配置。' });
+  }
+  if (state.self.laborBalance === null) {
+    add({ id: 'balance', level: 'mid', title: '查詢勞退專戶餘額並填入',
+      detail: '到勞保局 e 化服務系統或「勞動保障卡」App 查詢，填入「起點設定」後，勞退月領的估算會準確很多。' });
+  }
+  if (r.investPool <= 0) {
+    add({ id: 'invest', level: 'mid', title: '開始定期投資',
+      detail: '目前退休收入全靠勞保勞退。即使每月 3,000 元，長期複利也能明顯提高退休月領。' });
+  }
+  if (!state.care?.enabled && r.me.age >= 40) {
+    add({ id: 'care', level: 'low', title: '把晚年照護費納入規劃',
+      detail: '照護費常是晚年最大的開銷。在「起點設定」開啟晚年照護支出，看看資產能撐到幾歲。' });
+  }
+  if (!state.insHaircut) {
+    add({ id: 'stress', level: 'low', title: '做一次勞保壓力測試',
+      detail: '把勞保給付打 8 折試試看。如果結果仍然夠用，你的規劃就比較不怕制度變動。', apply: { path: 'insHaircut', value: 20 } });
+  }
+  add({ id: 'review', level: 'low', title: '每年檢視一次',
+    detail: '每年更新月薪、勞退餘額與投資市值，確認進度。薪資、市場和法規都會變，規劃也要跟著調整。' });
+  const order = { high: 0, mid: 1, low: 2 };
+  return list.sort((a, b) => order[a.level] - order[b.level]);
+}
+
+/* ── 年度進度追蹤 ─────────────────────────────── */
+
+/** 依目前設定產生逐年預期路徑（年底值）：投資資產與勞退專戶 */
+export function planPath(state, nowYear = new Date().getFullYear()) {
+  const r = compute(state, nowYear);
+  const path = [];
+  for (let t = 0; t <= r.n; t++) {
+    const acct = laborPensionAccount({
+      salary: state.self.salary, growthPct: num(state.salaryGrowth), selfRate: num(state.self.selfRate), returnPct: num(state.self.laborReturn),
+      workStartAge: state.self.workStartAge, age: r.me.age, retireAge: r.me.age + t, nowYear, balance: state.self.laborBalance,
+    });
+    path.push({ year: nowYear + t, invest: Math.max(0, investPoolAt(state, t, 0, r.me.age)), labor: acct.pool });
+  }
+  return path;
+}
+
+/** 某日期在基準路徑上的預期值：path[0] 為建立基準當天，之後每點相隔一年，中間線性內插 */
+export function expectedAt(baseline, dateStr) {
+  const p = baseline.path;
+  const t = (new Date(dateStr) - new Date(baseline.createdAt)) / (365.25 * 864e5);
+  if (t <= 0 || p.length < 2) return { invest: p[0].invest, labor: p[0].labor };
+  const i = Math.min(p.length - 2, Math.floor(t));
+  const f = Math.min(1, t - i);
+  return { invest: p[i].invest + (p[i + 1].invest - p[i].invest) * f, labor: p[i].labor + (p[i + 1].labor - p[i].labor) * f };
+}
+
+/** 每次記錄與基準的差距 */
+export function trackProgress(tracking) {
+  if (!tracking?.baseline) return [];
+  return [...tracking.checkins].sort((a, b) => a.date.localeCompare(b.date)).map((c) => {
+    const e = expectedAt(tracking.baseline, c.date);
+    const actual = num(c.invest) + num(c.labor);
+    const expected = e.invest + e.labor;
+    return { ...c, expInvest: e.invest, expLabor: e.labor, actual, expected, diff: actual - expected, ratio: expected > 0 ? actual / expected : null };
+  });
 }

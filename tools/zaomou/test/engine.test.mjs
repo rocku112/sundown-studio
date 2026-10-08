@@ -306,3 +306,147 @@ test('參數年度過期判斷', () => {
   assert.equal(dataStale(DATA_YEAR + 1911), false);
   assert.equal(dataStale(DATA_YEAR + 1912), true);
 });
+
+test('勞保打折壓力測試', () => {
+  const s = defaults(2026);
+  const full = compute(s, 2026);
+  s.insHaircut = 30;
+  const cut = compute(s, 2026);
+  assert.equal(cut.me.insMonthly, Math.round(full.me.insMonthly * 0.7));
+  assert.equal(cut.me.insFull, full.me.insMonthly);
+  assert.equal(full.total - cut.total, full.me.insMonthly - cut.me.insMonthly);
+  s.spouse.enabled = true;
+  const sp = compute(s, 2026);
+  assert.equal(sp.spouse.insMonthly, Math.round(sp.spouse.insFull * 0.7), '配偶同樣打折');
+  // 敏感度：勞保打 8 折為負、照現制為 0
+  const row = sensitivity(defaults(2026), 2026).find((r) => r.key === 'ins');
+  assert.ok(row.low < 0 && row.high === 0);
+});
+
+import { careCostAt } from '../js/engine.js';
+
+test('晚年照護支出：提早用完資產、照護期缺口', () => {
+  const s = defaults(2026);
+  const base = lifecycle(s, 2026);
+  assert.equal(careCostAt(s, 85, 35), 0, '未啟用時為 0');
+  s.care.enabled = true; // 80 歲起每月 3 萬（今日幣值）
+  assert.equal(careCostAt(s, 79, 35), 0);
+  near(careCostAt(s, 80, 35), 30000 * 12 * Math.pow(1.02, 45), 1);
+  const withCare = lifecycle(s, 2026);
+  assert.ok(withCare.runoutAge < base.runoutAge, `${withCare.runoutAge} 應早於 ${base.runoutAge}`);
+  const r = compute(s, 2026);
+  assert.equal(r.care.startAge, 80);
+  near(r.care.need, (31000 + 30000) * Math.pow(1.02, 45), 1);
+  assert.equal(r.care.gap, r.care.need - r.total);
+  // 退休前的月領與資產池不受影響
+  assert.equal(r.total, compute(defaults(2026), 2026).total);
+});
+
+import { eventsPoolAt } from '../js/engine.js';
+
+test('人生重大事件：退休前支出降低資產池、退休後收入延長可撐年齡', () => {
+  const s = defaults(2026); // 35 歲，65 退休
+  const base = compute(s, 2026);
+  s.events = [{ id: 'e1', name: '頭期款', age: 40, amount: 1000000, kind: 'out' }];
+  const r = compute(s, 2026);
+  // 支出 100 萬（今日幣值）在 40 歲發生：名目 100萬×1.02^5，之後以新增投資報酬 6% 複利 25 年
+  const expect = 1000000 * Math.pow(1.02, 5) * Math.pow(1 + 0.06 / 12, 12 * 25);
+  near(base.investPool - r.investPool, expect, 2);
+  assert.ok(r.eventsMonthly < 0 && r.total < base.total);
+  // 退休後的繼承收入讓資產撐更久
+  const t = defaults(2026);
+  const lc0 = lifecycle(t, 2026);
+  t.events = [{ id: 'e2', name: '繼承', age: 80, amount: 3000000, kind: 'in' }];
+  const lc1 = lifecycle(t, 2026);
+  assert.ok(lc1.runoutAge === null || lc1.runoutAge > lc0.runoutAge);
+  assert.equal(compute(t, 2026).total, compute(defaults(2026), 2026).total, '退休後事件不影響月領');
+  // 已過去的事件不計入、並提出警告
+  const u = defaults(2026); u.events = [{ id: 'e3', name: '舊事', age: 30, amount: 100000, kind: 'out' }];
+  assert.equal(eventsPoolAt(u, 30, 0, 35), 0);
+  assert.ok(validate(u, 2026).some((x) => x.field === 'events'));
+});
+
+import { monteCarlo } from '../js/engine.js';
+
+test('蒙地卡羅：可重現、波動 0 時等於確定性、波動越大成功率不升', () => {
+  const s = defaults(2026);
+  const a = monteCarlo(s, 2026, { sims: 500 });
+  const b = monteCarlo(s, 2026, { sims: 500 });
+  assert.equal(a.success, b.success, '同種子結果相同');
+  assert.ok(a.success >= 0 && a.success <= 1);
+  // 波動 0：與確定性路徑接近（年複利 vs 月複利有小差異），且必然成功（確定性 92 歲才用完、預期壽命 83）
+  const z = monteCarlo(s, 2026, { sims: 50, vol: 0 });
+  assert.equal(z.success, 1);
+  const det = compute(s, 2026).investPool;
+  assert.ok(Math.abs(z.atRetire.p50 - det) / det < 0.06, `${z.atRetire.p50} vs ${det}`);
+  // 中位數約等於基準（扣除波動拖累後）
+  const m = monteCarlo(s, 2026, { sims: 2000, vol: 12 });
+  assert.ok(Math.abs(m.atRetire.p50 - z.atRetire.p50) / z.atRetire.p50 < 0.12, `${m.atRetire.p50} vs ${z.atRetire.p50}`);
+  assert.ok(m.band[30].p10 < m.band[30].p50 && m.band[30].p50 < m.band[30].p90);
+  const hi = monteCarlo(s, 2026, { sims: 2000, vol: 20 });
+  assert.ok(hi.success <= m.success + 0.01);
+  // 沒有投資資產時不模擬
+  const e = defaults(2026); e.holdings = []; e.portfolios = [];
+  assert.equal(monteCarlo(e, 2026), null);
+});
+
+import { actionPlan } from '../js/engine.js';
+
+test('行動清單：依狀況出現、可套用、排序', () => {
+  const s = defaults(2026);
+  s.targetMonthly = 90000;
+  s.holdings[1].amount = 50000; // 現金只有 5 萬，不足 6 個月生活費
+  const ids = actionPlan(s, 2026).map((a) => a.id);
+  for (const k of ['gap', 'selfRate', 'emergency', 'balance', 'stress', 'review']) assert.ok(ids.includes(k), k);
+  assert.ok(!ids.includes('bridge') && !ids.includes('invest'));
+  const levels = actionPlan(s, 2026).map((a) => a.level);
+  assert.deepEqual(levels, [...levels].sort((a, b) => ({ high: 0, mid: 1, low: 2 })[a] - ({ high: 0, mid: 1, low: 2 })[b]));
+  // 改善後項目消失
+  s.self.selfRate = 6; s.targetMonthly = 10000; s.self.laborBalance = 500000;
+  s.holdings.push({ id: 'c', name: '現金', kind: 'cash', amount: 300000, rate: 1 });
+  const ids2 = actionPlan(s, 2026).map((a) => a.id);
+  for (const k of ['gap', 'selfRate', 'emergency', 'balance']) assert.ok(!ids2.includes(k), k);
+  // 提早退休出現空窗期；成功率低時出現安全邊際
+  const t = defaults(2026); t.self.retireAge = 55;
+  assert.ok(actionPlan(t, 2026, { success: 0.6 }).some((a) => a.id === 'bridge'));
+  assert.equal(actionPlan(t, 2026, { success: 0.6 }).find((a) => a.id === 'mc').level, 'high');
+});
+
+import { planPath, expectedAt, trackProgress } from '../js/engine.js';
+
+test('進度追蹤：基準路徑、內插、超前落後', () => {
+  const s = defaults(2026);
+  const path = planPath(s, 2026);
+  assert.equal(path[0].year, 2026);
+  assert.equal(path.length, 31);
+  near(path[0].invest, 800000, 1);                    // 現值：台股 2 張×150×1000 + 存款 50 萬
+  near(path[30].invest, compute(s, 2026).investPool, 2);
+  assert.ok(path[5].labor > path[0].labor);
+  const baseline = { createdAt: '2026-10-08', path };
+  const mid = expectedAt(baseline, '2027-01-01');
+  assert.ok(mid.invest > path[0].invest && mid.invest < path[1].invest);
+  const rows = trackProgress({ baseline, checkins: [
+    { id: 'b', date: '2028-01-01', invest: 0, labor: 0 },
+    { id: 'a', date: '2027-01-01', invest: mid.invest * 1.1, labor: mid.labor },
+  ] });
+  assert.equal(rows[0].id, 'a', '依日期排序');
+  assert.ok(rows[0].diff > 0 && Math.abs(rows[0].ratio - (mid.invest * 1.1 + mid.labor) / (mid.invest + mid.labor)) < 1e-9);
+  assert.ok(rows[1].diff < 0);
+  assert.deepEqual(trackProgress({ baseline: null, checkins: [] }), []);
+});
+
+import { templates } from '../js/state.js';
+
+test('快速開始範本：皆可計算、無錯誤級檢查、各有特色', () => {
+  const list = templates(2026);
+  assert.equal(list.length, 5);
+  for (const t of list) {
+    const s = t.make();
+    const r = compute(s, 2026);
+    assert.ok(Number.isFinite(r.total) && r.total > 0, t.id);
+    assert.deepEqual(validate(s, 2026).filter((x) => x.level === 'error'), [], t.id);
+  }
+  const fire = list.find((t) => t.id === 'fire').make();
+  assert.ok(compute(fire, 2026).me.bridge.years > 0, '提早退休範本應有空窗期');
+  assert.ok(list.find((t) => t.id === 'family').make().spouse.enabled);
+});
