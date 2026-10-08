@@ -112,6 +112,16 @@ def month_ends(days):
     return out
 
 
+def incomplete(store, key, ratio=0.85):
+    """某季家數明顯少於相鄰季（例：上櫃那次沒抓到，只剩上市約一半）→ 視為不完整、需要重抓。"""
+    if key not in store:
+        return True
+    ks = sorted(store)
+    i = ks.index(key)
+    nb = [len(store[k]) for k in ks[max(0, i - 1):i + 2] if k != key]
+    return bool(nb) and len(store[key]) < ratio * max(nb)
+
+
 # ── 季報 ─────────────────────────────────────────────────────────────
 COLS = {"rev": ["營業收入", "收益", "收入合計"], "gp": ["營業毛利"], "op": ["營業利益"],
         "ni": ["歸屬於母公司業主", "本期淨利", "本期稅後淨利"], "eps": ["基本每股盈餘"]}
@@ -233,7 +243,7 @@ def main():
     failed, streak = [], 0
     for i, (y, q) in reversed(list(enumerate(qs))):   # 新的先抓，再往回補
         key = f"{y}Q{q}"
-        if key in inc and i < len(qs) - 1:
+        if not incomplete(inc, key) and i < len(qs) - 1:
             continue
         if over():
             print("  時間預算用完，季報下次接著補", flush=True)
@@ -248,7 +258,7 @@ def main():
             except Exception as e:
                 failed.append(str(e)[:150])
         streak = 0 if rows else streak + 1
-        if len(rows) > 500:
+        if len(rows) > 500 and len(rows) > len(inc.get(key, {})):
             inc[key] = rows
             if len(inc) == 1 or i == len(qs) - 1:
                 print(f"  季報樣本 {key}：{len(rows)} 家，例 2330 → {rows.get('2330')}")
@@ -262,7 +272,7 @@ def main():
     bfail, streak = [], 0
     for i, (y, q) in reversed(list(enumerate(qs))):
         key = f"{y}Q{q}"
-        if key in bal and i < len(qs) - 1:
+        if not incomplete(bal, key) and i < len(qs) - 1:
             continue
         if over():
             print("  時間預算用完，資產負債表下次接著補", flush=True)
@@ -277,7 +287,7 @@ def main():
             except Exception as e:
                 bfail.append(str(e)[:150])
         streak = 0 if rows else streak + 1
-        if len(rows) > 500:
+        if len(rows) > 500 and len(rows) > len(bal.get(key, {})):
             bal[key] = rows
             if len(bal) == 1 or i == len(qs) - 1:
                 print(f"  資產負債表樣本 {key}：{len(rows)} 家，例 2330 → {rows.get('2330')}")
