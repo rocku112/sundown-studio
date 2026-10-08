@@ -430,3 +430,39 @@ export function goalPlan(state, nowYear = new Date().getFullYear()) {
     extraMonthly, lumpSum, retireAge, requiredReturn, selfRate6,
   };
 }
+
+/**
+ * 起點設定檢查：回傳 [{ field, level: 'error'|'warn'|'info', msg }]。
+ * error = 輸入互相矛盾、結果不可信；warn = 可能打錯；info = 合理但值得說明。
+ */
+export function validate(state, nowYear = new Date().getFullYear()) {
+  const out = [];
+  const add = (field, level, msg) => out.push({ field, level, msg });
+  const check = (p, who, prefix) => {
+    const age = nowYear - p.birthYear;
+    if (age < 15 || age > 85) {
+      // 出生年錯了其他檢查都不可信，只報這一條；小於 200 多半是民國年
+      add(`${prefix}.birthYear`, 'error', p.birthYear > 0 && p.birthYear < 200
+        ? `${who}出生年請填西元年：民國 ${p.birthYear} 年是西元 ${p.birthYear + 1911} 年。`
+        : `${who}出生年 ${p.birthYear} 換算為 ${age} 歲，請確認是否正確。`);
+      return;
+    }
+    if (p.workStartAge >= p.retireAge) add(`${prefix}.workStartAge`, 'error', `${who}開始投保年齡（${p.workStartAge}）不小於退休年齡（${p.retireAge}），投保年資會是 0。`);
+    else if (p.workStartAge > age) add(`${prefix}.workStartAge`, 'info', `${who}尚未開始工作，試算將從 ${p.workStartAge} 歲開始投保。`);
+    if (p.retireAge <= age) add(`${prefix}.retireAge`, 'warn', `${who}退休年齡（${p.retireAge}）不大於目前年齡（${age}），已視為現在退休、不再累積。`);
+    if (p.salary <= 0) add(`${prefix}.salary`, 'warn', `${who}月薪為 0，勞保與勞退都無法累積。`);
+    else if (p.salary < INSURANCE_GRADES[0]) add(`${prefix}.salary`, 'info', `${who}月薪低於勞保第 1 級 ${INSURANCE_GRADES[0].toLocaleString()} 元，全時工作者至少以第 1 級投保。`);
+    if (p.oldSystemYears > 0) {
+      const maxOld = Math.floor(NEW_SYSTEM_START - (p.birthYear + p.workStartAge));
+      if (maxOld <= 0) add(`${prefix}.oldSystemYears`, 'error', `${who}在 94 年 7 月勞退新制施行時尚未開始工作，不會有舊制年資。`);
+      else if (p.oldSystemYears > maxOld) add(`${prefix}.oldSystemYears`, 'warn', `${who}舊制年資 ${p.oldSystemYears} 年，超過 94 年 7 月前可能的工作年數（約 ${maxOld} 年）。`);
+    }
+  };
+  check(state.self, '', 'self');
+  if (state.spouse.enabled) check(state.spouse, `${state.spouse.name || '配偶'}的`, 'spouse');
+  const life = state.lifeAgeOverride;
+  if (life !== null && life !== undefined && life <= state.self.retireAge) add('lifeAgeOverride', 'error', `預期壽命（${life}）不大於退休年齡，無法計算提領月數。`);
+  const health = state.healthAgeOverride;
+  if (health !== null && health !== undefined && life !== null && life !== undefined && health > life) add('healthAgeOverride', 'warn', '健康平均壽命大於預期壽命，請確認。');
+  return out;
+}

@@ -231,3 +231,29 @@ test('提早退休空窗期：勞退滿 60、勞保最早提前 5 年', () => {
   assert.equal(compute(s, 2026).me.bridge.years, 0);
   assert.equal(compute(s, 2026).me.bridge.missing, 0);
 });
+
+import { validate } from '../js/engine.js';
+
+test('欄位檢查：預設值無錯誤、矛盾輸入被抓出', () => {
+  const s = defaults(2026);
+  assert.deepEqual(validate(s, 2026).filter((x) => x.level !== 'info'), []);
+  const lv = (st, f) => validate(st, 2026).find((x) => x.field === f)?.level;
+  const a = defaults(2026); a.self.workStartAge = 66;
+  assert.equal(lv(a, 'self.workStartAge'), 'error');
+  const b = defaults(2026); b.self.birthYear = 2006; b.self.workStartAge = 23; // 20 歲、尚未工作
+  assert.equal(lv(b, 'self.workStartAge'), 'info');
+  const c = defaults(2026); c.self.retireAge = 30;
+  assert.equal(lv(c, 'self.retireAge'), 'warn');
+  const d = defaults(2026); d.self.birthYear = 75; // 民國年誤填
+  assert.equal(lv(d, 'self.birthYear'), 'error');
+  assert.match(validate(d, 2026)[0].msg, /西元 1986 年/);
+  assert.equal(validate(d, 2026).length, 1, '出生年有誤時不再連帶報其他欄位');
+  const e = defaults(2026); e.self.oldSystemYears = 5; // 1991 年生，94 年時 14 歲
+  assert.equal(lv(e, 'self.oldSystemYears'), 'error');
+  const f = defaults(2026); f.self.birthYear = 1966; f.self.workStartAge = 22; f.self.oldSystemYears = 30; // 最多約 17 年
+  assert.equal(lv(f, 'self.oldSystemYears'), 'warn');
+  const g = defaults(2026); g.lifeAgeOverride = 60;
+  assert.equal(lv(g, 'lifeAgeOverride'), 'error');
+  const h = defaults(2026); h.spouse.enabled = true; h.spouse.salary = 0;
+  assert.equal(lv(h, 'spouse.salary'), 'warn');
+});

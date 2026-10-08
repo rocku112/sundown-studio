@@ -2,7 +2,7 @@
    畫面分兩種：含輸入欄位的分頁（起點設定、投資資產、目標反算）只在結構改變時重繪，
    數字靠 data-o 局部更新，避免打字時失焦；純輸出的分頁與側欄則每次重算後整頁重繪。 */
 
-import { compute, holdingValue, growLump, growMonthly, lifecycle, sensitivity, retireAgeOptions, goalPlan } from './engine.js';
+import { compute, holdingValue, growLump, growMonthly, lifecycle, sensitivity, retireAgeOptions, goalPlan, validate } from './engine.js';
 import { legalPensionAge, INSURANCE_GRADES, MIN_LIVING, EXPENSE_LEVELS, RETURN_PRESETS, LIFE_TABLE, DATA_YEAR, PENSION_WAGE_MAX } from './data.js';
 import { load, save, defaults, parseImport, getPath, setPath, uid, applySeed, STORAGE_KEY } from './state.js';
 import { lineChart, donut, wan, attachTooltips } from './charts.js';
@@ -80,6 +80,12 @@ function outVal(key) {
   const me = R.me;
   switch (kind) {
     case 'total': return money(R.total);
+    case 'issues': {
+      const list = validate(state, NOW);
+      if (!list.length) return '';
+      const icon = { error: '✕', warn: '!', info: 'i' };
+      return `<div class="issues">${list.map((x) => `<button type="button" class="issue ${x.level}" data-focus="${x.field}"><span>${icon[x.level]}</span>${esc(x.msg)}</button>`).join('')}</div>`;
+    }
     case 'ageinfo': {
       const s = state.self;
       return `目前約 <b>${me.age}</b> 歲，距退休 <b>${R.n}</b> 年；勞保年資 <b>${me.insYears}</b> 年；
@@ -148,6 +154,7 @@ function pageSetup() {
   return `
   <div class="page-head"><span class="step">STEP 01</span><h2 class="page-title">起點設定</h2></div>
   <p class="page-sub">填入基本資料，右側數字即時更新。資料只存在這台裝置的瀏覽器裡。</p>
+  ${out('issues', outVal('issues'))}
 
   <section class="card"><div class="card-h"><h3>${badge('user', 'rgba(45,74,110,.1)', C.navy)}個人基本資料</h3></div>
     <div class="grid">
@@ -699,6 +706,11 @@ function refreshOutputs() {
     else if (el.tagName === 'SELECT' && String(el.value) !== String(v)) el.value = v;
   }
   for (const el of $$('input[type=range]')) fillRange(el);
+  const issues = validate(state, NOW);
+  const bad = new Set(issues.filter((x) => x.level !== 'info').map((x) => x.field));
+  for (const el of $$('[data-k]')) el.setAttribute('aria-invalid', String(bad.has(el.dataset.k)));
+  const t1 = $('[data-tab="setup"]');
+  if (t1) t1.classList.toggle('has-issue', issues.some((x) => x.level === 'error'));
   for (const el of $$('[data-set]')) el.setAttribute('aria-pressed', String(getPath(state, el.dataset.set)) === el.dataset.val);
 }
 
@@ -775,6 +787,12 @@ document.addEventListener('focusout', (e) => {
 });
 
 document.addEventListener('click', (e) => {
+  const f = e.target.closest('[data-focus]');
+  if (f) {
+    const el = $(`[data-k="${f.dataset.focus}"]`);
+    if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.focus({ preventScroll: true }); }
+    return;
+  }
   const t = e.target.closest('[data-tab],[data-set],[data-toggle],[data-act]');
   if (!t || t.tagName === 'SELECT' || t.type === 'file') return;
   if (t.dataset.tab) {

@@ -306,3 +306,14 @@ details.yearly .tbl-wrap { max-height: 420px; overflow: auto; margin-top: 14px; 
 .opt strong { font: 800 24px var(--mono); color: var(--navy); line-height: 1.3; }
 .opt p { margin: 0 0 6px; font-size: 13px; color: var(--muted); line-height: 1.65; flex: 1; }
 .opt .btn { align-self: flex-start; min-height: 38px; padding: 8px 14px; font-size: 13px; }
+
+/* ── 欄位檢查 ── */
+.issues { display: flex; flex-direction: column; gap: 6px; }
+.issue { display: flex; align-items: flex-start; gap: 10px; text-align: left; border: 1px solid; border-radius: 12px; padding: 10px 14px; font-size: 14px; line-height: 1.6; background: var(--surface); width: 100%; }
+.issue span { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font: 700 12px var(--mono); color: #fff; flex-shrink: 0; margin-top: 1px; }
+.issue.error { border-color: rgba(194,69,61,.35); color: var(--red); } .issue.error span { background: var(--red); }
+.issue.warn { border-color: rgba(168,123,18,.35); color: #7A5A0A; } .issue.warn span { background: var(--gold2); }
+.issue.info { border-color: var(--border); color: var(--muted); } .issue.info span { background: var(--navyL); }
+.issue:hover { border-color: currentColor; }
+.input[aria-invalid="true"] { border-color: var(--red); background: #FFF8F6; }
+.tab.has-issue .ic { box-shadow: 0 0 0 2px var(--red); }
