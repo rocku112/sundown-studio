@@ -69,6 +69,8 @@ jobs:
           ( cd .. && timeout 20m python -X utf8 swing/scripts/fetch_fund.py --budget 16 ) || echo "::warning::基本面抓取失敗"
           # 新增官方來源：重大訊息、庫藏股、董監質押、處置／注意股、借券、景氣燈號（每日快照＋歷史回補）
           ( cd .. && timeout 14m python -u -X utf8 swing/scripts/fetch_extra.py --budget 12 ) || echo "::warning::新增資料來源抓取失敗"
+          # 官方長歷史（0050／006208／0056 含息還原、加權指數）：取代 Yahoo，逐日往前回補到上市起點
+          ( cd .. && timeout 10m python -u -X utf8 swing/scripts/fetch_official.py --budget 8 ) || echo "::warning::官方長歷史抓取失敗"
           # 官方日線（含日後下市股票）：補最新幾天，並順便回補十年歷史 20 分鐘
           ( cd .. && python -X utf8 swing/scripts/fetch_prices.py --days 2550 --budget 20 ) || echo "::warning::官方日線抓取失敗"
           # 波段實驗室：五年日線回測（約 3 分鐘）
@@ -101,7 +103,7 @@ jobs:
           git config user.name  "twflow-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add twflow/data/market/days twflow/data/market/stock_meta.json $(ls -d twflow/data/etf twflow/data/taifex 2>/dev/null) \
-                  $(ls swing/data/revenue.json 2>/dev/null) $(ls -d swing/data/chips swing/data/fund swing/data/tdcc swing/data/prices swing/data/forward swing/data/extra 2>/dev/null) \
+                  $(ls swing/data/revenue.json 2>/dev/null) $(ls -d swing/data/chips swing/data/fund swing/data/tdcc swing/data/prices swing/data/forward swing/data/extra swing/data/official 2>/dev/null) \
                   twflow/data/market/market.json twflow/web/data \
                   twflow/web/snapshot.html
           if git diff --staged --quiet; then

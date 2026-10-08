@@ -55,6 +55,9 @@ jobs:
       - name: 新增資料來源（重大訊息、庫藏股、質押、處置注意、借券、景氣燈號）
         run: timeout 9m python -u -X utf8 swing/scripts/fetch_extra.py --budget 7 --hist-days 40 || echo "::warning::新增資料來源抓取失敗"; ls -R swing/data/extra | head -60 || true
 
+      - name: 官方長歷史（0050 含息還原、加權指數；試抓）
+        run: timeout 6m python -u -X utf8 swing/scripts/fetch_official.py --budget 4 || echo "::warning::官方長歷史抓取失敗"
+
       - name: 月營收（公開資訊觀測站）
         run: python -X utf8 swing/scripts/fetch_revenue.py
 

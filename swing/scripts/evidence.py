@@ -26,6 +26,7 @@ import json
 import math
 import warnings
 import os
+import sys
 import time
 from datetime import date, datetime, timedelta, timezone
 
@@ -74,6 +75,26 @@ def split_stats(dates, vals, split, min_n=10):
 
 
 def fetch_0050():
+    """0050 含息還原：優先用證交所官方（fetch_official.py 補齊後），否則退回 Yahoo；兩者都有時交叉比對。"""
+    import fetch_official as OFF
+    off = OFF.series("0050")
+    try:
+        y = fetch_0050_yahoo()
+    except Exception as e:                       # noqa: BLE001
+        if not off:
+            raise
+        print(f"  0050 Yahoo 失敗（{e!r}），使用官方資料", file=sys.stderr)
+        y = None
+    if off:
+        if y:
+            OFF.compare("0050", [(r[0], r[3]) for r in off], [(r[0], r[3]) for r in y])
+        print(f"  0050：使用證交所官方含息還原（{off[0][0]} 起）")
+        return off
+    print("  0050：官方長歷史尚未補齊，暫用 Yahoo")
+    return y
+
+
+def fetch_0050_yahoo():
     r = requests.get("https://query1.finance.yahoo.com/v8/finance/chart/0050.TW",
                      params={"period1": 0, "period2": int(time.time()), "interval": "1d", "events": "div,split"},
                      headers=UA, timeout=30)

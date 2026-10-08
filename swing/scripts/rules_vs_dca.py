@@ -41,6 +41,26 @@ YEARS = 10
 
 
 def fetch_index():
+    """加權指數：優先用證交所官方（FMTQIK，fetch_official.py 補齊後），否則退回 Yahoo；兩者都有時交叉比對。"""
+    import fetch_official as OFF
+    off = OFF.index_series()
+    try:
+        y = fetch_index_yahoo()
+    except Exception as e:                       # noqa: BLE001
+        if not off:
+            raise
+        print(f"  ^TWII Yahoo 失敗（{e!r}），使用官方資料", file=sys.stderr)
+        y = None
+    if off:
+        if y:
+            OFF.compare("^TWII", off, y)
+        print(f"  ^TWII：使用證交所官方加權指數（{off[0][0]} 起）")
+        return check("^TWII", off)
+    print("  ^TWII：官方長歷史尚未補齊，暫用 Yahoo")
+    return y
+
+
+def fetch_index_yahoo():
     r = requests.get("https://query1.finance.yahoo.com/v8/finance/chart/%5ETWII",
                      params={"period1": 0, "period2": int(time.time()), "interval": "1d"}, headers=UA, timeout=30)
     r.raise_for_status()
