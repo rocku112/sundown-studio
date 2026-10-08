@@ -2,7 +2,7 @@
    畫面分兩種：含輸入欄位的分頁（起點設定、投資資產、目標反算）只在結構改變時重繪，
    數字靠 data-o 局部更新，避免打字時失焦；純輸出的分頁與側欄則每次重算後整頁重繪。 */
 
-import { compute, holdingValue, growLump, lifecycle, sensitivity, retireAgeOptions } from './engine.js';
+import { compute, holdingValue, growLump, growMonthly, lifecycle, sensitivity, retireAgeOptions, goalPlan } from './engine.js';
 import { legalPensionAge, INSURANCE_GRADES, MIN_LIVING, EXPENSE_LEVELS, RETURN_PRESETS, LIFE_TABLE, DATA_YEAR, PENSION_WAGE_MAX } from './data.js';
 import { load, save, defaults, parseImport, getPath, setPath, uid, applySeed, STORAGE_KEY } from './state.js';
 import { lineChart, donut, wan, attachTooltips } from './charts.js';
@@ -88,8 +88,9 @@ function outVal(key) {
     }
     case 'insgrade': {
       if (state.self.insMode === 'manual') return `投保薪資 <b>${money(me.insBase)}</b>（第 ${me.insGrade} 級）`;
-      return `月薪 ${money(state.self.salary)} → 第 <b>${me.insGrade}</b> 級，投保薪資 <b>${money(me.insBase)}</b>` +
-        (state.self.salary > 45800 ? '（已達上限）' : '');
+      return `月薪 ${money(state.self.salary)} → 目前第 <b>${me.insGrade}</b> 級 ${money(me.insBaseNow)}` +
+        (me.insBaseNow >= 45800 ? '（已達上限）' : '') +
+        `；依薪資年增率推估，退休前 60 個月平均投保薪資約 <b>${money(me.insBase)}</b>，勞保年金以此計算。`;
     }
     case 'laborinfo': return `每月提繳 <b>${money(me.acct.monthlyContrib)}</b>（雇主 6% + 自提 ${pct(state.self.selfRate, 1)}，提繳工資上限 ${money(PENSION_WAGE_MAX)}）。` +
       (state.self.laborBalance === null ? `未填餘額，依新制施行後約 <b>${me.acct.estimatedPast.toFixed(1)}</b> 年年資回推估算。` : '') +
@@ -248,7 +249,7 @@ function pageFloor() {
   const me = R.me, s = state.self;
   const ins = me.ins;
   const insNote = ins.kind === 'annuity'
-    ? `投保薪資 ${money(me.insBase)} × 年資 ${me.insYears} 年，${ins.formula} 式擇優（A ${money(ins.a)}／B ${money(ins.b)}）` +
+    ? `退休前 60 個月平均投保薪資 ${money(me.insBase)} × 年資 ${me.insYears} 年，${ins.formula} 式擇優（A ${money(ins.a)}／B ${money(ins.b)}）` +
       (ins.adj ? `，${ins.startAge} 歲請領 ${ins.adj > 0 ? '延後增給' : '提前減給'} ${Math.round(Math.abs(ins.adj) * 100)}%` : `，${ins.startAge} 歲起領`)
     : `年資未滿 15 年，只能請領一次金約 ${wan(ins.lump)}，以提領月數換算`;
   const row = (k, sub, v, tag = '') => `<div class="row"><div class="k">${k}${tag}<small>${sub}</small></div><div class="v">${money(v)}</div></div>`;
@@ -273,7 +274,7 @@ function pageFloor() {
       <div class="row"><div class="k">勞保老年年金<small>A 式：平均月投保薪資 × 年資 × 0.775% + 3,000；B 式：平均月投保薪資 × 年資 × 1.55%，兩者擇優。法定請領年齡 ${legalPensionAge(s.birthYear)} 歲，每提前 1 年減給 4%、每延後 1 年增給 4%，各以 5 年為限。年資未滿 15 年改請領一次金。</small></div></div>
       <div class="row"><div class="k">勞退新制<small>雇主每月提繳 6%＋個人自提，依薪資年增率逐月累積、以勞退基金收益月複利滾存；退休時的專戶金額依提領方式換算月領。</small></div></div>
       <div class="row"><div class="k">勞基法舊制<small>前 15 年每年 2 個基數，第 16 年起每年 1 個基數，最高 45 個基數；基數以退休前 6 個月平均工資計，此處以推估的退休時月薪近似。</small></div></div>
-      <div class="row"><div class="k">簡化假設<small>投保薪資維持目前級距、不計勞保年金依 CPI 調整、不計稅負與保費；實際金額以勞保局核定為準。</small></div></div>
+      <div class="row"><div class="k">簡化假設<small>投保薪資依薪資年增率逐月升級、級距表維持 115 年版、不計勞保年金依 CPI 調整、不計稅負與保費；實際金額以勞保局核定為準。</small></div></div>
     </div>
   </section>`;
 }
@@ -333,34 +334,106 @@ function pageInvest() {
 }
 
 function pagePlan() {
+  const g = goalPlan(state, NOW);
+  const me = R.me, s = state.self;
+  const size = window.innerWidth < 640 ? { width: 380, height: 220 } : { width: 680, height: 240 };
+  const pctDone = Math.round(g.progress * 100);
+  const barColor = g.progress >= 1 ? C.green : g.progress >= 0.7 ? C.gold2 : C.red;
+  const ir = state.investReturn;
+
+  // 目標快選：生活費與所得替代率
+  const round = (v) => Math.round(v / 1000) * 1000;
+  const presets = [
+    R.expenseToday > 0 ? ['目前生活費', round(R.expenseToday)] : null,
+    R.expenseToday > 0 ? ['生活費 ×1.3（含醫療預備）', round(R.expenseToday * 1.3)] : null,
+    ['月薪 60%', round(s.salary * 0.6)],
+    ['月薪 70%', round(s.salary * 0.7)],
+  ].filter(Boolean);
+
+  // 已達標時：最早幾歲可以退休
+  let earliest = null;
+  if (g.gapPV <= 0 && g.target > 0) {
+    for (let a = s.retireAge - 1; a > me.age && a >= 50; a--) {
+      const t = JSON.parse(JSON.stringify(state)); t.self.retireAge = a;
+      if (compute(t, NOW).totalPV >= g.target) earliest = a; else break;
+    }
+  }
+
+  const opt = (o) => `<div class="opt${o.muted ? ' muted' : ''}">
+      <div class="opt-h"><span class="opt-n">${o.n}</span><small>${o.k}</small></div>
+      <strong>${o.v}</strong><p>${o.p}</p>
+      ${o.btn || ''}</div>`;
+  const ceil100 = (v) => Math.ceil(v / 100) * 100;
+  const options = g.gapPV > 0 ? [
+    { n: 1, k: '每月多投資', v: Number.isFinite(g.extraMonthly) ? money(ceil100(g.extraMonthly)) : '—',
+      p: `以年化 ${pct(ir)} 投入 ${g.n} 年，退休時補足 ${wan(g.shortfallPool)}。`,
+      btn: Number.isFinite(g.extraMonthly) ? `<button type="button" class="btn primary" data-act="apply-extra" data-val="${ceil100(g.extraMonthly)}">加入定期投資</button>` : '' },
+    { n: 2, k: '今天一次投入', v: money(Math.ceil(g.lumpSum / 1000) * 1000),
+      p: `放著以年化 ${pct(ir)} 滾 ${g.n} 年，也能補足同樣的缺口。`,
+      btn: `<button type="button" class="btn" data-act="apply-lump" data-val="${Math.ceil(g.lumpSum / 1000) * 1000}">加入現有資產</button>` },
+    g.retireAge
+      ? { n: 3, k: '延後退休', v: `${g.retireAge} 歲`, p: `晚 ${g.retireAge - s.retireAge} 年：多累積、勞保延後增給、提領年數變短。`,
+          btn: `<button type="button" class="btn" data-set="self.retireAge" data-val="${g.retireAge}">改為 ${g.retireAge} 歲退休</button>` }
+      : { n: 3, k: '延後退休', v: '75 歲仍不足', p: '單靠晚退休補不起來，需要搭配其他方式。', muted: true },
+    g.requiredReturn !== null
+      ? { n: 4, k: '提高投資報酬', v: `+${g.requiredReturn.toFixed(1)} 個百分點`, p: g.requiredReturn > 3 ? '幅度偏大，代表要承擔明顯更高的波動風險，不建議單靠這一招。' : '所有投資的年化報酬同時提高這麼多即可達標；報酬越高、波動通常越大。' }
+      : { n: 4, k: '提高投資報酬', v: '—', p: state.holdings.length + state.portfolios.length ? '報酬再高也補不起來。' : '尚未設定投資資產。', muted: true },
+    g.selfRate6
+      ? { n: 5, k: '勞退自提拉到 6%', v: `+${money(g.selfRate6.gain)}`, p: `每月多提撥 ${money(g.selfRate6.monthlyCost)}（可從當年所得扣除），月領（今日幣值）增加${g.selfRate6.enough ? '，單獨就能達標' : '，可補一部分'}。`,
+          btn: `<button type="button" class="btn" data-set="self.selfRate" data-val="6">改為自提 6%</button>` }
+      : { n: 5, k: '勞退自提', v: '已是 6%', p: '自提已達上限。', muted: true },
+    { n: 6, k: '調整目標', v: money(round(g.currentPV)), p: '照目前規劃，每月大約能有這麼多（今日幣值）。',
+      btn: `<button type="button" class="btn" data-set="targetMonthly" data-val="${round(g.currentPV)}">改用這個目標</button>` },
+  ].map(opt).join('') : '';
+
+  // 資產池路徑：目前規劃 vs 加碼後，對照退休時需要的資產池
+  const extra = g.gapPV > 0 && Number.isFinite(g.extraMonthly) ? g.extraMonthly : 0;
+  const ptsNow = R.growth.map((p) => ({ x: p.age, y: p.pool }));
+  const ptsPlus = R.growth.map((p, t) => ({ x: p.age, y: p.pool + growMonthly(extra, t, ir) }));
+  const pathChart = R.n > 0 ? lineChart({
+    series: [
+      { name: '目前規劃', points: ptsNow, color: C.navy, fill: 'rgba(30,53,84,.07)' },
+      ...(extra > 0 ? [{ name: '加碼後', points: ptsPlus, color: C.green, dash: true }] : []),
+      ...(g.requiredPool > 0 ? [{ name: '需要的資產池', points: [{ x: me.age, y: g.requiredPool }, { x: s.retireAge, y: g.requiredPool }], color: C.red, dash: true }] : []),
+    ],
+    ...size, xFmt: (x) => `${x}歲`,
+    tip: { title: (x) => `${x} 歲`, fmt: wan },
+  }) : '';
+
   return `
   <div class="page-head"><span class="step">STEP 04</span><h2 class="page-title">目標反算</h2></div>
-  <p class="page-sub">先決定退休後想過的生活，再算出現在每個月還要多投資多少。</p>
-  <section class="card"><div class="card-h"><h3>${badge('target', 'rgba(201,74,74,.1)', C.red)}我的目標</h3></div>
+  <p class="page-sub">先決定退休後想過的生活，再看目前規劃差多少，以及有哪些方式補得上。</p>
+
+  <section class="card"><div class="card-h"><h3>${badge('target', 'rgba(194,69,61,.1)', C.red)}我的目標</h3></div>
     <div class="grid two">
-      ${numF('targetMonthly', '希望退休後每月可用（今日幣值）', { min: 0, step: 5000, unit: '元' })}
+      ${numF('targetMonthly', '希望退休後每月可用（今日幣值）', { unit: '元' })}
       ${numF('investReturn', '新增投資的預期年化報酬', { min: 0, max: 15, step: 0.5, unit: '%' })}
     </div>
-    <div class="stats" style="margin-top:16px">
-      <div class="stat"><small>換算退休當年名目</small><strong>${out('rv:target', outVal('rv:target'))}</strong></div>
-      <div class="stat good"><small>保底收入（含配偶）</small><strong>${money(R.floor + R.spouseTotal)}</strong></div>
-      <div class="stat ${R.reverse.gapMonthly > 0 ? 'bad' : 'good'}"><small>需靠投資補足／月</small><strong>${out('rv:gap', outVal('rv:gap'))}</strong></div>
+    <div class="chips">${presets.map(([l, v]) => `<button type="button" class="chip" data-set="targetMonthly" data-val="${v}" aria-pressed="${state.targetMonthly === v}">${l} ${money(v)}</button>`).join('')}</div>
+    <div class="goal">
+      <div class="goal-h"><span>目前規劃達成率</span><strong style="color:${barColor}">${pctDone}%</strong></div>
+      <div class="goal-bar" role="progressbar" aria-valuenow="${pctDone}" aria-valuemin="0" aria-valuemax="100"><i style="width:${Math.min(100, pctDone)}%;background:${barColor}"></i></div>
+      <div class="goal-f"><span>目前規劃 ${money(g.currentPV)}／月</span><span>目標 ${money(g.target)}／月</span></div>
+      <p class="note">以上皆為今日幣值。目標換算到 ${NOW + g.n} 年退休當年約為 ${money(R.reverse.targetNominal)}／月（通膨 ${pct(state.cpi)}）。</p>
     </div>
   </section>
-  <section class="card"><div class="card-h"><h3>${badge('coins', 'rgba(232,184,75,.18)', '#9A7210')}需要的資產池</h3></div>
-    <div class="stats">
-      <div class="stat"><small>退休時需要</small><strong>${out('rv:pool', outVal('rv:pool'))}</strong></div>
-      <div class="stat"><small>目前規劃可累積</small><strong>${out('rv:have', outVal('rv:have'))}</strong></div>
-      <div class="stat ${R.reverse.shortfallPool > 0 ? 'bad' : 'good'}"><small>尚缺</small><strong>${out('rv:short', outVal('rv:short'))}</strong></div>
-    </div>
-    <div class="alert ${R.reverse.shortfallPool > 0 ? 'bad' : 'good'}" style="margin-top:14px">
-      ${R.reverse.shortfallPool > 0
-        ? `除了現有規劃，每月還需再投入 <b>${out('rv:extra', outVal('rv:extra'))}</b><p>以年化 ${pct(state.investReturn)} 投資 ${R.n} 年估算。</p>`
-        : '<b>現有規劃已足以達成目標。</b><p>可以考慮提高目標、提早退休，或把多出來的預算留作緊急預備金。</p>'}
-    </div>
-  </section>
-  <section class="card"><div class="card-h"><h3>${badge('hourglass', 'rgba(232,184,75,.18)', '#9A7210')}財務自由年齡</h3><strong class="num" style="font-size:20px;color:var(--navy)">${out('fire', outVal('fire'))}</strong></div>
-    <p class="note" style="margin:0">定義：投資資產（不含勞保、勞退）已足以支應通膨後的生活費 ${money(R.expenseToday)}／月（今日幣值），一路用到預期壽命 ${R.me.lifeAge.toFixed(0)} 歲；以退休後年化 ${pct(state.postReturn)} 扣除通膨計算。</p>
+
+  ${g.gapPV > 0 ? `
+  <section><div class="sub-h"><h3>${badge('sliders', 'rgba(232,184,75,.18)', '#9A7210')}還差 ${money(g.gapPV)}／月，可以這樣補</h3><span class="hint">任選一種或組合使用</span></div>
+    <div class="opts">${options}</div>
+  </section>` : `
+  <section class="card"><div class="alert good" style="margin:0"><b>目前規劃已能達成目標，每月約多出 ${money(g.currentPV - g.target)}（今日幣值）。</b>
+    <p>${earliest ? `照目前規劃，最早 <b>${earliest} 歲</b>退休仍能達標。` : '目前設定的退休年齡已是最早能達標的年齡。'}多出來的預算也可以留作緊急預備金或醫療準備。</p>
+    ${earliest ? `<div class="btn-row" style="margin-top:10px"><button type="button" class="btn" data-set="self.retireAge" data-val="${earliest}">改為 ${earliest} 歲退休</button></div>` : ''}</div>
+  </section>`}
+
+  ${pathChart ? `<section class="card"><div class="card-h"><h3>${badge('trend', 'rgba(58,95,138,.12)', C.navyL)}資產池路徑</h3><span class="hint">名目金額</span></div>
+    ${pathChart}
+    <div class="chart-legend"><span><i style="background:${C.navy}"></i>目前規劃 ${wan(g.havePool)}</span>${extra > 0 ? `<span><i style="background:${C.green}"></i>每月加碼 ${money(ceil100(extra))} 後</span>` : ''}${g.requiredPool > 0 ? `<span><i style="background:${C.red}"></i>退休時需要 ${wan(g.requiredPool)}</span>` : ''}</div>
+  </section>` : ''}
+
+  <section class="card"><div class="card-h"><h3>${badge('hourglass', 'rgba(232,184,75,.18)', '#9A7210')}財務自由年齡</h3><strong class="num" style="font-size:22px;color:var(--navy)">${out('fire', outVal('fire'))}</strong></div>
+    <p class="note" style="margin:0">投資資產（不含勞保、勞退）已足以支應通膨後的生活費 ${money(R.expenseToday)}／月（今日幣值），一路用到預期壽命 ${me.lifeAge.toFixed(0)} 歲；以退休後年化 ${pct(state.postReturn)} 扣除通膨計算。到這個年齡，工作就成了選項而不是必要。</p>
   </section>`;
 }
 
@@ -718,6 +791,19 @@ document.addEventListener('click', (e) => {
   else if (act === 'del-asset') { const p = state.portfolios.find((x) => x.id === pid); if (p) p.assets = p.assets.filter((a) => a.id !== id); }
   else if (act === 'export') return exportFile();
   else if (act === 'csv') return exportCsv();
+  else if (act === 'apply-extra') {
+    // 加碼併入「目標補足」組合，重複套用時累加
+    const amt = +t.dataset.val;
+    let p = state.portfolios.find((x) => x.name === '目標補足');
+    if (!p) { p = { id: uid('p'), name: '目標補足', assets: [] }; state.portfolios.push(p); }
+    const a = p.assets[0];
+    if (a) { a.monthly += amt; a.rate = state.investReturn; } else p.assets.push({ id: uid('a'), name: '目標補足加碼', monthly: amt, rate: state.investReturn });
+    toast(`已在「投資資產」加入每月 ${money(amt)} 的定期投資`);
+  } else if (act === 'apply-lump') {
+    const amt = +t.dataset.val;
+    state.holdings.push({ id: uid('h'), name: '目標補足一次投入', kind: 'cash', shares: 0, price: 0, amount: amt, rate: state.investReturn });
+    toast(`已在「投資資產」加入一筆 ${money(amt)} 的單筆投入`);
+  }
   else if (act === 'reset') { if (!confirm('清除所有設定，回到預設值？')) return; state = defaults(NOW); }
   else if (act === 'share') return openShare();
   else if (act === 'close-dialog') return t.closest('dialog').close();

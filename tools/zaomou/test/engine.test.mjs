@@ -163,3 +163,54 @@ test('退休年齡比較：只列未來年齡、標出目前設定', () => {
   assert.ok(opts.find((o) => o.retireAge === 65).current);
   assert.ok(opts[2].totalPV > opts[0].totalPV);
 });
+
+import { goalPlan } from '../js/engine.js';
+
+test('目標反算：各補足方式真的能達標', () => {
+  const s = defaults(2026);
+  s.targetMonthly = 90000; // 今日幣值，高於目前規劃
+  const g = goalPlan(s, 2026);
+  assert.ok(g.gapPV > 0 && g.progress < 1);
+  // 每月加碼：照建議金額加一筆投資，應剛好達標
+  const a = JSON.parse(JSON.stringify(s));
+  a.portfolios.push({ id: 'x', name: 'x', assets: [{ id: 'x', name: 'x', monthly: g.extraMonthly + 1, rate: s.investReturn }] });
+  assert.ok(compute(a, 2026).totalPV >= s.targetMonthly - 1);
+  // 一次投入：以現金資產投入，報酬同新增投資
+  const b = JSON.parse(JSON.stringify(s));
+  b.holdings.push({ id: 'y', name: 'y', kind: 'cash', amount: g.lumpSum + 10, rate: s.investReturn });
+  assert.ok(compute(b, 2026).totalPV >= s.targetMonthly - 1);
+  // 延後退休
+  if (g.retireAge) {
+    const c = JSON.parse(JSON.stringify(s)); c.self.retireAge = g.retireAge;
+    assert.ok(compute(c, 2026).totalPV >= s.targetMonthly);
+    c.self.retireAge = g.retireAge - 1;
+    assert.ok(compute(c, 2026).totalPV < s.targetMonthly, '應找最早達標的年齡');
+  }
+  assert.ok(g.requiredReturn > 0);
+  assert.ok(g.selfRate6.gain > 0 && g.selfRate6.monthlyCost === 2700);
+});
+
+test('目標反算：已達標時不需補足', () => {
+  const s = defaults(2026);
+  s.targetMonthly = 10000;
+  const g = goalPlan(s, 2026);
+  assert.equal(g.gapPV, 0);
+  assert.equal(g.extraMonthly, 0);
+  assert.equal(g.retireAge, null);
+});
+
+import { avgInsuredSalary } from '../js/engine.js';
+
+test('勞保平均投保薪資：隨薪資成長升級、上限 45,800', () => {
+  assert.equal(avgInsuredSalary(30000, 0, 30), 30300);           // 不成長：維持目前級距
+  assert.equal(avgInsuredSalary(30000, 2, 30), 45800);           // 30 年後早已超過上限
+  assert.equal(avgInsuredSalary(80000, 2, 10), 45800);
+  const near = avgInsuredSalary(36000, 2, 1);                    // 只剩 1 年：混合過去 4 年回推月薪
+  assert.ok(near > 33300 && near <= 38200, `${near}`);
+  // 整體試算：自動模式比手動固定目前級距高
+  const s = defaults(2026);
+  s.self.salary = 30000;
+  const auto = compute(s, 2026).me.insMonthly;
+  s.self.insMode = 'manual'; s.self.insGrade = 2; // 30,300
+  assert.ok(auto > compute(s, 2026).me.insMonthly);
+});

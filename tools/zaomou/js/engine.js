@@ -58,6 +58,19 @@ export function insuranceGrade(salary) {
   return { grade: idx + 1, salary: INSURANCE_GRADES[idx] };
 }
 
+/**
+ * 勞保老年年金的「平均月投保薪資」：退休前最高 60 個月的平均（勞工保險條例第 19 條）。
+ * 薪資逐年成長時，每個月依當時月薪對應級距，取退休前最後 60 個月平均；
+ * 距退休不足 5 年時，不足的月份以薪資年增率回推過去月薪。級距表假設不變（保守）。
+ */
+export function avgInsuredSalary(salary, growthPct, yearsToRetire) {
+  const g = Math.pow(1 + growthPct / 100, 1 / 12);
+  const end = Math.round(Math.max(0, yearsToRetire) * 12);
+  let sum = 0;
+  for (let m = end - 60; m < end; m++) sum += insuranceGrade(salary * Math.pow(g, m)).salary;
+  return sum / 60;
+}
+
 /* ── 法定給付 ─────────────────────────────────── */
 
 /** 勞保老年給付：滿 15 年請領年金（A/B 式擇優，提前／延後 ±4%/年）；未滿請領一次金 */
@@ -137,7 +150,9 @@ function person(p, ctx) {
   const payoutMonths = Math.max(12, Math.round((lifeAge - p.retireAge) * 12));
   const payout = makePayout(payoutMonths, ctx.payoutMode, ctx.postReturn);
 
-  const base = p.insMode === 'manual' ? INSURANCE_GRADES[clamp(p.insGrade, 1, INSURANCE_GRADES.length) - 1] : insuranceGrade(p.salary).salary;
+  const baseNow = p.insMode === 'manual' ? INSURANCE_GRADES[clamp(p.insGrade, 1, INSURANCE_GRADES.length) - 1] : insuranceGrade(p.salary).salary;
+  // 自動模式：投保薪資跟著薪資成長升級；手動模式：使用者指定的級距維持不變
+  const base = p.insMode === 'manual' ? baseNow : Math.round(avgInsuredSalary(p.salary, ctx.salaryGrowth, yearsToRetire));
   const insYears = Math.max(0, p.retireAge - p.workStartAge);
   const ins = laborInsurance({ base, years: insYears, birthYear: p.birthYear, claimAge: p.retireAge });
   const insMonthly = ins.kind === 'annuity' ? ins.monthly : Math.round(payout.toMonthly(ins.lump));
@@ -155,7 +170,7 @@ function person(p, ctx) {
 
   return {
     age, yearsToRetire, lifeAge, healthAge, payout, payoutMonths,
-    insBase: base, insGrade: insuranceGrade(base).grade, insYears, ins, insMonthly,
+    insBase: base, insBaseNow: baseNow, insGrade: insuranceGrade(baseNow).grade, insYears, ins, insMonthly,
     acct, laborRetire, oldUnits: units, oldLump, oldMonthly, finalSalary,
     floor: insMonthly + laborRetire + oldMonthly,
   };
@@ -343,4 +358,55 @@ export function retireAgeOptions(state, nowYear = new Date().getFullYear(), ages
     const r = compute(s, nowYear);
     return { retireAge, total: r.total, totalPV: r.totalPV, coverage: r.coverage, pool: r.investPool, ins: r.me.insMonthly, current: retireAge === state.self.retireAge };
   });
+}
+
+/**
+ * 目標反算：目前規劃離目標（今日幣值月領）多遠，以及五種補足方式各需要多少。
+ * 「達標」定義為 compute().totalPV ≥ 目標，等同退休當年名目月領 ≥ 目標 ×（1+通膨）^年數。
+ */
+export function goalPlan(state, nowYear = new Date().getFullYear()) {
+  const r = compute(state, nowYear);
+  const target = Math.max(0, num(state.targetMonthly));
+  const reached = (s) => compute(s, nowYear).totalPV >= target;
+  const progress = target > 0 ? r.totalPV / target : 1;
+  const gapPV = Math.max(0, target - r.totalPV);
+  const ir = num(state.investReturn);
+  const n = r.n;
+
+  // 1. 每月加碼（以「新增投資的預期報酬」投入）
+  const extraMonthly = gapPV > 0 ? r.reverse.extraMonthly : 0;
+  // 2. 今天一次投入
+  const lumpSum = gapPV > 0 && n > 0 ? r.reverse.shortfallPool / Math.pow(1 + ir / 100 / 12, 12 * n) : 0;
+  // 3. 延後退休（最多到 75 歲）
+  let retireAge = null;
+  if (gapPV > 0) {
+    for (let a = state.self.retireAge + 1; a <= 75; a++) {
+      const s = cloneState(state); s.self.retireAge = a;
+      if (reached(s)) { retireAge = a; break; }
+    }
+  }
+  // 4. 需要的投資報酬率（所有投資資產同時加減）
+  let requiredReturn = null;
+  const hasInvest = state.holdings.length + state.portfolios.reduce((t, p) => t + p.assets.length, 0) > 0;
+  if (gapPV > 0 && hasInvest) {
+    const ok = (d) => reached(shiftReturns(cloneState(state), d));
+    if (ok(20)) {
+      let lo = 0, hi = 20;
+      for (let i = 0; i < 30; i++) { const mid = (lo + hi) / 2; if (ok(mid)) hi = mid; else lo = mid; }
+      requiredReturn = hi; // 需要加上的百分點
+    }
+  }
+  // 5. 勞退自提拉到 6%
+  let selfRate6 = null;
+  if (num(state.self.selfRate) < 6) {
+    const s = cloneState(state); s.self.selfRate = 6;
+    const pv = compute(s, nowYear).totalPV;
+    selfRate6 = { gain: pv - r.totalPV, enough: pv >= target, monthlyCost: Math.round(Math.min(state.self.salary, 150000) * (6 - num(state.self.selfRate)) / 100) };
+  }
+
+  return {
+    target, currentPV: r.totalPV, progress, gapPV, n,
+    requiredPool: r.reverse.requiredPool, havePool: r.investPool, shortfallPool: r.reverse.shortfallPool,
+    extraMonthly, lumpSum, retireAge, requiredReturn, selfRate6,
+  };
 }
