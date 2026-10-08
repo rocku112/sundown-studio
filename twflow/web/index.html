@@ -2462,7 +2462,7 @@ function benchRet(date){
 function buildHold(){
   const el=$('hold');
   // 解析代號需要 ETF 與美股資料，第一次進來先載入
-  if(!ETFD||!BENCH){ Promise.all([etfReady(),benchReady()]).then(()=>{ if(curView==='hold') buildHold(); }); }
+  if(!ETFD||!BENCH||!EPF){ Promise.all([etfReady(),benchReady(),epfReady()]).then(()=>{ if(curView==='hold') buildHold(); }); }
   if(!DIR.tw&&!DIR.us&&HOLD.some(h=>/^(TWX|USX):/.test(h.key))) dirReady().then(()=>{ if(curView==='hold') buildHold(); });
   const rows=HOLD.map(h=>{const i=holdInfo(h); if(!i||!i.price||!i.fx) return {h,i:null};
     const val=i.price*h.shares*i.fx, cost=h.cost*h.shares*i.fx;
@@ -2522,6 +2522,7 @@ function buildHold(){
       ${Object.entries(mk).filter(([,w])=>w>0).map(([k,w])=>bar(k,w)).join('')}
       <div class="rsub" style="margin:12px 0 6px">產業／類別</div>
       ${Object.entries(grp).sort((a,b)=>b[1]-a[1]).map(([k,w])=>bar(k,w)).join('')}</div>`:''}
+    ${ok.length?holdTools(ok,tv):''}
     ${rows.length?`<div class="card"><h3>持股明細</h3>${rows.map(r=>r.i?`
       <div class="ritem" data-code="${r.h.key}" style="grid-template-columns:minmax(0,1fr) auto auto">
         <div><div class="rname">${esc(r.i.name)} <span style="color:var(--s8);font-weight:400">${esc(r.i.code)}</span></div>
@@ -2563,6 +2564,83 @@ function buildHold(){
       HOLD=j; saveHold(); buildHold(); toast('已匯入 '+j.length+' 筆持股');
     }catch(_){ toast('檔案格式不對，請用本站匯出的備份檔'); } };
   const clr=$('h-clear'); if(clr) clr.onclick=()=>{ if(confirm('確定清除全部持股？')){ HOLD=[]; saveHold(); buildHold(); } };
+  const dd=$('h-dd'); if(dd) dd.oninput=()=>{ HDD=+dd.value; const box=$('h-ddbox'); if(box) box.innerHTML=ddTable(); $('h-ddv').textContent=HDD+'%'; };
+  const cash=$('h-cash'); if(cash) cash.onchange=()=>{ HCASH=Math.max(0,+cash.value||0); buildHold(); };
+  el.querySelectorAll('[data-tgt]').forEach(inp=>inp.onchange=()=>{
+    const h=HOLD.find(x=>x.id===inp.dataset.tgt); if(!h) return;
+    const v=inp.value===''?null:Math.max(0,Math.min(100,+inp.value)); h.tgt=v; saveHold(); buildHold(); });
+  el.querySelectorAll('[data-note]').forEach(t=>t.onchange=()=>{
+    const h=HOLD.find(x=>x.id===t.dataset.note); if(!h) return; h.note=t.value.slice(0,500); saveHold(); toast('已存在這台裝置'); });
+}
+/* ══ 持有決策工具：下跌情境、客觀風險資料、再平衡計算、持有規則備忘（只陳述數字，不給買賣建議）══ */
+let HDD=30, HCASH=0, HOK=[], HTV=0;
+function ddTable(){
+  const f=1-HDD/100, rows=HOK.map(r=>{const nv=r.val*f; return {r,nv,loss:nv-r.val,ret:(nv/r.cost-1)*100};});
+  const tv2=HTV*f, tc=HOK.reduce((a,r)=>a+r.cost,0);
+  return `<table class="st lft"><tr><th>持股</th><th>跌後市值</th><th>少了</th><th>跌後報酬率</th></tr>
+    ${rows.map(x=>`<tr><td>${esc(x.r.i.name)}</td><td>${ntd(x.nv)}</td><td style="color:var(--down)">${ntd(x.loss)}</td><td style="color:${col(x.ret)}">${pct(x.ret)}</td></tr>`).join('')}
+    <tr><td><b>合計</b></td><td><b>${ntd(tv2)}</b></td><td style="color:var(--down)"><b>${ntd(tv2-HTV)}</b></td><td style="color:${col(tv2-tc)}"><b>${pct(tc?(tv2/tc-1)*100:null)}</b></td></tr></table>`;
+}
+function holdFacts(r){
+  const out=[];
+  if(r.i.mkt==='etf'){
+    const p=epf(r.i.code), e=ETFD&&ETFD.etfs.find(x=>x.code===r.i.code);
+    if(p){
+      if(p.index) out.push(['追蹤指數',esc(p.index)]);
+      if(p.listed){ const y=(Date.now()-new Date(p.listed))/3.156e10;
+        out.push(['上市',`${esc(p.listed)}（${y<1?`約 ${Math.max(1,Math.round(y*12))} 個月`:y.toFixed(1)+' 年'}）`+(y<1?'<span class="vbadge mid" style="margin-left:6px">還沒經歷過完整的空頭</span>':'')]); }
+      if(p.mdd3!=null) out.push(['近三年（或上市以來）最大回撤',p.mdd3+'%']);
+      if(p.vol!=null){ out.push(['年化波動度',p.vol+'%']);
+        out.push(['一年內常見的漲跌範圍（±1 個波動度，約 2/3 的年份落在這裡）',`約 ±${Math.round(p.vol)}%，市值 ${ntd(r.val*(1-p.vol/100))} ～ ${ntd(r.val*(1+p.vol/100))}`]); }
+      if(p.tr3!=null) out.push(['含息年化（3 年）',p.tr3+'%']);
+    }
+    if(e){
+      if(e.aum!=null) out.push(['規模',e.aum+' 億元'+(e.aum<20?'<span class="vbadge mid" style="margin-left:6px">規模偏小：成交可能較少、價差較大；長期過小可能清算下市（按淨值退回）</span>':'')]);
+      if(e.prem!=null) out.push(['今日折溢價',(e.prem>=0?'溢價 ':'折價 ')+Math.abs(e.prem).toFixed(2)+'%（市價 '+e.price+'、淨值 '+e.nav+'）']);
+    }
+  } else if(r.i.mkt==='tw'){
+    const d=D&&D.stock_data[r.i.code];
+    if(d&&d.position!=null) out.push(['價格位階（近 60 日高低區間）',d.position+'%']);
+    const fl=FLAGS&&FLAGS.codes&&FLAGS.codes[r.i.code];
+    if(fl&&fl.pg) out.push(['董監設質比例',fl.pg[0]+'%']);
+    if(fl&&(fl.pn||fl.pw||fl.nt)) out.push(['處置／注意',fl.pn?'處置中':fl.pw?'處置預警':'近 30 天被列注意 '+fl.nt[0]+' 天']);
+  }
+  return out;
+}
+function holdTools(ok,tv){
+  HOK=ok; HTV=tv;
+  if(!FLAGS) flagsReady().then(()=>{ if(curView==='hold') buildHold(); });
+  const tot=tv+HCASH, anyT=ok.some(r=>r.h.tgt!=null), sumT=ok.reduce((a,r)=>a+(r.h.tgt||0),0);
+  const reb=ok.map(r=>{
+    if(r.h.tgt==null) return null;
+    const want=tot*r.h.tgt/100, diff=want-r.val, px=r.i.price*r.i.fx;
+    const sh=Math.floor(Math.abs(diff)/px), amt=sh*px, fee=diff<0?amt*SELLCOST[r.i.mkt]:amt*0.001425;
+    return {r,diff,sh,amt,fee};
+  });
+  return `<div class="card"><h3>持有決策工具</h3>
+    <p style="font-size:13px;color:var(--s9);line-height:1.8">「要不要獲利了結」沒有標準答案，但可以先看清楚三件事：<b>跌下去會怎樣、這檔本身的風險、你希望它佔多少</b>。
+      成本價只影響感覺，不影響之後的漲跌；比較有用的問題是「如果手上是現金，我會用這個價格、這個比例買它嗎？」</p>
+    <div class="stitle" style="margin-top:6px">1　如果下跌 <b id="h-ddv">${HDD}%</b></div>
+    <input id="h-dd" type="range" min="5" max="60" step="5" value="${HDD}" style="width:100%;accent-color:var(--gold)">
+    <div class="rsub" style="font-size:11.5px;white-space:normal">參考：台股 2022 年約 −30%；那斯達克 2022 年約 −33%、2000–2002 年約 −78%；單一科技類股更深。</div>
+    <div id="h-ddbox" style="overflow-x:auto;margin-top:8px">${ddTable()}</div>
+    <div class="stitle" style="margin-top:14px">2　每檔的客觀資料</div>
+    ${ok.map(r=>{const f=holdFacts(r); return `<div class="erow"><div class="ehead"><b>${esc(r.i.name)} <span class="rsub">${esc(r.i.code)}</span></b><span class="rsub">占 ${(r.w*100).toFixed(1)}%</span></div>
+      ${f.length?f.map(([k,v])=>`<div class="kv" style="align-items:flex-start;gap:10px"><span style="flex:0 0 42%;white-space:normal">${k}</span><b style="flex:1;white-space:normal;text-align:right;font-weight:500">${v}</b></div>`).join(''):'<div class="rsub">這檔沒有額外的體質資料。</div>'}</div>`;}).join('')}
+    <div class="stitle" style="margin-top:14px">3　再平衡計算機</div>
+    <p class="rsub" style="white-space:normal;font-size:12px">填每檔希望佔總資產的比例（%），可再加上準備投入的現金，算出要賣或補多少股才會回到你設定的比例。股數無條件捨去，台股可用零股。</p>
+    <div class="kv"><span>準備新投入的現金</span><b><input id="h-cash" type="number" min="0" step="1000" value="${HCASH||''}" placeholder="0" style="width:120px;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--s10)"></b></div>
+    ${ok.map((r,k)=>{const x=reb[k]; return `<div class="kv" style="gap:8px;flex-wrap:wrap"><span>${esc(r.i.name)}　目前 ${(r.w*100).toFixed(1)}%</span>
+      <b style="font-weight:500"><input data-tgt="${r.h.id}" type="number" min="0" max="100" step="1" value="${r.h.tgt??''}" placeholder="目標%" style="width:76px;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--s10)">
+      ${x?(x.sh===0?'<span class="rsub">　已接近目標</span>':`<span style="color:${x.diff<0?'var(--down)':'var(--up)'}">　${x.diff<0?'賣出':'買進'} ${x.sh.toLocaleString()} 股（約 ${ntd(x.amt)}，費用約 ${ntd(x.fee)}）</span>`):''}</b></div>`;}).join('')}
+    ${anyT&&ok.some(r=>r.h.tgt==null)?`<div class="rsub" style="white-space:normal">沒填目標的持股不變動；比例以「目前總市值＋新投入現金」計算。</div>`
+      :anyT&&Math.abs(sumT-100)>0.5?`<div class="rsub" style="white-space:normal;color:var(--gold)">設定的比例合計 ${sumT.toFixed(0)}%，${sumT<100?`剩下的 ${(100-sumT).toFixed(0)}% 會變成現金`:`超過 100%，需要額外投入現金`}。</div>`:''}
+    <div class="stitle" style="margin-top:14px">4　持有規則備忘（事先寫好，照規則做）</div>
+    <p class="rsub" style="white-space:normal;font-size:12px">例：「長期持有，跌 30% 也不賣」、「佔比超過 40% 就賣回 30%」、「需要用錢的前一年開始分批換成現金」。寫下來的規則比看盤當下的感覺穩定。</p>
+    ${ok.map(r=>`<div style="margin:6px 0"><div class="rsub">${esc(r.i.name)}</div>
+      <textarea data-note="${r.h.id}" rows="2" maxlength="500" placeholder="我持有的理由／什麼情況會賣" style="width:100%;box-sizing:border-box;padding:8px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--s10);font:inherit;font-size:13px">${esc(r.h.note||'')}</textarea></div>`).join('')}
+    <p class="note" style="margin-top:8px;font-size:12px">以上只依你輸入的資料與公開數據計算，不構成投資建議；要不要賣、賣多少，取決於你的資金用途、多久會用到這筆錢、能承受多大的下跌。
+      研究頁的「高檔調節 vs 定期定額」是用 0050 測的，對單一市場或單一類股不能直接套用。</p></div>`;
 }
 
 /* ══ 面板開關 ══════════════════════════════════════════════════ */
