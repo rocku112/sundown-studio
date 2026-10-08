@@ -474,3 +474,7 @@ details.fold > summary:focus-visible { outline: 3px solid var(--gold); outline-o
 
 /* 主題切換按鈕 */
 #btn-theme svg { width: 18px; height: 18px; }
+
+/* ── 自提卡：假設調整區 ── */
+.assume { margin-top: 12px; padding: 14px 16px; border-radius: 12px; background: var(--bg); }
+.assume .grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }

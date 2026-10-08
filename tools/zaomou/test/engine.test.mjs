@@ -618,3 +618,17 @@ test('勞退自提延後開始：越晚開始損失越多、手上現金越多',
   near(o[1].fv, growMonthly(a.monthly, a.years - 3, 4), 1);
   assert.equal(o[1].inHand, a.afterTaxMonthly * 36);
 });
+
+test('自提節稅：可指定稅率級距、累積節稅', () => {
+  const t = selfContributionTax(45000, 6, 0, 20); // 已婚合併、其他所得等，自行指定 20%
+  assert.equal(t.manual, true);
+  assert.equal(t.marginal, 0.2);
+  assert.equal(t.saving, Math.round(32400 * 0.2));
+  const s = defaults(2026);
+  const a = selfContributionAnalysis(s, 2026);
+  assert.equal(a.totalSaving, a.annualSaving * a.years);
+  s.self.taxRateOverride = 12;
+  const b = selfContributionAnalysis(s, 2026);
+  assert.equal(b.marginal, 0.12);
+  assert.ok(b.breakEven > a.breakEven, '稅率越高，自己投資要打平越難');
+});

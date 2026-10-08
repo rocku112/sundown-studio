@@ -117,7 +117,7 @@ function outVal(key) {
       ` 退休時專戶約 <b>${wan(me.acct.pool)}</b>，依勞保局月退算法約月領 <b>${money(me.laborRetire)}</b>${me.laborOfficial.eligible ? `，領到 ${me.laborOfficial.endAge} 歲` : '（年資未滿 15 年只能一次領）'}。`;
     case 'taxinfo': {
       const cur = state.self.selfRate;
-      const t = selfContributionTax(state.self.salary, cur > 0 ? cur : 6, state.self.bonusMonths);
+      const t = selfContributionTax(state.self.salary, cur > 0 ? cur : 6, state.self.bonusMonths, state.self.taxRateOverride);
       if (t.marginal === 0) return '依目前月薪估算，綜合所得淨額為 0、本來就不用繳稅，自提沒有節稅效果，但仍可累積退休金。';
       return `${cur > 0 ? `自提 ${pct(cur)}` : '若自提 6%'}：每年提撥 <b>${money(t.contrib)}</b>，不計入當年度薪資所得課稅，估計少繳綜所稅約 <b>${money(t.saving)}</b>（邊際稅率 ${Math.round(t.marginal * 100)}%），實際負擔約 ${money(t.netCost)}。`;
     }
@@ -364,7 +364,7 @@ function pageFloor() {
       <div class="row"><div class="k">勞保老年年金<small>A 式：平均月投保薪資 × 年資 × 0.775% + 3,000；B 式：平均月投保薪資 × 年資 × 1.55%，兩者擇優。法定請領年齡 ${legalPensionAge(s.birthYear)} 歲，每提前 1 年減給 4%、每延後 1 年增給 4%，各以 5 年為限。年資未滿 15 年改請領一次金。</small></div></div>
       <div class="row"><div class="k">勞退新制<small>雇主每月提繳 6%＋個人自提，依薪資年增率逐月累積、以勞退基金收益月複利滾存；退休時的專戶金額依提領方式換算月領。</small></div></div>
       <div class="row"><div class="k">勞基法舊制<small>前 15 年每年 2 個基數，第 16 年起每年 1 個基數，最高 45 個基數；基數以退休前 6 個月平均工資計，此處以推估的退休時月薪近似。</small></div></div>
-      <div class="row"><div class="k">簡化假設<small>投保薪資依薪資年增率逐月升級、級距表維持 115 年版、不計勞保年金依 CPI 調整、不計稅負與保費；實際金額以勞保局核定為準。</small></div></div>
+      <div class="row"><div class="k">簡化假設<small>投保薪資依薪資年增率逐月升級、級距表維持 115 年版；月領金額為稅前（勞保年金屬保險給付免稅；勞退月退屬退職所得，115 年度每年 894,000 元以內免稅；投資收益另依個人狀況），不計健保等保費；實際金額以勞保局核定為準。勞退自提的節稅效果另見「關鍵決策」。</small></div></div>
     </div>
   </section>`;
 }
@@ -485,7 +485,7 @@ function pagePlan() {
       ? { n: 4, k: '提高投資報酬', v: `+${g.requiredReturn.toFixed(1)} 個百分點`, p: g.requiredReturn > 3 ? '幅度偏大，代表要承擔明顯更高的波動風險，不建議單靠這一招。' : '所有投資的年化報酬同時提高這麼多即可達標；報酬越高、波動通常越大。' }
       : { n: 4, k: '提高投資報酬', v: '—', p: state.holdings.length + state.portfolios.length ? '報酬再高也補不起來。' : '尚未設定投資資產。', muted: true },
     g.selfRate6
-      ? { n: 5, k: '勞退自提拉到 6%', v: `+${money(g.selfRate6.gain)}`, p: `每月多提撥 ${money(g.selfRate6.monthlyCost)}，自提不計入當年度薪資所得課稅，估計每年少繳稅 ${money(selfContributionTax(s.salary, 6, s.bonusMonths).saving - selfContributionTax(s.salary, s.selfRate, s.bonusMonths).saving)}；月領（今日幣值）增加${g.selfRate6.enough ? '，單獨就能達標' : '，可補一部分'}。`,
+      ? { n: 5, k: '勞退自提拉到 6%', v: `+${money(g.selfRate6.gain)}`, p: `每月多提撥 ${money(g.selfRate6.monthlyCost)}，自提不計入當年度薪資所得課稅，估計每年少繳稅 ${money(selfContributionTax(s.salary, 6, s.bonusMonths, s.taxRateOverride).saving - selfContributionTax(s.salary, s.selfRate, s.bonusMonths, s.taxRateOverride).saving)}；月領（今日幣值）增加${g.selfRate6.enough ? '，單獨就能達標' : '，可補一部分'}。`,
           btn: `<button type="button" class="btn" data-set="self.selfRate" data-val="6">改為自提 6%</button>` }
       : { n: 5, k: '勞退自提', v: '已是 6%', p: '自提已達上限。', muted: true },
     { n: 6, k: '調整目標', v: money(round(g.currentPV)), p: '照目前規劃，每月大約能有這麼多（今日幣值）。',
@@ -813,14 +813,27 @@ function selfRateCard() {
     : `自己投資要年化超過 <b>${a.breakEven.toFixed(2)}%</b> 才能打平自提；你設定的 ${pct(a.investReturn)} 不到這個門檻，自提較有利。`;
   return `<section class="card"><div class="card-h"><h3>${badge('piggy', 'rgba(232,184,75,.18)', '#9A7210')}勞退自提：值不值得？</h3><span class="hint">${cur > 0 ? `目前自提 ${pct(cur)}` : '以自提 6% 試算'}</span></div>
     <p class="note" style="margin-top:0">${lead}</p>
+    <div class="assume">
+      <div class="grid">
+        ${numF('self.laborReturn', '勞退基金收益假設', { min: 0, max: 20, step: 0.1, unit: '%' })}
+        ${numF('investReturn', '你自己投資的預期報酬', { min: -5, max: 20, step: 0.5, unit: '%' })}
+        <label class="field"><span>你的綜所稅級距</span><select class="input txt" data-k="self.taxRateOverride" data-t="numnull" data-rerender>
+          <option value="" ${state.self.taxRateOverride === null ? 'selected' : ''}>自動估算（依月薪與年終）</option>
+          ${[0, 5, 12, 20, 30, 40].map((r) => `<option value="${r}" ${state.self.taxRateOverride === r ? 'selected' : ''}>${r}%</option>`).join('')}
+        </select></label>
+      </div>
+      <div class="chips">${RETURN_PRESETS.map((p) => `<button type="button" class="chip" data-set="self.laborReturn" data-val="${p.v}" aria-pressed="${state.self.laborReturn === p.v}" title="${p.tip}">${p.label}</button>`).join('')}</div>
+      <p class="note" style="margin-top:8px">勞退基金官方實績：近 5 年平均 ${LABOR_FUND.avg5.rate}%（${LABOR_FUND.avg5.period}）、近 10 年 ${LABOR_FUND.avg10.rate}%（${LABOR_FUND.avg10.period}），但開辦至 ${LABOR_FUND.longAvg.to} 年平均只有 ${LABOR_FUND.longAvg.rate}%——近年股市大漲拉高了平均。規劃幾十年後的錢，建議用保守一點的數字，再用高的數字看看樂觀情境。已婚合併申報或有其他所得時，請自行選擇稅率級距。</p>
+    </div>
     <div class="stats" style="margin-top:12px">
       <div class="stat"><small>每月提撥</small><strong>${money(a.monthly)}</strong><small>不計入薪資所得課稅</small></div>
-      <div class="stat good"><small>每年少繳稅</small><strong>${money(a.annualSaving)}</strong><small>依 115 年度級距估算</small></div>
+      <div class="stat good"><small>每年少繳稅</small><strong>${money(a.annualSaving)}</strong><small>${a.manualTax ? `以 ${mRate}% 級距計算` : '依 115 年度級距估算'}</small></div>
+      <div class="stat good"><small>${a.years} 年累積少繳稅</small><strong>${wan(a.totalSaving)}</strong><small>以目前薪資與級距估算</small></div>
       <div class="stat"><small>鎖定到 ${a.startAge} 歲</small><strong>${a.lockedYears} 年</strong><small>期間不能動用</small></div>
     </div>
     <div class="vs">
-      <div><small>自提進勞退（收益 ${pct(a.laborReturn)}）</small><strong>${wan(a.viaPension)}</strong><span>最差情況（只有保證收益 ${a.minGuarantee.rate}%）：${wan(a.viaPensionFloor)}</span></div>
-      <div><small>領回來自己投資（稅後、報酬 ${pct(a.investReturn)}）</small><strong>${wan(a.selfInvest)}</strong><span>沒有保證，報酬可能更高也可能虧損</span></div>
+      <div><small>自提進勞退（收益 ${pct(a.laborReturn)}）</small><strong>${wan(a.viaPension)}</strong><span>最差情況（只有保證收益 ${a.minGuarantee.rate}%）：${wan(a.viaPensionFloor)}<br>可動用：滿 ${a.startAge} 歲才能領</span></div>
+      <div><small>領回來自己投資（稅後、報酬 ${pct(a.investReturn)}）</small><strong>${wan(a.selfInvest)}</strong><span>沒有保證，報酬可能更高也可能虧損<br>可動用：隨時（但也容易被花掉）</span></div>
     </div>
     ${delayTable()}
     ${verdict ? `<p class="note"><b>打平點：</b>${verdict}${a.marginal ? `在兩邊報酬相同的前提下，自提因為節稅，終值固定多 ${Math.round((1 / (1 - a.marginal) - 1) * 1000) / 10}%。` : ''}</p>` : ''}
