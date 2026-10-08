@@ -2,7 +2,7 @@
    畫面分兩種：含輸入欄位的分頁（起點設定、投資資產、目標與行動）只在結構改變時重繪，
    數字靠 data-o 局部更新，避免打字時失焦；純輸出的分頁與側欄則每次重算後整頁重繪。 */
 
-import { compute, holdingValue, growLump, growMonthly, lifecycle, sensitivity, retireAgeOptions, goalPlan, validate, scenarioSummary, selfContributionTax, monteCarlo, actionPlan, planPath, trackProgress, laborLumpVsMonthly, selfContributionAnalysis, insuranceClaimOptions, insCpiFactor, insuranceLumpVsAnnuity, withdrawalStrategies, selfRateDelayOptions, stateDiff, householdTimeline } from './engine.js';
+import { compute, holdingValue, growLump, growMonthly, lifecycle, sensitivity, retireAgeOptions, goalPlan, validate, scenarioSummary, selfContributionTax, monteCarlo, actionPlan, planPath, trackProgress, laborLumpVsMonthly, selfContributionAnalysis, insuranceClaimOptions, insCpiFactor, insuranceLumpVsAnnuity, withdrawalStrategies, selfRateDelayOptions, stateDiff, householdTimeline, selfRateFit } from './engine.js';
 import { LABOR_MONTHLY, LABOR_FUND, legalPensionAge, INSURANCE_GRADES, MIN_LIVING, EXPENSE_LEVELS, RETURN_PRESETS, LIFE_TABLE, DATA_YEAR, PENSION_WAGE_MAX, dataStale } from './data.js';
 import { load, save, defaults, parseImport, getPath, setPath, uid, applySeed, STORAGE_KEY, normalize, loadScenarios, saveScenarios, MAX_SCENARIOS, templates, SHARE_PREFIX, encodeShare, decodeShare } from './state.js';
 import { lineChart, donut, wan, attachTooltips } from './charts.js';
@@ -53,8 +53,13 @@ const ICON = {
   save: '<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>',
   trend: '<path d="M3 17l6-6 4 4 8-8M15 7h6v6"/>',
   coins: '<circle cx="8" cy="8" r="6"/><path d="M18.1 10.4A6 6 0 1 1 10.3 18M7 6h1v4M16.7 13.9l.7.7-2.8 2.8"/>',
+  shield: '<path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/><path d="M8.5 12l2.5 2.5 4.5-5"/>',
+  lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
   share: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/>',
 };
+// 重點摘要與補足方式的圖示：一眼分辨每張卡在講什麼
+const INSIGHT_IC = { 計畫成功率: 'target', 生活費覆蓋率: 'wallet', 投資資產可撐到: 'hourglass', 最有感的調整: 'sliders', 勞保壓力測試: 'shield', 提早退休空窗期: 'hourglass', 最大收入來源: 'chart' };
+const OPT_IC = ['coins', 'wallet', 'briefcase', 'trend', 'piggy', 'target'];
 const icon = (k) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`;
 const badge = (k, bg, fg) => `<span class="badge-ic" style="background:${bg};color:${fg}">${icon(k)}</span>`;
 
@@ -474,7 +479,7 @@ function pagePlan() {
   }
 
   const opt = (o) => `<div class="opt${o.muted ? ' muted' : ''}">
-      <div class="opt-h"><span class="opt-n">${o.n}</span><small>${o.k}</small></div>
+      <div class="opt-h"><span class="opt-n" aria-hidden="true">${icon(OPT_IC[o.n - 1])}</span><small>${o.k}</small></div>
       <strong>${o.v}</strong><p>${o.p}</p>
       ${o.btn || ''}</div>`;
   const ceil100 = (v) => Math.ceil(v / 100) * 100;
@@ -658,7 +663,7 @@ function pageAnalysis() {
   <p class="page-sub">把數字翻成結論：夠不夠、撐多久、調整哪裡最有效。圖表可用滑鼠或手指查看每一歲的數值。</p>
 
   <section class="insights" aria-label="重點摘要">
-    ${insights.map((i) => `<div class="insight ${i.cls}"><small>${i.k}</small><strong>${i.v}</strong><p>${i.p}</p></div>`).join('')}
+    ${insights.map((i) => `<div class="insight ${i.cls}"><small><span class="ins-ic">${icon(INSIGHT_IC[i.k] || 'chart')}</span>${i.k}</small><strong>${i.v}</strong><p>${i.p}</p></div>`).join('')}
   </section>
 
   ${mc ? mcCard(mc, size) : ''}
@@ -829,10 +834,11 @@ function foldedDecisions() {
     ? `月領 ${money(lc.monthly)} 到 ${lc.endAge} 歲${lc.outlive > 0 ? `，<b>比你的預期壽命早 ${lc.outlive.toFixed(1)} 年領完</b>` : '，已涵蓋你的預期壽命'}；一次領 ${wan(lc.pool)}。`
     : `新制年資未滿 15 年，<b>只能一次領</b> ${wan(lc.pool)}。`));
   if (state.self.salary > 0) {
-    const a = selfContributionAnalysis(state, NOW);
-    out.push(fold('selfrate', selfRateCard(), a.marginal === 0
-      ? '你目前不用繳綜所稅，自提<b>沒有節稅效果</b>，差別只在報酬、保障與流動性。'
-      : `邊際稅率 ${Math.round(a.marginal * 100)}%，每年少繳 ${money(a.annualSaving)}；自己投資要年化超過 <b>${a.breakEven.toFixed(2)}%</b> 才打平。`));
+    const f = memo('selffit', selfRateFit), a = f.a;
+    const lv = { high: '適合自提', mid: '可以考慮', low: '不急著自提' }[f.level];
+    out.push(fold('selfrate', selfRateCard(), `<b>${lv}</b>（${f.yes} 項有利、${f.no} 項不利）・` + (a.marginal === 0
+      ? '你目前不用繳綜所稅，自提沒有節稅效果。'
+      : `每年少繳稅 ${money(a.annualSaving)}；自己投資要年化超過 ${a.breakEven.toFixed(2)}% 才打平。`)));
   }
   return out.length ? `<div class="sub-h"><h3>${badge('sliders', 'rgba(45,74,110,.1)', C.navy)}關鍵決策</h3><span class="hint">點開看計算與正反比較</span></div>${out.join('')}` : '';
 }
@@ -869,17 +875,52 @@ function delayTable() {
 
 function selfRateCard() {
   if (state.self.salary <= 0) return '';
-  const a = selfContributionAnalysis(state, NOW);
+  const f = memo('selffit', selfRateFit);
+  const a = f.a;
   const cur = state.self.selfRate;
   const mRate = Math.round(a.marginal * 100);
-  const lead = a.marginal === 0
-    ? `以目前月薪估算你不用繳綜所稅，自提<b>沒有節稅效果</b>，兩條路投入的錢一樣多，差別只在報酬、保障與流動性。`
-    : `你的邊際稅率約 <b>${mRate}%</b>：每提撥 100 元，當年少繳約 ${mRate} 元稅，等於一開始就多了 ${mRate}% 的本金。`;
-  const verdict = a.breakEven === null ? '' : a.investReturn >= a.breakEven
-    ? `自己投資只要年化超過 <b>${a.breakEven.toFixed(2)}%</b> 就能打平自提；依你設定的 ${pct(a.investReturn)}，自己投資的終值較高，但前提是每年平均真的拿到這個報酬、也不會中途動用——而自提還有保證收益墊底。`
-    : `自己投資要年化超過 <b>${a.breakEven.toFixed(2)}%</b> 才能打平自提；你設定的 ${pct(a.investReturn)} 不到這個門檻，自提較有利。`;
+  const LV = { high: ['適合自提', 'good', '多數條件對自提有利'], mid: ['可以考慮', 'mid', '有利有弊，看你重視什麼'], low: ['不急著自提', 'bad', '目前條件對自提不利'] }[f.level];
+  const mark = (ok) => ok === true ? '<i class="fit-m ok" aria-label="有利">✓</i>' : ok === false ? '<i class="fit-m no" aria-label="不利">✕</i>' : '<i class="fit-m mid" aria-label="中性">–</i>';
+  const known = f.items.filter((x) => x.ok !== null).length;
+  const ring = known ? Math.round((f.yes / known) * 100) : 0;
+
+  // 三條路的終值，用長條直接比大小
+  const bars = [
+    ['自提進勞退', a.viaPension, C.green, `收益 ${pct(a.laborReturn)}・${a.startAge} 歲才能領`],
+    ['自提・最差情況', a.viaPensionFloor, C.greenL, `只有保證收益 ${a.minGuarantee.rate}%`],
+    ['領回來自己投資', a.selfInvest, C.gold, `稅後 ${money(a.afterTaxMonthly)}／月・報酬 ${pct(a.investReturn)}・沒有保證`],
+  ];
+  const maxBar = Math.max(...bars.map((b) => b[1]), 1);
+
+  // 打平圖：橫軸是自己投資的報酬，看在哪裡追上自提
+  const size = window.innerWidth < 640 ? { width: 380, height: 210 } : { width: 680, height: 220 };
+  const flat = (v) => [{ x: 0, y: v }, { x: 12, y: v }];
+  const chart = lineChart({
+    series: [
+      { name: '自己投資', points: f.curve.map((p) => ({ x: p.r, y: p.v })), color: C.gold2, fill: 'rgba(232,184,75,.12)' },
+      { name: '自提進勞退', points: flat(a.viaPension), color: C.green },
+      { name: '自提最差情況', points: flat(a.viaPensionFloor), color: C.greenL, dash: true },
+    ],
+    ...size, xStep: 2, xFmt: (x) => `${x}%`, yFmt: wan,
+    marks: [
+      ...(a.breakEven !== null && a.breakEven <= 12 ? [{ x: Math.round(a.breakEven * 2) / 2, label: `打平 ${a.breakEven.toFixed(1)}%`, color: C.red }] : []),
+      ...(a.investReturn >= 0 && a.investReturn <= 12 ? [{ x: Math.round(a.investReturn * 2) / 2, label: '你的設定', color: C.navy }] : []),
+    ],
+    tip: { title: (x) => `自己投資年化 ${x}%`, fmt: wan },
+  });
+
+  const li = (ic, b, t) => `<li>${icon(ic)}<div><b>${b}</b>${t}</div></li>`;
   return `<section class="card"><div class="card-h"><h3>${badge('piggy', 'rgba(232,184,75,.18)', '#9A7210')}勞退自提：值不值得？</h3><span class="hint">${cur > 0 ? `目前自提 ${pct(cur)}` : '以自提 6% 試算'}</span></div>
-    <p class="note" style="margin-top:0">${lead}</p>
+
+    <div class="fit">
+      <div class="fit-score ${LV[1]}" style="--p:${ring}">
+        <div class="fit-ring"><strong>${f.yes}<small>/${known}</small></strong></div>
+        <div><b>${LV[0]}</b><span>${LV[2]}</span><span class="fit-sub">有利 ${f.yes} 項・不利 ${f.no} 項・中性 ${f.items.length - known} 項</span><span class="fit-sub">${a.marginal ? `每提 100 元，當年少繳約 ${mRate} 元稅` : '你目前不用繳綜所稅，自提沒有節稅效果'}</span></div>
+      </div>
+      <ul class="fit-items">${f.items.map((x) => `<li class="${x.ok === true ? 'ok' : x.ok === false ? 'no' : 'mid'}">
+        <span class="fit-ic">${icon(x.icon)}</span><div><b>${x.title}</b><small>${x.detail}</small></div>${mark(x.ok)}</li>`).join('')}</ul>
+    </div>
+
     <div class="assume">
       <div class="grid">
         ${numF('self.laborReturn', '勞退基金收益假設', { min: 0, max: 20, step: 0.1, unit: '%' })}
@@ -890,35 +931,46 @@ function selfRateCard() {
         </select></label>
       </div>
       <div class="chips">${RETURN_PRESETS.map((p) => `<button type="button" class="chip" data-set="self.laborReturn" data-val="${p.v}" aria-pressed="${state.self.laborReturn === p.v}" title="${p.tip}">${p.label}</button>`).join('')}</div>
-      <p class="note" style="margin-top:8px">勞退基金官方實績：近 5 年平均 ${LABOR_FUND.avg5.rate}%（${LABOR_FUND.avg5.period}）、近 10 年 ${LABOR_FUND.avg10.rate}%（${LABOR_FUND.avg10.period}），但開辦至 ${LABOR_FUND.longAvg.to} 年平均只有 ${LABOR_FUND.longAvg.rate}%——近年股市大漲拉高了平均。規劃幾十年後的錢，建議用保守一點的數字，再用高的數字看看樂觀情境。已婚合併申報或有其他所得時，請自行選擇稅率級距。</p>
+      <p class="note" style="margin-top:8px">勞退基金官方實績：近 5 年平均 ${LABOR_FUND.avg5.rate}%（${LABOR_FUND.avg5.period}）、近 10 年 ${LABOR_FUND.avg10.rate}%（${LABOR_FUND.avg10.period}），但開辦至 ${LABOR_FUND.longAvg.to} 年平均只有 ${LABOR_FUND.longAvg.rate}%——近年股市大漲拉高了平均。建議用保守的數字規劃，再用高的數字看樂觀情境。已婚合併申報或有其他所得時，請自行選擇稅率級距。</p>
     </div>
+
     <div class="stats" style="margin-top:12px">
       <div class="stat"><small>每月提撥</small><strong>${money(a.monthly)}</strong><small>不計入薪資所得課稅</small></div>
       <div class="stat good"><small>每年少繳稅</small><strong>${money(a.annualSaving)}</strong><small>${a.manualTax ? `以 ${mRate}% 級距計算` : '依 115 年度級距估算'}</small></div>
       <div class="stat good"><small>${a.years} 年累積少繳稅</small><strong>${wan(a.totalSaving)}</strong><small>以目前薪資與級距估算</small></div>
       <div class="stat"><small>鎖定到 ${a.startAge} 歲</small><strong>${a.lockedYears} 年</strong><small>期間不能動用</small></div>
     </div>
-    <div class="vs">
-      <div><small>自提進勞退（收益 ${pct(a.laborReturn)}）</small><strong>${wan(a.viaPension)}</strong><span>最差情況（只有保證收益 ${a.minGuarantee.rate}%）：${wan(a.viaPensionFloor)}<br>可動用：滿 ${a.startAge} 歲才能領</span></div>
-      <div><small>領回來自己投資（稅後、報酬 ${pct(a.investReturn)}）</small><strong>${wan(a.selfInvest)}</strong><span>沒有保證，報酬可能更高也可能虧損<br>可動用：隨時（但也容易被花掉）</span></div>
-    </div>
+
+    <h4 class="sub4">同樣的錢，${a.startAge} 歲時各有多少？</h4>
+    <div class="hbars">${bars.map(([l, v, c, d]) => `<div class="hbar"><div class="hbar-h"><span>${l}</span><b class="num">${wan(v)}</b></div>
+      <div class="hbar-t"><i style="width:${Math.max(2, (v / maxBar) * 100)}%;background:${c}"></i></div><small>${d}</small></div>`).join('')}</div>
+
+    <h4 class="sub4">自己投資要賺多少，才追得上自提？</h4>
+    ${chart}
+    <div class="chart-legend"><span><i style="background:${C.gold2}"></i>自己投資（依報酬）</span><span><i style="background:${C.green}"></i>自提 ${pct(a.laborReturn)}</span><span><i style="background:${C.greenL}"></i>自提最差 ${a.minGuarantee.rate}%</span></div>
+    ${a.breakEven !== null ? `<p class="note"><b>打平點 ${a.breakEven.toFixed(2)}%：</b>${a.investReturn >= a.breakEven
+      ? `你設定的 ${pct(a.investReturn)} 高於打平點，自己投資的終值較高——前提是長期平均真的拿到這個報酬，也不會中途動用；自提則有保證收益墊底。`
+      : `你設定的 ${pct(a.investReturn)} 不到打平點，自提較有利。`}${a.marginal ? `兩邊報酬相同時，自提因為節稅，終值固定多 ${Math.round((1 / (1 - a.marginal) - 1) * 1000) / 10}%。` : ''}</p>` : ''}
+
     ${delayTable()}
-    ${verdict ? `<p class="note"><b>打平點：</b>${verdict}${a.marginal ? `在兩邊報酬相同的前提下，自提因為節稅，終值固定多 ${Math.round((1 / (1 - a.marginal) - 1) * 1000) / 10}%。` : ''}</p>` : ''}
+
     <div class="proscons">
-      <div class="pros"><h4>優點</h4><ul>
-        <li><b>節稅</b>：自提不計入當年度薪資所得課稅（勞工退休金條例第 14 條）${a.marginal ? `，你每年約少繳 ${money(a.annualSaving)}` : '；但你目前不用繳稅，這點對你沒有作用'}。</li>
-        <li><b>保本＋最低保證</b>：領取時收益不低於二年期定存利率計算的收益，不足由國庫補足（第 23 條）；${a.minGuarantee.year} 年度保證收益率 ${a.minGuarantee.rate}%。</li>
-        <li><b>專業代操、免手續費</b>：由勞動基金運用局統一運用；近兩年收益率 ${LABOR_FUND.recent.map((x) => `${x.year} 年 ${x.rate}%`).join('、')}。</li>
-        <li><b>強迫儲蓄</b>：從薪水直接扣，不會被花掉；隨時可以調整或停止自提。</li>
+      <div class="pros"><h4>優點</h4><ul class="pc">
+        ${li('receipt', '節稅', `自提不計入當年度薪資所得課稅（勞工退休金條例第 14 條）${a.marginal ? `，你每年約少繳 ${money(a.annualSaving)}` : '；但你目前不用繳稅，這點對你沒有作用'}。`)}
+        ${li('shield', '保本＋最低保證', `領取時收益不低於二年期定存利率計算的收益，不足由國庫補足（第 23 條）；${a.minGuarantee.year} 年度保證收益率 ${a.minGuarantee.rate}%。`)}
+        ${li('coins', '收益不用每年報稅', '專戶裡滾出的收益不必每年申報；自己投資的股利、利息每年要計入所得，也可能被扣二代健保補充保費。')}
+        ${li('lock', '不會被扣押', '請領退休金的權利不得讓與、扣押、抵銷或供擔保（第 29 條），遇到債務糾紛也受保障。')}
+        ${li('users', '身故由家人領回', '請領前過世，由遺屬或指定請領人一次領回；月領期間過世，剩餘金額也由他們領回（第 26 條）。')}
+        ${li('history', '強迫儲蓄、可隨時調整', '從薪水直接扣、不會被花掉；自提率可以隨時向公司申請調整或停止。')}
       </ul></div>
-      <div class="cons"><h4>缺點與風險</h4><ul>
-        <li><b>流動性差</b>：要到 ${a.startAge} 歲才能領（第 24 條），這 ${a.lockedYears} 年間急用、買房都動不到。先有緊急預備金再自提。</li>
-        <li><b>報酬不能自己選</b>：長期平均收益率 ${LABOR_FUND.longAvg.rate}%（${LABOR_FUND.longAvg.from}–${LABOR_FUND.longAvg.to} 年），也曾出現虧損年度；年輕、投資紀律好的人，自己長期投資的期望報酬可能較高。</li>
-        <li><b>月領只到平均餘命</b>：選月領的話領到官方平均餘命為止（見上方月領 vs 一次領）。</li>
-        <li><b>政策可能調整</b>：收益分配、請領規定可能隨法規修正而改變。</li>
+      <div class="cons"><h4>缺點與風險</h4><ul class="pc">
+        ${li('hourglass', '流動性差', `要到 ${a.startAge} 歲才能領（第 24 條），這 ${a.lockedYears} 年間急用、買房都動不到。先有緊急預備金再自提。`)}
+        ${li('sliders', '報酬不能自己選', `長期平均收益率 ${LABOR_FUND.longAvg.rate}%（${LABOR_FUND.longAvg.from}–${LABOR_FUND.longAvg.to} 年），也曾出現虧損年度；投資紀律好的人，自己長期投資的期望報酬可能較高。`)}
+        ${li('landmark', '月領只到平均餘命', '選月領的話領到官方平均餘命為止（見上方月領 vs 一次領）。')}
+        ${li('building', '政策可能調整', '收益分配、請領規定可能隨法規修正而改變。')}
       </ul></div>
     </div>
-    <p class="note"><b>大致來說：</b>邊際稅率越高、離 60 歲越近、已有緊急預備金、不想自己管理投資的人，自提越划算；收入低（不用繳稅）、近期有買房等大額資金需求、或確定能長期維持較高投資報酬的人，可以少提或不提。這是依你的數字整理的試算比較，不是投資建議。</p>
+    <p class="note">這是依你的數字整理的試算比較，不是投資建議。</p>
     ${cur < 6 ? `<div class="btn-row"><button type="button" class="btn" data-set="self.selfRate" data-val="6">把自提改成 6% 看看月領變化</button></div>` : ''}
   </section>`;
 }

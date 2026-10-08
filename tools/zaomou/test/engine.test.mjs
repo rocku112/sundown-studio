@@ -690,3 +690,22 @@ test('家庭時間軸：階段連續、只剩一人的年數與收入', () => {
   // 本人工作中、配偶尚未退休的年份不計收入
   assert.ok(h.years.every((y) => y.st.some((x) => x !== 'work') || y.income === 0));
 });
+
+import { selfRateFit } from '../js/engine.js';
+test('自提適合度：沒繳稅時判定不適合，高稅率且有預備金時適合', () => {
+  const low = defaults(2026); low.self.salary = 28000;
+  assert.equal(selfRateFit(low, 2026).level, 'low');
+  const hi = defaults(2026); hi.self.salary = 150000; hi.self.birthYear = 2026 - 50; hi.holdings[1].amount = 600000;
+  const f = selfRateFit(hi, 2026);
+  assert.equal(f.items.find((x) => x.id === 'tax').ok, true);
+  assert.equal(f.items.find((x) => x.id === 'cash').ok, true);
+  assert.equal(f.level, 'high');
+  // 60 歲前買房 → 大額支出項目轉為不利
+  hi.events.push({ id: 'e', name: '買房', age: 55, amount: 5000000, kind: 'out' });
+  assert.equal(selfRateFit(hi, 2026).items.find((x) => x.id === 'events').ok, false);
+  // 終值曲線遞增，且在打平點附近與自提終值相交
+  const c = f.curve;
+  assert.ok(c.every((p, i) => i === 0 || p.v > c[i - 1].v));
+  const at = (x) => { const i = c.findIndex((p) => p.r >= x); return c[i].v; };
+  assert.ok(at(f.a.breakEven + 0.5) >= f.a.viaPension && at(Math.max(0, f.a.breakEven - 0.5)) <= f.a.viaPension);
+});

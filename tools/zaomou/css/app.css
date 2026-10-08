@@ -518,3 +518,52 @@ details.adv > summary:focus-visible { outline: 3px solid var(--gold); outline-of
 .ph-s { color: var(--text); }
 .phases b.neg { color: var(--red); }
 @media (max-width: 640px) { .phases li { grid-template-columns: 1fr auto; } .ph-y { grid-column: 1 / -1; } }
+
+/* ── 勞退自提：適合度、長條比較、圖示清單 ── */
+.fit { display: grid; grid-template-columns: 220px 1fr; gap: 14px; margin-bottom: 14px; }
+.fit-score { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; padding: 16px; border-radius: 14px; background: var(--bg); }
+.fit-score b { display: block; font-size: 18px; }
+.fit-score span { display: block; font-size: 13px; color: var(--muted); }
+.fit-score .fit-sub { margin-top: 6px; font-size: 12px; }
+.fit-ring { --c: var(--gold2); width: 96px; height: 96px; border-radius: 50%; display: grid; place-items: center;
+  background: radial-gradient(closest-side, var(--bg) 78%, transparent 80% 100%), conic-gradient(var(--c) calc(var(--p) * 1%), var(--border) 0); }
+.fit-ring strong { font: 800 30px var(--mono); color: var(--c); }
+.fit-ring small { font-size: 15px; color: var(--muted); font-weight: 600; }
+.fit-score.good .fit-ring { --c: var(--green); } .fit-score.good b { color: var(--green); }
+.fit-score.bad .fit-ring { --c: var(--red); } .fit-score.bad b { color: var(--red); }
+.fit-score.mid b { color: var(--gold2); }
+.fit-items { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.fit-items li { display: grid; grid-template-columns: 34px 1fr 24px; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border); }
+.fit-items li b { display: block; font-size: 14px; }
+.fit-items li small { display: block; font-size: 12px; color: var(--muted); line-height: 1.5; }
+.fit-ic { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--bg); color: var(--muted); }
+.fit-ic svg { width: 18px; height: 18px; }
+.fit-items li.ok .fit-ic { background: rgba(46,115,83,.12); color: var(--green); }
+.fit-items li.no .fit-ic { background: rgba(178,58,51,.1); color: var(--red); }
+.fit-m { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font: 800 13px var(--mono); font-style: normal; color: #fff; }
+.fit-m.ok { background: var(--green); } .fit-m.no { background: var(--red); } .fit-m.mid { background: var(--border-2); color: var(--muted); }
+.sub4 { margin: 18px 0 8px; font-size: 15px; }
+.hbars { display: flex; flex-direction: column; gap: 10px; }
+.hbar-h { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; }
+.hbar-h b { font-size: 16px; }
+.hbar-t { height: 12px; border-radius: 6px; background: var(--bg-2); overflow: hidden; margin: 4px 0 2px; }
+.hbar-t i { display: block; height: 100%; border-radius: 6px; transition: width .3s; }
+.hbar small { font-size: 12px; color: var(--muted); }
+.proscons ul.pc { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.pc li { display: grid; grid-template-columns: 22px 1fr; gap: 8px; align-items: start; }
+.pc li + li { margin-top: 0; }
+.pc li > svg { width: 18px; height: 18px; margin-top: 3px; }
+.pros .pc li > svg { color: var(--green); } .cons .pc li > svg { color: var(--red); }
+.pc li b { display: block; }
+@media (max-width: 860px) { .fit { grid-template-columns: 1fr; } .fit-score { flex-direction: row; text-align: left; } }
+@media (max-width: 560px) { .fit-items { grid-template-columns: 1fr; } }
+
+/* 重點摘要與補足方式的圖示 */
+.insight small { display: flex; align-items: center; gap: 6px; }
+.ins-ic { width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center; background: var(--bg); color: var(--navy2); flex-shrink: 0; }
+.ins-ic svg { width: 14px; height: 14px; }
+.insight.good .ins-ic { color: var(--green); background: rgba(46,115,83,.1); }
+.insight.bad .ins-ic { color: var(--red); background: rgba(178,58,51,.08); }
+.insight.gold .ins-ic { color: var(--gold2); background: rgba(232,184,75,.16); }
+.opt-n { width: 30px; height: 30px; border-radius: 9px; background: var(--ink-bg); }
+.opt-n svg { width: 16px; height: 16px; }

@@ -1089,3 +1089,44 @@ export function householdTimeline(state, nowYear = new Date().getFullYear()) {
     survivor: survivor && { name: survivor.name, years: Math.abs(a.lifeYear - b.lifeYear), from: Math.min(a.lifeYear, b.lifeYear), income: survivor.floorPV },
   };
 }
+
+/**
+ * 勞退自提「適不適合你」：依個人資料逐項判斷，ok 為 true（有利自提）、false（不利）、null（中性）。
+ * 另附自己投資報酬 0–12% 的終值曲線，用來畫打平點。
+ */
+export function selfRateFit(state, nowYear = new Date().getFullYear()) {
+  const a = selfContributionAnalysis(state, nowYear);
+  const r = compute(state, nowYear);
+  const expense = num(state.monthlyExpense);
+  const cash = state.holdings.filter((h) => h.kind === 'cash').reduce((t, h) => t + holdingValue(h, state.fx), 0);
+  const bigOut = (state.events || []).filter((e) => e.kind === 'out' && e.age < a.startAge && e.age >= r.me.age && num(e.amount) >= Math.max(300000, expense * 12));
+  const mRate = Math.round(a.marginal * 100);
+  const items = [
+    { id: 'tax', icon: 'receipt', title: '稅率',
+      ok: a.marginal >= 0.12 ? true : a.marginal > 0 ? null : false,
+      detail: a.marginal >= 0.12 ? `邊際稅率 ${mRate}%，節稅效果明顯` : a.marginal > 0 ? `邊際稅率 ${mRate}%，有節稅但幅度小` : '目前不用繳綜所稅，沒有節稅效果' },
+    { id: 'cash', icon: 'wallet', title: '緊急預備金',
+      ok: expense > 0 ? cash >= expense * 6 : null,
+      detail: expense > 0 ? (cash >= expense * 6 ? `現金約 ${Math.floor(cash / expense)} 個月生活費，夠應急` : `現金只有約 ${(cash / expense).toFixed(1)} 個月生活費，建議先存到 6 個月`) : '未填生活費，無法判斷' },
+    { id: 'events', icon: 'building', title: `${a.startAge} 歲前的大筆支出`,
+      ok: bigOut.length ? false : true,
+      detail: bigOut.length ? `已規劃 ${bigOut.map((e) => `${e.age} 歲${e.name}`).join('、')}，這些錢自提後動不到` : '沒有規劃中的大額支出（可在投資資產頁加入人生事件）' },
+    { id: 'return', icon: 'trend', title: '和自己投資比',
+      ok: a.breakEven === null ? null : a.investReturn < a.breakEven,
+      detail: a.breakEven === null ? '無法計算打平報酬率' : a.investReturn < a.breakEven
+        ? `自己投資要 ${a.breakEven.toFixed(1)}% 才打平，你設定的 ${num(a.investReturn)}% 不到`
+        : `你設定的 ${num(a.investReturn)}% 高於打平點 ${a.breakEven.toFixed(1)}%，但沒有保證` },
+    { id: 'lock', icon: 'hourglass', title: '鎖定時間',
+      ok: a.lockedYears <= 15 ? true : a.lockedYears > 25 ? false : null,
+      detail: `要再等 ${a.lockedYears} 年（${a.startAge} 歲）才能領${a.lockedYears > 25 ? '，期間很長、變數多' : a.lockedYears <= 15 ? '，時間不算長' : ''}` },
+    { id: 'monthly', icon: 'landmark', title: '能不能月領',
+      ok: r.me.laborOfficial.eligible ? true : null,
+      detail: r.me.laborOfficial.eligible ? `新制年資約 ${Math.round(r.me.laborOfficial.newYears)} 年，可以選月領或一次領` : '新制年資未滿 15 年，只能一次領' },
+  ];
+  const yes = items.filter((x) => x.ok === true).length, no = items.filter((x) => x.ok === false).length;
+  const level = a.marginal === 0 || no >= 3 ? 'low' : yes >= 4 && no <= 1 ? 'high' : 'mid';
+  const fv = (m, p) => growLump(growMonthly(m, a.years, p), Math.max(0, a.startAge - state.self.retireAge), p);
+  const curve = [];
+  for (let p = 0; p <= 12; p += 0.5) curve.push({ r: p, v: fv(a.afterTaxMonthly, p) });
+  return { a, items, yes, no, level, curve };
+}

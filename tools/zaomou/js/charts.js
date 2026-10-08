@@ -90,11 +90,12 @@ export function lineChart({ series, bands = [], xFmt = (x) => x, yFmt = wan, mar
     if (!s.dotsOnly) svg += `<polyline points="${pts}" fill="none" stroke="${s.color}" stroke-width="2.4" stroke-linejoin="round" ${s.dash ? 'stroke-dasharray="6 4"' : ''}/>`;
     if (s.dots || s.dotsOnly) for (const p of s.points) svg += `<circle cx="${sx(p.x).toFixed(1)}" cy="${sy(p.y).toFixed(1)}" r="5" fill="${s.color}" stroke="#fff" stroke-width="2"/>`;
   }
-  for (const m of marks) {
+  marks.forEach((m, i) => {
     const x = sx(m.x);
+    const right = x > width * 0.72; // 靠右的標籤改往左寫，避免超出圖框
     svg += `<line x1="${x}" x2="${x}" y1="${T}" y2="${height - B}" stroke="${m.color}" stroke-width="1.5" stroke-dasharray="3 3"/>`;
-    svg += `<text x="${x + 4}" y="${T + 10}" style="fill:${m.color};font-weight:700">${m.label}</text>`;
-  }
+    svg += `<text x="${right ? x - 4 : x + 4}" y="${T + 10 + (i % 2) * 14}" text-anchor="${right ? 'end' : 'start'}" style="fill:${m.color};font-weight:700">${m.label}</text>`;
+  });
   if (tip) svg += `<line class="hover-l" x1="0" x2="0" y1="${T}" y2="${height - B}" stroke="#1E3554" stroke-width="1" opacity="0"/>`;
   return svg + '</svg>';
 }
