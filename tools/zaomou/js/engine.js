@@ -4,7 +4,7 @@
 
 import {
   INSURANCE_GRADES, PENSION_WAGE_MAX, EMPLOYER_RATE, NEW_SYSTEM_START, LABOR_PENSION_AGE,
-  legalPensionAge, PENSION_ADJ_PER_YEAR, PENSION_ADJ_MAX_YEARS, PENSION_MIN_YEARS, LIFE_TABLE, TAX, LABOR_MONTHLY,
+  legalPensionAge, PENSION_ADJ_PER_YEAR, PENSION_ADJ_MAX_YEARS, PENSION_MIN_YEARS, LIFE_TABLE, TAX, LABOR_MONTHLY, LABOR_FUND, PENSION_CPI_TRIGGER,
 } from './data.js';
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
@@ -63,12 +63,12 @@ export function insuranceGrade(salary) {
  * 薪資逐年成長時，每個月依當時月薪對應級距，取退休前最後 60 個月平均；
  * 距退休不足 5 年時，不足的月份以薪資年增率回推過去月薪。級距表假設不變（保守）。
  */
-export function avgInsuredSalary(salary, growthPct, yearsToRetire) {
+export function avgInsuredSalary(salary, growthPct, yearsToRetire, months = 60) {
   const g = Math.pow(1 + growthPct / 100, 1 / 12);
   const end = Math.round(Math.max(0, yearsToRetire) * 12);
   let sum = 0;
-  for (let m = end - 60; m < end; m++) sum += insuranceGrade(salary * Math.pow(g, m)).salary;
-  return sum / 60;
+  for (let m = end - months; m < end; m++) sum += insuranceGrade(salary * Math.pow(g, m)).salary;
+  return sum / months;
 }
 
 /* ── 法定給付 ─────────────────────────────────── */
@@ -196,7 +196,9 @@ function person(p, ctx) {
   // 自動模式：投保薪資跟著薪資成長升級；手動模式：使用者指定的級距維持不變
   const base = p.insMode === 'manual' ? baseNow : Math.round(avgInsuredSalary(p.salary, ctx.salaryGrowth, yearsToRetire));
   const insYears = Math.max(0, p.retireAge - p.workStartAge);
-  const ins = laborInsurance({ base, years: insYears, birthYear: p.birthYear, claimAge: p.retireAge });
+  // 勞保請領年齡：未指定時同退休年齡；不能早於退休（仍在職投保時不能請領）
+  const claimAge = Math.max(p.retireAge, p.insClaimAge ?? p.retireAge);
+  const ins = laborInsurance({ base, years: insYears, birthYear: p.birthYear, claimAge });
   // 勞保一次金同樣要到法定請領年齡才能領，以開始領取後的月數換算
   const insStart = ins.kind === 'annuity' ? Math.max(p.retireAge, ins.startAge) : Math.max(p.retireAge, ins.legal);
   const insFull = ins.kind === 'annuity' ? ins.monthly
@@ -354,7 +356,9 @@ export function compute(state, nowYear = new Date().getFullYear()) {
   if (state.care?.enabled) {
     const yrs = Math.max(0, state.care.startAge - me.age);
     const need = (expenseToday + num(state.care.monthly)) * Math.pow(1 + cpi, yrs);
-    care = { startAge: state.care.startAge, need, gap: need - total, monthlyAtStart: num(state.care.monthly) * Math.pow(1 + cpi, yrs), years: Math.max(0, me.lifeAge - state.care.startAge) };
+    // 照護開始時，勞保年金已依 CPI 累計調整過
+    const insBoost = me.insMonthly * (insCpiFactor(state.cpi, state.care.startAge - me.bridge.insStart) - 1);
+    care = { startAge: state.care.startAge, need, gap: need - total - insBoost, monthlyAtStart: num(state.care.monthly) * Math.pow(1 + cpi, yrs), years: Math.max(0, me.lifeAge - state.care.startAge) };
   }
 
   return {
@@ -574,7 +578,7 @@ export function incomeTax(net) {
 }
 
 /**
- * 勞退自提節稅估算（勞工退休金條例第 14 條：自提部分自當年度綜合所得總額全數扣除）。
+ * 勞退自提節稅估算（勞工退休金條例第 14 條：自願提繳的金額不計入提繳年度薪資所得課稅）。
  * 簡化：單身、只有薪資所得、年薪 = 月薪 × 12、使用標準扣除額。
  */
 export function selfContributionTax(salary, selfRate) {
@@ -794,4 +798,187 @@ export function laborLumpVsMonthly(state, nowYear = new Date().getFullYear()) {
     selfInvest: { rate: num(state.postReturn), lastsUntil: lastsUntil(num(state.postReturn)) },
     needRate, officialRate: LABOR_MONTHLY.rate * 100,
   };
+}
+
+/**
+ * 勞退自提決策分析：同一筆薪水，「自提進勞退」vs「領回來自己投資」。
+ * - 自提：每月提撥 C，不計入薪資所得課稅，以勞退收益率滾到可請領年齡；最差情況以最低保證收益計。
+ * - 自己投資：同一筆錢先繳稅（少了節稅），稅後金額以「新增投資報酬」滾到同一年齡。
+ * 回傳兩條路的終值、打平所需報酬率、鎖定年數等。
+ */
+export function selfContributionAnalysis(state, nowYear = new Date().getFullYear(), ratePct) {
+  const r = compute(state, nowYear);
+  const s = state.self;
+  const rate = ratePct ?? (num(s.selfRate) > 0 ? num(s.selfRate) : 6);
+  const tax = selfContributionTax(s.salary, rate);
+  const monthly = tax.contrib / 12;
+  const afterTaxMonthly = (tax.contrib - tax.saving) / 12;
+  const n = r.n;                                           // 提撥年數（到退休）
+  const start = Math.max(s.retireAge, LABOR_PENSION_AGE);  // 可請領年齡
+  const wait = Math.max(0, start - s.retireAge);
+  const fv = (m, pctRate) => growLump(growMonthly(m, n, pctRate), wait, pctRate);
+  const viaPension = fv(monthly, num(s.laborReturn));
+  const viaPensionFloor = fv(monthly, LABOR_FUND.minGuarantee.rate);
+  const selfInvest = fv(afterTaxMonthly, num(state.investReturn));
+  // 自己投資要打平自提所需的年化報酬
+  let breakEven = null;
+  if (afterTaxMonthly > 0 && n > 0) {
+    let lo = -5, hi = 30;
+    for (let i = 0; i < 50; i++) { const mid = (lo + hi) / 2; if (fv(afterTaxMonthly, mid) >= viaPension) hi = mid; else lo = mid; }
+    breakEven = hi;
+  }
+  return {
+    rate, monthly, afterTaxMonthly, annualSaving: tax.saving, marginal: tax.marginal,
+    years: n, lockedYears: Math.max(0, start - r.me.age), startAge: start,
+    viaPension, viaPensionFloor, selfInvest, breakEven,
+    laborReturn: num(s.laborReturn), investReturn: num(state.investReturn), minGuarantee: LABOR_FUND.minGuarantee,
+  };
+}
+
+/**
+ * 勞保請領年齡比較：年資與投保薪資在退休時固定，比較不同請領年齡的月領與累計領取。
+ * 回本歲數：比法定年齡晚領，要活到幾歲累計金額才追上（名目、未折現、不計 CPI 調整）。
+ */
+export function insuranceClaimOptions(state, nowYear = new Date().getFullYear()) {
+  const r = compute(state, nowYear);
+  const me = r.me;
+  if (me.ins.kind !== 'annuity') return null;
+  const legal = me.ins.legal;
+  const base = Math.max(me.ins.a, me.ins.b); // 法定年齡請領的月領（未打折）
+  const haircut = 1 - clamp(num(state.insHaircut), 0, 100) / 100;
+  const from = Math.max(state.self.retireAge, legal - PENSION_ADJ_MAX_YEARS);
+  const to = legal + PENSION_ADJ_MAX_YEARS;
+  const lifeAge = me.lifeAge;
+  const legalMonthly = base * haircut;
+  const opts = [];
+  for (let c = from; c <= to; c++) {
+    const monthly = base * (1 + (c - legal) * PENSION_ADJ_PER_YEAR) * haircut;
+    const cumToLife = Math.max(0, lifeAge - c) * 12 * monthly;
+    // 與法定年齡相比的回本歲數：m1(x−c1) = m2(x−c2)
+    let breakEven = null;
+    if (c !== legal && monthly !== legalMonthly) {
+      breakEven = (monthly * c - legalMonthly * legal) / (monthly - legalMonthly);
+    }
+    opts.push({ age: c, monthly: Math.round(monthly), cumToLife, breakEven, current: c === me.ins.startAge });
+  }
+  const best = opts.reduce((b, o) => (o.cumToLife > b.cumToLife ? o : b), opts[0]);
+  return { legal, lifeAge, opts, best: best.age, retireAge: state.self.retireAge };
+}
+
+/**
+ * 勞保年金依 CPI 調整後的倍數：開始請領後，物價累計成長達 5% 時才一次調整（第 65 條之 4）。
+ * 回傳請領第 years 年時，年金相對於起領金額的倍數（名目）。
+ */
+export function insCpiFactor(cpiPct, years) {
+  const c = num(cpiPct) / 100;
+  let price = 1, level = 1;
+  for (let y = 1; y <= Math.floor(Math.max(0, years)); y++) {
+    price *= 1 + c;
+    if (Math.abs(price / level - 1) >= PENSION_CPI_TRIGGER - 1e-12) level = price;
+  }
+  return level;
+}
+
+/**
+ * 勞保一次請領老年給付 vs 老年年金（勞工保險條例第 58、59、19 條）：
+ * - 資格：98 年 1 月 1 日（97 年修正條文施行）前已有保險年資者，可選擇一次請領。
+ * - 一次請領：年資每滿 1 年給 1 個月，超過 15 年部分每年 2 個月，上限 45 個月；
+ *   60 歲後年資最多計 5 年，合併上限 50 個月。平均月投保薪資取退保前 3 年。
+ */
+export function insuranceLumpVsAnnuity(state, nowYear = new Date().getFullYear()) {
+  const r = compute(state, nowYear);
+  const p = state.self;
+  const firstInsuredYear = p.birthYear + p.workStartAge;
+  const eligible = firstInsuredYear < 2009 && r.me.ins.kind === 'annuity';
+  if (!eligible) return { eligible: false, firstInsuredYear };
+  const years = r.me.insYears;
+  const pre60 = Math.max(0, Math.min(years, 60 - p.workStartAge));
+  const post60 = Math.min(5, Math.max(0, years - pre60));
+  const counted = Math.floor(pre60 + post60);
+  let months = counted <= 15 ? counted : 15 + 2 * (counted - 15);
+  months = Math.min(months, post60 > 0 ? 50 : 45);
+  const base3 = p.insMode === 'manual' ? r.me.insBaseNow : Math.round(avgInsuredSalary(p.salary, num(state.salaryGrowth), r.n, 36));
+  const lump = months * base3;
+  const annuity = r.me.insMonthly;
+  const claimAge = r.me.ins.startAge;
+  const breakEvenAge = annuity > 0 ? claimAge + lump / annuity / 12 : null;
+  // 若一次領的錢以退休後報酬滾存，年金要領到幾歲現值才追上
+  const j = Math.pow(1 + num(state.postReturn) / 100, 1 / 12) - 1;
+  let pv = 0, k = 0;
+  while (annuity > 0 && pv < lump && k < 12 * 60) { pv += annuity / Math.pow(1 + j, k); k++; }
+  return {
+    eligible: true, firstInsuredYear, months, base3, lump, annuity, claimAge, counted,
+    breakEvenAge, breakEvenDiscounted: pv >= lump ? claimAge + k / 12 : null, lifeAge: r.me.lifeAge,
+  };
+}
+
+/**
+ * 退休後提領策略比較（蒙地卡羅，三種策略共用同一組隨機報酬）：
+ * - fixed：每年固定提領「投資月領 × 12」（名目）
+ * - percent：每年提領當時資產的固定比例（比例 = 退休當年的提領率），不會用完但收入波動
+ * - guardrail：從固定金額出發；當年提領率高於起始 120% 時減 10%，低於 80% 時加 10%
+ * 回傳各策略的成功率、收入中位數（相對起始）、最差年份收入（P10，相對起始）、過世時資產中位數。
+ */
+export function withdrawalStrategies(state, nowYear = new Date().getFullYear(), { sims = 1000, vol = num(state.volatility, 12), seed = 20261008 } = {}) {
+  const r = compute(state, nowYear);
+  if (r.investPool <= 0 || r.investMonthly <= 0) return null;
+  const age0 = r.me.age, retire = state.self.retireAge, lifeEnd = Math.round(r.me.lifeAge);
+  let wsum = 0, gsum = 0;
+  for (const h of state.holdings) { const w = growLump(holdingValue(h, state.fx), r.n, num(h.rate)); wsum += w; gsum += w * num(h.rate); }
+  for (const p of state.portfolios) for (const a of p.assets) { const w = growMonthly(num(a.monthly), r.n, num(a.rate)); wsum += w; gsum += w * num(a.rate); }
+  const g = wsum > 0 ? gsum / wsum / 100 : 0.05;
+  const sigma = Math.max(0, vol) / 100, mu = g + sigma * sigma / 2;
+  const normal = rng(seed);
+  const draw0 = r.investMonthly * 12;
+  const keys = ['fixed', 'percent', 'guardrail'];
+  const res = Object.fromEntries(keys.map((k) => [k, { ok: 0, avgInc: [], minInc: [], left: [] }]));
+  for (let i = 0; i < sims; i++) {
+    // 與 monteCarlo 相同的流程與亂數序列：每年一個報酬，從現在模擬到 100 歲
+    let pool = r.holdingsNow;
+    let st = null;
+    const inc = { fixed: [], percent: [], guardrail: [] };
+    const dead = { fixed: null, percent: null, guardrail: null };
+    let rate0 = 0;
+    for (let a = age0 + 1; a <= 100; a++) {
+      const ret = mu + sigma * normal();
+      let evf = 0;
+      for (const ev of state.events || []) if (num(ev.age) === a) evf += eventAmount(state, ev, age0);
+      if (a <= retire) {
+        pool = pool * (1 + ret) + r.monthlyInvest * 12 + evf;
+        if (pool < 0) pool = 0;
+        continue;
+      }
+      if (!st) {
+        rate0 = pool > 0 ? draw0 / pool : 0;
+        st = { fixed: { p: pool, w: draw0 }, percent: { p: pool, w: draw0 }, guardrail: { p: pool, w: draw0 } };
+      }
+      const care = careCostAt(state, a, age0);
+      for (const k of keys) {
+        const x = st[k];
+        if (dead[k] !== null) { if (a <= lifeEnd) inc[k].push(0); continue; }
+        if (k === 'percent') x.w = x.p * rate0;
+        if (k === 'guardrail' && x.p > 0) {
+          const cur = x.w / x.p;
+          if (cur > rate0 * 1.2) x.w *= 0.9;
+          else if (cur < rate0 * 0.8) x.w *= 1.1;
+        }
+        x.p = x.p * (1 + ret) - x.w - care + evf;
+        if (a <= lifeEnd) inc[k].push(x.p >= 0 ? x.w : Math.max(0, x.w + x.p));
+        if (x.p <= 0) { x.p = 0; dead[k] = a; }
+      }
+    }
+    for (const k of keys) {
+      if (dead[k] === null || dead[k] > lifeEnd) res[k].ok++;
+      const arr = inc[k].length ? inc[k] : [draw0];
+      res[k].avgInc.push(arr.reduce((s2, v) => s2 + v, 0) / arr.length / draw0);
+      res[k].minInc.push(Math.min(...arr) / draw0);
+      res[k].left.push(st ? st[k].p : pool);
+    }
+  }
+  const q = (arr, p) => { const s2 = [...arr].sort((x, y) => x - y); return s2[Math.min(s2.length - 1, Math.floor(p * s2.length))]; };
+  const out = {};
+  for (const k of keys) {
+    out[k] = { success: res[k].ok / sims, medianIncome: q(res[k].avgInc, 0.5), worstIncome: q(res[k].minInc, 0.1), medianLeft: q(res[k].left, 0.5) };
+  }
+  return { ...out, draw0, rate0: r.investPool > 0 ? draw0 / r.investPool : 0, lifeEnd, sims };
 }

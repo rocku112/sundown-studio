@@ -25,6 +25,7 @@ export function legalPensionAge(birthYear) {
 export const PENSION_ADJ_PER_YEAR = 0.04; // 提前／延後每年 ±4%，最多 5 年
 export const PENSION_ADJ_MAX_YEARS = 5;
 export const PENSION_MIN_YEARS = 15; // 年資滿 15 年才能請領年金，未滿請領一次金
+export const PENSION_CPI_TRIGGER = 0.05; // 勞工保險條例第 65 條之 4：CPI 累計成長率達 ±5% 時依該成長率調整年金
 
 /* 退休年齡的平均餘命（年）。
    60–70 歲為生命表參考值；超出範圍以 65 歲值每歲約 0.72 年線性外推。
@@ -62,12 +63,12 @@ export const EXPENSE_LEVELS = [
   { label: '寬裕生活', mult: 3, tip: '含旅遊與醫療預備' },
 ];
 
-/* 勞退基金歷史報酬參考（快選用） */
+/* 勞退基金收益率快選：以官方數字為錨點（見下方 LABOR_FUND 來源） */
 export const RETURN_PRESETS = [
-  { label: '保守 2%', v: 2 },
-  { label: '穩健 4%', v: 4 },
-  { label: '長期平均 6%', v: 6 },
-  { label: '樂觀 8%', v: 8 },
+  { label: '保證下限 1.7%', v: 1.7 },
+  { label: '長期平均 3.6%', v: 3.6 },
+  { label: '穩健 5%', v: 5 },
+  { label: '樂觀 7%', v: 7 },
 ];
 
 /* 綜合所得稅（115 年度所得，116 年 5 月申報適用）
@@ -99,4 +100,14 @@ export const LABOR_MONTHLY = {
   minYears: 15, // 勞工退休金條例第 24 條：年資滿 15 年才可選擇月退休金
   years: { 60: 23, 61: 23, 62: 22, 63: 21, 64: 20, 65: 19, 66: 19, 67: 18, 68: 17, 69: 16, 70: 16, 71: 15, 72: 14,
     73: 13, 74: 13, 75: 12, 76: 11, 77: 11, 78: 10, 79: 9, 80: 9, 81: 8, 82: 8, 83: 7, 84: 6, 85: 6 },
+};
+
+/* 新制勞退基金實績與保證收益（勞動部、勞動基金運用局公告）
+   - 113 年收益率 16.16%、114 年 15.60%（勞動部 115/2/2 新聞稿）
+   - 94 年至 111 年底平均收益率 3.6%（勞動部 112/3/8 說明）
+   - 最低保證收益：勞工退休金條例第 23 條，不低於當地銀行二年定期存款利率，不足由國庫補足；114 年度 1.7108% */
+export const LABOR_FUND = {
+  recent: [{ year: 113, rate: 16.16 }, { year: 114, rate: 15.60 }],
+  longAvg: { from: 94, to: 111, rate: 3.6 },
+  minGuarantee: { year: 114, rate: 1.7108 },
 };

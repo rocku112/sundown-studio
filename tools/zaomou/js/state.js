@@ -14,11 +14,11 @@ export function defaults(nowYear = new Date().getFullYear()) {
     self: {
       birthYear: nowYear - 35, gender: 'male', workStartAge: 23, retireAge: 65,
       salary: 45000, insMode: 'auto', insGrade: 11,
-      selfRate: 0, laborReturn: 4, laborBalance: null, oldSystemYears: 0,
+      selfRate: 0, laborReturn: 4, laborBalance: null, oldSystemYears: 0, insClaimAge: null,
     },
     spouse: {
       enabled: false, name: '配偶', birthYear: nowYear - 35, gender: 'female', workStartAge: 23, retireAge: 65,
-      salary: 40000, insMode: 'auto', insGrade: 11, selfRate: 0, laborReturn: 4, laborBalance: null, oldSystemYears: 0,
+      salary: 40000, insMode: 'auto', insGrade: 11, selfRate: 0, laborReturn: 4, laborBalance: null, oldSystemYears: 0, insClaimAge: null,
     },
     salaryGrowth: 2,
     cpi: 2,
@@ -106,7 +106,7 @@ export function normalize(raw) {
     ...merge({ id: uid('p'), name: '投資組合', assets: [] }, p),
     assets: (p.assets || []).map((a) => merge({ id: uid('a'), name: '標的', monthly: 0, rate: 0 }, a)),
   }));
-  for (const k of ['laborBalance']) {
+  for (const k of ['laborBalance', 'insClaimAge']) {
     for (const who of ['self', 'spouse']) {
       const v = raw?.[who]?.[k];
       s[who][k] = v === null || v === undefined || v === '' || !Number.isFinite(+v) ? null : +v;

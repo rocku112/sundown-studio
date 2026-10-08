@@ -337,7 +337,8 @@ test('晚年照護支出：提早用完資產、照護期缺口', () => {
   const r = compute(s, 2026);
   assert.equal(r.care.startAge, 80);
   near(r.care.need, (31000 + 30000) * Math.pow(1.02, 45), 1);
-  assert.equal(r.care.gap, r.care.need - r.total);
+  // 80 歲時勞保年金已依 CPI 調整：65 歲起領 15 年、通膨 2%，每 3 年調一次，共漲 1.02^15
+  near(r.care.gap, r.care.need - r.total - r.me.insMonthly * (Math.pow(1.02, 15) - 1), 1e-6);
   // 退休前的月領與資產池不受影響
   assert.equal(r.total, compute(defaults(2026), 2026).total);
 });
@@ -484,4 +485,111 @@ test('勞退一次領 vs 月領：資格與比較', () => {
   // 新制年資未滿 15 年：只能一次領
   const u = defaults(2026); u.self.birthYear = 1975; u.self.workStartAge = 50; u.self.retireAge = 60;
   assert.equal(laborLumpVsMonthly(u, 2026).eligible, false);
+});
+
+import { selfContributionAnalysis } from '../js/engine.js';
+
+test('勞退自提決策分析', () => {
+  const s = defaults(2026); // 月薪 45,000、5% 級距、勞退收益 4%、新增投資 6%
+  const a = selfContributionAnalysis(s, 2026);
+  assert.equal(a.rate, 6);
+  assert.equal(a.monthly, 2700);
+  assert.equal(a.annualSaving, selfContributionTax(45000, 6).saving);
+  assert.ok(a.afterTaxMonthly < a.monthly);
+  assert.ok(a.viaPensionFloor < a.viaPension, '保證收益是最差情況');
+  // 打平報酬率：以此報酬自己投資，終值等於自提
+  const t = JSON.parse(JSON.stringify(s)); t.investReturn = a.breakEven;
+  near(selfContributionAnalysis(t, 2026).selfInvest, a.viaPension, a.viaPension * 1e-6);
+  // 有節稅時，打平所需報酬 > 勞退收益率
+  assert.ok(a.breakEven > s.self.laborReturn);
+  // 不用繳稅時（月薪 3 萬）兩邊投入相同，打平報酬率 = 勞退收益率
+  const u = defaults(2026); u.self.salary = 30000;
+  near(selfContributionAnalysis(u, 2026).breakEven, u.self.laborReturn, 1e-6);
+  // 鎖定到 60 歲以後
+  assert.equal(a.lockedYears, 30);
+});
+
+import { insuranceClaimOptions } from '../js/engine.js';
+
+test('勞保請領年齡比較：±4%/年、回本歲數、延後請領產生空窗', () => {
+  const s = defaults(2026); // 1991 年生，法定 65 歲；退休 65
+  const o = insuranceClaimOptions(s, 2026);
+  assert.equal(o.legal, 65);
+  assert.deepEqual(o.opts.map((x) => x.age), [65, 66, 67, 68, 69, 70], '退休後才能請領');
+  const base = o.opts[0].monthly;
+  assert.equal(o.opts[5].monthly, Math.round(base * 1.2));
+  // 70 歲請領的回本歲數：m70(x−70) = m65(x−65) → x = (1.2×70 − 65)/0.2 = 95
+  near(o.opts[5].breakEven, 95, 1e-6);
+  // 早退休可提前請領
+  const e = defaults(2026); e.self.retireAge = 60;
+  const oe = insuranceClaimOptions(e, 2026);
+  assert.equal(oe.opts[0].age, 60);
+  near(oe.opts[0].breakEven, (0.8 * 60 - 65) / (0.8 - 1), 1e-6); // 60 歲領的回本點：85 歲之後被法定年齡追上
+  // 指定延後到 68 歲請領：月領增加、空窗期延長
+  const d = defaults(2026); d.self.insClaimAge = 68;
+  const r = compute(d, 2026);
+  assert.equal(r.me.ins.startAge, 68);
+  assert.equal(r.me.insMonthly, Math.round(compute(defaults(2026), 2026).me.insFull * 1.12));
+  assert.equal(r.me.bridge.insYears, 3);
+});
+
+import { insCpiFactor } from '../js/engine.js';
+
+test('勞保年金 CPI 調整：累計達 5% 才一次調整', () => {
+  assert.equal(insCpiFactor(2, 0), 1);
+  assert.equal(insCpiFactor(2, 2), 1);                       // 1.02² = 4.04%，未達 5%
+  near(insCpiFactor(2, 3), Math.pow(1.02, 3), 1e-12);         // 6.12%，第 3 年調整
+  near(insCpiFactor(2, 5), Math.pow(1.02, 3), 1e-12);         // 下一次要再累計 5%
+  near(insCpiFactor(2, 6), Math.pow(1.02, 6), 1e-12);
+  near(insCpiFactor(5, 1), 1.05, 1e-12);                      // 剛好 5% 即調整
+  assert.equal(insCpiFactor(0, 30), 1);
+});
+
+import { insuranceLumpVsAnnuity } from '../js/engine.js';
+
+test('勞保一次請領 vs 年金：資格、月數上限、回本年齡', () => {
+  assert.equal(insuranceLumpVsAnnuity(defaults(2026), 2026).eligible, false, '2014 年才投保，無舊制一次請領資格');
+  const s = defaults(2026);
+  Object.assign(s.self, { birthYear: 1971, workStartAge: 25, retireAge: 65, salary: 70000 }); // 1996 年起投保、年資 40 年
+  const c = insuranceLumpVsAnnuity(s, 2026);
+  assert.ok(c.eligible);
+  // 60 歲前 35 年 + 60 歲後 5 年 = 40 年：15 + 2×25 = 65 個月 → 60 歲後有年資，上限 50 個月
+  assert.equal(c.months, 50);
+  assert.equal(c.base3, 45800);
+  assert.equal(c.lump, 50 * 45800);
+  near(c.breakEvenAge, 65 + c.lump / c.annuity / 12, 1e-9);
+  assert.ok(c.breakEvenDiscounted > c.breakEvenAge, '考慮報酬後，年金要領更久才追上');
+  // 2008 年（37 歲）起投保、60 歲退休、年資 23 年：15 + 2×8 = 31 個月
+  const t = defaults(2026);
+  Object.assign(t.self, { birthYear: 1971, workStartAge: 37, retireAge: 60, salary: 70000 });
+  assert.equal(insuranceLumpVsAnnuity(t, 2026).months, 31);
+  // 40 歲（2011 年）才投保：無資格
+  t.self.workStartAge = 40;
+  assert.equal(insuranceLumpVsAnnuity(t, 2026).eligible, false);
+});
+
+import { withdrawalStrategies } from '../js/engine.js';
+
+test('提領策略比較：固定比例不會用完、護欄介於兩者之間', () => {
+  const s = defaults(2026);
+  const w = withdrawalStrategies(s, 2026, { sims: 400 });
+  assert.equal(w.percent.success, 1, '固定比例永遠不會把錢用完');
+  assert.ok(w.fixed.success < 1);
+  assert.ok(w.guardrail.success >= w.fixed.success, '護欄會在不好的年份減少提領');
+  assert.ok(w.percent.worstIncome < w.fixed.worstIncome || w.fixed.worstIncome === 0, '固定比例的收入波動較大');
+  // 波動 0：三種策略的收入都與起始相同（固定比例在報酬穩定時不一定，但不會用完）
+  const z = withdrawalStrategies(s, 2026, { sims: 10, vol: 0 });
+  assert.equal(z.fixed.success, 1);
+  near(z.fixed.medianIncome, 1, 1e-9);
+  // 沒有投資資產時不比較
+  const e = defaults(2026); e.holdings = []; e.portfolios = [];
+  assert.equal(withdrawalStrategies(e, 2026), null);
+});
+
+test('提領策略：固定金額成功率與蒙地卡羅一致', () => {
+  for (const tpl of [defaults(2026), Object.assign(defaults(2026), { care: { enabled: true, startAge: 80, monthly: 30000 } })]) {
+    const mc = monteCarlo(tpl, 2026, { sims: 600 });
+    const w = withdrawalStrategies(tpl, 2026, { sims: 600 });
+    assert.equal(w.fixed.success, mc.success);
+  }
 });

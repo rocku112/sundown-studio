@@ -393,3 +393,19 @@ details.yearly .tbl-wrap { max-height: 420px; overflow: auto; margin-top: 14px; 
 .pts { margin: 14px 0 0; padding-left: 20px; font-size: 14px; line-height: 1.75; }
 .pts li + li { margin-top: 6px; }
 .pts b { color: var(--navy); }
+
+/* ── 自提決策 ── */
+.vs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.vs > div { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+.vs small { display: block; font-size: 12px; color: var(--muted); }
+.vs strong { display: block; font: 800 22px var(--mono); color: var(--navy); margin: 2px 0; }
+.vs span { font-size: 12px; color: var(--muted); }
+.proscons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+.proscons > div { border-radius: 12px; padding: 12px 16px; }
+.proscons .pros { background: rgba(46,115,83,.07); }
+.proscons .cons { background: rgba(178,58,51,.06); }
+.proscons h4 { margin: 0 0 6px; font-size: 14px; }
+.proscons .pros h4 { color: var(--green); } .proscons .cons h4 { color: var(--red); }
+.proscons ul { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.7; color: var(--text); }
+.proscons li + li { margin-top: 4px; }
+@media (max-width: 720px) { .vs, .proscons { grid-template-columns: 1fr; } }

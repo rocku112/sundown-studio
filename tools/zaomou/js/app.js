@@ -2,8 +2,8 @@
    畫面分兩種：含輸入欄位的分頁（起點設定、投資資產、目標與行動）只在結構改變時重繪，
    數字靠 data-o 局部更新，避免打字時失焦；純輸出的分頁與側欄則每次重算後整頁重繪。 */
 
-import { compute, holdingValue, growLump, growMonthly, lifecycle, sensitivity, retireAgeOptions, goalPlan, validate, scenarioSummary, selfContributionTax, monteCarlo, actionPlan, planPath, trackProgress, laborLumpVsMonthly } from './engine.js';
-import { LABOR_MONTHLY, legalPensionAge, INSURANCE_GRADES, MIN_LIVING, EXPENSE_LEVELS, RETURN_PRESETS, LIFE_TABLE, DATA_YEAR, PENSION_WAGE_MAX, dataStale } from './data.js';
+import { compute, holdingValue, growLump, growMonthly, lifecycle, sensitivity, retireAgeOptions, goalPlan, validate, scenarioSummary, selfContributionTax, monteCarlo, actionPlan, planPath, trackProgress, laborLumpVsMonthly, selfContributionAnalysis, insuranceClaimOptions, insCpiFactor, insuranceLumpVsAnnuity, withdrawalStrategies } from './engine.js';
+import { LABOR_MONTHLY, LABOR_FUND, legalPensionAge, INSURANCE_GRADES, MIN_LIVING, EXPENSE_LEVELS, RETURN_PRESETS, LIFE_TABLE, DATA_YEAR, PENSION_WAGE_MAX, dataStale } from './data.js';
 import { load, save, defaults, parseImport, getPath, setPath, uid, applySeed, STORAGE_KEY, normalize, loadScenarios, saveScenarios, MAX_SCENARIOS, templates } from './state.js';
 import { lineChart, donut, wan, attachTooltips } from './charts.js';
 
@@ -108,7 +108,7 @@ function outVal(key) {
       const cur = state.self.selfRate;
       const t = selfContributionTax(state.self.salary, cur > 0 ? cur : 6);
       if (t.marginal === 0) return '依目前月薪估算，綜合所得淨額為 0、本來就不用繳稅，自提沒有節稅效果，但仍可累積退休金。';
-      return `${cur > 0 ? `自提 ${pct(cur)}` : '若自提 6%'}：每年提撥 <b>${money(t.contrib)}</b>，可從所得扣除，估計少繳綜所稅約 <b>${money(t.saving)}</b>（邊際稅率 ${Math.round(t.marginal * 100)}%），實際負擔約 ${money(t.netCost)}。`;
+      return `${cur > 0 ? `自提 ${pct(cur)}` : '若自提 6%'}：每年提撥 <b>${money(t.contrib)}</b>，不計入當年度薪資所得課稅，估計少繳綜所稅約 <b>${money(t.saving)}</b>（邊際稅率 ${Math.round(t.marginal * 100)}%），實際負擔約 ${money(t.netCost)}。`;
     }
     case 'haircut': {
       if (!state.insHaircut) return '目前照現行制度計算。想知道「萬一勞保給付變少」還夠不夠用，把滑桿往右拉。';
@@ -210,6 +210,7 @@ function pageSetup() {
     <div class="grid two">
       ${numF('self.salary', '目前月薪', { min: 0, step: 1000, unit: '元' })}
       ${rangeF('salaryGrowth', '薪資年增率', 0, 6, 0.5)}
+      ${numF('self.insClaimAge', '勞保請領年齡', { nullable: true, min: 55, max: 75, unit: '歲', placeholder: '同退休年齡', em: '（選填，可晚於退休）' })}
       ${s.insMode === 'manual' ? `<label class="field"><span>勞保投保薪資級距</span>
         <select class="input" data-k="self.insGrade" data-t="num">${INSURANCE_GRADES.map((g, i) =>
           `<option value="${i + 1}" ${s.insGrade === i + 1 ? 'selected' : ''}>第 ${i + 1} 級 — ${money(g)}</option>`).join('')}</select></label>` : ''}
@@ -335,7 +336,13 @@ function pageFloor() {
       <div class="row total"><div class="k">退休月領總計<small>約當今日幣值 ${money(R.totalPV)}</small></div><div class="v">${money(R.total)}</div></div>
     </div>
   </section>
+  ${claimAgeCard()}
+
+  ${insLumpCard()}
+
   ${laborChoiceCard()}
+
+  ${selfRateCard()}
 
   ${me.bridge.years > 0 ? `<section class="card bridge"><div class="card-h"><h3>${badge('hourglass', 'rgba(194,69,61,.1)', C.red)}提早退休的空窗期</h3><span class="tag warn">${s.retireAge}–${s.retireAge + me.bridge.years} 歲</span></div>
     <div class="stats">
@@ -472,7 +479,7 @@ function pagePlan() {
       ? { n: 4, k: '提高投資報酬', v: `+${g.requiredReturn.toFixed(1)} 個百分點`, p: g.requiredReturn > 3 ? '幅度偏大，代表要承擔明顯更高的波動風險，不建議單靠這一招。' : '所有投資的年化報酬同時提高這麼多即可達標；報酬越高、波動通常越大。' }
       : { n: 4, k: '提高投資報酬', v: '—', p: state.holdings.length + state.portfolios.length ? '報酬再高也補不起來。' : '尚未設定投資資產。', muted: true },
     g.selfRate6
-      ? { n: 5, k: '勞退自提拉到 6%', v: `+${money(g.selfRate6.gain)}`, p: `每月多提撥 ${money(g.selfRate6.monthlyCost)}，自提可從所得扣除，估計每年少繳稅 ${money(selfContributionTax(s.salary, 6).saving - selfContributionTax(s.salary, s.selfRate).saving)}；月領（今日幣值）增加${g.selfRate6.enough ? '，單獨就能達標' : '，可補一部分'}。`,
+      ? { n: 5, k: '勞退自提拉到 6%', v: `+${money(g.selfRate6.gain)}`, p: `每月多提撥 ${money(g.selfRate6.monthlyCost)}，自提不計入當年度薪資所得課稅，估計每年少繳稅 ${money(selfContributionTax(s.salary, 6).saving - selfContributionTax(s.salary, s.selfRate).saving)}；月領（今日幣值）增加${g.selfRate6.enough ? '，單獨就能達標' : '，可補一部分'}。`,
           btn: `<button type="button" class="btn" data-set="self.selfRate" data-val="6">改為自提 6%</button>` }
       : { n: 5, k: '勞退自提', v: '已是 6%', p: '自提已達上限。', muted: true },
     { n: 6, k: '調整目標', v: money(round(g.currentPV)), p: '照目前規劃，每月大約能有這麼多（今日幣值）。',
@@ -611,10 +618,16 @@ function pageAnalysis() {
   // 通膨購買力
   const yrs = Math.max(1, Math.round(me.lifeAge - s.retireAge));
   const cpi = state.cpi / 100;
-  const real = Array.from({ length: yrs + 1 }, (_, k) => ({ x: s.retireAge + k, y: R.total / Math.pow(1 + cpi, k) }));
+  // 勞保年金依第 65 條之 4，物價累計漲 5% 才調整一次；其他收入假設固定
+  const nominalAt = (age) => R.total + me.insMonthly * (insCpiFactor(state.cpi, age - me.bridge.insStart) - 1);
+  const real = Array.from({ length: yrs + 1 }, (_, k) => ({ x: s.retireAge + k, y: nominalAt(s.retireAge + k) / Math.pow(1 + cpi, k) }));
+  const realFlat = Array.from({ length: yrs + 1 }, (_, k) => ({ x: s.retireAge + k, y: R.total / Math.pow(1 + cpi, k) }));
   const halfIdx = real.findIndex((p) => p.y <= R.total / 2);
   const realChart = lineChart({
-    series: [{ name: '實質購買力', points: real, color: '#C0622A', fill: 'rgba(192,98,42,.08)' }],
+    series: [
+      { name: '實質購買力', points: real, color: '#C0622A', fill: 'rgba(192,98,42,.08)' },
+      { name: '若勞保也不調整', points: realFlat, color: C.muted, dash: true },
+    ],
     ...size, xFmt: (x) => `${x}歲`, yFmt: (v) => `${Math.round(v / 1000)}k`,
     marks: halfIdx > 0 ? [{ x: real[halfIdx].x, label: '購買力減半', color: C.red }] : [],
     tip: { title: (x) => `${x} 歲`, fmt: money },
@@ -633,6 +646,8 @@ function pageAnalysis() {
   </section>
 
   ${mc ? mcCard(mc, size) : ''}
+
+  ${mc ? strategyCard() : ''}
 
   ${scenarioCard()}
 
@@ -672,7 +687,7 @@ function pageAnalysis() {
       <div class="stat bad"><small>${Math.round(me.lifeAge)} 歲時</small><strong>${money(real[real.length - 1].y)}</strong></div>
     </div>
     ${realChart}
-    <p class="note">假設月領金額固定不變、通膨 ${pct(state.cpi)}。勞保年金會在累計 CPI 成長達 5% 時調整，可抵銷部分侵蝕。</p>
+    <p class="note">通膨 ${pct(state.cpi)}。勞保年金在物價累計上漲達 5% 時依漲幅調整（勞工保險條例第 65 條之 4），所以曲線呈階梯狀；勞退、投資等其他收入假設金額固定。虛線是勞保也不調整時的情況。</p>
   </section>
 
   <section class="card"><div class="card-h"><h3>${badge('user', 'rgba(63,143,106,.12)', C.green)}健康期與全壽命總領</h3></div>
@@ -691,6 +706,86 @@ function pageAnalysis() {
       </table></div>
       <div class="btn-row" style="margin-top:12px"><button type="button" class="btn" data-act="csv">下載 CSV</button></div>
     </details>
+  </section>`;
+}
+
+function insLumpCard() {
+  const c = insuranceLumpVsAnnuity(state, NOW);
+  if (!c.eligible) return '';
+  const better = c.breakEvenAge !== null && c.lifeAge > c.breakEvenAge ? 'annuity' : 'lump';
+  return `<section class="card"><div class="card-h"><h3>${badge('landmark', 'rgba(232,184,75,.18)', '#9A7210')}勞保：年金還是一次請領？</h3><span class="hint">${c.firstInsuredYear} 年起投保，可二選一</span></div>
+    <p class="note" style="margin-top:0">98 年 1 月 1 日前已有勞保年資的人，可選擇一次請領老年給付（勞工保險條例第 58 條），核付後不能變更。</p>
+    <div class="vs">
+      <div><small>老年年金</small><strong>${money(c.annuity)}／月</strong><span>${c.claimAge} 歲起按月領，物價累計漲 5% 會調整</span></div>
+      <div><small>一次請領</small><strong>${wan(c.lump)}</strong><span>${c.months} 個月 × 退保前 3 年平均投保薪資 ${money(c.base3)}</span></div>
+    </div>
+    <ul class="pts">
+      <li>年金要領到 <b>${c.breakEvenAge.toFixed(1)} 歲</b>，累計才追上一次請領${c.breakEvenDiscounted ? `；若把一次領的錢以年化 ${pct(state.postReturn)} 投資，則要領到 <b>${c.breakEvenDiscounted.toFixed(1)} 歲</b>` : ''}。</li>
+      <li>你的預期壽命約 ${c.lifeAge.toFixed(1)} 歲，${better === 'annuity' ? '<b>依平均壽命，年金累計較多</b>；而且活得越久、年金越划算，等於買了長壽保險。' : '<b>依平均壽命，一次請領較多</b>；但若活得比平均久，年金會反超。'}</li>
+      <li>一次請領適合：健康狀況不佳、有明確大額資金用途、或擔心未來給付被調降的人。年金適合：擔心活太久錢不夠、不想自己管理一大筆錢的人。</li>
+    </ul>
+    <p class="note">一次請領計算：年資 ${c.counted} 年，每滿 1 年給 1 個月、超過 15 年部分每年 2 個月，上限 45 個月；60 歲後年資最多計 5 年、合併上限 50 個月（第 59 條）。平均投保薪資：年金取最高 60 個月、一次請領取退保前 3 年（第 19 條）。</p>
+  </section>`;
+}
+
+function claimAgeCard() {
+  const o = insuranceClaimOptions(state, NOW);
+  if (!o || o.opts.length < 2) return '';
+  const cur = R.me.ins.startAge;
+  const best = o.opts.find((x) => x.age === o.best);
+  const curOpt = o.opts.find((x) => x.age === cur);
+  return `<section class="card"><div class="card-h"><h3>${badge('landmark', 'rgba(63,143,106,.12)', C.green)}勞保幾歲開始領最划算？</h3><span class="hint">法定請領年齡 ${o.legal} 歲</span></div>
+    <p class="note" style="margin-top:0">提前請領每年減給 4%、延後每年增給 4%，各以 5 年為限（勞工保險條例第 58 條）。晚領每月較多，但少領幾年；要活過「回本歲數」，晚領才划算。</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>請領年齡</th><th>每月</th><th>累計到 ${o.lifeAge.toFixed(0)} 歲</th><th>與 ${o.legal} 歲比的回本歲數</th><th></th></tr></thead>
+      <tbody>${o.opts.map((x) => `<tr class="${x.age === cur ? 'cur' : ''}"><td>${x.age} 歲${x.age === o.legal ? '（法定）' : ''}</td><td>${money(x.monthly)}</td>
+        <td class="${x.age === o.best ? 'good' : ''}">${wan(x.cumToLife)}${x.age === o.best ? ' ★' : ''}</td>
+        <td>${x.breakEven === null ? '—' : x.age > o.legal ? `活過 ${x.breakEven.toFixed(1)} 歲才划算` : `${x.breakEven.toFixed(1)} 歲前較划算`}</td>
+        <td>${x.age === cur ? '' : `<button type="button" class="btn ghost" style="color:var(--navy2)" data-set="self.insClaimAge" data-val="${x.age}">改用</button>`}</td></tr>`).join('')}</tbody>
+    </table></div>
+    <p class="note">依你的預期壽命 ${o.lifeAge.toFixed(1)} 歲，累計領最多的是 <b>${o.best} 歲</b>開始領（約 ${wan(best.cumToLife)}）${curOpt && o.best !== cur ? `，比目前設定的 ${cur} 歲多 ${wan(best.cumToLife - curOpt.cumToLife)}` : ''}。這是未折現的名目累計；若重視「早拿到的錢可以先用或投資」、健康狀況不確定，或需要錢支應空窗期，早一點領也合理。延後請領期間沒有勞保收入，會列入空窗期。</p>
+  </section>`;
+}
+
+function selfRateCard() {
+  if (state.self.salary <= 0) return '';
+  const a = selfContributionAnalysis(state, NOW);
+  const cur = state.self.selfRate;
+  const mRate = Math.round(a.marginal * 100);
+  const lead = a.marginal === 0
+    ? `以目前月薪估算你不用繳綜所稅，自提<b>沒有節稅效果</b>，兩條路投入的錢一樣多，差別只在報酬、保障與流動性。`
+    : `你的邊際稅率約 <b>${mRate}%</b>：每提撥 100 元，當年少繳約 ${mRate} 元稅，等於一開始就多了 ${mRate}% 的本金。`;
+  const verdict = a.breakEven === null ? '' : a.investReturn >= a.breakEven
+    ? `自己投資只要年化超過 <b>${a.breakEven.toFixed(2)}%</b> 就能打平自提；依你設定的 ${pct(a.investReturn)}，自己投資的終值較高，但前提是每年平均真的拿到這個報酬、也不會中途動用——而自提還有保證收益墊底。`
+    : `自己投資要年化超過 <b>${a.breakEven.toFixed(2)}%</b> 才能打平自提；你設定的 ${pct(a.investReturn)} 不到這個門檻，自提較有利。`;
+  return `<section class="card"><div class="card-h"><h3>${badge('piggy', 'rgba(232,184,75,.18)', '#9A7210')}勞退自提：值不值得？</h3><span class="hint">${cur > 0 ? `目前自提 ${pct(cur)}` : '以自提 6% 試算'}</span></div>
+    <p class="note" style="margin-top:0">${lead}</p>
+    <div class="stats" style="margin-top:12px">
+      <div class="stat"><small>每月提撥</small><strong>${money(a.monthly)}</strong><small>不計入薪資所得課稅</small></div>
+      <div class="stat good"><small>每年少繳稅</small><strong>${money(a.annualSaving)}</strong><small>依 115 年度級距估算</small></div>
+      <div class="stat"><small>鎖定到 ${a.startAge} 歲</small><strong>${a.lockedYears} 年</strong><small>期間不能動用</small></div>
+    </div>
+    <div class="vs">
+      <div><small>自提進勞退（收益 ${pct(a.laborReturn)}）</small><strong>${wan(a.viaPension)}</strong><span>最差情況（只有保證收益 ${a.minGuarantee.rate}%）：${wan(a.viaPensionFloor)}</span></div>
+      <div><small>領回來自己投資（稅後、報酬 ${pct(a.investReturn)}）</small><strong>${wan(a.selfInvest)}</strong><span>沒有保證，報酬可能更高也可能虧損</span></div>
+    </div>
+    ${verdict ? `<p class="note"><b>打平點：</b>${verdict}${a.marginal ? `在兩邊報酬相同的前提下，自提因為節稅，終值固定多 ${Math.round((1 / (1 - a.marginal) - 1) * 1000) / 10}%。` : ''}</p>` : ''}
+    <div class="proscons">
+      <div class="pros"><h4>優點</h4><ul>
+        <li><b>節稅</b>：自提不計入當年度薪資所得課稅（勞工退休金條例第 14 條）${a.marginal ? `，你每年約少繳 ${money(a.annualSaving)}` : '；但你目前不用繳稅，這點對你沒有作用'}。</li>
+        <li><b>保本＋最低保證</b>：領取時收益不低於二年期定存利率計算的收益，不足由國庫補足（第 23 條）；${a.minGuarantee.year} 年度保證收益率 ${a.minGuarantee.rate}%。</li>
+        <li><b>專業代操、免手續費</b>：由勞動基金運用局統一運用；近兩年收益率 ${LABOR_FUND.recent.map((x) => `${x.year} 年 ${x.rate}%`).join('、')}。</li>
+        <li><b>強迫儲蓄</b>：從薪水直接扣，不會被花掉；隨時可以調整或停止自提。</li>
+      </ul></div>
+      <div class="cons"><h4>缺點與風險</h4><ul>
+        <li><b>流動性差</b>：要到 ${a.startAge} 歲才能領（第 24 條），這 ${a.lockedYears} 年間急用、買房都動不到。先有緊急預備金再自提。</li>
+        <li><b>報酬不能自己選</b>：長期平均收益率 ${LABOR_FUND.longAvg.rate}%（${LABOR_FUND.longAvg.from}–${LABOR_FUND.longAvg.to} 年），也曾出現虧損年度；年輕、投資紀律好的人，自己長期投資的期望報酬可能較高。</li>
+        <li><b>月領只到平均餘命</b>：選月領的話領到官方平均餘命為止（見上方月領 vs 一次領）。</li>
+        <li><b>政策可能調整</b>：收益分配、請領規定可能隨法規修正而改變。</li>
+      </ul></div>
+    </div>
+    <p class="note"><b>大致來說：</b>邊際稅率越高、離 60 歲越近、已有緊急預備金、不想自己管理投資的人，自提越划算；收入低（不用繳稅）、近期有買房等大額資金需求、或確定能長期維持較高投資報酬的人，可以少提或不提。這是依你的數字整理的試算比較，不是投資建議。</p>
+    ${cur < 6 ? `<div class="btn-row"><button type="button" class="btn" data-set="self.selfRate" data-val="6">把自提改成 6% 看看月領變化</button></div>` : ''}
   </section>`;
 }
 
@@ -780,6 +875,28 @@ function actionsCard() {
       <button type="button" class="check" role="checkbox" aria-checked="${!!done[a.id]}" data-act="action-done" data-id="${a.id}" aria-label="標記完成：${esc(a.title)}"></button>
       <div><strong>${esc(a.title)}${levelTag[a.level]}</strong><p>${esc(a.detail)}</p>${applyBtn(a)}</div></li>`).join('')}</ul>
     <p class="note">清單依目前試算自動產生，改變設定後會跟著更新；勾選狀態存在這台裝置。</p>
+  </section>`;
+}
+
+function strategyCard() {
+  const w = withdrawalStrategies(state, NOW, { sims: 1000 });
+  if (!w) return '';
+  const rows = [
+    ['fixed', '固定金額', `每年領 ${money(w.draw0)}，不隨市場調整（目前的假設）`],
+    ['guardrail', '護欄式', '提領率超過起始 120% 時減 10%、低於 80% 時加 10%'],
+    ['percent', '固定比例', `每年領當時資產的 ${(w.rate0 * 100).toFixed(1)}%，永遠不會用完`],
+  ];
+  const best = rows.reduce((b, r) => (w[r[0]].success > w[b[0]].success ? r : b), rows[0]);
+  return `<section class="card"><div class="card-h"><h3>${badge('sliders', 'rgba(122,107,184,.12)', C.purple)}退休後怎麼領：提領策略比較</h3><span class="hint">同一組 1,000 種市場情境</span></div>
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>策略</th><th>成功率</th><th>平均收入</th><th>最差年份收入</th><th>100 歲時剩餘</th></tr></thead>
+      <tbody>${rows.map(([k, l, d]) => `<tr><td><b>${l}</b><br><small style="color:var(--muted);font-family:inherit;white-space:normal">${d}</small></td>
+        <td class="${w[k].success >= 0.85 ? 'good' : w[k].success < 0.7 ? 'bad' : ''}">${Math.round(w[k].success * 100)}%</td>
+        <td>${Math.round(w[k].medianIncome * 100)}%</td>
+        <td class="${w[k].worstIncome < 0.6 ? 'bad' : ''}">${Math.round(w[k].worstIncome * 100)}%</td>
+        <td>${wan(w[k].medianLeft)}</td></tr>`).join('')}</tbody>
+    </table></div>
+    <p class="note"><b>怎麼看：</b>收入以「起始提領金額」為 100%。平均收入為各情境中位數；最差年份收入是運氣差的 10% 情境裡、收入最低那一年的水準。成功率最高的是「${best[1]}」——在壞年份少領一點，換來錢比較不會用完。適合哪一種，取決於你能不能接受收入起伏：保底收入（勞保、勞退）越高，越能承受投資提領的波動。</p>
   </section>`;
 }
 
