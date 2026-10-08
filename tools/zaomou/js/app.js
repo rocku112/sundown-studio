@@ -2,8 +2,8 @@
    畫面分兩種：含輸入欄位的分頁（起點設定、投資資產、目標與行動）只在結構改變時重繪，
    數字靠 data-o 局部更新，避免打字時失焦；純輸出的分頁與側欄則每次重算後整頁重繪。 */
 
-import { compute, holdingValue, growLump, growMonthly, lifecycle, sensitivity, retireAgeOptions, goalPlan, validate, scenarioSummary, selfContributionTax, monteCarlo, actionPlan, planPath, trackProgress } from './engine.js';
-import { legalPensionAge, INSURANCE_GRADES, MIN_LIVING, EXPENSE_LEVELS, RETURN_PRESETS, LIFE_TABLE, DATA_YEAR, PENSION_WAGE_MAX, dataStale } from './data.js';
+import { compute, holdingValue, growLump, growMonthly, lifecycle, sensitivity, retireAgeOptions, goalPlan, validate, scenarioSummary, selfContributionTax, monteCarlo, actionPlan, planPath, trackProgress, laborLumpVsMonthly } from './engine.js';
+import { LABOR_MONTHLY, legalPensionAge, INSURANCE_GRADES, MIN_LIVING, EXPENSE_LEVELS, RETURN_PRESETS, LIFE_TABLE, DATA_YEAR, PENSION_WAGE_MAX, dataStale } from './data.js';
 import { load, save, defaults, parseImport, getPath, setPath, uid, applySeed, STORAGE_KEY, normalize, loadScenarios, saveScenarios, MAX_SCENARIOS, templates } from './state.js';
 import { lineChart, donut, wan, attachTooltips } from './charts.js';
 
@@ -103,7 +103,7 @@ function outVal(key) {
     }
     case 'laborinfo': return `每月提繳 <b>${money(me.acct.monthlyContrib)}</b>（雇主 6% + 自提 ${pct(state.self.selfRate, 1)}，提繳工資上限 ${money(PENSION_WAGE_MAX)}）。` +
       (state.self.laborBalance === null ? `未填餘額，依新制施行後約 <b>${me.acct.estimatedPast.toFixed(1)}</b> 年年資回推估算。` : '') +
-      ` 退休時專戶約 <b>${wan(me.acct.pool)}</b>，換算月領 <b>${money(me.laborRetire)}</b>。`;
+      ` 退休時專戶約 <b>${wan(me.acct.pool)}</b>，依勞保局月退算法約月領 <b>${money(me.laborRetire)}</b>${me.laborOfficial.eligible ? `，領到 ${me.laborOfficial.endAge} 歲` : '（年資未滿 15 年只能一次領）'}。`;
     case 'taxinfo': {
       const cur = state.self.selfRate;
       const t = selfContributionTax(state.self.salary, cur > 0 ? cur : 6);
@@ -322,9 +322,9 @@ function pageFloor() {
   <section class="card">
     <div class="rows">
       ${row('勞保老年給付', insNote + (state.insHaircut ? `；壓力測試打 ${discount(state.insHaircut)} 折（原 ${money(me.insFull)}）` : ''), me.insMonthly, (ins.kind === 'lump' ? '<span class="tag warn">一次金</span>' : `<span class="tag">${ins.formula} 式</span>`) + (state.insHaircut ? `<span class="tag warn">−${state.insHaircut}%</span>` : ''))}
-      ${row('勞退新制月領', me.bridge.laborYears > 0
-        ? `專戶退休時約 ${wan(me.acct.pool)}，繼續滾存到 ${me.bridge.laborStart} 歲才開始領${state.payoutMode === 'annuity' ? '（年金化）' : ''}`
-        : `專戶退休時約 ${wan(me.acct.pool)} ÷ ${me.payoutMonths} 個月${state.payoutMode === 'annuity' ? '（年金化）' : ''}`, me.laborRetire)}
+      ${row('勞退新制月領', me.laborOfficial.eligible
+        ? `${me.bridge.laborYears > 0 ? `專戶滾存到 ${me.bridge.laborStart} 歲約 ${wan(me.laborPool)}` : `專戶約 ${wan(me.laborPool)}`}，依勞保局算法（利率 ${(LABOR_MONTHLY.rate * 100).toFixed(4)}%、平均餘命 ${me.laborOfficial.years} 年）領到 ${me.laborOfficial.endAge} 歲`
+        : `新制年資約 ${me.laborOfficial.newYears.toFixed(0)} 年，未滿 15 年只能一次領約 ${wan(me.laborPool)}，以提領月數換算`, me.laborRetire)}
       ${me.oldUnits > 0 ? row('勞基法舊制', `${me.oldUnits} 基數，一次領約 ${wan(me.oldLump)}`, me.oldMonthly) : ''}
       ${state.benefit.enabled ? row(esc(state.benefit.name || '企業福利信託'), `每月 ${money(state.benefit.self + state.benefit.company)}，年化 ${pct(state.benefit.rate)}`, R.benefitMonthly) : ''}
       <div class="row sum"><div class="k">保底月領小計</div><div class="v">${money(R.floor)}</div></div>
@@ -335,6 +335,8 @@ function pageFloor() {
       <div class="row total"><div class="k">退休月領總計<small>約當今日幣值 ${money(R.totalPV)}</small></div><div class="v">${money(R.total)}</div></div>
     </div>
   </section>
+  ${laborChoiceCard()}
+
   ${me.bridge.years > 0 ? `<section class="card bridge"><div class="card-h"><h3>${badge('hourglass', 'rgba(194,69,61,.1)', C.red)}提早退休的空窗期</h3><span class="tag warn">${s.retireAge}–${s.retireAge + me.bridge.years} 歲</span></div>
     <div class="stats">
       <div class="stat"><small>勞保年金開始</small><strong>${me.bridge.insStart} 歲</strong><small>${me.bridge.insYears ? `空窗 ${me.bridge.insYears} 年，每月少 ${money(me.insMonthly)}` : '退休即可領'}</small></div>
@@ -689,6 +691,34 @@ function pageAnalysis() {
       </table></div>
       <div class="btn-row" style="margin-top:12px"><button type="button" class="btn" data-act="csv">下載 CSV</button></div>
     </details>
+  </section>`;
+}
+
+function laborChoiceCard() {
+  const c = laborLumpVsMonthly(state, NOW);
+  if (c.pool <= 0) return '';
+  const head = `<div class="card-h"><h3>${badge('piggy', 'rgba(63,143,106,.12)', C.green)}勞退：月領還是一次領？</h3><span class="hint">${c.startAge} 歲起可請領</span></div>`;
+  const src = `<p class="note">計算依據：勞保局「月退休金計算基礎」，自 113 年 4 月 1 日起適用——利率 ${c.officialRate.toFixed(4)}%（勞動基金運用局 110–112 年平均保證收益率）、內政部 111 年全國簡易生命表平均餘命；公式與官方因子表逐一核對一致。請領方式經核付後不得變更（勞工退休金條例第 24 條）。領月退期間，專戶剩餘金額每年仍參與收益分配，實際可能略多。<a href="https://www.bli.gov.tw/0018437.html" target="_blank" rel="noopener">勞保局說明</a></p>`;
+  if (!c.eligible) {
+    return `<section class="card">${head}<div class="alert bad"><b>新制年資約 ${c.newYears.toFixed(0)} 年，未滿 15 年，只能一次領約 ${money(c.pool)}</b>
+      <p>勞工退休金條例第 24 條：年滿 60 歲、工作年資滿 15 年才可選擇月領。</p></div>${src}</section>`;
+  }
+  const self = c.selfInvest;
+  return `<section class="card">${head}
+    <div class="stats">
+      <div class="stat"><small>月領（勞保局算法）</small><strong>${money(c.monthly)}</strong><small>每月，領 ${c.years} 年到 ${c.endAge} 歲</small></div>
+      <div class="stat"><small>一次領</small><strong>${wan(c.pool)}</strong><small>${c.startAge} 歲一次拿到</small></div>
+      <div class="stat ${c.outlive > 0 ? 'bad' : 'good'}"><small>你的預期壽命</small><strong>${c.lifeAge.toFixed(1)} 歲</strong><small>${c.outlive > 0 ? `比月領結束晚 ${c.outlive.toFixed(1)} 年` : `月領可涵蓋`}</small></div>
+    </div>
+    <ul class="pts">
+      ${c.outlive > 0
+        ? `<li><b>月領會在 ${c.endAge} 歲領完</b>，依生命表你可能再活約 ${c.outlive.toFixed(1)} 年，這段期間沒有勞退收入（延壽年金尚未開辦）。勞保局用的是不分性別的平均餘命，女性通常會比月領期間活得久。</li>`
+        : `<li><b>月領期間（到 ${c.endAge} 歲）已涵蓋你的預期壽命</b>：勞保局用不分性別的平均餘命，對預期壽命較短的人相對有利。</li>`}
+      <li>若一次領出、自己以年化 ${pct(self.rate)} 管理，每月同樣領 ${money(c.monthly)}，大約可以領到 <b>${self.lastsUntil >= 100 ? '100 歲以上' : `${self.lastsUntil.toFixed(1)} 歲`}</b>。</li>
+      ${c.needRate !== null ? `<li>要用一次領的錢，每月領 ${money(c.monthly)} 一直領到預期壽命 ${c.lifeAge.toFixed(0)} 歲，自己投資需要年化約 <b>${c.needRate.toFixed(2)}%</b>${c.needRate > c.officialRate ? `，高於月退採用的 ${c.officialRate.toFixed(4)}%，代表要承擔投資風險` : `，低於月退採用的 ${c.officialRate.toFixed(4)}%`}。</li>` : ''}
+      <li>月領由勞保局代管、沒有投資風險；一次領彈性大、可傳承，但要自己承擔市場波動與花太快的風險。</li>
+    </ul>
+    ${src}
   </section>`;
 }
 

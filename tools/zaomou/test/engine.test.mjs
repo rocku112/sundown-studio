@@ -450,3 +450,38 @@ test('快速開始範本：皆可計算、無錯誤級檢查、各有特色', ()
   assert.ok(compute(fire, 2026).me.bridge.years > 0, '提早退休範本應有空窗期');
   assert.ok(list.find((t) => t.id === 'family').make().spouse.enabled);
 });
+
+import { laborMonthlyOfficial, laborLumpVsMonthly } from '../js/engine.js';
+
+test('勞退月退休金：與勞保局官方範例與因子表一致', () => {
+  const a = laborMonthlyOfficial(2000000, 60);
+  near(a.factor, 20.239737682, 1e-8);                      // 官方：60 歲、平均餘命 23 年
+  assert.equal(Math.round(a.monthly), 8235);               // 官方範例 200 萬 → 8,235 元
+  // 官方範例 400 萬寫 16,470（為 8,235 × 2），公式值 16,469.26，差在範例的進位方式
+  near(laborMonthlyOfficial(4000000, 60).monthly, 16470, 1);
+  near(laborMonthlyOfficial(1, 65).factor, 17.090076046, 1e-8);
+  near(laborMonthlyOfficial(1, 72).factor, 12.945411072, 1e-8);
+  near(laborMonthlyOfficial(1, 90).factor, 5.802024418, 1e-8); // 85 歲以上同 85 歲
+  assert.equal(laborMonthlyOfficial(1, 65).endAge, 84);
+});
+
+test('勞退一次領 vs 月領：資格與比較', () => {
+  const s = defaults(2026); // 1991 年生、23 歲起工作，新制年資 42 年
+  const c = laborLumpVsMonthly(s, 2026);
+  assert.ok(c.eligible);
+  assert.equal(c.startAge, 65);
+  assert.equal(c.endAge, 84);
+  assert.equal(c.monthly, compute(s, 2026).me.laborOfficial.monthly);
+  // 以官方利率自己管理，剛好領到平均餘命結束
+  const t = JSON.parse(JSON.stringify(s)); t.postReturn = 1.1473;
+  near(laborLumpVsMonthly(t, 2026).selfInvest.lastsUntil, 84, 0.1);
+  // 男性 65 歲預期壽命約 83.3 歲，短於官方不分性別的 84 歲：月領期間已涵蓋預期壽命
+  assert.ok(c.outlive < 0 && c.needRate < 1.1473);
+  // 女性預期壽命約 87 歲，會比月退期間多活約 3 年：一次領自己管理需要更高報酬才能領到預期壽命
+  const f = JSON.parse(JSON.stringify(s)); f.self.gender = 'female';
+  const cf = laborLumpVsMonthly(f, 2026);
+  assert.ok(cf.outlive > 2 && cf.needRate > 1.1473, `${cf.outlive} ${cf.needRate}`);
+  // 新制年資未滿 15 年：只能一次領
+  const u = defaults(2026); u.self.birthYear = 1975; u.self.workStartAge = 50; u.self.retireAge = 60;
+  assert.equal(laborLumpVsMonthly(u, 2026).eligible, false);
+});

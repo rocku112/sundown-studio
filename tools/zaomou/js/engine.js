@@ -4,7 +4,7 @@
 
 import {
   INSURANCE_GRADES, PENSION_WAGE_MAX, EMPLOYER_RATE, NEW_SYSTEM_START, LABOR_PENSION_AGE,
-  legalPensionAge, PENSION_ADJ_PER_YEAR, PENSION_ADJ_MAX_YEARS, PENSION_MIN_YEARS, LIFE_TABLE, TAX,
+  legalPensionAge, PENSION_ADJ_PER_YEAR, PENSION_ADJ_MAX_YEARS, PENSION_MIN_YEARS, LIFE_TABLE, TAX, LABOR_MONTHLY,
 } from './data.js';
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
@@ -117,6 +117,20 @@ export function laborPensionAccount({ salary, growthPct, selfRate, returnPct, wo
   return { pool: acc, estimatedPast: pastYears, monthlyContrib: Math.round(wage(salary) * rate) };
 }
 
+/**
+ * 勞退月退休金（勞保局官方算法）：專戶金額 ÷ 期初年金現值因子 ÷ 12。
+ * 因子 = (1 − (1/(1+i))^T) ÷ (12 × ((1+i)^(1/12) − 1)) × (1+i)^(1/12)，T 為請領年齡的平均餘命（官方表）。
+ * 月退只發到平均餘命為止（延壽年金尚未開辦），期間剩餘金額仍參與收益分配（此處不計，偏保守）。
+ */
+export function laborMonthlyOfficial(pool, claimAge) {
+  const age = clamp(Math.round(claimAge), 60, 85);
+  const T = LABOR_MONTHLY.years[age];
+  const i = LABOR_MONTHLY.rate;
+  const m = Math.pow(1 + i, 1 / 12);
+  const factor = (1 - Math.pow(1 / (1 + i), T)) / (12 * (m - 1)) * m;
+  return { monthly: Math.max(0, pool) / factor / 12, years: T, factor, endAge: age + T };
+}
+
 /** 勞基法舊制退休金：前 15 年每年 2 基數，之後每年 1 基數，上限 45 基數 */
 export function oldSystemUnits(years) {
   const y = Math.max(0, years);
@@ -194,10 +208,16 @@ function person(p, ctx) {
     salary: p.salary, growthPct: ctx.salaryGrowth, selfRate: p.selfRate, returnPct: p.laborReturn,
     workStartAge: p.workStartAge, age, retireAge: p.retireAge, nowYear: ctx.nowYear, balance: p.laborBalance,
   });
-  // 勞退要滿 60 歲才能領：提早退休時專戶繼續以基金收益滾存到 60 歲，再依剩餘月數換算
+  // 勞退要滿 60 歲才能領：提早退休時專戶繼續以基金收益滾存到 60 歲
   const laborStart = Math.max(p.retireAge, LABOR_PENSION_AGE);
   const laborPool = growLump(acct.pool, laborStart - p.retireAge, p.laborReturn);
-  const laborRetire = Math.round(makePayout(Math.max(12, Math.round((lifeAge - laborStart) * 12)), ctx.payoutMode, ctx.postReturn).toMonthly(laborPool));
+  // 新制年資（94 年 7 月起）滿 15 年才能月領，否則只能一次領
+  const newYears = Math.max(0, p.retireAge - Math.max(p.workStartAge, NEW_SYSTEM_START - p.birthYear));
+  const official = laborMonthlyOfficial(laborPool, laborStart);
+  const laborEligible = newYears >= LABOR_MONTHLY.minYears;
+  // 可月領時採勞保局官方算法；只能一次領時，依使用者的提領方式把一次金換算成月領
+  const laborRetire = laborEligible ? Math.round(official.monthly)
+    : Math.round(makePayout(Math.max(12, Math.round((lifeAge - laborStart) * 12)), ctx.payoutMode, ctx.postReturn).toMonthly(laborPool));
 
   const finalSalary = p.salary * Math.pow(1 + ctx.salaryGrowth / 100, yearsToRetire);
   const units = oldSystemUnits(p.oldSystemYears);
@@ -207,7 +227,7 @@ function person(p, ctx) {
   return {
     age, yearsToRetire, lifeAge, healthAge, payout, payoutMonths,
     insFull, insBase: base, insBaseNow: baseNow, insGrade: insuranceGrade(baseNow).grade, insYears, ins, insMonthly,
-    acct, laborRetire, oldUnits: units, oldLump, oldMonthly, finalSalary,
+    acct, laborRetire, laborPool, laborOfficial: { ...official, eligible: laborEligible, newYears }, oldUnits: units, oldLump, oldMonthly, finalSalary,
     floor: insMonthly + laborRetire + oldMonthly,
     bridge: bridgeGap(p.retireAge, insStart, laborStart, insMonthly, laborRetire),
   };
@@ -739,4 +759,39 @@ export function trackProgress(tracking) {
     const expected = e.invest + e.labor;
     return { ...c, expInvest: e.invest, expLabor: e.labor, actual, expected, diff: actual - expected, ratio: expected > 0 ? actual / expected : null };
   });
+}
+
+/**
+ * 勞退一次領 vs 月領：
+ * - 月領：官方算法，領到平均餘命（endAge）為止。
+ * - 一次領：同一筆錢自己以「退休後報酬」管理，每月領同樣金額，看能撐到幾歲；
+ *   以及要領到自己的預期壽命，需要多少年化報酬。
+ */
+export function laborLumpVsMonthly(state, nowYear = new Date().getFullYear()) {
+  const r = compute(state, nowYear);
+  const me = r.me;
+  const o = me.laborOfficial;
+  const pool = me.laborPool;
+  const M = o.monthly;
+  const startAge = Math.max(state.self.retireAge, LABOR_PENSION_AGE);
+  const lifeAge = me.lifeAge;
+  const lastsUntil = (ratePct) => {
+    const j = Math.pow(1 + ratePct / 100, 1 / 12) - 1;
+    let b = pool, k = 0;
+    while (b > 0 && k < 12 * 60) { b -= M; b *= 1 + j; k++; } // 期初給付
+    return startAge + k / 12;
+  };
+  // 一次領自己管理，要每月領 M 直到預期壽命所需的年化報酬
+  let needRate = null;
+  if (M > 0 && lastsUntil(15) >= lifeAge) {
+    let lo = -5, hi = 15;
+    for (let i = 0; i < 40; i++) { const mid = (lo + hi) / 2; if (lastsUntil(mid) >= lifeAge) hi = mid; else lo = mid; }
+    needRate = hi;
+  }
+  return {
+    eligible: o.eligible, newYears: o.newYears, pool, monthly: M, years: o.years, startAge, endAge: o.endAge,
+    lifeAge, outlive: lifeAge - o.endAge,
+    selfInvest: { rate: num(state.postReturn), lastsUntil: lastsUntil(num(state.postReturn)) },
+    needRate, officialRate: LABOR_MONTHLY.rate * 100,
+  };
 }
