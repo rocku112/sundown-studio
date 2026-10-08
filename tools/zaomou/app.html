@@ -21,6 +21,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/app.css">
+<script>/* 先套用使用者指定的主題，避免載入時閃一下 */try{var t=JSON.parse(localStorage.getItem('zaomou_ui')||'{}').theme;if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;}catch(e){}</script>
 </head>
 <body>
 <header class="top">
@@ -30,6 +31,11 @@
       <div><b>早謀遠算</b><small>SunDown Studio</small></div>
     </a>
     <nav class="tabs" id="tabs" role="tablist" aria-label="試算步驟"></nav>
+    <div class="hist" role="group" aria-label="復原與重做">
+      <button type="button" id="btn-undo" title="復原（Ctrl+Z）" aria-label="復原" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
+      <button type="button" id="btn-redo" title="重做（Ctrl+Shift+Z）" aria-label="重做" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>
+      <button type="button" id="btn-theme" title="切換主題" aria-label="切換主題：自動"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/></svg></button>
+    </div>
     <div class="top-total"><small>退休月領</small><strong class="num" id="ttotal"></strong></div>
   </div>
 </header>

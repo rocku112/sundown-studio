@@ -593,3 +593,28 @@ test('提領策略：固定金額成功率與蒙地卡羅一致', () => {
     assert.equal(w.fixed.success, mc.success);
   }
 });
+
+test('年終獎金：提高稅率級距與節稅效果', () => {
+  // 月薪 10 萬：12 個月淨額 1,200,000−464,000=736,000（12%）；16 個月 1,600,000−464,000=1,136,000（仍 12%）
+  const a = selfContributionTax(100000, 6, 0), b = selfContributionTax(100000, 6, 4);
+  assert.equal(a.contrib, b.contrib, '年終不提繳');
+  assert.equal(b.marginal, 0.12);
+  // 月薪 4.5 萬：12 個月在 5% 級距；加 12 個月年終（年所得 108 萬）淨額 616,000 → 進入 12%
+  assert.equal(selfContributionTax(45000, 6, 0).marginal, 0.05);
+  assert.equal(selfContributionTax(45000, 6, 12).marginal, 0.12);
+  assert.ok(selfContributionTax(45000, 6, 12).saving > selfContributionTax(45000, 6, 0).saving);
+});
+
+import { selfRateDelayOptions } from '../js/engine.js';
+
+test('勞退自提延後開始：越晚開始損失越多、手上現金越多', () => {
+  const s = defaults(2026);
+  const o = selfRateDelayOptions(s, 2026);
+  assert.deepEqual(o.map((x) => x.delay), [0, 3, 5, 10]);
+  assert.equal(o[0].loss, 0);
+  for (let i = 1; i < o.length; i++) assert.ok(o[i].loss > o[i - 1].loss && o[i].inHand > o[i - 1].inHand);
+  // 延後 3 年 = 前 3 年沒提撥，等同第一筆晚 3 年進入、少滾 27 年以上的複利
+  const a = selfContributionAnalysis(s, 2026);
+  near(o[1].fv, growMonthly(a.monthly, a.years - 3, 4), 1);
+  assert.equal(o[1].inHand, a.afterTaxMonthly * 36);
+});

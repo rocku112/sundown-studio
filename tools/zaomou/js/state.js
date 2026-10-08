@@ -14,7 +14,7 @@ export function defaults(nowYear = new Date().getFullYear()) {
     self: {
       birthYear: nowYear - 35, gender: 'male', workStartAge: 23, retireAge: 65,
       salary: 45000, insMode: 'auto', insGrade: 11,
-      selfRate: 0, laborReturn: 4, laborBalance: null, oldSystemYears: 0, insClaimAge: null,
+      selfRate: 0, laborReturn: 4, laborBalance: null, oldSystemYears: 0, insClaimAge: null, bonusMonths: 0,
     },
     spouse: {
       enabled: false, name: '配偶', birthYear: nowYear - 35, gender: 'female', workStartAge: 23, retireAge: 65,
@@ -62,22 +62,22 @@ export function templates(nowYear = new Date().getFullYear()) {
   const etf = (amount) => ({ id: 'h-etf', name: '已持有 ETF', kind: 'cash', shares: 0, price: 0, amount, rate: 6 });
   const list = [
     { id: 'fresh', name: '社會新鮮人', desc: '25 歲、月薪 3.2 萬、剛開始存錢', make: () => {
-      const s = base(); Object.assign(s.self, { birthYear: nowYear - 25, workStartAge: 23, salary: 32000, selfRate: 0 });
+      const s = base(); Object.assign(s.self, { birthYear: nowYear - 25, workStartAge: 23, salary: 32000, selfRate: 0, bonusMonths: 1 });
       s.holdings = [cash(100000)]; s.portfolios = pf(3000); s.monthlyExpense = 25000; s.targetMonthly = 40000; return s; } },
     { id: 'single', name: '單身上班族', desc: '35 歲、月薪 5 萬、每月投資 1 萬', make: () => {
-      const s = base(); Object.assign(s.self, { birthYear: nowYear - 35, workStartAge: 23, salary: 50000, selfRate: 0 });
+      const s = base(); Object.assign(s.self, { birthYear: nowYear - 35, workStartAge: 23, salary: 50000, selfRate: 0, bonusMonths: 2 });
       s.holdings = [cash(600000), etf(400000)]; s.portfolios = pf(10000); s.monthlyExpense = 31000; s.targetMonthly = 50000; return s; } },
     { id: 'family', name: '雙薪家庭', desc: '40 歲、夫妻月薪 6 萬＋5 萬、有子女教育支出', make: () => {
-      const s = base(); Object.assign(s.self, { birthYear: nowYear - 40, workStartAge: 24, salary: 60000, selfRate: 3 });
+      const s = base(); Object.assign(s.self, { birthYear: nowYear - 40, workStartAge: 24, salary: 60000, selfRate: 3, bonusMonths: 2 });
       Object.assign(s.spouse, { enabled: true, name: '配偶', birthYear: nowYear - 38, gender: 'female', workStartAge: 24, salary: 50000, selfRate: 0 });
       s.holdings = [cash(1000000), etf(800000)]; s.portfolios = pf(15000); s.monthlyExpense = 50000; s.targetMonthly = 80000;
       s.events = [{ id: 'e1', name: '子女大學學費', age: 50, amount: 1000000, kind: 'out' }]; return s; } },
     { id: 'near', name: '接近退休', desc: '55 歲、勞退累積 250 萬、想確認夠不夠', make: () => {
-      const s = base(); Object.assign(s.self, { birthYear: nowYear - 55, workStartAge: 25, salary: 70000, selfRate: 6, laborBalance: 2500000 });
+      const s = base(); Object.assign(s.self, { birthYear: nowYear - 55, workStartAge: 25, salary: 70000, selfRate: 6, laborBalance: 2500000, bonusMonths: 2 });
       s.holdings = [cash(3000000), etf(2000000)]; s.portfolios = pf(20000); s.monthlyExpense = 40000; s.targetMonthly = 55000;
       s.care = { enabled: true, startAge: 80, monthly: 30000 }; return s; } },
     { id: 'fire', name: '提早退休', desc: '35 歲、月薪 8 萬、每月投資 4 萬、50 歲退休', make: () => {
-      const s = base(); Object.assign(s.self, { birthYear: nowYear - 35, workStartAge: 23, salary: 80000, selfRate: 6, retireAge: 50 });
+      const s = base(); Object.assign(s.self, { birthYear: nowYear - 35, workStartAge: 23, salary: 80000, selfRate: 6, retireAge: 50, bonusMonths: 3 });
       s.holdings = [cash(800000), etf(2500000)]; s.portfolios = pf(40000); s.monthlyExpense = 40000; s.targetMonthly = 50000; return s; } },
   ];
   return list.map((t) => ({ ...t, make: () => normalize(t.make()) }));

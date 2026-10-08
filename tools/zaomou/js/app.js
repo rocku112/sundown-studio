@@ -2,12 +2,23 @@
    畫面分兩種：含輸入欄位的分頁（起點設定、投資資產、目標與行動）只在結構改變時重繪，
    數字靠 data-o 局部更新，避免打字時失焦；純輸出的分頁與側欄則每次重算後整頁重繪。 */
 
-import { compute, holdingValue, growLump, growMonthly, lifecycle, sensitivity, retireAgeOptions, goalPlan, validate, scenarioSummary, selfContributionTax, monteCarlo, actionPlan, planPath, trackProgress, laborLumpVsMonthly, selfContributionAnalysis, insuranceClaimOptions, insCpiFactor, insuranceLumpVsAnnuity, withdrawalStrategies } from './engine.js';
+import { compute, holdingValue, growLump, growMonthly, lifecycle, sensitivity, retireAgeOptions, goalPlan, validate, scenarioSummary, selfContributionTax, monteCarlo, actionPlan, planPath, trackProgress, laborLumpVsMonthly, selfContributionAnalysis, insuranceClaimOptions, insCpiFactor, insuranceLumpVsAnnuity, withdrawalStrategies, selfRateDelayOptions } from './engine.js';
 import { LABOR_MONTHLY, LABOR_FUND, legalPensionAge, INSURANCE_GRADES, MIN_LIVING, EXPENSE_LEVELS, RETURN_PRESETS, LIFE_TABLE, DATA_YEAR, PENSION_WAGE_MAX, dataStale } from './data.js';
 import { load, save, defaults, parseImport, getPath, setPath, uid, applySeed, STORAGE_KEY, normalize, loadScenarios, saveScenarios, MAX_SCENARIOS, templates } from './state.js';
 import { lineChart, donut, wan, attachTooltips } from './charts.js';
 
 const NOW = new Date().getFullYear();
+
+/* 依目前設定快取耗時的模擬：設定 JSON 相同就直接重用，設定一改自動失效（最多保留 24 筆） */
+const memoCache = new Map();
+function memo(name, fn, args = []) {
+  const key = `${name}|${JSON.stringify(args)}|${JSON.stringify(state)}`;
+  if (memoCache.has(key)) return memoCache.get(key);
+  const v = fn(state, NOW, ...args);
+  memoCache.set(key, v);
+  if (memoCache.size > 24) memoCache.delete(memoCache.keys().next().value);
+  return v;
+}
 const hadSaved = (() => { try { return !!(localStorage.getItem(STORAGE_KEY) || localStorage.getItem('nuclear_retirement_v1')); } catch { return false; } })();
 let state = load();
 const seeded = applySeed(state, NOW);
@@ -106,7 +117,7 @@ function outVal(key) {
       ` 退休時專戶約 <b>${wan(me.acct.pool)}</b>，依勞保局月退算法約月領 <b>${money(me.laborRetire)}</b>${me.laborOfficial.eligible ? `，領到 ${me.laborOfficial.endAge} 歲` : '（年資未滿 15 年只能一次領）'}。`;
     case 'taxinfo': {
       const cur = state.self.selfRate;
-      const t = selfContributionTax(state.self.salary, cur > 0 ? cur : 6);
+      const t = selfContributionTax(state.self.salary, cur > 0 ? cur : 6, state.self.bonusMonths);
       if (t.marginal === 0) return '依目前月薪估算，綜合所得淨額為 0、本來就不用繳稅，自提沒有節稅效果，但仍可累積退休金。';
       return `${cur > 0 ? `自提 ${pct(cur)}` : '若自提 6%'}：每年提撥 <b>${money(t.contrib)}</b>，不計入當年度薪資所得課稅，估計少繳綜所稅約 <b>${money(t.saving)}</b>（邊際稅率 ${Math.round(t.marginal * 100)}%），實際負擔約 ${money(t.netCost)}。`;
     }
@@ -209,6 +220,7 @@ function pageSetup() {
       ${seg('self.insMode', [['auto', '依月薪自動'], ['manual', '手動選級距']], { label: '投保薪資設定方式' })}</div>
     <div class="grid two">
       ${numF('self.salary', '目前月薪', { min: 0, step: 1000, unit: '元' })}
+      ${numF('self.bonusMonths', '年終與獎金', { min: 0, max: 24, step: 0.5, unit: '個月', em: '（用於估算稅率）' })}
       ${rangeF('salaryGrowth', '薪資年增率', 0, 6, 0.5)}
       ${numF('self.insClaimAge', '勞保請領年齡', { nullable: true, min: 55, max: 75, unit: '歲', placeholder: '同退休年齡', em: '（選填，可晚於退休）' })}
       ${s.insMode === 'manual' ? `<label class="field"><span>勞保投保薪資級距</span>
@@ -231,7 +243,7 @@ function pageSetup() {
       ${numF('self.laborBalance', '目前專戶累積金額', { nullable: true, min: 0, step: 10000, unit: '元', placeholder: '不確定可留白', em: '（選填）' })}
     </div>
     <p class="note">${out('laborinfo', outVal('laborinfo'))} 專戶餘額可至勞保局 e 化服務系統或「勞動保障卡」App 查詢，填入後估算最準。</p>
-    <div class="calc">${out('taxinfo', outVal('taxinfo'))}<br><small>依 115 年度綜所稅級距、單身、年薪以月薪 × 12 計、使用標準扣除額估算；有配偶合併申報、年終獎金或列舉扣除時會不同。</small></div>
+    <div class="calc">${out('taxinfo', outVal('taxinfo'))}<br><small>依 115 年度綜所稅級距、單身、年薪以月薪 ×（12 + 年終月數）計、使用標準扣除額估算；有配偶合併申報、年終獎金或列舉扣除時會不同。</small></div>
   </section>
 
   <section class="card"><div class="card-h"><h3>${badge('history', 'rgba(63,154,110,.12)', C.green)}勞基法舊制年資</h3><span class="hint">94 年 7 月前已在職者</span></div>
@@ -336,13 +348,7 @@ function pageFloor() {
       <div class="row total"><div class="k">退休月領總計<small>約當今日幣值 ${money(R.totalPV)}</small></div><div class="v">${money(R.total)}</div></div>
     </div>
   </section>
-  ${claimAgeCard()}
-
-  ${insLumpCard()}
-
-  ${laborChoiceCard()}
-
-  ${selfRateCard()}
+  ${foldedDecisions()}
 
   ${me.bridge.years > 0 ? `<section class="card bridge"><div class="card-h"><h3>${badge('hourglass', 'rgba(194,69,61,.1)', C.red)}提早退休的空窗期</h3><span class="tag warn">${s.retireAge}–${s.retireAge + me.bridge.years} 歲</span></div>
     <div class="stats">
@@ -479,7 +485,7 @@ function pagePlan() {
       ? { n: 4, k: '提高投資報酬', v: `+${g.requiredReturn.toFixed(1)} 個百分點`, p: g.requiredReturn > 3 ? '幅度偏大，代表要承擔明顯更高的波動風險，不建議單靠這一招。' : '所有投資的年化報酬同時提高這麼多即可達標；報酬越高、波動通常越大。' }
       : { n: 4, k: '提高投資報酬', v: '—', p: state.holdings.length + state.portfolios.length ? '報酬再高也補不起來。' : '尚未設定投資資產。', muted: true },
     g.selfRate6
-      ? { n: 5, k: '勞退自提拉到 6%', v: `+${money(g.selfRate6.gain)}`, p: `每月多提撥 ${money(g.selfRate6.monthlyCost)}，自提不計入當年度薪資所得課稅，估計每年少繳稅 ${money(selfContributionTax(s.salary, 6).saving - selfContributionTax(s.salary, s.selfRate).saving)}；月領（今日幣值）增加${g.selfRate6.enough ? '，單獨就能達標' : '，可補一部分'}。`,
+      ? { n: 5, k: '勞退自提拉到 6%', v: `+${money(g.selfRate6.gain)}`, p: `每月多提撥 ${money(g.selfRate6.monthlyCost)}，自提不計入當年度薪資所得課稅，估計每年少繳稅 ${money(selfContributionTax(s.salary, 6, s.bonusMonths).saving - selfContributionTax(s.salary, s.selfRate, s.bonusMonths).saving)}；月領（今日幣值）增加${g.selfRate6.enough ? '，單獨就能達標' : '，可補一部分'}。`,
           btn: `<button type="button" class="btn" data-set="self.selfRate" data-val="6">改為自提 6%</button>` }
       : { n: 5, k: '勞退自提', v: '已是 6%', p: '自提已達上限。', muted: true },
     { n: 6, k: '調整目標', v: money(round(g.currentPV)), p: '照目前規劃，每月大約能有這麼多（今日幣值）。',
@@ -544,12 +550,12 @@ function pagePlan() {
 function pageAnalysis() {
   const me = R.me, s = state.self;
   const size = window.innerWidth < 640 ? { width: 380, height: 230 } : { width: 680, height: 260 };
-  const scen = [[-2, '悲觀', C.red], [0, '基準', C.navy], [2, '樂觀', C.green]].map(([d, l, c]) => ({ d, l, c, lc: lifecycle(state, NOW, d) }));
+  const scen = [[-2, '悲觀', C.red], [0, '基準', C.navy], [2, '樂觀', C.green]].map(([d, l, c]) => ({ d, l, c, lc: memo('lc', lifecycle, [d]) }));
   const base = scen[1].lc;
-  const sens = sensitivity(state, NOW);
-  const ages = retireAgeOptions(state, NOW);
+  const sens = memo('sens', sensitivity);
+  const ages = memo('ages', retireAgeOptions);
   const hasInvest = R.investPool > 0;
-  const mc = monteCarlo(state, NOW, { sims: 1000 });
+  const mc = memo('mc', monteCarlo, [{ sims: 1000 }]);
 
   // 月領來源
   const parts = [
@@ -566,7 +572,7 @@ function pageAnalysis() {
   // 重點摘要
   const cov = R.coverage;
   const lever = sens.find((r) => r.key !== 'cpi'); // 通膨是外部風險、不是能調的槓桿
-  const leverHigh = Math.abs(lever.high) >= Math.abs(lever.low);
+  const leverHigh = lever.high >= lever.low; // 一律呈現「能改善」的那個方向
   const leverVal = leverHigh ? lever.high : lever.low;
   const leverWhat = `${lever.label}${leverHigh ? lever.highLabel : lever.lowLabel}`;
   const run = base.runoutAge;
@@ -709,6 +715,23 @@ function pageAnalysis() {
   </section>`;
 }
 
+/* 可收合的深度分析卡：預設只顯示標題與一句結論，展開狀態記在這台裝置 */
+const UI_KEY = 'zaomou_ui';
+const uiPrefs = (() => { try { return JSON.parse(localStorage.getItem(UI_KEY) || '{}'); } catch { return {}; } })();
+function fold(id, html, verdict) {
+  if (!html) return '';
+  const m = html.match(/^\s*<section class="card([^"]*)">\s*(<div class="card-h">[\s\S]*?<\/div>)([\s\S]*)<\/section>\s*$/);
+  if (!m) return html;
+  const open = uiPrefs.open?.[id];
+  return `<details class="card fold${m[1]}" data-fold="${id}" ${open ? 'open' : ''}><summary>${m[2]}<p class="verdict">${verdict}</p></summary>${m[3]}</details>`;
+}
+document.addEventListener('toggle', (e) => {
+  const d = e.target;
+  if (!d.matches?.('details[data-fold]')) return;
+  uiPrefs.open = { ...(uiPrefs.open || {}), [d.dataset.fold]: d.open };
+  try { localStorage.setItem(UI_KEY, JSON.stringify(uiPrefs)); } catch { /* 忽略 */ }
+}, true);
+
 function insLumpCard() {
   const c = insuranceLumpVsAnnuity(state, NOW);
   if (!c.eligible) return '';
@@ -728,6 +751,25 @@ function insLumpCard() {
   </section>`;
 }
 
+function foldedDecisions() {
+  const out = [];
+  const co = insuranceClaimOptions(state, NOW);
+  if (co && co.opts.length >= 2) out.push(fold('claim', claimAgeCard(), `依你的預期壽命，<b>${co.best} 歲</b>開始領勞保累計最多；目前設定 ${R.me.ins.startAge} 歲。`));
+  const il = insuranceLumpVsAnnuity(state, NOW);
+  if (il.eligible) out.push(fold('inslump', insLumpCard(), `一次請領 ${wan(il.lump)}；年金要領到 ${il.breakEvenAge.toFixed(1)} 歲才追上，${il.lifeAge > il.breakEvenAge ? '依平均壽命<b>年金較多</b>' : '依平均壽命<b>一次請領較多</b>'}。`));
+  const lc = laborLumpVsMonthly(state, NOW);
+  if (lc.pool > 0) out.push(fold('laborchoice', laborChoiceCard(), lc.eligible
+    ? `月領 ${money(lc.monthly)} 到 ${lc.endAge} 歲${lc.outlive > 0 ? `，<b>比你的預期壽命早 ${lc.outlive.toFixed(1)} 年領完</b>` : '，已涵蓋你的預期壽命'}；一次領 ${wan(lc.pool)}。`
+    : `新制年資未滿 15 年，<b>只能一次領</b> ${wan(lc.pool)}。`));
+  if (state.self.salary > 0) {
+    const a = selfContributionAnalysis(state, NOW);
+    out.push(fold('selfrate', selfRateCard(), a.marginal === 0
+      ? '你目前不用繳綜所稅，自提<b>沒有節稅效果</b>，差別只在報酬、保障與流動性。'
+      : `邊際稅率 ${Math.round(a.marginal * 100)}%，每年少繳 ${money(a.annualSaving)}；自己投資要年化超過 <b>${a.breakEven.toFixed(2)}%</b> 才打平。`));
+  }
+  return out.length ? `<div class="sub-h"><h3>${badge('sliders', 'rgba(45,74,110,.1)', C.navy)}關鍵決策</h3><span class="hint">點開看計算與正反比較</span></div>${out.join('')}` : '';
+}
+
 function claimAgeCard() {
   const o = insuranceClaimOptions(state, NOW);
   if (!o || o.opts.length < 2) return '';
@@ -745,6 +787,17 @@ function claimAgeCard() {
     </table></div>
     <p class="note">依你的預期壽命 ${o.lifeAge.toFixed(1)} 歲，累計領最多的是 <b>${o.best} 歲</b>開始領（約 ${wan(best.cumToLife)}）${curOpt && o.best !== cur ? `，比目前設定的 ${cur} 歲多 ${wan(best.cumToLife - curOpt.cumToLife)}` : ''}。這是未折現的名目累計；若重視「早拿到的錢可以先用或投資」、健康狀況不確定，或需要錢支應空窗期，早一點領也合理。延後請領期間沒有勞保收入，會列入空窗期。</p>
   </section>`;
+}
+
+function delayTable() {
+  const o = selfRateDelayOptions(state, NOW);
+  if (o.length < 2) return '';
+  return `<div class="tbl-wrap" style="margin-top:14px"><table class="tbl">
+    <thead><tr><th>什麼時候開始自提</th><th>到 ${selfContributionAnalysis(state, NOW).startAge} 歲累積</th><th>比現在開始少</th><th>延後期間留在手上</th></tr></thead>
+    <tbody>${o.map((x) => `<tr class="${x.delay === 0 ? 'cur' : ''}"><td>${x.delay === 0 ? '現在' : `${x.delay} 年後（${x.startAge} 歲）`}</td><td>${wan(x.fv)}</td>
+      <td class="${x.loss > 0 ? 'bad' : ''}">${x.loss > 0 ? `−${wan(x.loss)}` : '—'}</td><td>${x.inHand > 0 ? `${wan(x.inHand)}（稅後）` : '—'}</td></tr>`).join('')}</tbody>
+  </table></div>
+  <p class="note">還沒有緊急預備金的人，可以先把這筆錢存在手上、晚幾年再開始自提；代價是表中「少」的那一欄（少了複利與節稅）。</p>`;
 }
 
 function selfRateCard() {
@@ -769,6 +822,7 @@ function selfRateCard() {
       <div><small>自提進勞退（收益 ${pct(a.laborReturn)}）</small><strong>${wan(a.viaPension)}</strong><span>最差情況（只有保證收益 ${a.minGuarantee.rate}%）：${wan(a.viaPensionFloor)}</span></div>
       <div><small>領回來自己投資（稅後、報酬 ${pct(a.investReturn)}）</small><strong>${wan(a.selfInvest)}</strong><span>沒有保證，報酬可能更高也可能虧損</span></div>
     </div>
+    ${delayTable()}
     ${verdict ? `<p class="note"><b>打平點：</b>${verdict}${a.marginal ? `在兩邊報酬相同的前提下，自提因為節稅，終值固定多 ${Math.round((1 / (1 - a.marginal) - 1) * 1000) / 10}%。` : ''}</p>` : ''}
     <div class="proscons">
       <div class="pros"><h4>優點</h4><ul>
@@ -861,7 +915,7 @@ function trackingCard() {
 }
 
 function actionsCard() {
-  const items = actionPlan(state, NOW, monteCarlo(state, NOW, { sims: 1000 }));
+  const items = actionPlan(state, NOW, memo('mc', monteCarlo, [{ sims: 1000 }]));
   const done = state.actionsDone || {};
   const sorted = [...items.filter((a) => !done[a.id]), ...items.filter((a) => done[a.id])];
   const n = items.filter((a) => done[a.id]).length;
@@ -879,7 +933,7 @@ function actionsCard() {
 }
 
 function strategyCard() {
-  const w = withdrawalStrategies(state, NOW, { sims: 1000 });
+  const w = memo('ws', withdrawalStrategies, [{ sims: 1000 }]);
   if (!w) return '';
   const rows = [
     ['fixed', '固定金額', `每年領 ${money(w.draw0)}，不隨市場調整（目前的假設）`],
@@ -976,9 +1030,9 @@ function yearlyRows(lc) {
 function printReport() {
   const me = R.me, s = state.self;
   const g = goalPlan(state, NOW);
-  const lc = lifecycle(state, NOW);
-  const ages = retireAgeOptions(state, NOW);
-  const sens = sensitivity(state, NOW);
+  const lc = memo('lc', lifecycle, [0]);
+  const ages = memo('ages', retireAgeOptions);
+  const sens = memo('sens', sensitivity);
   const tr = (k, v) => `<tr><th>${k}</th><td>${v}</td></tr>`;
   const income = [
     ['勞保老年年金', me.insMonthly], ['勞退新制', me.laborRetire], ['勞基法舊制', me.oldMonthly],
@@ -1020,7 +1074,7 @@ function printReport() {
   </table></section>` : ''}
 
   <section><h2>今年的行動清單</h2><table class="rp-grid">
-    ${actionPlan(state, NOW, monteCarlo(state, NOW, { sims: 1000 })).map((a, i) => `<tr><td style="width:2em">${state.actionsDone?.[a.id] ? '☑' : '☐'}</td><td><b>${esc(a.title)}</b><br>${esc(a.detail)}</td></tr>`).join('')}
+    ${actionPlan(state, NOW, memo('mc', monteCarlo, [{ sims: 1000 }])).map((a, i) => `<tr><td style="width:2em">${state.actionsDone?.[a.id] ? '☑' : '☐'}</td><td><b>${esc(a.title)}</b><br>${esc(a.detail)}</td></tr>`).join('')}
   </table></section>
 
   <section><h2>幾歲退休比較</h2><table class="rp-grid">
@@ -1041,7 +1095,7 @@ function printReport() {
 }
 
 function exportCsv() {
-  const rows = yearlyRows(lifecycle(state, NOW));
+  const rows = yearlyRows(memo('lc', lifecycle, [0]));
   const head = ['年齡', '西元', '階段', '當年投入或提領', '年底資產池', '生活費（月）'];
   const body = rows.map((r) => [r.age, r.year, r.phase, Math.round(r.flow), Math.round(r.pool), Math.round(r.expense)].join(','));
   const blob = new Blob(['﻿' + [head.join(','), ...body].join('\r\n')], { type: 'text/csv;charset=utf-8' });
@@ -1140,8 +1194,83 @@ function refreshOutputs() {
 }
 
 let saveTimer;
-function update({ rerender = false } = {}) {
+/* ── 復原／重做與變更回饋 ─────────────────────
+   每次設定改變前的快照放進 undo；打字、拖滑桿期間（焦點在欄位上）合併成一步，離開欄位時才記錄。 */
+const undoStack = [], redoStack = [];
+let committed = JSON.stringify(state), committedPV = null, editBase = null, editPV = null;
+function commit({ feedback = true } = {}) {
+  const now = JSON.stringify(state);
+  const base = editBase ?? committed;
+  const pv0 = editBase ? editPV : committedPV;
+  editBase = null;
+  if (now === base) { committed = now; committedPV = R.totalPV; return; }
+  undoStack.push(base);
+  if (undoStack.length > 60) undoStack.shift();
+  redoStack.length = 0;
+  committed = now;
+  committedPV = R.totalPV;
+  if (feedback && pv0 !== null) {
+    const d = R.totalPV - pv0;
+    const delta = Math.abs(d) < 1 ? '月領不變' : `月領（今日幣值）${d > 0 ? '+' : '−'}${money(Math.abs(d))}`;
+    // 同一個動作若已顯示說明（例如「已套用範本」），把月領變化接在後面
+    const prefix = Date.now() - lastToastAt < 300 && !lastToastMsg.includes('月領') ? `${lastToastMsg}｜` : '';
+    toast(`${prefix}${delta}`, { label: '復原', fn: undo });
+  }
+  renderHistoryButtons();
+}
+function restore(json) {
+  state = normalize(JSON.parse(json));
   R = compute(state, NOW);
+  committed = JSON.stringify(state);
+  committedPV = R.totalPV;
+  update({ rerender: true, history: false });
+  renderHistoryButtons();
+}
+function undo() {
+  if (editBase !== null) commit({ feedback: false }); // 先把進行中的編輯結算成一步
+  if (!undoStack.length) return toast('沒有可以復原的變更');
+  redoStack.push(committed);
+  const pv0 = R.totalPV;
+  restore(undoStack.pop());
+  const d = R.totalPV - pv0;
+  toast(`已復原${Math.abs(d) >= 1 ? `｜月領 ${d > 0 ? '+' : '−'}${money(Math.abs(d))}` : ''}`, { label: '重做', fn: redo });
+}
+function redo() {
+  if (!redoStack.length) return toast('沒有可以重做的變更');
+  undoStack.push(committed);
+  restore(redoStack.pop());
+  toast('已重做', { label: '復原', fn: undo });
+}
+function renderHistoryButtons() {
+  const u = $('#btn-undo'), r = $('#btn-redo');
+  if (u) u.disabled = !undoStack.length;
+  if (r) r.disabled = !redoStack.length;
+}
+const isEditable = (el) => el?.matches?.('input:not([type=file]):not([type=checkbox]), select, textarea');
+document.addEventListener('focusin', (e) => {
+  if (isEditable(e.target) && e.target.closest('[data-k]') && editBase === null) { editBase = committed; editPV = committedPV; }
+});
+document.addEventListener('focusout', (e) => {
+  if (isEditable(e.target) && e.target.closest('[data-k]')) setTimeout(() => { if (!isEditable(document.activeElement) || !document.activeElement.closest('[data-k]')) commit(); });
+});
+// 滑桿放開、下拉選定時就算一步（焦點仍在原欄位，之後的修改另起一步）
+document.addEventListener('change', (e) => {
+  if (e.target.matches?.('input[type=range][data-k], select[data-k]') && editBase !== null) {
+    setTimeout(() => { commit(); if (document.activeElement === e.target) { editBase = committed; editPV = committedPV; } });
+  }
+});
+document.addEventListener('keydown', (e) => {
+  if (!(e.ctrlKey || e.metaKey)) return;
+  const k = e.key.toLowerCase();
+  if (k !== 'z' && k !== 'y') return;
+  if (isEditable(document.activeElement) && document.activeElement.type !== 'range') return; // 交給瀏覽器的文字復原
+  e.preventDefault();
+  if (k === 'y' || (k === 'z' && e.shiftKey)) redo(); else undo();
+});
+
+function update({ rerender = false, history = true } = {}) {
+  R = compute(state, NOW);
+  if (committedPV === null) committedPV = R.totalPV;
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => save(state), 400);
   // 純輸出的分頁（plan 只有兩個輸入欄位，焦點不在其中時才整頁重繪）
@@ -1149,6 +1278,9 @@ function update({ rerender = false } = {}) {
   if (rerender || (OUTPUT_ONLY.has(tab) && !focusInMain)) renderPage();
   refreshOutputs();
   renderAside();
+  // 欄位編輯中先不記錄（離開欄位時才合併成一步）；焦點已離開欄位就結算
+  if (editBase !== null && !isEditable(document.activeElement)) commit();
+  else if (history && editBase === null) commit();
 }
 
 function fillRange(el) {
@@ -1175,6 +1307,7 @@ const CLAMP = {
 document.addEventListener('input', (e) => {
   const el = e.target.closest('[data-k]');
   if (!el) return;
+  if (editBase === null && isEditable(el)) { editBase = committed; editPV = committedPV; }
   setPath(state, el.dataset.k, parseVal(el));
   update({ rerender: el.hasAttribute('data-rerender') && el.tagName === 'SELECT' });
 });
@@ -1328,11 +1461,20 @@ function exportFile() {
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
-let toastTimer;
-function toast(msg) {
+let toastTimer, lastToastAt = 0, lastToastMsg = '';
+function toast(msg, action) {
   const el = $('#toast');
-  el.textContent = msg; el.classList.add('show');
-  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+  el.textContent = msg;
+  if (action) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = action.label;
+    b.addEventListener('click', () => { el.classList.remove('show'); action.fn(); });
+    el.appendChild(b);
+  }
+  el.classList.toggle('has-action', !!action);
+  el.classList.add('show');
+  lastToastAt = Date.now(); lastToastMsg = msg;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), action ? 5000 : 2600);
 }
 
 /* ── 結果圖卡 ─────────────────────────────── */
@@ -1406,6 +1548,26 @@ renderTabs();
 renderPage();
 refreshOutputs();
 renderAside();
+committedPV = R.totalPV;
+$('#btn-undo')?.addEventListener('click', undo);
+$('#btn-redo')?.addEventListener('click', redo);
+// 主題：自動（跟隨系統）→ 深色 → 淺色
+const THEMES = [['auto', '自動'], ['dark', '深色'], ['light', '淺色']];
+function applyTheme() {
+  const t = uiPrefs.theme || 'auto';
+  if (t === 'auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = t;
+  $('#btn-theme')?.setAttribute('aria-label', `切換主題：目前${THEMES.find((x) => x[0] === t)[1]}`);
+  $('#btn-theme')?.setAttribute('title', `主題：${THEMES.find((x) => x[0] === t)[1]}（點擊切換）`);
+}
+$('#btn-theme')?.addEventListener('click', () => {
+  const i = THEMES.findIndex((x) => x[0] === (uiPrefs.theme || 'auto'));
+  uiPrefs.theme = THEMES[(i + 1) % THEMES.length][0];
+  try { localStorage.setItem(UI_KEY, JSON.stringify(uiPrefs)); } catch { /* 忽略 */ }
+  applyTheme();
+  toast(`主題：${THEMES.find((x) => x[0] === uiPrefs.theme)[1]}`);
+});
+applyTheme();
+renderHistoryButtons();
 attachTooltips(document);
 if (dataStale(NOW)) {
   const bar = document.createElement('div');
