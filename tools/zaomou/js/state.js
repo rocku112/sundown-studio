@@ -197,7 +197,7 @@ export function easyAnswers(s) {
   const invest = s.holdings.filter((h) => h.kind !== 'cash').reduce((t, h) => t + amountOf(h, s.fx), 0);
   const monthly = s.portfolios.reduce((t, p) => t + p.assets.reduce((u, a) => u + (+a.monthly || 0), 0), 0);
   return {
-    birthYear: s.self.birthYear, gender: s.self.gender, retireAge: s.self.retireAge, salary: s.self.salary,
+    birthYear: s.self.birthYear, gender: s.self.gender, retireAge: s.self.retireAge, salary: s.self.salary, bonusMonths: s.self.bonusMonths ?? 0,
     workStartAge: s.self.workStartAge, pastInsYears: s.self.pastInsYears ?? null, laborBalance: s.self.laborBalance ?? null,
     cash: Math.round(cash), invest: Math.round(invest), monthly: Math.round(monthly), expense: s.monthlyExpense,
   };
@@ -210,6 +210,7 @@ export function applyEasy(s, a) {
   const next = JSON.parse(JSON.stringify(s));
   const cur = easyAnswers(s);
   Object.assign(next.self, { birthYear: a.birthYear, gender: a.gender, retireAge: a.retireAge, salary: a.salary });
+  if ('bonusMonths' in a) next.self.bonusMonths = Math.max(0, +a.bonusMonths || 0);
   if ('workStartAge' in a) Object.assign(next.self, { workStartAge: a.workStartAge, pastInsYears: a.pastInsYears ?? null, laborBalance: a.laborBalance ?? null });
   if (a.cash !== cur.cash || a.invest !== cur.invest) {
     next.holdings = [

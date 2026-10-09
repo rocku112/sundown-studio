@@ -851,3 +851,14 @@ test('勞退明細建議：只列出和目前不同的欄位，收益率與薪�
   s.self.selfRate = 3;
   assert.ok(!laborStatementSuggestions(parseLaborStatement(text), s, 2026).some((x) => x.path === 'self.selfRate'));
 });
+test('年終月數：提高稅率級距與節稅，但不改變自提金額；簡單版可寫回', () => {
+  const none = selfContributionTax(80000, 6, 0), two = selfContributionTax(80000, 6, 2), six = selfContributionTax(80000, 6, 6);
+  assert.equal(none.contrib, two.contrib); // 自提只依月薪
+  assert.equal(none.marginal, 0.05);
+  assert.equal(six.marginal, 0.12);
+  assert.ok(six.saving > two.saving && two.saving >= none.saving);
+  const s = defaults(2026);
+  const b = applyEasy(s, { ...easyAnswers(s), bonusMonths: 3 });
+  assert.equal(b.self.bonusMonths, 3);
+  assert.equal(easyAnswers(b).bonusMonths, 3);
+});

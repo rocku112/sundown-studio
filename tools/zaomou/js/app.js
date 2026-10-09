@@ -222,7 +222,8 @@ function pageSetup() {
       ${numF('self.birthYear', '出生年（西元）', { min: 1940, max: NOW - 15 })}
       ${numF('self.retireAge', '預計退休年齡', { min: 50, max: 75, unit: '歲', rerender: true })}
       <div class="field"><span>生理性別 <em>（影響預期壽命）</em></span>${seg('self.gender', [['male', '男性'], ['female', '女性']])}</div>
-      ${numF('self.salary', '目前月薪', { min: 0, step: 1000, unit: '元' })}
+      ${numF('self.salary', '目前月薪', { min: 0, step: 1000, unit: '元', em: '（每月固定領的獎金也算進來）' })}
+      ${numF('self.bonusMonths', '年終、績效獎金、員工酬勞', { min: 0, max: 24, step: 0.5, unit: '個月', em: '（一年合計約幾個月薪水）' })}
       ${rangeF('self.selfRate', '勞退自提', 0, 6, 0.5, { em: '（0–6%，不確定就填 0）' })}
       ${numF('monthlyExpense', '退休後每月生活費', { min: 0, step: 1000, unit: '元', em: '（以今天的物價）' })}
     </div>
@@ -248,7 +249,6 @@ function pageSetup() {
   <section class="card"><div class="card-h"><h3>${badge('briefcase', 'rgba(45,74,110,.1)', C.navy)}薪資與勞保</h3>
       ${seg('self.insMode', [['auto', '依月薪自動'], ['manual', '手動選級距']], { label: '投保薪資設定方式' })}</div>
     <div class="grid two">
-      ${numF('self.bonusMonths', '年終與獎金', { min: 0, max: 24, step: 0.5, unit: '個月', em: '（用於估算稅率）' })}
       ${rangeF('salaryGrowth', '薪資年增率', 0, 6, 0.5)}
       ${numF('self.insClaimAge', '勞保請領年齡', { nullable: true, min: 55, max: 75, unit: '歲', placeholder: '同退休年齡', em: '（選填，可晚於退休）' })}
       ${s.insMode === 'manual' ? `<label class="field"><span>勞保投保薪資級距</span>

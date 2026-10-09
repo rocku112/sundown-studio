@@ -56,8 +56,11 @@ const STEPS = [
       <p class="ez-sub" id="ez-rs">${ans.retireAge - (NOW - ans.birthYear) > 0 ? `還要工作 ${ans.retireAge - (NOW - ans.birthYear)} 年` : '已到退休年齡'}</p>`,
   },
   {
-    id: 'salary', icon: 'briefcase', q: '現在每月薪水多少？', hint: '稅前、不含年終。用來估算勞保和勞退能領多少。',
-    body: () => moneyField('salary', '每月薪水', [30000, 45000, 60000, 80000, 100000]),
+    id: 'salary', icon: 'briefcase', q: '現在每月薪水多少？', hint: '稅前。每月固定領的獎金、津貼也算進來。用來估算勞保和勞退能領多少。',
+    body: () => moneyField('salary', '每月薪水', [30000, 45000, 60000, 80000, 100000]) + `
+      <label class="ez-field"><span>年終、績效獎金、員工酬勞，一年加起來大約幾個月？</span><input class="ez-input num" type="number" inputmode="decimal" step="0.5" min="0" max="24" data-a="bonusMonths" value="${ans.bonusMonths}"></label>
+      <div class="ez-chips">${[0, 1, 2, 3, 6].map((v) => `<button type="button" data-pick="bonusMonths" data-val="${v}" aria-pressed="${ans.bonusMonths === v}">${v} 個月</button>`).join('')}</div>
+      <p class="ez-sub">這些會讓所得稅率變高（勞退自提的節稅效果也跟著變大），但一年發一次的獎金不列入勞退提繳。</p>`,
   },
   {
     id: 'work', icon: 'clock', q: '你的勞保年資有多久？', hint: '年資會直接影響勞保和勞退能領多少。換過工作、中間沒投保、早年打工都算。',
@@ -299,6 +302,7 @@ function check(id) {
   if (id === 'retire' && ans.retireAge <= age && age < 70) return '退休年齡要大於現在的年齡';
   if (id === 'work' && (ans.workStartAge < 15 || ans.workStartAge > Math.max(15, age))) return `第一次投保年齡請填 15 到 ${Math.max(15, age)} 歲`;
   if (id === 'work' && ans.pastInsYears !== null && (ans.pastInsYears < 0 || ans.pastInsYears > Math.max(0, age - 15))) return `累計年資請填 0 到 ${Math.max(0, age - 15)} 年`;
+  if (id === 'salary' && !(ans.bonusMonths >= 0 && ans.bonusMonths <= 24)) return '年終與獎金請填 0 到 24 個月';
   if (id === 'salary' && ans.salary <= 0) return '請填每月薪水；還沒工作可以填預計的起薪';
   if (id === 'expense' && ans.expense <= 0) return '請填退休後每月大概要花多少';
   return '';
