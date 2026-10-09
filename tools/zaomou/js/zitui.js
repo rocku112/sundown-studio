@@ -1,6 +1,6 @@
 /* 早謀遠算 · 勞退自提指南：互動比較、試算、自我檢查（稅率與複利沿用試算引擎，數字只維護一份） */
 import { selfContributionTax, growMonthly } from './engine.js';
-import { LABOR_FUND } from './data.js';
+import { LABOR_FUND, PENSION_WAGE_MAX } from './data.js';
 
 const $ = (id) => document.getElementById(id);
 const num = (v) => +String(v).replace(/[^\d.]/g, '') || 0;
@@ -8,6 +8,7 @@ const fmt = (v) => Math.round(v).toLocaleString();
 const wan = (v) => `${Math.round(v / 10000).toLocaleString()} 萬`;
 const FLOOR = LABOR_FUND.minGuarantee.rate; // 保證收益（最差情況）
 const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const CPI = 2; // 通膨假設（%），與早謀遠算預設一致
 
 /**
  * 自提 6% 與「不自提、扣稅後自己存」到 65 歲的比較。
@@ -20,9 +21,24 @@ function compare({ salary, bonus = 0, age, lr, alt, other = 0, interest = 0, div
   const vP = growMonthly(m, yrs, lr), vF = growMonthly(m, yrs, FLOOR), vA = growMonthly(after, yrs, alt);
   let lo = -5, hi = 30;
   for (let i = 0; i < 50; i++) { const mid = (lo + hi) / 2; if (growMonthly(after, yrs, mid) >= vP) hi = mid; else lo = mid; }
-  return { t, vP, vF, vA, breakEven: hi };
+  return { t, vP, vF, vA, breakEven: hi, yrs, principal: t.contrib * yrs };
 }
 
+/** 以今天的購買力顯示：終值除以通膨累積倍數 */
+const realOf = (c, on) => (on ? Math.pow(1 + CPI / 100, -c.yrs) : 1);
+function showDelta(el, c, k) {
+  const gap = (c.vA - c.vP) * k;
+  const cls = Math.abs(c.vA / c.vP - 1) < 0.05 ? 't' : gap < 0 ? 'p' : 'a';
+  el.className = `delta ${cls}`;
+  el.innerHTML = cls === 't' ? `兩邊差約<b>${wan(Math.abs(gap))}</b>` : `${gap < 0 ? '自提' : '不自提'}多約<b>${wan(Math.abs(gap))}</b>`;
+  if (!still && !document.hidden) { el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
+}
+function inflationNote(el, c, on) {
+  el.hidden = !on;
+  if (!on) return;
+  const k = realOf(c, true);
+  el.innerHTML = `以每年通膨 ${CPI}% 換算，${c.yrs} 年後的 1 萬元只值今天的 ${Math.round(k * 10000).toLocaleString()} 元。保證收益約 ${FLOOR}% 低於通膨，若勞退基金只拿到保證收益，存進去的每一筆錢實質上都在縮水；最差情況的購買力約 ${wan(c.vF * k)}。`;
+}
 function drawBars(box, rows) {
   const max = Math.max(...rows.map((r) => r[1]), 1);
   if (box.children.length !== rows.length) box.innerHTML = rows.map(() => '<div class="bar"><span></span><i style="width:0"></i><em></em></div>').join('');
@@ -81,7 +97,10 @@ function tween(id, to, f) {
     const be = $('p-be');
     be.style.left = `${Math.min(100, Math.max(0, c.breakEven * 10))}%`;
     be.querySelector('small').textContent = `打平 ${c.breakEven.toFixed(1)}%`;
-    drawBars($('p-bars'), [[`自提（${lr}%）`, c.vP, 'b-p'], ['自提最差情況', c.vF, 'b-f'], [`不自提（${alt}%）`, c.vA, 'b-a']]);
+    const on = $('p-real').checked, k = realOf(c, on);
+    showDelta($('p-delta'), c, k);
+    drawBars($('p-bars'), [[`自提（${lr}%）`, c.vP * k, 'b-p'], ['自提最差情況', c.vF * k, 'b-f'], [`不自提（${alt}%）`, c.vA * k, 'b-a']]);
+    inflationNote($('p-infl'), c, on);
     verdict($('p-text'), c, alt);
   }
   const pick = (groupId, fn) => $(groupId).addEventListener('click', (e) => {
@@ -93,6 +112,7 @@ function tween(id, to, f) {
   pick('p-who', (b) => { who = { age: +b.dataset.age, sal: +b.dataset.sal }; });
   pick('p-lr', (b) => { lr = +b.dataset.v; });
   $('p-alt').addEventListener('input', render);
+  $('p-real').addEventListener('change', render);
   render();
 })();
 
@@ -114,8 +134,14 @@ function tween(id, to, f) {
     tween('o-rate', salary ? c.t.marginal * 100 : null, (v) => `${Math.round(v)}%`);
     tween('o-save', salary ? c.t.saving : null, fmt);
     tween('o-be', salary ? c.breakEven : null, (v) => `${v.toFixed(1)}%`);
-    if (!salary) { $('o-bars').innerHTML = ''; $('o-text').className = 'verdict'; $('o-text').textContent = '輸入月薪就會算出結果。'; return; }
-    drawBars($('o-bars'), [[`自提（${lr}%）`, c.vP, 'b-p'], ['自提最差情況', c.vF, 'b-f'], [`不自提（${alt}%）`, c.vA, 'b-a']]);
+    // 提繳工資上限：月薪超過 15 萬時，自提以 15 萬計
+    $('o-cap').hidden = salary <= PENSION_WAGE_MAX;
+    if (salary > PENSION_WAGE_MAX) $('o-cap').innerHTML = `<b>已套用提繳工資上限</b>：月薪超過 ${fmt(PENSION_WAGE_MAX)} 元，勞退提繳以 ${fmt(PENSION_WAGE_MAX)} 元計算，自提 6% 每月最多 ${fmt(PENSION_WAGE_MAX * 0.06)} 元；稅率仍依你的全部所得計算。`;
+    if (!salary) { $('o-bars').innerHTML = ''; $('o-delta').textContent = ''; $('o-infl').hidden = true; $('o-text').className = 'verdict'; $('o-text').textContent = '輸入月薪就會算出結果。'; return; }
+    const on = $('c-real').checked, k = realOf(c, on);
+    showDelta($('o-delta'), c, k);
+    drawBars($('o-bars'), [[`自提（${lr}%）`, c.vP * k, 'b-p'], ['自提最差情況', c.vF * k, 'b-f'], [`不自提（${alt}%）`, c.vA * k, 'b-a']]);
+    inflationNote($('o-infl'), c, on);
     verdict($('o-text'), c, alt, `<br><small class="small">打平報酬率 ${c.breakEven.toFixed(1)}%：不自提的錢，長期年化要超過這個數字才會比自提多。</small>`);
   }
   const syncChips = (id) => {
@@ -123,6 +149,7 @@ function tween(id, to, f) {
     if (g) for (const b of g.querySelectorAll('button')) b.setAttribute('aria-pressed', String(+b.dataset.v === +$(id).value));
   };
   for (const id of ['c-sal', 'c-bonus', 'c-int', 'c-div', 'c-other', 'c-age', 'c-lr', 'c-alt']) $(id).addEventListener('input', () => { syncChips(id); run(); });
+  $('c-real').addEventListener('change', run);
   for (const id of ['c-sal', 'c-int', 'c-div', 'c-other']) $(id).addEventListener('blur', () => { const v = num($(id).value); $(id).value = v ? fmt(v) : (id === 'c-sal' ? '' : '0'); });
   for (const g of document.querySelectorAll('.chips[data-for]')) {
     g.addEventListener('click', (e) => {

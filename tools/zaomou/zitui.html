@@ -350,6 +350,17 @@ tr.here td:first-child { box-shadow: inset 4px 0 0 var(--coin); font-weight: 700
 .site-foot { border-top: 1px solid var(--line); padding-top: 18px; display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 14px; color: var(--muted); }
 .site-foot a { color: var(--accent); }
 @media (max-width: 720px) { .zn-links { display: none; } .zn-cta { margin-left: auto; } }
+/* 差距、通膨開關、上限提示 */
+.bar-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 16px; }
+.delta { margin: 0; font-size: 15px; color: var(--soft); }
+.delta b { font: 800 24px var(--mono); margin-inline: 2px; }
+.delta.p b { color: var(--good); } .delta.a b { color: var(--warn); } .delta.t b { color: var(--sky); }
+.real { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: var(--soft); cursor: pointer; }
+.real input { width: 18px; height: 18px; accent-color: var(--accent); }
+.infl { border-left: 3px solid var(--warn); padding-left: 10px; }
+.cap { margin: 0; padding: 10px 14px; border-radius: 10px; background: var(--sky-soft); color: var(--ink); font-size: 15px; }
+.cap b { color: var(--sky); }
+@media (prefers-reduced-motion: no-preference) { .delta b { display: inline-block; } .delta.bump b { animation: bump .38s ease; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 <script>/* 先套用使用者在早謀遠算指定的主題，避免載入時閃一下 */try{var t=JSON.parse(localStorage.getItem('zaomou_ui')||'{}').theme;if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;}catch(e){}</script>
@@ -442,6 +453,7 @@ tr.here td:first-child { box-shadow: inset 4px 0 0 var(--coin); font-weight: 700
           <li><svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg><div><b>60 歲前動不到</b><span><mark>急用、買房都拿不出來</mark>；滿 60 歲才能請領（仍在職也可以）。</span></div></li>
           <li><svg class="ic" aria-hidden="true"><use href="#i-down"/></svg><div><b>報酬不能自己選，也有虧損年度</b><span>基金表現好壞都要接受；長期平均報酬可能低於自己投資。</span></div></li>
           <li><svg class="ic" aria-hidden="true"><use href="#i-hourglass"/></svg><div><b>月領只發到平均餘命</b><span>活得比平均久的人，最後幾年沒有勞退可領。</span></div></li>
+          <li><svg class="ic" aria-hidden="true"><use href="#i-down"/></svg><div><b>保證收益可能跑輸通膨</b><span>保證下限約 1.7%，低於約 2% 的通膨時，<mark>實質購買力會縮水</mark>；保本保的是名目金額，不是購買力。</span></div></li>
         </ul>
       </div>
     </div>
@@ -477,7 +489,12 @@ tr.here td:first-child { box-shadow: inset 4px 0 0 var(--coin); font-weight: 700
         </div>
         <div class="ticks" aria-hidden="true"><span style="left:15%">放銀行</span><span style="left:40%">穩健投資</span><span style="left:70%">積極投資</span></div>
       </div>
+      <div class="bar-head">
+        <p class="delta" id="p-delta" aria-live="polite"></p>
+        <label class="real" for="p-real"><input type="checkbox" id="p-real"><span>扣掉通膨 2%，用今天的購買力看</span></label>
+      </div>
       <div class="bars" id="p-bars"></div>
+      <p class="infl small" id="p-infl" hidden></p>
       <p class="verdict" id="p-text"></p>
     </div>
     <div class="note-box"><b>兩邊都要看清楚：</b>「自提最差情況」是勞退基金只拿到保證收益（約 1.7%）的結果；自己投資的報酬則沒有保證，碰上長期空頭或中途賣掉，結果可能比自提差。滑桿上的「打平」是兩邊一樣多的報酬率，勞退收益假設越高，打平點也越高。</div>
@@ -530,6 +547,7 @@ tr.here td:first-child { box-shadow: inset 4px 0 0 var(--coin); font-weight: 700
         <div class="chips" data-for="c-alt" role="group" aria-label="替代報酬快選">
           <button type="button" data-v="1.5" aria-pressed="false">放銀行 1.5</button><button type="button" data-v="4" aria-pressed="true">穩健投資 4</button><button type="button" data-v="7" aria-pressed="false">積極投資 7</button>
         </div>
+        <label class="real" for="c-real"><input type="checkbox" id="c-real"><span>扣掉通膨 2%，用今天的購買力看</span></label>
       </fieldset>
     </form>
     <div class="card calc-out" aria-live="polite">
@@ -539,7 +557,10 @@ tr.here td:first-child { box-shadow: inset 4px 0 0 var(--coin); font-weight: 700
         <div><small>打平報酬率</small><strong id="o-be">—</strong></div>
       </div>
       <div class="timeline" id="o-time" aria-hidden="true"></div>
+      <p class="cap" id="o-cap" hidden></p>
+      <p class="delta" id="o-delta" aria-live="polite"></p>
       <div class="bars" id="o-bars"></div>
+      <p class="infl small" id="o-infl" hidden></p>
       <p class="verdict" id="o-text"></p>
     </div>
     <details class="other-help"><summary>哪些算「其他會報稅的所得」？</summary>
