@@ -872,3 +872,9 @@ test('其他所得：拉高綜合所得淨額與邊際稅率，但不改變自�
   // 預設值為 0，與舊資料相容
   assert.equal(defaults(2026).self.otherIncome, 0);
 });
+test('存款利息：27 萬以內被儲蓄投資特別扣除額抵掉，超過才計入', () => {
+  const none = selfContributionTax(60000, 6, 2, null, 0, 0);
+  assert.deepEqual(selfContributionTax(60000, 6, 2, null, 0, 270000), none);
+  const over = selfContributionTax(60000, 6, 2, null, 0, 670000); // 超過 40 萬，等同其他所得 40 萬
+  assert.deepEqual(over, selfContributionTax(60000, 6, 2, null, 400000, 0));
+});
