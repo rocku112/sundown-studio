@@ -14,7 +14,7 @@ export function defaults(nowYear = new Date().getFullYear()) {
     self: {
       birthYear: nowYear - 35, gender: 'male', workStartAge: 23, retireAge: 65,
       salary: 45000, insMode: 'auto', insGrade: 11,
-      selfRate: 0, laborReturn: 4, laborBalance: null, oldSystemYears: 0, insClaimAge: null, bonusMonths: 0, taxRateOverride: null,
+      selfRate: 0, laborReturn: 4, laborBalance: null, oldSystemYears: 0, insClaimAge: null, bonusMonths: 0, taxRateOverride: null, otherIncome: 0,
       pastInsYears: null, // 已累積勞保年資（選填）：工作中斷或打工時填，留白表示開始投保後沒有中斷
     },
     spouse: {

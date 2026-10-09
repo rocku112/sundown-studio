@@ -600,11 +600,13 @@ export function incomeTax(net) {
  * 勞退自提節稅估算（勞工退休金條例第 14 條：自願提繳的金額不計入提繳年度薪資所得課稅）。
  * 簡化：單身、只有薪資所得、年薪 = 月薪 ×（12 + 年終月數）、使用標準扣除額。
  */
-export function selfContributionTax(salary, selfRate, bonusMonths = 0, rateOverride = null) {
+export function selfContributionTax(salary, selfRate, bonusMonths = 0, rateOverride = null, otherIncome = 0) {
   // 年所得含年終獎金；自提只依月薪計算（年終不提繳）
   const annual = Math.max(0, salary) * (12 + Math.max(0, num(bonusMonths)));
   const contrib = Math.round(Math.min(Math.max(0, salary), PENSION_WAGE_MAX) * selfRate / 100) * 12;
-  const net = (income) => income - TAX.exemption - TAX.standardSingle - Math.min(income, TAX.salaryDeduction);
+  // 其他應稅所得（利息超過特別扣除額的部分、合併計稅的股利、租金、兼職等）一併計入綜合所得；薪資特別扣除額只扣薪資
+  const other = Math.max(0, num(otherIncome));
+  const net = (income) => income + other - TAX.exemption - TAX.standardSingle - Math.min(income, TAX.salaryDeduction);
   const before = incomeTax(net(annual));
   const after = incomeTax(net(annual - contrib));
   // 使用者指定稅率級距時（已婚合併申報、有其他所得等），直接以該級距估算
@@ -711,8 +713,8 @@ export function actionPlan(state, nowYear = new Date().getFullYear(), mc = null)
       apply: { act: 'apply-extra', value: amt } });
   }
   if (num(state.self.selfRate) < 6 && state.self.salary > 0) {
-    const t = selfContributionTax(state.self.salary, 6, state.self.bonusMonths, state.self.taxRateOverride);
-    const now = selfContributionTax(state.self.salary, num(state.self.selfRate), state.self.bonusMonths, state.self.taxRateOverride);
+    const t = selfContributionTax(state.self.salary, 6, state.self.bonusMonths, state.self.taxRateOverride, state.self.otherIncome);
+    const now = selfContributionTax(state.self.salary, num(state.self.selfRate), state.self.bonusMonths, state.self.taxRateOverride, state.self.otherIncome);
     add({ id: 'selfRate', level: 'high', title: '勞退自提提高到 6%',
       detail: `每月多提撥 ${money((t.contrib - now.contrib) / 12)}，${t.saving - now.saving > 0 ? `每年約少繳稅 ${money(t.saving - now.saving)}，` : ''}${g.selfRate6 ? `月領（今日幣值）增加 ${money(g.selfRate6.gain)}` : ''}。向公司人資申請即可，隨時可調整。`,
       apply: { path: 'self.selfRate', value: 6 } });
@@ -835,7 +837,7 @@ export function selfContributionAnalysis(state, nowYear = new Date().getFullYear
   const r = compute(state, nowYear);
   const s = state.self;
   const rate = ratePct ?? (num(s.selfRate) > 0 ? num(s.selfRate) : 6);
-  const tax = selfContributionTax(s.salary, rate, s.bonusMonths, s.taxRateOverride);
+  const tax = selfContributionTax(s.salary, rate, s.bonusMonths, s.taxRateOverride, s.otherIncome);
   const monthly = tax.contrib / 12;
   const afterTaxMonthly = (tax.contrib - tax.saving) / 12;
   const n = r.n;                                           // 提撥年數（到退休）

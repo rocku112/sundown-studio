@@ -862,3 +862,13 @@ test('年終月數：提高稅率級距與節稅，但不改變自提金額；�
   assert.equal(b.self.bonusMonths, 3);
   assert.equal(easyAnswers(b).bonusMonths, 3);
 });
+test('其他所得：拉高綜合所得淨額與邊際稅率，但不改變自提金額', () => {
+  const base = selfContributionTax(60000, 6, 2, null, 0);
+  const more = selfContributionTax(60000, 6, 2, null, 400000);
+  assert.equal(base.contrib, more.contrib);
+  assert.equal(base.marginal, 0.05);
+  assert.equal(more.marginal, 0.12);
+  assert.ok(more.saving > base.saving);
+  // 預設值為 0，與舊資料相容
+  assert.equal(defaults(2026).self.otherIncome, 0);
+});

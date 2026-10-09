@@ -128,8 +128,8 @@ function outVal(key) {
       ` 退休時專戶約 <b>${wan(me.acct.pool)}</b>，依勞保局月退算法約月領 <b>${money(me.laborRetire)}</b>${me.laborOfficial.eligible ? `，領到 ${me.laborOfficial.endAge} 歲` : '（年資未滿 15 年只能一次領）'}。`;
     case 'taxinfo': {
       const cur = state.self.selfRate;
-      const t = selfContributionTax(state.self.salary, cur > 0 ? cur : 6, state.self.bonusMonths, state.self.taxRateOverride);
-      if (t.marginal === 0) return '依目前月薪估算，綜合所得淨額為 0、本來就不用繳稅，自提沒有節稅效果，但仍可累積退休金。';
+      const t = selfContributionTax(state.self.salary, cur > 0 ? cur : 6, state.self.bonusMonths, state.self.taxRateOverride, state.self.otherIncome);
+      if (t.marginal === 0) return '依目前所得估算，綜合所得淨額為 0、本來就不用繳稅，自提沒有節稅效果，但仍可累積退休金。';
       return `${cur > 0 ? `自提 ${pct(cur)}` : '若自提 6%'}：每年提撥 <b>${money(t.contrib)}</b>，不計入當年度薪資所得課稅，估計少繳綜所稅約 <b>${money(t.saving)}</b>（邊際稅率 ${Math.round(t.marginal * 100)}%），實際負擔約 ${money(t.netCost)}。`;
     }
     case 'haircut': {
@@ -224,6 +224,7 @@ function pageSetup() {
       <div class="field"><span>生理性別 <em>（影響預期壽命）</em></span>${seg('self.gender', [['male', '男性'], ['female', '女性']])}</div>
       ${numF('self.salary', '目前月薪', { min: 0, step: 1000, unit: '元', em: '（每月固定領的獎金也算進來）' })}
       ${numF('self.bonusMonths', '年終、績效獎金、員工酬勞', { min: 0, max: 24, step: 0.5, unit: '個月', em: '（一年合計約幾個月薪水）' })}
+      ${numF('self.otherIncome', '其他會報稅的所得', { min: 0, step: 10000, unit: '元', em: '（一年；利息、合併計稅的股利、租金、兼職等，用於估算稅率）' })}
       ${rangeF('self.selfRate', '勞退自提', 0, 6, 0.5, { em: '（0–6%，不確定就填 0）' })}
       ${numF('monthlyExpense', '退休後每月生活費', { min: 0, step: 1000, unit: '元', em: '（以今天的物價）' })}
     </div>
@@ -269,7 +270,7 @@ function pageSetup() {
         <div class="chips">${RETURN_PRESETS.map((p) => `<button type="button" class="chip" data-set="self.laborReturn" data-val="${p.v}" aria-pressed="${s.laborReturn === p.v}">${p.label}</button>`).join('')}</div></div>
     </div>
     <p class="note">${out('laborinfo', outVal('laborinfo'))} 專戶餘額可至勞保局 e 化服務系統或「勞動保障卡」App 查詢，填入後估算最準。</p>
-    <div class="calc">${out('taxinfo', outVal('taxinfo'))}<br><small>依 115 年度綜所稅級距、單身、年薪以月薪 ×（12 + 年終月數）計、使用標準扣除額估算；有配偶合併申報、年終獎金或列舉扣除時會不同。</small></div>
+    <div class="calc">${out('taxinfo', outVal('taxinfo'))}<br><small>依 115 年度綜所稅級距、單身、年所得以月薪 ×（12 + 年終月數）＋其他會報稅的所得計、使用標準扣除額估算；有配偶合併申報、年終獎金或列舉扣除時會不同。</small></div>
   </section>
 
   <section class="card"><div class="card-h"><h3>${badge('history', 'rgba(63,154,110,.12)', C.green)}勞基法舊制年資</h3><span class="hint">94 年 7 月前已在職者</span></div>
@@ -518,7 +519,7 @@ function pagePlan() {
       ? { n: 4, k: '提高投資報酬', v: `+${g.requiredReturn.toFixed(1)} 個百分點`, p: g.requiredReturn > 3 ? '幅度偏大，代表要承擔明顯更高的波動風險，不建議單靠這一招。' : '所有投資的年化報酬同時提高這麼多即可達標；報酬越高、波動通常越大。' }
       : { n: 4, k: '提高投資報酬', v: '—', p: state.holdings.length + state.portfolios.length ? '報酬再高也補不起來。' : '尚未設定投資資產。', muted: true },
     g.selfRate6
-      ? { n: 5, k: '勞退自提拉到 6%', v: `+${money(g.selfRate6.gain)}`, p: `每月多提撥 ${money(g.selfRate6.monthlyCost)}，自提不計入當年度薪資所得課稅，估計每年少繳稅 ${money(selfContributionTax(s.salary, 6, s.bonusMonths, s.taxRateOverride).saving - selfContributionTax(s.salary, s.selfRate, s.bonusMonths, s.taxRateOverride).saving)}；月領（今日幣值）增加${g.selfRate6.enough ? '，單獨就能達標' : '，可補一部分'}。`,
+      ? { n: 5, k: '勞退自提拉到 6%', v: `+${money(g.selfRate6.gain)}`, p: `每月多提撥 ${money(g.selfRate6.monthlyCost)}，自提不計入當年度薪資所得課稅，估計每年少繳稅 ${money(selfContributionTax(s.salary, 6, s.bonusMonths, s.taxRateOverride, s.otherIncome).saving - selfContributionTax(s.salary, s.selfRate, s.bonusMonths, s.taxRateOverride, s.otherIncome).saving)}；月領（今日幣值）增加${g.selfRate6.enough ? '，單獨就能達標' : '，可補一部分'}。`,
           btn: `<button type="button" class="btn" data-set="self.selfRate" data-val="6">改為自提 6%</button>` }
       : { n: 5, k: '勞退自提', v: '已是 6%', p: '自提已達上限。', muted: true },
     { n: 6, k: '調整目標', v: money(round(g.currentPV)), p: '照目前規劃，每月大約能有這麼多（今日幣值）。',
@@ -1004,7 +1005,7 @@ function selfRateCard() {
         </select></label>
       </div>
       <div class="chips">${RETURN_PRESETS.map((p) => `<button type="button" class="chip" data-set="self.laborReturn" data-val="${p.v}" aria-pressed="${state.self.laborReturn === p.v}" title="${p.tip}">${p.label}</button>`).join('')}</div>
-      <p class="note" style="margin-top:8px">勞退基金官方實績：近 5 年平均 ${LABOR_FUND.avg5.rate}%（${LABOR_FUND.avg5.period}）、近 10 年 ${LABOR_FUND.avg10.rate}%（${LABOR_FUND.avg10.period}），但開辦至 ${LABOR_FUND.longAvg.to} 年平均只有 ${LABOR_FUND.longAvg.rate}%——近年股市大漲拉高了平均。建議用保守的數字規劃，再用高的數字看樂觀情境。已婚合併申報或有其他所得時，請自行選擇稅率級距。</p>
+      <p class="note" style="margin-top:8px">勞退基金官方實績：近 5 年平均 ${LABOR_FUND.avg5.rate}%（${LABOR_FUND.avg5.period}）、近 10 年 ${LABOR_FUND.avg10.rate}%（${LABOR_FUND.avg10.period}），但開辦至 ${LABOR_FUND.longAvg.to} 年平均只有 ${LABOR_FUND.longAvg.rate}%——近年股市大漲拉高了平均。建議用保守的數字規劃，再用高的數字看樂觀情境。有利息、股利、租金等其他所得，請填在起點設定的「其他會報稅的所得」；已婚合併申報時可直接選稅率級距。</p>
     </div>
 
     <div class="stats" style="margin-top:12px">
