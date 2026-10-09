@@ -1019,7 +1019,7 @@ function selfRateCard() {
         </select></label>
       </div>
       <div class="chips">${RETURN_PRESETS.map((p) => `<button type="button" class="chip" data-set="self.laborReturn" data-val="${p.v}" aria-pressed="${state.self.laborReturn === p.v}" title="${p.tip}">${p.label}</button>`).join('')}</div>
-      <p class="note" style="margin-top:8px">勞退基金官方實績：近 5 年平均 ${LABOR_FUND.avg5.rate}%（${LABOR_FUND.avg5.period}）、近 10 年 ${LABOR_FUND.avg10.rate}%（${LABOR_FUND.avg10.period}），但開辦至 ${LABOR_FUND.longAvg.to} 年平均只有 ${LABOR_FUND.longAvg.rate}%——近年股市大漲拉高了平均。建議用保守的數字規劃，再用高的數字看樂觀情境。有利息、股利、租金等其他所得，請填在起點設定的「其他會報稅的所得」；已婚合併申報時可直接選稅率級距。</p>
+      <p class="note" style="margin-top:8px">勞退基金官方實績：近 5 年平均 ${LABOR_FUND.avg5.rate}%（${LABOR_FUND.avg5.period}）、近 10 年 ${LABOR_FUND.avg10.rate}%（${LABOR_FUND.avg10.period}）、${LABOR_FUND.ytd.period} 單期 ${LABOR_FUND.ytd.rate}%，但開辦至 ${LABOR_FUND.longAvg.to} 年平均只有 ${LABOR_FUND.longAvg.rate}%——近年股市大漲拉高了平均。建議用保守的數字規劃，再用高的數字看樂觀情境。有利息、股利、租金等其他所得，請填在起點設定的「其他會報稅的所得」；已婚合併申報時可直接選稅率級距。</p>
     </div>
 
     <div class="stats" style="margin-top:12px">
