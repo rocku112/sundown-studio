@@ -878,3 +878,23 @@ test('存款利息：27 萬以內被儲蓄投資特別扣除額抵掉，超過�
   const over = selfContributionTax(60000, 6, 2, null, 0, 670000); // 超過 40 萬，等同其他所得 40 萬
   assert.deepEqual(over, selfContributionTax(60000, 6, 2, null, 400000, 0));
 });
+
+import { yearIncomeTax } from '../js/engine.js';
+test('股利二擇一：一般所得選合併計稅（8.5% 抵減、上限 8 萬），高所得選 28% 分開計稅', () => {
+  // 月薪 5 萬、股利 20 萬：5% 級距，合併計稅可抵減 17,000，甚至退稅
+  const low = yearIncomeTax({ salaryIncome: 600000, dividend: 200000 });
+  assert.equal(low.method, 'merge');
+  assert.equal(low.tax, yearIncomeTax({ salaryIncome: 600000, dividend: 0 }).tax + Math.round((200000) * 0.05) - 17000);
+  // 抵減上限 8 萬：股利 200 萬只能抵 8 萬
+  const cap = yearIncomeTax({ salaryIncome: 600000, dividend: 2000000 });
+  const mergedCap = yearIncomeTax({ salaryIncome: 600000 + 2000000, dividend: 0 }).tax - 80000;
+  assert.ok(cap.tax <= mergedCap);
+  // 年薪 800 萬（40% 級距）、股利 300 萬：分開計稅較有利
+  const high = yearIncomeTax({ salaryIncome: 8000000, dividend: 3000000 });
+  assert.equal(high.method, 'separate');
+  assert.equal(high.tax, yearIncomeTax({ salaryIncome: 8000000 }).tax + 840000);
+  // 自提節稅：合併計稅時股利會把薪資推到較高級距
+  const t0 = selfContributionTax(80000, 6, 2, null, 0, 0, 0), t1 = selfContributionTax(80000, 6, 2, null, 0, 0, 500000);
+  assert.equal(t1.dividendMethod, 'merge');
+  assert.ok(t1.marginal >= t0.marginal);
+});

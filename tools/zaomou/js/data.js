@@ -76,6 +76,8 @@ export const RETURN_PRESETS = [
 export const TAX = {
   year: 115,
   pensionExempt: 894000,
+  // 股利二擇一（財政部稅務入口網「肆、所得篇」，115-04-15 更新）：合併計稅按股利 8.5% 抵減、每戶上限 8 萬；分開計稅 28%
+  dividendCredit: 0.085, dividendCreditCap: 80000, dividendSeparateRate: 0.28,
   savingsDeduction: 270000,   // 儲蓄投資特別扣除額：存款利息等全戶每年上限（財政部稅務入口網，115-04-27 更新）      // 退職所得（分期領取）每年免稅額（115 年度）
   exemption: 101000,          // 一般免稅額（每人）
   standardSingle: 136000,     // 標準扣除額（單身）
