@@ -128,6 +128,9 @@ export const LABOR_MONTHLY = {
 export const LABOR_FUND = {
   recent: [{ year: 113, rate: 16.16 }, { year: 114, rate: 15.60 }],
   ytd: { period: '115.1–8', rate: 29.25 },
+  // 退休基金最近月份收益率：當年度累計到公告前 2 個月底，用於計算請領時尚未分配期間的收益
+  // （勞工退休金條例施行細則第 34 條；勞動基金運用局 115-10-01 公告）
+  latestMonthly: { year: 115, month: 8, rate: 29.2538, announced: '115-10-01' },
   avg5: { period: '110–115.8', rate: 15.70 },
   avg10: { period: '105–115.8', rate: 12.62 },
   longAvg: { from: 94, to: 111, rate: 3.6 },

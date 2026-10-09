@@ -1679,7 +1679,9 @@ document.addEventListener('click', (e) => {
       <button type="button" class="btn primary" data-act="bli-apply">套用勾選的項目</button></div>`;
     return;
   } else if (act === 'bli-apply') {
-    const picked = bliPending.filter((_, i) => $(`[data-bli="${i}"]`)?.checked);
+    let picked = bliPending.filter((_, i) => $(`[data-bli="${i}"]`)?.checked);
+    // 同一欄位勾了兩項（餘額、餘額＋未分配收益）時，以後面那一項為準
+    picked = picked.filter((x, i) => !picked.slice(i + 1).some((y) => y.path === x.path));
     if (!picked.length) return toast('沒有勾選任何項目');
     for (const x of picked) setPath(state, x.path, x.value);
     bliPending = [];

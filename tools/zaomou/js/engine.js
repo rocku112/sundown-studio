@@ -1366,6 +1366,11 @@ export function laborStatementSuggestions(r, state, nowYear = new Date().getFull
   };
   const money = (v) => `$${Math.round(v).toLocaleString()}`;
   if (r.balance !== null) add('self.laborBalance', '勞退專戶目前餘額', p.laborBalance === null ? '依年資估算' : money(p.laborBalance), money(r.balance), r.balance, true, r.last ? `截至 ${roc(r.last)}，不含尚未分配的收益` : '');
+  const und = laborUndistributed(r);
+  if (r.balance !== null && und && und.amount > 0) {
+    out.push({ path: 'self.laborBalance', label: '再加上今年尚未分配的收益', from: money(r.balance), to: money(r.balance + und.amount), value: r.balance + und.amount, checked: false,
+      note: `概估約 ${money(und.amount)}：依勞動基金運用局 ${und.announced} 公告、${und.through}累計收益率 ${und.rate}%。要到明年 3 月底前才分配，年底前可能漲跌，預設不套用；勾選時會取代上一項` });
+  }
   if (r.years !== null) {
     const y = Math.round(r.years * 4) / 4;
     add('self.pastInsYears', '累計年資', p.pastInsYears === null ? '視為沒中斷' : `${p.pastInsYears} 年`, `${y} 年`, y, true, '以勞退提繳年資代入勞保年資；兩者通常接近，可再對照勞保投保紀錄');
@@ -1383,6 +1388,31 @@ export function laborStatementSuggestions(r, state, nowYear = new Date().getFull
   }
   if (r.avgReturn !== null) add('self.laborReturn', '勞退收益假設', `${num(p.laborReturn)}%`, `${(Math.round(r.avgReturn * 10) / 10)}%`, Math.round(r.avgReturn * 10) / 10, false, `你的專戶 ${r.returns[0].year}–${r.returns[r.returns.length - 1].year} 年已分配收益約年化 ${r.avgReturn.toFixed(1)}%（概估）；含近年大多頭，預設不套用`);
   return out;
+}
+
+/** 明細最後一年：年初餘額（上一年底、已含分配收益）與當年各月提繳 */
+function lastYearDetail(rows) {
+  if (!rows.length) return null;
+  const year = Math.max(...rows.map((r) => r.year));
+  const idx = rows.findIndex((r) => r.year === year);
+  const start = rows[idx].running - rows[idx].amount;
+  const contribs = rows.filter((r) => r.year === year && r.month).map((r) => ({ month: r.month, amount: r.amount }));
+  const distributed = rows.some((r) => r.year === year && !r.month); // 當年收益已分配（通常是隔年 3 月）
+  return { year, start, contribs, distributed };
+}
+
+/**
+ * 專戶尚未分配的收益（概估）。新制勞退基金收益每年分配一次（隔年 3 月底前），
+ * 明細餘額不含當年已賺未分的部分；以勞動基金運用局公告的「最近月份收益率」（當年累計）估算：
+ * 年初餘額 × 累計收益率 ＋ 當年各月提繳 × 累計收益率 × 該筆在期間內的比例。
+ */
+export function laborUndistributed(r, latest = LABOR_FUND.latestMonthly) {
+  const ly = r?.lastYear;
+  if (!ly || ly.distributed || ly.year !== latest.year) return null;
+  const rate = latest.rate / 100, M = latest.month;
+  const fromStart = ly.start * rate;
+  const fromNew = ly.contribs.filter((c) => c.month <= M).reduce((s, c) => s + c.amount * rate * ((M - c.month + 0.5) / M), 0);
+  return { amount: Math.round(fromStart + fromNew), rate: latest.rate, through: `${latest.year} 年 ${latest.month} 月`, announced: latest.announced };
 }
 
 /**
@@ -1446,5 +1476,6 @@ export function parseLaborStatement(text) {
     wages, growth, returns, avgReturn: geo, rows: rows.length,
     consistent: headerTotal !== null && lastRunning !== null ? headerTotal === lastRunning : null,
     complete: rows.length ? rows[0].running === rows[0].amount : false, // 從第一筆提繳開始（沒有「以前年度」合併列）
+    lastYear: lastYearDetail(rows),
   };
 }

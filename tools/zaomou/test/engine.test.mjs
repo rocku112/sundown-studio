@@ -910,3 +910,21 @@ test('退休後健保費：第六類每月 826 元；補充保費看每次入帳
   assert.equal(b.supplementYear, 0);
   assert.equal(retireHealthPremium({ dependents: 5 }).monthly, 826 * 4); // 眷屬最多計 3 口
 });
+
+import { laborUndistributed } from '../js/engine.js';
+test('勞退未分配收益：依最近月份收益率概估；當年收益已分配或年度不同時不估', () => {
+  const { text } = fakeStatement('\n'); // 假資料 110–112 年，112 年收益已分配
+  const r = parseLaborStatement(text);
+  assert.equal(r.lastYear.year, 112);
+  assert.equal(r.lastYear.distributed, true);
+  assert.equal(laborUndistributed(r, { year: 112, month: 8, rate: 10 }), null);
+  // 拿掉 112 年的收益列，模擬「今年還沒分配」
+  const cut = parseLaborStatement(text.split('\n').filter((l, i, a) => !(/^112$/.test(l) && /收益/.test(a[i + 1] || ''))).join('\n'));
+  // 收益列被拆成多行，改用結構化方式驗證
+  const ly = { year: 112, start: 100000, contribs: [{ month: 1, amount: 1000 }, { month: 8, amount: 1000 }, { month: 9, amount: 1000 }], distributed: false };
+  const u = laborUndistributed({ lastYear: ly }, { year: 112, month: 8, rate: 20, announced: 'x' });
+  // 年初 10 萬 × 20% ＋ 1 月提繳 1000 × 20% × 7.5/8 ＋ 8 月提繳 1000 × 20% × 0.5/8；9 月在期間外
+  assert.equal(u.amount, Math.round(20000 + 1000 * 0.2 * 7.5 / 8 + 1000 * 0.2 * 0.5 / 8));
+  assert.equal(laborUndistributed({ lastYear: ly }, { year: 113, month: 8, rate: 20 }), null);
+  assert.ok(cut);
+});

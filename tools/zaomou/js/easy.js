@@ -1,5 +1,5 @@
 /* 早謀遠算 · 簡單版：一次一題，最後只回答「夠不夠、錢從哪來、怎麼補」 */
-import { compute, goalPlan, actionPlan, parseLaborStatement } from './engine.js';
+import { compute, goalPlan, actionPlan, parseLaborStatement, laborUndistributed } from './engine.js';
 import { load, save, applySeed, easyAnswers, applyEasy } from './state.js';
 import { legalPensionAge, MIN_LIVING, EXPENSE_LEVELS } from './data.js';
 
@@ -241,7 +241,8 @@ document.addEventListener('click', (e) => {
     if (r.complete && r.first) { ans.workStartAge = Math.max(15, Math.round(r.first.year + 1911 - ans.birthYear - (r.first.month < 7 ? 0.5 : 0))); done.push(`${ans.workStartAge} 歲開始投保`); }
     if (r.selfRate !== null && r.selfRate !== state.self.selfRate) { state.self.selfRate = r.selfRate; done.push(`自提 ${r.selfRate}%`); }
     commit(); render();
-    toast(`已從明細帶入：${done.join('、')}`);
+    const und = laborUndistributed(r);
+    toast(`已從明細帶入：${done.join('、')}${und && und.amount > 0 ? `。另有今年尚未分配的收益約 ${money(und.amount)}（明年 3 月前才入帳，未計入）` : ''}`);
     return;
   }
   const wk = e.target.closest('[data-work]');
