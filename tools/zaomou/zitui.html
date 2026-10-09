@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>勞退自提適合誰？· 早謀遠算 | SunDown Studio</title>
+<meta name="description" content="勞退自提划不划算？不是看薪水高低，而是比較這筆錢不自提會去哪。依 115 年度稅率與現行法規，客觀比較自提、放銀行與自己投資，附互動試算與 6 題自我檢查。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="勞退自提適合誰？· 早謀遠算">
+<meta property="og:description" content="不是看薪水高低，而是比較這筆錢不自提會去哪。客觀比較自提、放銀行與自己投資，附互動試算。">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:url" content="https://rocku112.github.io/sundown-studio/tools/zaomou/zitui.html">
+<meta property="og:image" content="https://rocku112.github.io/sundown-studio/tools/zaomou/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#1E3554">
+<link rel="canonical" href="https://rocku112.github.io/sundown-studio/tools/zaomou/zitui.html">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&family=Noto+Serif+TC:wght@700;900&display=swap">
+<style>
+/* 版面：單欄閱讀文件（最寬 880px）；先講核心比較，再給工具與清單；窄螢幕全部改單欄。色票沿用早謀遠算介紹頁 */
+:root {
+  --bg: #F6F1E7; --surface: #FFFDF8; --ink: #16263B; --soft: #3C4A5C; --muted: #5C6573; --line: #E3D9C6;
+  --head: #1E3554; --accent: #2D4A6E; --accent-soft: #E8EDF3;
+  --good: #2E7353; --good-soft: #E5EFE7; --bad: #B23A33; --bad-soft: #F6E3DF; --warn: #80600F; --warn-soft: #F5EACB;
+  --sky: #3A5F8A; --sky-soft: #E6EDF5; --hl: #F6DE9C; --hl-ink: #6B4A00;
+  --coin: #E8B84B; --coin-deep: #A9790F; --coin-ink: #2A1D05; --pig: #F2C6BE;
+  --bar-pension: #1E3554; --bar-floor: #8FA6C4; --bar-alt: #E8B84B;
+  --nav-bg: rgba(246, 241, 231, .88);
+  --cta-a: #2D4A6E; --cta-b: #1E3554; --cta-c: #121F31;
+  --display: 'Noto Serif TC', 'Songti TC', serif;
+  --body: 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif;
+  --mono: 'Outfit', 'IBM Plex Mono', ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F1620; --surface: #161F2A; --ink: #E7EDF4; --soft: #C3CDD9; --muted: #A9B4C2; --line: #2A3647;
+    --head: #DCE7F5; --accent: #8DB2DE; --accent-soft: #1D2A3A;
+    --good: #6CC59A; --good-soft: #182B22; --bad: #F08A80; --bad-soft: #35211F; --warn: #E3B655; --warn-soft: #33290F;
+    --sky: #8DB2DE; --sky-soft: #1C2938; --hl: #4A3B12; --hl-ink: #F6D98A;
+    --coin: #F0C35A; --coin-deep: #C99A2E; --pig: #E9A9A3;
+    --bar-pension: #8DB2DE; --bar-floor: #3E5778; --bar-alt: #F0C35A;
+    --nav-bg: rgba(15, 22, 32, .88);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F1620; --surface: #161F2A; --ink: #E7EDF4; --soft: #C3CDD9; --muted: #A9B4C2; --line: #2A3647;
+  --head: #DCE7F5; --accent: #8DB2DE; --accent-soft: #1D2A3A;
+  --good: #6CC59A; --good-soft: #182B22; --bad: #F08A80; --bad-soft: #35211F; --warn: #E3B655; --warn-soft: #33290F;
+  --sky: #8DB2DE; --sky-soft: #1C2938; --hl: #4A3B12; --hl-ink: #F6D98A;
+  --coin: #F0C35A; --coin-deep: #C99A2E; --pig: #E9A9A3;
+  --bar-pension: #8DB2DE; --bar-floor: #3E5778; --bar-alt: #F0C35A;
+  --nav-bg: rgba(15, 22, 32, .88);
+  color-scheme: dark;
+}
+
+/* ── 基本排版 ── */
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 17px/1.9 var(--body); letter-spacing: .02em; margin: 0; }
+.wrap { max-width: 880px; margin: 0 auto; padding-inline: 20px; padding-block: 40px 64px; display: flex; flex-direction: column; gap: 52px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 900; text-wrap: balance; margin: 0; line-height: 1.3; letter-spacing: .01em; color: var(--head); }
+h1 { font-size: clamp(38px, 8vw, 58px); line-height: 1.2; }
+h2 { font-size: clamp(24px, 4.4vw, 31px); display: flex; align-items: center; gap: 12px; }
+h3 { font-size: 20px; font-weight: 700; }
+p { margin: 0; }
+a { color: var(--accent); }
+mark { background: linear-gradient(transparent 55%, var(--hl) 55%); color: inherit; padding-inline: 1px; }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.ic { width: 1em; height: 1em; flex-shrink: 0; }
+section { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.sec-sub { font-size: 16.5px; color: var(--soft); max-width: 38em; }
+.small { font-size: 15px; line-height: 1.8; color: var(--muted); }
+.hic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--coin); color: var(--coin-ink); flex-shrink: 0; }
+.hic .ic { width: 22px; height: 22px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px; min-width: 0; }
+
+/* ── 開頭 ── */
+header { display: flex; flex-direction: column; gap: 22px; }
+.hero { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 20px; align-items: center; }
+.hero-text { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.eyebrow { font-size: 14px; font-weight: 700; letter-spacing: .14em; color: var(--sky); }
+.h1-hl { color: var(--ink); background: linear-gradient(transparent 62%, var(--hl) 62%); padding-inline: 2px; }
+.lead { font-size: 19px; line-height: 1.85; color: var(--soft); max-width: 32em; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px; }
+.meta span { font-size: 13px; background: var(--sky-soft); color: var(--sky); padding: 2px 12px; border-radius: 99px; font-weight: 500; }
+.hero-art { max-width: 290px; justify-self: center; width: 100%; }
+.pig { width: 100%; height: auto; overflow: visible; }
+.pig .shadow { fill: var(--line); }
+.pig .pig-b, .pig .ear, .pig .leg, .pig .snout { fill: var(--pig); stroke: var(--ink); stroke-width: 3; }
+.pig .nost, .pig .eye, .pig .slot { fill: var(--ink); }
+.pig .tail { fill: none; stroke: var(--ink); stroke-width: 3; stroke-linecap: round; }
+.pig .coin circle { fill: var(--coin); stroke: var(--coin-deep); stroke-width: 3; }
+.pig .coin .mark { fill: none; stroke: var(--coin-deep); stroke-width: 3; stroke-linecap: round; }
+.pig .tag60 rect { fill: var(--accent); }
+.pig .tag60 text { fill: var(--bg); font: 700 15px var(--body); text-anchor: middle; }
+.pig .body { transform-origin: 118px 170px; }
+.pig .coin, .pig .tag60 { transform-box: fill-box; transform-origin: center; }
+
+/* 一分鐘重點 */
+.key { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.key li { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.key ul { display: contents; }
+.key .k-ic { width: 34px; height: 34px; padding: 7px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); }
+.key b { font-family: var(--display); font-size: 19px; color: var(--head); line-height: 1.4; }
+.key span { font-size: 15px; color: var(--soft); line-height: 1.75; }
+
+/* 得到與付出 */
+.trade { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.side { border-radius: 16px; padding: 16px 18px 6px; min-width: 0; }
+.side.get { background: var(--good-soft); } .side.pay { background: var(--bad-soft); }
+.side h3 { font-size: 18px; display: flex; align-items: center; gap: 8px; }
+.side.get h3 { color: var(--good); } .side.pay h3 { color: var(--bad); }
+.side h3 .ic { width: 22px; height: 22px; }
+.side ul { list-style: none; margin: 6px 0 0; padding: 0; }
+.side li { padding: 10px 0; border-top: 1px solid var(--line); display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; }
+.side li:first-child { border-top: 0; }
+.side li .ic { width: 20px; height: 20px; margin-top: 4px; }
+.side.get li .ic { color: var(--good); } .side.pay li .ic { color: var(--bad); }
+.side li b { display: block; font-size: 16.5px; }
+.side li span { font-size: 15px; color: var(--soft); line-height: 1.75; }
+
+/* ── 核心比較 ── */
+.compare { display: flex; flex-direction: column; gap: 14px; }
+.case { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 16px; align-items: center; padding: 14px 0; border-top: 1px solid var(--line); }
+.case:first-of-type { border-top: 0; }
+.case-h b { display: block; font-size: 16.5px; }
+.case-h small { display: block; font-size: 13.5px; color: var(--muted); line-height: 1.6; }
+.case-h .tag { display: inline-block; margin-top: 4px; font-size: 12.5px; font-weight: 700; padding: 1px 10px; border-radius: 99px; }
+.tag.win-p { background: var(--good-soft); color: var(--good); } .tag.win-a { background: var(--warn-soft); color: var(--warn); } .tag.tie { background: var(--sky-soft); color: var(--sky); }
+.bars { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.bar { display: grid; grid-template-columns: 112px minmax(0, 1fr) 64px; gap: 10px; align-items: center; font-size: 13.5px; color: var(--muted); }
+.bar i { display: block; height: 14px; border-radius: 7px; transform-origin: left; }
+.bar em { font: 700 14px var(--mono); font-style: normal; color: var(--ink); text-align: right; }
+.b-p { background: var(--bar-pension); } .b-f { background: var(--bar-floor); } .b-a { background: var(--bar-alt); }
+.note-box { border-left: 4px solid var(--sky); background: var(--sky-soft); border-radius: 0 12px 12px 0; padding: 12px 16px; font-size: 15.5px; line-height: 1.8; color: var(--ink); }
+.note-box b { color: var(--sky); }
+
+/* ── 稅率表 ── */
+.tbl-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+table { width: 100%; border-collapse: collapse; min-width: 560px; font-size: 16px; }
+th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 13px; color: var(--muted); font-weight: 700; background: var(--accent-soft); }
+tr:last-child td { border-bottom: 0; }
+td.r, th.r { text-align: right; }
+td.num { font-weight: 700; color: var(--head); }
+.rate { display: inline-block; min-width: 46px; text-align: center; padding: 1px 8px; border-radius: 99px; font: 600 13px var(--mono); }
+.r0 { background: var(--bad-soft); color: var(--bad); } .r5 { background: var(--warn-soft); color: var(--warn); }
+.r12 { background: var(--good-soft); color: var(--good); } .r20 { background: var(--accent-soft); color: var(--accent); }
+
+/* ── 試算 ── */
+.calc { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.calc fieldset { margin: 0; border: 1px solid var(--line); border-radius: 16px; padding: 12px 16px 16px; display: grid; gap: 12px; min-width: 0; background: var(--surface); }
+.calc legend { font-weight: 700; color: var(--head); padding: 0 6px; font-size: 15px; }
+.calc label { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.calc label > span { font-size: 13.5px; font-weight: 700; color: var(--muted); }
+.calc label em { font-style: normal; font-weight: 500; font-size: 12px; margin-left: 6px; padding: 1px 8px; border-radius: 99px; background: var(--good-soft); color: var(--good); }
+.calc input { width: 100%; font: 600 19px var(--mono); padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+.calc input:focus { outline: 3px solid var(--accent-soft); border-color: var(--accent); }
+.calc .two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips button { border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 99px; padding: 3px 10px; font: 500 13px var(--body); cursor: pointer; }
+.chips button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+.chips button:focus-visible, .yn button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.calc-out { display: flex; flex-direction: column; gap: 14px; }
+.tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.tiles div { display: flex; flex-direction: column; min-width: 0; }
+.tiles small { font-size: 12.5px; color: var(--muted); }
+.tiles strong { font: 700 26px var(--mono); color: var(--head); display: inline-block; }
+.verdict { display: flex; gap: 12px; align-items: flex-start; border-top: 1px solid var(--line); padding-top: 14px; font-size: 16px; line-height: 1.85; }
+.verdict b { font-family: var(--display); font-size: 19px; }
+.ric { width: 32px; height: 32px; padding: 6px; border-radius: 50%; flex-shrink: 0; background: var(--accent-soft); color: var(--accent); }
+.verdict.p .ric, .result.good .ric { background: var(--good); color: var(--bg); }
+.verdict.a .ric, .result.mid .ric { background: var(--warn); color: var(--bg); }
+.verdict.t .ric { background: var(--sky); color: var(--bg); }
+.result.bad .ric { background: var(--bad); color: var(--bg); }
+.verdict.p b { color: var(--good); } .verdict.a b { color: var(--warn); } .verdict.t b { color: var(--sky); }
+.other-help { border: 1px solid var(--line); border-radius: 12px; padding: 10px 16px; background: var(--surface); }
+.other-help summary { cursor: pointer; font-weight: 700; color: var(--head); }
+.other-help ul { margin: 8px 0 4px; padding-left: 20px; font-size: 15px; line-height: 1.8; display: flex; flex-direction: column; gap: 4px; }
+
+/* ── 有利／不利 ── */
+.vs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.col { border-radius: 16px; padding: 18px 18px 8px; display: flex; flex-direction: column; min-width: 0; }
+.col.fit { background: var(--good-soft); } .col.unfit { background: var(--bad-soft); }
+.col h3 { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.col.fit h3 { color: var(--good); } .col.unfit h3 { color: var(--bad); }
+.mark { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font: 700 14px var(--mono); color: var(--bg); flex-shrink: 0; }
+.fit .mark { background: var(--good); } .unfit .mark { background: var(--bad); }
+.items { list-style: none; margin: 0; padding: 0; }
+.items li { padding: 12px 0; border-top: 1px solid var(--line); display: grid; grid-template-columns: 78px minmax(0, 1fr); gap: 10px; }
+.items li:first-child { border-top: 0; }
+.ftag { display: inline-flex; align-items: center; gap: 5px; align-self: start; padding: 3px 9px; border-radius: 99px; background: var(--surface); font-size: 12.5px; font-weight: 700; }
+.ftag .ic { width: 14px; height: 14px; }
+.fit .ftag, .fit .items b { color: var(--good); } .unfit .ftag, .unfit .items b { color: var(--bad); }
+.items b { display: block; font-size: 16.5px; }
+.items span { font-size: 15px; color: var(--soft); line-height: 1.75; }
+
+/* ── 自我檢查 ── */
+.check { display: flex; flex-direction: column; }
+.q { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); }
+.q:first-child { border-top: 0; }
+.q p { font-size: 16.5px; }
+.q small { display: block; font-size: 13.5px; color: var(--muted); }
+.yn { display: inline-flex; border: 1px solid var(--line); border-radius: 99px; overflow: hidden; }
+.yn button { border: 0; background: transparent; color: var(--ink); font: 500 15px var(--body); padding: 7px 16px; cursor: pointer; min-width: 56px; }
+.yn button + button { border-left: 1px solid var(--line); }
+.yn button[aria-pressed="true"] { background: var(--accent); color: var(--bg); }
+.dots { display: flex; gap: 6px; margin-top: 12px; }
+.dots i { flex: 1; height: 6px; border-radius: 3px; background: var(--line); transition: background .25s; }
+.dots i.y { background: var(--good); } .dots i.n { background: var(--bad); }
+.result { margin-top: 12px; border-radius: 12px; padding: 14px 16px; background: var(--accent-soft); display: flex; gap: 12px; align-items: flex-start; }
+.result > div { display: flex; flex-direction: column; gap: 2px; }
+.result b { font-family: var(--display); font-size: 19px; }
+.result.good { background: var(--good-soft); } .result.good b { color: var(--good); }
+.result.bad { background: var(--bad-soft); } .result.bad b { color: var(--bad); }
+.result.mid { background: var(--warn-soft); } .result.mid b { color: var(--warn); }
+.reset { align-self: flex-start; margin-top: 8px; background: none; border: 0; color: var(--accent); font: 500 14px var(--body); text-decoration: underline; cursor: pointer; padding: 4px 0; }
+
+/* ── 容易忽略的事 ── */
+.facts { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.facts li { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; min-width: 0; }
+.facts li.wide { grid-column: 1 / -1; }
+.facts b { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; font-family: var(--display); font-size: 18.5px; color: var(--head); }
+.facts b .ic { width: 18px; height: 18px; color: var(--accent); }
+.facts span { font-size: 15.5px; color: var(--soft); line-height: 1.8; }
+.returns { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.returns .bar { grid-template-columns: 116px minmax(0, 1fr) 54px; }
+.returns .bar i { background: var(--accent); height: 9px; }
+
+/* ── 試算邀請 ── */
+.cta-big { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 22px; align-items: center; padding: 26px 28px; border-radius: 22px; text-decoration: none; color: #fff;
+  background: radial-gradient(120% 140% at 0% 0%, var(--cta-a) 0%, var(--cta-b) 55%, var(--cta-c) 100%); box-shadow: 0 18px 40px -18px rgba(22, 38, 59, .7); position: relative; overflow: hidden; }
+.cta-big::after { content: ''; position: absolute; right: -60px; top: -60px; width: 220px; height: 220px; border-radius: 50%; background: radial-gradient(circle, rgba(240, 195, 90, .35), transparent 70%); pointer-events: none; }
+.cta-art { width: 74px; height: 74px; border-radius: 22px; background: #F0C35A; color: #2A1D05; display: grid; place-items: center; }
+.cta-art svg { width: 40px; height: 40px; }
+.cta-body { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.cta-kicker { font-size: 13px; font-weight: 700; letter-spacing: .12em; color: #F6D98A; }
+.cta-title { font-family: var(--display); font-weight: 900; font-size: clamp(24px, 4.4vw, 32px); line-height: 1.3; }
+.cta-desc { font-size: 16px; line-height: 1.8; color: rgba(255, 255, 255, .86); }
+.cta-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.cta-chips span { font-size: 13px; padding: 3px 12px; border-radius: 99px; background: rgba(255, 255, 255, .14); border: 1px solid rgba(255, 255, 255, .22); }
+.cta-btn { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; padding: 15px 24px; border-radius: 99px; background: #F0C35A; color: #2A1D05; font-weight: 900; font-size: 18px; position: relative; z-index: 1; }
+.cta-btn svg { width: 20px; height: 20px; }
+.cta-big:focus-visible, .cta-mini:focus-visible { outline: 4px solid var(--coin); outline-offset: 4px; }
+.cta-mini { display: grid; grid-template-columns: 36px minmax(0, 1fr) 22px; gap: 12px; align-items: center; padding: 14px 16px; border-radius: 14px; text-decoration: none; color: var(--ink); background: var(--hl); border: 1px solid var(--coin); }
+.cta-mini > svg:first-child { width: 36px; height: 36px; padding: 7px; border-radius: 11px; background: var(--coin); color: var(--coin-ink); }
+.cta-mini span { font-size: 15.5px; line-height: 1.6; }
+.cta-mini b { display: block; color: var(--hl-ink); font-size: 17px; }
+.cta-mini .go { width: 22px; height: 22px; color: var(--hl-ink); }
+
+/* ── 來源 ── */
+.src { font-size: 14.5px; color: var(--muted); display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--line); padding-top: 20px; }
+.src ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+
+/* ── 動畫（只在使用者沒有要求減少動態時） ── */
+@media (prefers-reduced-motion: no-preference) {
+  .pig .c1 { animation: drop 3.2s cubic-bezier(.5, 0, .9, .5) infinite; }
+  .pig .c2 { animation: drop 3.2s cubic-bezier(.5, 0, .9, .5) 1.6s infinite; }
+  .pig .body { animation: jiggle 1.6s ease-in-out .9s infinite; }
+  .pig .tag60 { animation: bob 3.2s ease-in-out infinite; }
+  .bars .bar i, .returns .bar i { transition: width .45s cubic-bezier(.2, .8, .2, 1); animation: grow 1s cubic-bezier(.2, .8, .2, 1) both; }
+  .hic { animation: pop .5s cubic-bezier(.3, 1.6, .5, 1) both; }
+  .ric.pop { animation: pop .45s cubic-bezier(.3, 1.6, .5, 1); }
+  .bump { animation: bump .38s ease; }
+  .yn button[aria-pressed="true"], .chips button[aria-pressed="true"] { animation: press .25s ease; }
+  .facts li, .cta-mini { transition: transform .2s ease, box-shadow .2s ease; }
+  .facts li:hover, .cta-mini:hover { transform: translateY(-3px); box-shadow: 0 8px 20px -12px var(--accent); }
+  .cta-big { transition: transform .25s ease, box-shadow .25s ease; }
+  .cta-big:hover { transform: translateY(-4px); box-shadow: 0 26px 50px -20px rgba(22, 38, 59, .8); }
+  .cta-btn { animation: glow 2.6s ease-in-out infinite; }
+  .cta-btn svg, .cta-mini .go { transition: transform .2s ease; }
+  .cta-big:hover .cta-btn svg, .cta-mini:hover .go { transform: translateX(5px); }
+  .cta-art { animation: tilt 3.2s ease-in-out infinite; }
+}
+@keyframes drop { 0% { transform: translateY(-14px); opacity: 0; } 12% { opacity: 1; } 55% { transform: translateY(26px); opacity: 1; } 64%, 100% { transform: translateY(34px) scale(.5); opacity: 0; } }
+@keyframes jiggle { 0%, 70%, 100% { transform: rotate(0); } 78% { transform: rotate(-2.5deg); } 86% { transform: rotate(2deg); } 93% { transform: rotate(-1deg); } }
+@keyframes bob { 0%, 100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-5px) rotate(-3deg); } }
+@keyframes grow { from { transform: scaleX(0); } }
+@keyframes pop { 0% { transform: scale(.6); } 100% { transform: scale(1); } }
+@keyframes bump { 0% { transform: translateY(0); } 40% { transform: translateY(-3px); } 100% { transform: translateY(0); } }
+@keyframes press { 0% { transform: scale(.92); } 100% { transform: scale(1); } }
+@keyframes glow { 0%, 100% { box-shadow: 0 0 0 0 rgba(240, 195, 90, .55); } 50% { box-shadow: 0 0 0 10px rgba(240, 195, 90, 0); } }
+@keyframes tilt { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+
+/* ── 窄螢幕 ── */
+@media (max-width: 720px) {
+  .wrap { padding-inline: 16px; padding-block: 28px 48px; gap: 42px; }
+  .hero, .trade, .vs, .facts, .calc, .key { grid-template-columns: minmax(0, 1fr); }
+  .hero-art { max-width: 200px; order: -1; justify-self: start; }
+  .case { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .bar { grid-template-columns: 96px minmax(0, 1fr) 56px; }
+  .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .tiles strong { font-size: 21px; }
+  .q { grid-template-columns: minmax(0, 1fr); }
+  .cta-big { grid-template-columns: minmax(0, 1fr); padding: 22px 20px; gap: 16px; }
+  .cta-art { width: 58px; height: 58px; border-radius: 18px; }
+  .cta-art svg { width: 32px; height: 32px; }
+  .cta-btn { justify-content: center; }
+}
+
+/* 互動比較 */
+.play { display: flex; flex-direction: column; gap: 16px; }
+.play-row { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 10px; align-items: start; }
+.play-k { font-size: 13.5px; font-weight: 700; color: var(--muted); padding-top: 4px; }
+.play .chips button { font-size: 14px; padding: 5px 12px; }
+.slider { display: flex; flex-direction: column; gap: 6px; }
+.slider label { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 15px; font-weight: 700; color: var(--soft); }
+.slider output { font: 700 24px var(--mono); color: var(--warn); }
+.track { position: relative; padding-top: 22px; }
+.track input { width: 100%; -webkit-appearance: none; appearance: none; height: 10px; border-radius: 5px; outline: none; cursor: pointer;
+  background: linear-gradient(90deg, var(--bar-alt) var(--fill, 40%), var(--line) var(--fill, 40%)); }
+.track input::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; border-radius: 50%; background: var(--surface); border: 3px solid var(--coin-deep); box-shadow: 0 2px 8px rgba(0, 0, 0, .25); }
+.track input::-moz-range-thumb { width: 24px; height: 24px; border-radius: 50%; background: var(--surface); border: 3px solid var(--coin-deep); }
+.track input:focus-visible { outline: 3px solid var(--accent); outline-offset: 6px; }
+.be { position: absolute; top: 0; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; pointer-events: none; transition: left .3s ease; }
+.be small { order: -1; font: 700 12px var(--body); color: var(--good); white-space: nowrap; background: var(--good-soft); padding: 0 8px; border-radius: 99px; }
+.be i { width: 2px; height: 22px; background: var(--good); margin-top: 2px; }
+.ticks { position: relative; height: 18px; font-size: 12px; color: var(--muted); }
+.ticks span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+/* 稅率表：試算落點 */
+tr.here td { background: var(--hl); }
+tr.here td:first-child { box-shadow: inset 4px 0 0 var(--coin); font-weight: 700; }
+/* 試算：鎖住時間軸 */
+.timeline { display: flex; flex-direction: column; gap: 4px; }
+.tl-bar { display: flex; height: 26px; border-radius: 8px; overflow: hidden; font-size: 12.5px; font-weight: 700; }
+.tl-bar span { display: flex; align-items: center; justify-content: center; white-space: nowrap; overflow: hidden; padding-inline: 6px; transition: flex-grow .4s ease; }
+.tl-lock { background: var(--bad-soft); color: var(--bad); }
+.tl-free { background: var(--good-soft); color: var(--good); }
+.tl-ends { display: flex; justify-content: space-between; font: 600 12px var(--mono); color: var(--muted); }
+@media (max-width: 720px) { .play-row { grid-template-columns: minmax(0, 1fr); gap: 4px; } }
+
+/* 頁首導覽與頁尾（沿用早謀遠算介紹頁） */
+.zn { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--nav-bg); backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
+.zn-in { max-width: 880px; margin: 0 auto; padding-inline: 20px; height: 60px; display: flex; align-items: center; gap: 16px; }
+.zn-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); }
+.zn-brand svg { width: 30px; height: 30px; }
+.zn-brand b { display: block; font: 900 16px/1.1 var(--display); letter-spacing: .08em; }
+.zn-brand small { display: block; font-size: 11px; color: var(--muted); }
+.zn-links { display: flex; gap: 18px; margin-left: auto; font-size: 14px; }
+.zn-links a { color: var(--muted); text-decoration: none; font-weight: 500; }
+.zn-links a:hover { color: var(--head); }
+.zn-cta { padding: 7px 16px; border-radius: 99px; background: var(--cta-b); color: #fff; text-decoration: none; font-size: 14px; font-weight: 700; white-space: nowrap; }
+.site-foot { border-top: 1px solid var(--line); padding-top: 18px; display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 14px; color: var(--muted); }
+.site-foot a { color: var(--accent); }
+@media (max-width: 720px) { .zn-links { display: none; } .zn-cta { margin-left: auto; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+<script>/* 先套用使用者在早謀遠算指定的主題，避免載入時閃一下 */try{var t=JSON.parse(localStorage.getItem('zaomou_ui')||'{}').theme;if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;}catch(e){}</script>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-coins" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="9" cy="6" rx="6" ry="3"/><path d="M3 6v4c0 1.7 2.7 3 6 3s6-1.3 6-3V6"/><path d="M3 10v4c0 1.7 2.7 3 6 3 .7 0 1.4-.1 2-.2"/><circle cx="17" cy="16" r="5"/><path d="M17 14v4M15.5 15.5h3"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/><circle cx="12" cy="16" r="1.4"/></symbol>
+  <symbol id="i-receipt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2v20l2.5-1.5L10 22l2-1.5 2 1.5 2.5-1.5L19 22V2l-2.5 1.5L14 2l-2 1.5L10 2 7.5 3.5z"/><path d="M9 8h6M9 12h6M9 16h4"/></symbol>
+  <symbol id="i-calc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><rect x="8" y="5" width="8" height="4" rx="1"/><path d="M8.5 13h.01M12 13h.01M15.5 13h.01M8.5 17h.01M12 17h.01M15.5 17h.01"/></symbol>
+  <symbol id="i-people" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.6"/><path d="M16 14.2a5 5 0 0 1 5.5 5"/></symbol>
+  <symbol id="i-clip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="18" rx="2"/><path d="M9 2h6v4H9z"/><path d="M8.5 12l2 2 4-4M8.5 18h7"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></symbol>
+  <symbol id="i-brief" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2M2 13h20"/></symbol>
+  <symbol id="i-hourglass" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12M6 22h12M7 2c0 6 10 6 10 12v8M17 2c0 6-10 6-10 12v8"/></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0 0 4h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5"/><circle cx="16.5" cy="14" r="1.4"/></symbol>
+  <symbol id="i-house" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v11h14V10"/><path d="M10 21v-6h4v6"/></symbol>
+  <symbol id="i-trend" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></symbol>
+  <symbol id="i-card" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/></symbol>
+  <symbol id="i-thumb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 11v10H3V11z"/><path d="M7 11l4-8c1.7 0 3 1.3 3 3v3h5.5a2 2 0 0 1 2 2.3l-1.3 7.5a2 2 0 0 1-2 1.7H7"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M10 9v6M14 9v6"/></symbol>
+  <symbol id="i-scale" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M7 21h10M5 7h14"/><path d="M5 7l-3 6a3 3 0 0 0 6 0zM19 7l-3 6a3 3 0 0 0 6 0z"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-route" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="5" r="2.5"/><path d="M8.5 19H16a3 3 0 0 0 0-6H8a3 3 0 0 1 0-6h7.5"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-minus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l6 6 4-4 8 8"/><path d="M15 17h6v-6"/></symbol>
+</svg>
+
+<header class="zn">
+  <div class="zn-in">
+    <a class="zn-brand" href="./" title="回早謀遠算首頁">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="#1E3554"/><path d="M2 16a14 14 0 0 1 28 0" fill="#E8B84B"/><g stroke="#fff" stroke-width="1.5" stroke-linecap="round"><line x1="4.5" y1="18.5" x2="27.5" y2="18.5" opacity=".85"/><line x1="7" y1="21.5" x2="25" y2="21.5" opacity=".6"/><line x1="10.5" y1="24.5" x2="21.5" y2="24.5" opacity=".4"/></g></svg>
+      <span><b>早謀遠算</b><small>勞退自提指南</small></span>
+    </a>
+    <nav class="zn-links" aria-label="頁面導覽"><a href="#s-cmp">核心比較</a><a href="#s-calc">試算</a><a href="#s-check">自我檢查</a><a href="app.html">完整版</a></nav>
+    <a class="zn-cta" href="easy.html">開始試算</a>
+  </div>
+</header>
+<main class="wrap" id="top">
+  <header>
+    <div class="hero">
+      <div class="hero-text">
+        <p class="eyebrow">勞工退休金・個人自願提繳</p>
+        <h1>勞退自提<span class="h1-hl">適合誰？</span></h1>
+        <p class="lead">自提不是高薪族才划算，也不是每個人都該提。關鍵在一個比較：<mark>這筆錢不自提的話，會去哪裡？</mark>這頁用數字把兩邊攤開，最後附試算和自我檢查，讓你自己判斷。</p>
+        <div class="meta"><span>依 115 年度稅率與現行法規</span><span>更新：2026 年 10 月</span><span>僅供參考，不構成投資建議</span></div>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <svg viewBox="0 0 240 200" class="pig">
+          <ellipse cx="120" cy="186" rx="78" ry="8" class="shadow"/>
+          <g class="coin c1"><circle cx="120" cy="34" r="15"/><path d="M120 26v16M115 30h10" class="mark"/></g>
+          <g class="coin c2"><circle cx="120" cy="34" r="15"/><path d="M120 26v16M115 30h10" class="mark"/></g>
+          <g class="body">
+            <ellipse cx="118" cy="118" rx="78" ry="58" class="pig-b"/>
+            <rect x="102" y="62" width="32" height="7" rx="3.5" class="slot"/>
+            <circle cx="196" cy="112" r="18" class="snout"/><circle cx="191" cy="110" r="3" class="nost"/><circle cx="201" cy="110" r="3" class="nost"/>
+            <circle cx="160" cy="96" r="5" class="eye"/>
+            <path d="M70 66l-8-22 26 12z" class="ear"/>
+            <rect x="66" y="160" width="20" height="22" rx="7" class="leg"/><rect x="146" y="160" width="20" height="22" rx="7" class="leg"/>
+            <path d="M42 112c-14-4-14 14-2 10" class="tail"/>
+          </g>
+          <g class="tag60"><rect x="12" y="20" width="62" height="34" rx="10"/><text x="43" y="43">60 歲</text></g>
+        </svg>
+      </div>
+    </div>
+
+    <div class="card key">
+      <ul>
+        <li><svg class="k-ic" aria-hidden="true"><use href="#i-receipt"/></svg><b>節稅是加分，不是全部</b><span>月薪不到約 9 萬（5% 級距），自提 6% 每年只少繳約 800～2,500 元。</span></li>
+        <li><svg class="k-ic" aria-hidden="true"><use href="#i-route"/></svg><b>真正要比的是替代去處</b><span>錢放銀行，自提明顯較多；能長期穩定投資、年化 7%，自己投資較多。</span></li>
+        <li><svg class="k-ic" aria-hidden="true"><use href="#i-lock"/></svg><b>代價是 60 歲前動不到</b><span>先有緊急預備金、近期沒有買房等大筆支出，再考慮自提。</span></li>
+      </ul>
+    </div>
+
+    <div class="trade">
+      <div class="side get">
+        <h3><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>自提得到什麼</h3>
+        <ul>
+          <li><svg class="ic" aria-hidden="true"><use href="#i-coins"/></svg><div><b>節稅</b><span>自提金額<mark>不計入當年薪資所得課稅</mark>，稅率越高越有感。</span></div></li>
+          <li><svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg><div><b>保本與保證收益</b><span>請領時的收益不低於 2 年期定存利率計算的金額，不足由國庫補足。</span></div></li>
+          <li><svg class="ic" aria-hidden="true"><use href="#i-wallet"/></svg><div><b>強迫儲蓄、免手續費</b><span>薪水直接扣，不會被花掉；由勞動基金運用局統一運用。</span></div></li>
+        </ul>
+      </div>
+      <div class="side pay">
+        <h3><svg class="ic" aria-hidden="true"><use href="#i-minus"/></svg>自提付出什麼</h3>
+        <ul>
+          <li><svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg><div><b>60 歲前動不到</b><span><mark>急用、買房都拿不出來</mark>；滿 60 歲才能請領（仍在職也可以）。</span></div></li>
+          <li><svg class="ic" aria-hidden="true"><use href="#i-down"/></svg><div><b>報酬不能自己選，也有虧損年度</b><span>基金表現好壞都要接受；長期平均報酬可能低於自己投資。</span></div></li>
+          <li><svg class="ic" aria-hidden="true"><use href="#i-hourglass"/></svg><div><b>月領只發到平均餘命</b><span>活得比平均久的人，最後幾年沒有勞退可領。</span></div></li>
+        </ul>
+      </div>
+    </div>
+  </header>
+
+  <section aria-labelledby="s-cmp">
+    <h2 id="s-cmp"><span class="hic"><svg class="ic" aria-hidden="true"><use href="#i-route"/></svg></span>最關鍵的比較：這筆錢不自提會去哪？</h2>
+    <p class="sec-sub">先選一個最接近的情境，再拖拉「不自提的話，這筆錢的年化報酬」，看 65 歲時兩邊各有多少。不自提的錢，是扣完稅後留在手上的金額。</p>
+    <div class="card play">
+      <div class="play-row">
+        <span class="play-k">情境</span>
+        <div class="chips" id="p-who" role="group" aria-label="選擇情境">
+          <button type="button" data-age="25" data-sal="35000" aria-pressed="false">25 歲・月薪 3.5 萬</button>
+          <button type="button" data-age="30" data-sal="50000" aria-pressed="true">30 歲・月薪 5 萬</button>
+          <button type="button" data-age="45" data-sal="70000" aria-pressed="false">45 歲・月薪 7 萬</button>
+          <button type="button" data-age="50" data-sal="100000" aria-pressed="false">50 歲・月薪 10 萬</button>
+        </div>
+      </div>
+      <div class="play-row">
+        <span class="play-k">勞退基金收益</span>
+        <div class="chips" id="p-lr" role="group" aria-label="勞退基金收益假設">
+          <button type="button" data-v="1.7" aria-pressed="false">保證下限 1.7%</button>
+          <button type="button" data-v="3.6" aria-pressed="false">開辦至 111 年 3.6%</button>
+          <button type="button" data-v="4" aria-pressed="true">保守 4%</button>
+          <button type="button" data-v="6" aria-pressed="false">6%</button>
+        </div>
+      </div>
+      <div class="slider">
+        <label for="p-alt">不自提的話，這筆錢的年化報酬<output id="p-alt-v" for="p-alt">4%</output></label>
+        <div class="track">
+          <input type="range" id="p-alt" min="0" max="10" step="0.5" value="4">
+          <span class="be" id="p-be" aria-hidden="true"><i></i><small></small></span>
+        </div>
+        <div class="ticks" aria-hidden="true"><span style="left:15%">放銀行</span><span style="left:40%">穩健投資</span><span style="left:70%">積極投資</span></div>
+      </div>
+      <div class="bars" id="p-bars"></div>
+      <p class="verdict" id="p-text"></p>
+    </div>
+    <div class="note-box"><b>兩邊都要看清楚：</b>「自提最差情況」是勞退基金只拿到保證收益（約 1.7%）的結果；自己投資的報酬則沒有保證，碰上長期空頭或中途賣掉，結果可能比自提差。滑桿上的「打平」是兩邊一樣多的報酬率，勞退收益假設越高，打平點也越高。</div>
+    <p class="small">計算方式：每月自提月薪的 6%、金額固定、按月複利、提到 65 歲；單身、只有薪資所得、沒有年終。情境為虛構的示意，請用下方試算代入自己的條件。</p>
+  </section>
+
+  <section aria-labelledby="s-tax">
+    <h2 id="s-tax"><span class="hic"><svg class="ic" aria-hidden="true"><use href="#i-receipt"/></svg></span>稅率：節稅是加分，不是門檻</h2>
+    <p class="sec-sub">以單身、只有薪資所得、沒有年終估算。「打平報酬率」是你自己投資的長期年化報酬<mark>要超過多少</mark>，才比自提划算（勞退收益假設 4%、提到 65 歲）。</p>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>月薪大約</th><th>邊際稅率</th><th class="r">自提 6% 每年少繳稅</th><th class="r">打平報酬率</th></tr></thead>
+        <tbody>
+          <tr id="tr-0"><td>3.86 萬以下</td><td><span class="rate r0">0%</span></td><td class="r num">0</td><td class="r num">4.0%</td></tr>
+          <tr id="tr-5"><td>3.9～8.9 萬</td><td><span class="rate r5">5%</span></td><td class="r num">約 800～2,500</td><td class="r num">約 4.2～4.3%</td></tr>
+          <tr id="tr-12"><td>8.9～15.4 萬</td><td><span class="rate r12">12%</span></td><td class="r num">約 3,700～13,000</td><td class="r num">約 4.4～4.8%</td></tr>
+          <tr id="tr-20"><td>15.4 萬以上</td><td><span class="rate r20">20%+</span></td><td class="r num">約 2 萬以上</td><td class="r num">約 5.3% 以上</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="small here-note" id="here-note" hidden></p>
+    <div class="note-box"><b>沒到 9 萬也可能值得提：</b>稅率只決定「自提比自己投資多出多少起跑點」。即使完全不用繳稅（打平報酬率 4%），如果這筆錢本來會躺在銀行、或常常被花掉，自提仍然較好；反過來，稅率再高，若你需要這筆錢的流動性，也不一定要提。</div>
+    <p class="small">有年終的人，月薪門檻要再往下調：例如年終 2 個月，大約月薪 3.3 萬以下免稅、7.7 萬起進入 12%。有利息、股利或其他所得，或已婚合併申報，級距也會不同。提繳工資上限 15 萬，自提每月最多 9,000 元。離 60 歲越近，打平報酬率越高（同樣月薪 9 萬：25 歲約 4.2%、55 歲約 5.1%）。</p>
+  </section>
+
+  <section aria-labelledby="s-calc">
+    <h2 id="s-calc"><span class="hic"><svg class="ic" aria-hidden="true"><use href="#i-calc"/></svg></span>用你的數字算</h2>
+    <p class="sec-sub">左邊填所得（用來算稅率），右邊選假設（用來比較 65 歲時的結果）。年終、績效獎金、員工酬勞都算薪資所得，但一年發一次的獎金<mark>不列入勞退提繳工資</mark>，自提金額只看月薪。</p>
+    <form class="calc" id="calc" novalidate>
+      <fieldset>
+        <legend>你的所得</legend>
+        <div class="two">
+          <label for="c-sal"><span>月薪（元）</span><input id="c-sal" inputmode="numeric" value="60,000" autocomplete="off"></label>
+          <label for="c-bonus"><span>年終＋獎金（月）</span><input id="c-bonus" type="number" inputmode="decimal" min="0" max="24" step="0.5" value="2"></label>
+        </div>
+        <div class="two">
+          <label for="c-int"><span>存款利息／年<em>扣 27 萬</em></span><input id="c-int" inputmode="numeric" value="0" autocomplete="off"></label>
+          <label for="c-div"><span>股利／年<em>自動選較省</em></span><input id="c-div" inputmode="numeric" value="0" autocomplete="off"></label>
+        </div>
+        <label for="c-other"><span>其他會報稅的所得／年（租金、兼職等）</span><input id="c-other" inputmode="numeric" value="0" autocomplete="off"></label>
+      </fieldset>
+      <fieldset>
+        <legend>比較的假設</legend>
+        <label for="c-age"><span>現在幾歲</span><input id="c-age" type="number" inputmode="numeric" min="18" max="64" value="35"></label>
+        <label for="c-lr"><span>勞退基金年化收益（%）</span><input id="c-lr" type="number" inputmode="decimal" min="0" max="15" step="0.1" value="4"></label>
+        <div class="chips" data-for="c-lr" role="group" aria-label="勞退收益快選">
+          <button type="button" data-v="1.7" aria-pressed="false">保證下限 1.7</button><button type="button" data-v="3.6" aria-pressed="false">開辦至111年 3.6</button><button type="button" data-v="4" aria-pressed="true">保守 4</button><button type="button" data-v="6" aria-pressed="false">6</button>
+        </div>
+        <label for="c-alt"><span>不自提的話，這筆錢的年化報酬（%）</span><input id="c-alt" type="number" inputmode="decimal" min="0" max="15" step="0.5" value="4"></label>
+        <div class="chips" data-for="c-alt" role="group" aria-label="替代報酬快選">
+          <button type="button" data-v="1.5" aria-pressed="false">放銀行 1.5</button><button type="button" data-v="4" aria-pressed="true">穩健投資 4</button><button type="button" data-v="7" aria-pressed="false">積極投資 7</button>
+        </div>
+      </fieldset>
+    </form>
+    <div class="card calc-out" aria-live="polite">
+      <div class="tiles">
+        <div><small>邊際稅率</small><strong id="o-rate">—</strong></div>
+        <div><small>每年少繳稅</small><strong id="o-save">—</strong></div>
+        <div><small>打平報酬率</small><strong id="o-be">—</strong></div>
+      </div>
+      <div class="timeline" id="o-time" aria-hidden="true"></div>
+      <div class="bars" id="o-bars"></div>
+      <p class="verdict" id="o-text"></p>
+    </div>
+    <details class="other-help"><summary>哪些算「其他會報稅的所得」？</summary>
+      <ul>
+        <li><b>存款利息</b>：全戶每年可先扣「儲蓄投資特別扣除額」最多 270,000 元，超過才計稅，試算會自動扣。</li>
+        <li><b>股利</b>：試算會比較兩種方式、取稅較少的那個。合併計稅：併入所得，再按股利 8.5% 抵減稅額（每戶上限 8 萬元，抵不完可退稅）；分開計稅：股利按 28% 單獨計算。</li>
+        <li><b>其他所得</b>：租金（沒有逐項舉證時可先減 43% 必要費用）、兼職、稿費（一年 18 萬元以內免稅）、執行業務收入。</li>
+        <li><b>不用算</b>：賣股票的價差（證券交易所得目前停徵）、勞保給付。</li>
+        <li><b>已婚</b>：夫妻合併申報，請把配偶的所得也算進來；實際級距以報稅試算為準。</li>
+      </ul>
+    </details>
+    <a class="cta-mini" href="easy.html" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#i-coins"/></svg><span>想連勞保、勞退和投資一起算退休後每月能領多少？<b>用早謀遠算免費試算</b></span><svg class="go" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+  </section>
+
+  <section aria-labelledby="s-who">
+    <h2 id="s-who"><span class="hic"><svg class="ic" aria-hidden="true"><use href="#i-people"/></svg></span>哪些情況對自提比較有利</h2>
+    <p class="sec-sub">沒有哪一項是絕對的。同一個人可能同時符合兩邊，請把它當成檢查清單，看哪一邊比較重。</p>
+    <div class="vs">
+      <div class="col fit">
+        <h3><span class="mark" aria-hidden="true">✓</span>對自提比較有利</h3>
+        <ul class="items">
+          <li><span class="ftag"><svg class="ic" aria-hidden="true"><use href="#i-route"/></svg>去處</span><div><b>這筆錢本來多半放銀行或被花掉</b><span>自提的保本加基金收益，通常比活存、定存好。</span></div></li>
+          <li><span class="ftag"><svg class="ic" aria-hidden="true"><use href="#i-brief"/></svg>稅率</span><div><b>邊際稅率 12% 以上</b><span>單身無年終約月薪 9 萬以上，或加上年終、股利後達到。少繳的稅明顯。</span></div></li>
+          <li><span class="ftag"><svg class="ic" aria-hidden="true"><use href="#i-hourglass"/></svg>年齡</span><div><b>離 60 歲 15 年內</b><span>鎖住時間短，節稅優勢攤在較少年數。</span></div></li>
+          <li><span class="ftag"><svg class="ic" aria-hidden="true"><use href="#i-wallet"/></svg>預備金</span><div><b>已有 6 個月以上生活費的存款</b><span>急用時不必動到退休金。</span></div></li>
+          <li><span class="ftag"><svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg>保障</span><div><b>重視保本，或擔心債務糾紛</b><span>請領權利不得扣押、讓與或供擔保；身故由遺屬或指定請領人領回。</span></div></li>
+        </ul>
+      </div>
+      <div class="col unfit">
+        <h3><span class="mark" aria-hidden="true">✕</span>對自提比較不利</h3>
+        <ul class="items">
+          <li><span class="ftag"><svg class="ic" aria-hidden="true"><use href="#i-trend"/></svg>去處</span><div><b>會穩定長期投資，承受得了波動</b><span>長期報酬能穩定高於打平點（約 4～5%），自己投資終值較高。</span></div></li>
+          <li><span class="ftag"><svg class="ic" aria-hidden="true"><use href="#i-house"/></svg>支出</span><div><b>幾年內要買房、結婚、進修、創業</b><span>這些錢放進自提，到時候動不到。</span></div></li>
+          <li><span class="ftag"><svg class="ic" aria-hidden="true"><use href="#i-wallet"/></svg>預備金</span><div><b>存款不到 6 個月生活費</b><span>應該先把預備金存起來。</span></div></li>
+          <li><span class="ftag"><svg class="ic" aria-hidden="true"><use href="#i-card"/></svg>負債</span><div><b>有卡債、信貸等較高利率負債</b><span>先還債，報酬就是那筆利率，而且沒有風險。</span></div></li>
+          <li><span class="ftag"><svg class="ic" aria-hidden="true"><use href="#i-hourglass"/></svg>年齡</span><div><b>離 60 歲 30 年以上</b><span>鎖得很久，人生變數多；長期投資的複利空間也較大。</span></div></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="s-check">
+    <h2 id="s-check"><span class="hic"><svg class="ic" aria-hidden="true"><use href="#i-clip"/></svg></span>6 題自我檢查</h2>
+    <p class="sec-sub">每題選「是」或「否」，下方會即時給出傾向。前三題是「先處理再說」的條件；後三題決定自提和自己投資哪邊較合適。</p>
+    <div class="card check" id="check">
+      <div class="q"><p>存款夠 6 個月以上的生活費嗎？</p><div class="yn" data-q="cash" data-fit="yes"><button type="button" data-v="yes" aria-pressed="false">是</button><button type="button" data-v="no" aria-pressed="false">否</button></div></div>
+      <div class="q"><p>有卡債、信貸等利率較高的負債嗎？</p><div class="yn" data-q="debt" data-fit="no"><button type="button" data-v="yes" aria-pressed="false">是</button><button type="button" data-v="no" aria-pressed="false">否</button></div></div>
+      <div class="q"><p>60 歲前有買房、創業等大筆支出計畫嗎？</p><div class="yn" data-q="big" data-fit="no"><button type="button" data-v="yes" aria-pressed="false">是</button><button type="button" data-v="no" aria-pressed="false">否</button></div></div>
+      <div class="q"><p>不自提的話，這筆錢多半會放銀行或被花掉嗎？</p><div class="yn" data-q="idle" data-fit="yes"><button type="button" data-v="yes" aria-pressed="false">是</button><button type="button" data-v="no" aria-pressed="false">否</button></div></div>
+      <div class="q"><p>你會長期穩定投資，市場大跌時也不賣？<small>而且期望年化報酬在 4～5% 以上</small></p><div class="yn" data-q="invest" data-fit="no"><button type="button" data-v="yes" aria-pressed="false">是</button><button type="button" data-v="no" aria-pressed="false">否</button></div></div>
+      <div class="q"><p>邊際稅率 12% 以上，或離 60 歲不到 15 年？<small>單身無年終，大約是月薪 9 萬以上</small></p><div class="yn" data-q="edge" data-fit="yes"><button type="button" data-v="yes" aria-pressed="false">是</button><button type="button" data-v="no" aria-pressed="false">否</button></div></div>
+      <div class="dots" id="dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="result" id="result" aria-live="polite"><svg class="ric" aria-hidden="true"><use href="#i-clip"/></svg><div><b>還沒作答</b><span>回答上面的問題，這裡會顯示你比較適合自提、自己投資，還是先做別的事。</span></div></div>
+      <button type="button" class="reset" id="reset">清除答案</button>
+    </div>
+  </section>
+
+  <section aria-labelledby="s-facts">
+    <h2 id="s-facts"><span class="hic"><svg class="ic" aria-hidden="true"><use href="#i-bulb"/></svg></span>容易被忽略的事</h2>
+    <ul class="facts">
+      <li><b><svg class="ic" aria-hidden="true"><use href="#i-brief"/></svg>滿 60 歲就能領，仍在職也可以</b><span>不必等到退休；之後繼續工作，雇主仍要提繳，續提的部分每年可再請領一次。</span></li>
+      <li><b><svg class="ic" aria-hidden="true"><use href="#i-pause"/></svg>自提隨時可以調整或停止</b><span>向公司申請即可。可以先提一部分，例如 2～3%，之後再依狀況調整。</span></li>
+      <li><b><svg class="ic" aria-hidden="true"><use href="#i-hourglass"/></svg>月領只發到平均餘命</b><span>60 歲請領約領 23 年（勞保局依生命表計算）。預期壽命較長的人，最後幾年要靠其他資產。</span></li>
+      <li><b><svg class="ic" aria-hidden="true"><use href="#i-receipt"/></svg>自己投資有稅和補充保費</b><span>股利、利息每年要計入所得；每次入帳滿 2 萬元，還會先扣 <mark>2.11% 二代健保補充保費</mark>（一次領 3 萬股利扣 633 元）。專戶內的收益不用每年報稅，也不扣補充保費。</span></li>
+      <li class="wide"><b><svg class="ic" aria-hidden="true"><use href="#i-scale"/></svg>勞退收益該假設多少，最影響結論</b><span>同一個基金（新制勞退基金），不同期間的平均差很多，近年的高報酬含大多頭行情，不代表未來。單一期間的波動更大：115 年 1～8 月收益率 29.25%，但 111 年整年是負報酬。規劃時用保守的數字，再用高的數字看樂觀情境。</span>
+        <div class="returns" role="img" aria-label="新制勞退基金不同期間的平均收益：保證下限 1.7%，開辦至 111 年 3.6%，近 10 年 12.6%，近 5 年 15.7%">
+          <div class="bar"><span>保證下限（114）</span><i style="width:10.9%"></i><em>1.7%</em></div>
+          <div class="bar"><span>開辦至 111 年</span><i style="width:22.9%"></i><em>3.6%</em></div>
+          <div class="bar"><span>近 10 年</span><i style="width:80.4%"></i><em>12.6%</em></div>
+          <div class="bar"><span>近 5 年</span><i style="width:100%"></i><em>15.7%</em></div>
+        </div>
+      </li>
+    </ul>
+  </section>
+
+  <a class="cta-big" href="easy.html" target="_blank" rel="noopener">
+    <span class="cta-art" aria-hidden="true"><svg><use href="#i-calc"/></svg></span>
+    <span class="cta-body">
+      <span class="cta-kicker">免費試算工具・早謀遠算</span>
+      <span class="cta-title">退休後每月能領多少？<br>3 分鐘算給你看</span>
+      <span class="cta-desc">回答 7 個問題，就知道勞保、勞退加上自己的投資夠不夠用，不夠的話差多少、怎麼補。勞退自提也會依你的條件逐項評估。</span>
+      <span class="cta-chips"><span>7 題就算完</span><span>免註冊</span><span>資料不上傳</span></span>
+    </span>
+    <span class="cta-btn">開始免費試算<svg aria-hidden="true"><use href="#i-arrow"/></svg></span>
+  </a>
+
+  <footer class="src">
+    <b>依據</b>
+    <ul>
+      <li>勞工退休金條例：第 14 條（自提不計入薪資所得課稅）、第 23 條（保證收益）、第 24 條（60 歲請領、月領須年資 15 年）、第 26 條（身故由遺屬或指定請領人領回）、第 29 條（不得讓與、扣押、抵銷或供擔保）。<a href="https://laws.gov.taipei/law/LawSearch/LawArticleAmend/FL030634" target="_blank" rel="noopener">條文</a></li>
+      <li>勞保局「月退休金計算基礎」（113 年 4 月 1 日起適用）；在職滿 60 歲可請領：<a href="https://data.gov.tw/dataset/8172" target="_blank" rel="noopener">政府資料開放平臺</a>。</li>
+      <li>財政部 115 年度綜合所得稅免稅額、扣除額與課稅級距（台財稅字第 11404664070 號公告）。</li>
+      <li>股利合併計稅 8.5% 抵減（每戶上限 8 萬元）與 28% 分開計稅二擇一、租金必要費用 43%、稿費免稅額：<a href="https://www.etax.nat.gov.tw/etwmain/tax-info/understanding/tax-saving-manual/national/individual-income-tax/gLA3Vax" target="_blank" rel="noopener">財政部稅務入口網「肆、所得篇」</a>（115 年 4 月 15 日更新）。</li>
+      <li>儲蓄投資特別扣除額全戶每年上限 270,000 元：<a href="https://www.etax.nat.gov.tw/etwmain/alien-tax-service/alien-tax-faq/vAE2Wz7" target="_blank" rel="noopener">財政部稅務入口網</a>（115 年 4 月 27 日更新）。</li>
+      <li>二代健保補充保費：股利、利息、租金、執行業務收入單次給付 2 萬元以上，按 2.11% 扣取。<a href="https://www.nhi.gov.tw/ch/cp-4516-74b0f-2613-1.html" target="_blank" rel="noopener">衛生福利部中央健康保險署</a></li>
+      <li>新制勞退基金收益：勞動部（開辦至 111 年平均 3.6%）、勞動基金運用局<a href="https://www.blf.gov.tw/49487/49501/168709" target="_blank" rel="noopener">「新制基金績效」</a>（近 5 年 15.70%、近 10 年 12.62%，統計至 115 年 8 月底）、<a href="https://www.blf.gov.tw/media/jxplbxzz/%e5%8b%9e%e5%8b%95%e5%9f%ba%e9%87%91%e9%81%8b%e7%94%a8%e6%83%85%e5%bd%a2%e8%aa%aa%e6%98%8e-115%e5%b9%b48%e6%9c%88.pdf?mediaDL=true" target="_blank" rel="noopener">勞動基金運用情形報告（115 年截至 8 月底）</a>（115 年 1～8 月 29.25%）。同一份報告中的近 10 年 12.14%、近 5 年 15.55% 是「整體勞動基金」，範圍不同。</li>
+      <li>月薪門檻、少繳稅額、打平報酬率與 65 歲終值為試算：單身、標準扣除額、每月金額固定、按月複利；實際以個人申報與勞保局核定為準。</li>
+    </ul>
+  </footer>
+  <div class="site-foot"><span>早謀遠算 · SunDown Studio</span><a href="./">早謀遠算首頁</a><a href="easy.html">簡單版試算</a><a href="app.html">完整版試算</a><a href="../../">所有工具</a></div>
+</main>
+
+<script type="module" src="js/zitui.js"></script>
+</body>
+</html>

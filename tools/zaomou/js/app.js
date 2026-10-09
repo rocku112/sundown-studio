@@ -1058,7 +1058,7 @@ function selfRateCard() {
         ${li('building', '政策可能調整', '收益分配、請領規定可能隨法規修正而改變。')}
       </ul></div>
     </div>
-    <p class="note">這是依你的數字整理的試算比較，不是投資建議。</p>
+    <p class="note">這是依你的數字整理的試算比較，不是投資建議。想看自提、放銀行和自己投資的完整比較與判斷方式，請看<a href="zitui.html" target="_blank" rel="noopener">勞退自提指南</a>。</p>
     ${cur < 6 ? `<div class="btn-row"><button type="button" class="btn" data-set="self.selfRate" data-val="6">把自提改成 6% 看看月領變化</button></div>` : ''}
   </section>`;
 }

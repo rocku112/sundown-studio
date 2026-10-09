@@ -186,7 +186,7 @@ function renderResult() {
 
     ${todo.length ? `<section class="ez-card">
       <h2 class="ez-h">今年可以先做的事</h2>
-      <ol class="ez-todo">${todo.map((a) => `<li><span class="ez-pi">${icon(a.id === 'emergency' ? 'wallet' : a.id === 'selfRate' ? 'piggy' : a.id === 'bridge' ? 'clock' : 'check')}</span><div><b>${a.title}</b><small>${a.detail}</small>${a.apply ? `<button type="button" class="ez-mini" data-apply="${a.apply.path}" data-val="${a.apply.value}">幫我改成這樣</button>` : ''}</div></li>`).join('')}</ol>
+      <ol class="ez-todo">${todo.map((a) => `<li><span class="ez-pi">${icon(a.id === 'emergency' ? 'wallet' : a.id === 'selfRate' ? 'piggy' : a.id === 'bridge' ? 'clock' : 'check')}</span><div><b>${a.title}</b><small>${a.detail}</small>${a.apply ? `<button type="button" class="ez-mini" data-apply="${a.apply.path}" data-val="${a.apply.value}">幫我改成這樣</button>` : ''}${a.id === 'selfRate' ? '<a class="ez-guide" href="zitui.html">自提適不適合我？看指南 →</a>' : ''}</div></li>`).join('')}</ol>
     </section>` : ''}
 
     <section class="ez-card ez-assume">

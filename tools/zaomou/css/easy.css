@@ -105,3 +105,5 @@ body.easy .toast { white-space: normal; max-width: calc(100vw - 32px); text-alig
 .ez-bli summary { cursor: pointer; font-weight: 800; color: var(--navy2); }
 .ez-bli[open] { display: flex; flex-direction: column; gap: 10px; }
 .ez-text { font: 14px/1.5 var(--mono); min-height: 96px; resize: vertical; }
+
+.ez-guide { display: inline-block; margin: 8px 0 0 10px; font-size: 14px; font-weight: 700; color: var(--navy2); }

@@ -1,11 +1,11 @@
 /* 早謀遠算 · Service Worker
    network-first：有網路時一律取最新版、順便更新快取；離線時才用快取。
    不用 stale-while-revalidate，避免新舊版本的 ES module 混用而載入失敗。 */
-const CACHE = 'zaomou-v2';
+const CACHE = 'zaomou-v3';
 const PRECACHE = [
-  './', 'index.html', 'app.html', 'easy.html', 'manifest.webmanifest', 'favicon.svg', 'icon-192.png', 'icon-512.png',
+  './', 'index.html', 'app.html', 'easy.html', 'zitui.html', 'manifest.webmanifest', 'favicon.svg', 'icon-192.png', 'icon-512.png',
   'css/app.css', 'css/landing.css', 'css/easy.css',
-  'js/app.js', 'js/engine.js', 'js/state.js', 'js/data.js', 'js/charts.js', 'js/landing.js', 'js/easy.js',
+  'js/app.js', 'js/engine.js', 'js/state.js', 'js/data.js', 'js/charts.js', 'js/landing.js', 'js/easy.js', 'js/zitui.js',
 ];
 
 self.addEventListener('install', (e) => {
