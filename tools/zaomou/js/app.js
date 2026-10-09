@@ -2,8 +2,8 @@
    畫面分兩種：含輸入欄位的分頁（起點設定、投資資產、目標與行動）只在結構改變時重繪，
    數字靠 data-o 局部更新，避免打字時失焦；純輸出的分頁與側欄則每次重算後整頁重繪。 */
 
-import { compute, holdingValue, growLump, growMonthly, lifecycle, sensitivity, retireAgeOptions, goalPlan, validate, scenarioSummary, selfContributionTax, monteCarlo, actionPlan, planPath, trackProgress, laborLumpVsMonthly, selfContributionAnalysis, insuranceClaimOptions, insCpiFactor, insuranceLumpVsAnnuity, withdrawalStrategies, selfRateDelayOptions, stateDiff, pastInsured, parseLaborStatement, laborStatementSuggestions, householdTimeline, selfRateFit, insClaimFit, insLumpFit, laborChoiceFit, laborEarlyClaim, retirementTax, reviewIcs } from './engine.js';
-import { LABOR_MONTHLY, LABOR_FUND, legalPensionAge, INSURANCE_GRADES, MIN_LIVING, EXPENSE_LEVELS, RETURN_PRESETS, LIFE_TABLE, DATA_YEAR, PENSION_WAGE_MAX, dataStale, TAX } from './data.js';
+import { compute, holdingValue, growLump, growMonthly, lifecycle, sensitivity, retireAgeOptions, goalPlan, validate, scenarioSummary, selfContributionTax, monteCarlo, actionPlan, planPath, trackProgress, laborLumpVsMonthly, selfContributionAnalysis, insuranceClaimOptions, insCpiFactor, insuranceLumpVsAnnuity, withdrawalStrategies, selfRateDelayOptions, stateDiff, retireHealthPremium, pastInsured, parseLaborStatement, laborStatementSuggestions, householdTimeline, selfRateFit, insClaimFit, insLumpFit, laborChoiceFit, laborEarlyClaim, retirementTax, reviewIcs } from './engine.js';
+import { LABOR_MONTHLY, LABOR_FUND, legalPensionAge, INSURANCE_GRADES, MIN_LIVING, EXPENSE_LEVELS, RETURN_PRESETS, LIFE_TABLE, DATA_YEAR, PENSION_WAGE_MAX, dataStale, TAX, NHI } from './data.js';
 import { load, save, defaults, parseImport, getPath, setPath, uid, applySeed, STORAGE_KEY, normalize, loadScenarios, saveScenarios, MAX_SCENARIOS, templates, SHARE_PREFIX, encodeShare, decodeShare } from './state.js';
 import { lineChart, donut, wan, attachTooltips } from './charts.js';
 
@@ -897,12 +897,24 @@ function retireTaxCard() {
     t.laborEligible
       ? { icon: 'piggy', title: '勞退月領', ok: t.excess === 0, detail: t.excess === 0 ? `每年約 ${wan(t.laborYear)}，在退職所得免稅額 ${wan(t.exempt)} 以內` : `每年約 ${wan(t.laborYear)}，超過免稅額 ${wan(t.excess)}，約繳稅 ${money(t.tax)}／年` }
       : { icon: 'piggy', title: '勞退一次領', ok: null, detail: '一次領的退職所得有另外的免稅額算法，這裡未估算' },
-    { icon: 'coins', title: '投資收益', ok: null, detail: '股利、利息每年要計入所得，可能被扣二代健保補充保費；依個人狀況，未計入' },
+    { icon: 'coins', title: '投資收益', ok: null, detail: '股利、利息每年要計入所得（利息全戶有 27 萬特別扣除額；股利可選合併計稅 8.5% 抵減或 28% 分開計稅）' },
+  ];
+  // 健保費：沒有工作、沒有家人可依附時以第六類投保；補充保費以「每次入帳金額」判斷，舉季配息為例
+  const draw = Math.round(R.investMonthly * R.pvFactor * 12);
+  const h = retireHealthPremium({ annualIncome: draw, paymentsPerYear: 4 });
+  const nhiTiles = [
+    { icon: 'shield', title: '一般健保費', ok: null, detail: `沒有工作、也沒有配偶或子女可依附時，到戶籍地區公所以第六類投保，本人每月 ${money(NHI.region6Monthly)}（一年 ${money(NHI.region6Monthly * 12)}）；依附有工作的家人則按對方的投保金額計算` },
+    { icon: 'receipt', title: '二代健保補充保費', ok: null, detail: `股利、利息、租金每次入帳滿 ${money(NHI.supplementThreshold)} 就扣 ${(NHI.supplementRate * 100).toFixed(2)}%。` + (draw > 0 ? `舉例：若每年約 ${wan(draw)} 的退休提領全部來自配息（例如季配息 ETF），每次約 ${money(h.perPayment)}，${h.charged ? `一年約扣 ${money(h.supplementYear)}` : '未達門檻、不用扣'}；靠賣出股票、基金提領則不用扣` : '') },
   ];
   const f = { items: tiles, yes: tiles.filter((x) => x.ok === true).length, no: tiles.filter((x) => x.ok === false).length };
-  return `<section class="card"><div class="card-h"><h3>${badge('receipt', 'rgba(45,74,110,.1)', C.navy)}退休後還要繳稅嗎？</h3><span class="hint">今日幣值・${TAX.year} 年度</span></div>
+  const row = (x) => { const m = FIT_MARK[x.ok]; return `<li class="${m[0]}"><span class="fit-ic">${icon(x.icon)}</span><div><b>${x.title}</b><small>${x.detail}</small></div><i class="fit-m ${m[0]}" aria-label="${m[2]}">${m[1]}</i></li>`; };
+  return `<section class="card"><div class="card-h"><h3>${badge('receipt', 'rgba(45,74,110,.1)', C.navy)}退休後的稅與健保費</h3><span class="hint">今日幣值・${TAX.year} 年度</span></div>
+    <h4 class="sub4">稅</h4>
     <ul class="fit-items">${tiles.map((x) => { const m = FIT_MARK[x.ok]; return `<li class="${m[0]}"><span class="fit-ic">${icon(x.icon)}</span><div><b>${x.title}</b><small>${x.detail}</small></div><i class="fit-m ${m[0]}" aria-label="${m[2]}">${m[1]}</i></li>`; }).join('')}</ul>
-    ${t.laborEligible && t.excess === 0 ? `<p class="note">勞退月領每月還有約 ${money(t.monthlyRoom)} 的免稅空間。` : '<p class="note">'}稅額以單身、只有這筆所得、扣除一般免稅額與標準扣除額粗估；退休後的健保費依投保身分而定，官方 ${TAX.year} 年數字尚未查證，暫不計入。</p>
+    ${t.laborEligible && t.excess === 0 ? `<p class="note">勞退月領每月還有約 ${money(t.monthlyRoom)} 的免稅空間。` : '<p class="note">'}稅額以單身、只有這筆所得、扣除一般免稅額與標準扣除額粗估。</p>
+    <h4 class="sub4">健保費</h4>
+    <ul class="fit-items">${nhiTiles.map(row).join('')}</ul>
+    <p class="note">退休後每月至少要預留約 ${money(NHI.region6Monthly)} 的健保費，建議算進「退休後每月生活費」。補充保費是「每次入帳」滿 2 萬元才扣，同樣的年收入分成較多次入帳（例如月配息）可能就不用扣。依據：衛生福利部中央健康保險署（一般保費與第六類定額自 110 年起適用、115 年沿用；補充保費 2.11%）。部分縣市對長者或特定身分有健保費補助，請洽戶籍地。</p>
   </section>`;
 }
 
@@ -927,7 +939,7 @@ function foldedDecisions() {
       : `每年少繳稅 ${money(a.annualSaving)}；自己投資要年化超過 ${a.breakEven.toFixed(2)}% 才打平。`)));
   }
   const rt = memo('rtax', retirementTax);
-  out.push(fold('rtax', retireTaxCard(), rt.excess === 0 ? '勞保年金免稅；勞退月領在退職所得免稅額內，<b>大致不用繳稅</b>。' : `勞退月領超過退職所得免稅額，每年約繳稅 <b>${money(rt.tax)}</b>。`));
+  out.push(fold('rtax', retireTaxCard(), rt.excess === 0 ? '勞保年金免稅；勞退月領在退職所得免稅額內，<b>大致不用繳稅</b>；健保費沒有家人可依附時每月 826 元。' : `勞退月領超過退職所得免稅額，每年約繳稅 <b>${money(rt.tax)}</b>。`));
   return out.length ? `<div class="sub-h"><h3>${badge('sliders', 'rgba(45,74,110,.1)', C.navy)}關鍵決策</h3><span class="hint">點開看計算與正反比較</span></div>${out.join('')}` : '';
 }
 

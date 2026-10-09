@@ -4,7 +4,7 @@
 
 import {
   INSURANCE_GRADES, PENSION_WAGE_MAX, EMPLOYER_RATE, NEW_SYSTEM_START, LABOR_PENSION_AGE,
-  legalPensionAge, PENSION_ADJ_PER_YEAR, PENSION_ADJ_MAX_YEARS, PENSION_MIN_YEARS, LIFE_TABLE, TAX, LABOR_MONTHLY, LABOR_FUND, PENSION_CPI_TRIGGER,
+  legalPensionAge, NHI, PENSION_ADJ_PER_YEAR, PENSION_ADJ_MAX_YEARS, PENSION_MIN_YEARS, LIFE_TABLE, TAX, LABOR_MONTHLY, LABOR_FUND, PENSION_CPI_TRIGGER,
 } from './data.js';
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
@@ -1322,6 +1322,19 @@ function foldIcs(line) {
   out.push(cur);
   return out.join('\r\n ');
 }
+/**
+ * 退休後的健保費（今日幣值）：沒有工作、無家人可依附時以第六類投保，每月定額；
+ * 補充保費依「單次給付」計算——每次領到的股利或利息達 2 萬元，該次全額扣 2.11%。
+ * paymentsPerYear：股利／利息一年分幾次入帳（例如季配息 4 次）；annualIncome：一年的股利＋利息。
+ */
+export function retireHealthPremium({ annualIncome = 0, paymentsPerYear = 4, dependents = 0 } = {}) {
+  const n = Math.max(1, Math.round(num(paymentsPerYear, 4)));
+  const per = Math.max(0, num(annualIncome)) / n;
+  const each = per >= NHI.supplementThreshold ? Math.min(per, NHI.supplementCap) * NHI.supplementRate : 0;
+  const monthly = NHI.region6Monthly * (1 + clamp(Math.round(num(dependents)), 0, 3));
+  return { monthly, yearly: monthly * 12, perPayment: per, supplementYear: Math.round(each * n), charged: each > 0 };
+}
+
 /** 年度檢視提醒：每年同一天的全天行事曆事件（iCalendar），不需帳號或推播 */
 export function reviewIcs({ date, url, uidSeed = 'zaomou' }) {
   const d = date.replace(/-/g, '');

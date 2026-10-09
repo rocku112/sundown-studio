@@ -898,3 +898,15 @@ test('股利二擇一：一般所得選合併計稅（8.5% 抵減、上限 8 萬
   assert.equal(t1.dividendMethod, 'merge');
   assert.ok(t1.marginal >= t0.marginal);
 });
+
+import { retireHealthPremium } from '../js/engine.js';
+import { NHI } from '../js/data.js';
+test('退休後健保費：第六類每月 826 元；補充保費看每次入帳是否滿 2 萬', () => {
+  assert.equal(NHI.region6Monthly, 826);
+  const a = retireHealthPremium({ annualIncome: 120000, paymentsPerYear: 4 }); // 每季 3 萬 → 每次扣 633
+  assert.equal(a.yearly, 826 * 12);
+  assert.equal(a.supplementYear, 633 * 4);
+  const b = retireHealthPremium({ annualIncome: 120000, paymentsPerYear: 12 }); // 每月 1 萬 → 不扣
+  assert.equal(b.supplementYear, 0);
+  assert.equal(retireHealthPremium({ dependents: 5 }).monthly, 826 * 4); // 眷屬最多計 3 口
+});

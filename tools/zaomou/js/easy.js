@@ -195,6 +195,7 @@ function renderResult() {
         <li>你 ${age} 歲、月薪 ${money(ans.salary)}、${ans.retireAge} 歲退休；勞保年資到退休共 ${R.me.insYears.toFixed(1).replace(/\.0$/, '')} 年${ans.pastInsYears !== null ? `（到現在累計 ${ans.pastInsYears} 年，依你填的）` : ''}${ans.laborBalance === null ? '，勞退專戶依年資估算' : `，勞退專戶以目前 ${wan(ans.laborBalance)} 起算`}；勞保、勞退依現行法規與勞保局公式計算。${ans.retireAge < legal ? `勞保 ${legal} 歲才能領全額，${ans.retireAge} 歲就領每年少 4%${legal - ans.retireAge > 5 ? `，最早只能提前 5 年（${legal - 5} 歲）` : ''}。` : ''}</li>
         <li>存款 ${wan(ans.cash)}、投資 ${wan(ans.invest)}，每月再投資 ${money(ans.monthly)}，股票基金以年化 ${state.investReturn}%、通膨 ${state.cpi}% 估算。</li>
         <li>所有金額都換算成「今天的購買力」，方便和現在的生活比較。</li>
+        <li>退休後沒有工作、也沒有家人可依附時，健保費以第六類投保每月 826 元（健保署），記得算進退休後的花費；股利、利息每次入帳滿 2 萬元另扣 2.11% 補充保費。</li>
       </ul>
       <div class="ez-actions">
         <button type="button" class="ez-btn ghost" data-go="restart">修改答案</button>
