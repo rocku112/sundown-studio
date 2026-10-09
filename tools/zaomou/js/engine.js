@@ -121,7 +121,7 @@ export function laborPensionAccount({ salary, growthPct, selfRate, returnPct, wo
 /**
  * 勞退月退休金（勞保局官方算法）：專戶金額 ÷ 期初年金現值因子 ÷ 12。
  * 因子 = (1 − (1/(1+i))^T) ÷ (12 × ((1+i)^(1/12) − 1)) × (1+i)^(1/12)，T 為請領年齡的平均餘命（官方表）。
- * 月退只發到平均餘命為止（延壽年金尚未開辦），期間剩餘金額仍參與收益分配（此處不計，偏保守）。
+ * 月退只發到平均餘命為止（現行第 23 條沒有超過平均餘命後的給付規定），期間剩餘金額仍參與收益分配（此處不計，偏保守）。
  */
 export function laborMonthlyOfficial(pool, claimAge) {
   const age = clamp(Math.round(claimAge), 60, 85);

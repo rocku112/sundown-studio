@@ -1093,7 +1093,7 @@ function laborChoiceCard() {
     </div>
     <ul class="pts">
       ${c.outlive > 0
-        ? `<li><b>月領會在 ${c.endAge} 歲領完</b>，依生命表你可能再活約 ${c.outlive.toFixed(1)} 年，這段期間沒有勞退收入（延壽年金尚未開辦）。勞保局用的是不分性別的平均餘命，女性通常會比月領期間活得久。</li>`
+        ? `<li><b>月領會在 ${c.endAge} 歲領完</b>，依生命表你可能再活約 ${c.outlive.toFixed(1)} 年，這段期間沒有勞退收入（現行勞工退休金條例第 23 條沒有超過平均餘命後的給付規定）。勞保局用的是不分性別的平均餘命，女性通常會比月領期間活得久。</li>`
         : `<li><b>月領期間（到 ${c.endAge} 歲）已涵蓋你的預期壽命</b>：勞保局用不分性別的平均餘命，對預期壽命較短的人相對有利。</li>`}
       <li>若一次領出、自己以年化 ${pct(self.rate)} 管理，每月同樣領 ${money(c.monthly)}，大約可以領到 <b>${self.lastsUntil >= 100 ? '100 歲以上' : `${self.lastsUntil.toFixed(1)} 歲`}</b>。</li>
       ${c.needRate !== null ? `<li>要用一次領的錢，每月領 ${money(c.monthly)} 一直領到預期壽命 ${c.lifeAge.toFixed(0)} 歲，自己投資需要年化約 <b>${c.needRate.toFixed(2)}%</b>${c.needRate > c.officialRate ? `，高於月退採用的 ${c.officialRate.toFixed(4)}%，代表要承擔投資風險` : `，低於月退採用的 ${c.officialRate.toFixed(4)}%`}。</li>` : ''}
