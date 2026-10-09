@@ -1583,13 +1583,6 @@
    "auto": true
   },
   {
-   "sym": "CTVA",
-   "name": "Corteva",
-   "type": "stock",
-   "sector": "原物料",
-   "auto": true
-  },
-  {
    "sym": "CSGP",
    "name": "CoStar Group",
    "type": "stock",
@@ -2871,13 +2864,6 @@
    "auto": true
   },
   {
-   "sym": "PSKY",
-   "name": "Paramount Skydance Corporation",
-   "type": "stock",
-   "sector": "通訊服務",
-   "auto": true
-  },
-  {
    "sym": "PH",
    "name": "Parker Hannifin",
    "type": "stock",
@@ -3186,6 +3172,13 @@
    "auto": true
   },
   {
+   "sym": "SKYD",
+   "name": "Skydance Corporation",
+   "type": "stock",
+   "sector": "通訊服務",
+   "auto": true
+  },
+  {
    "sym": "SWKS",
    "name": "Skyworks Solutions",
    "type": "stock",
@@ -3396,6 +3389,13 @@
    "auto": true
   },
   {
+   "sym": "TWLO",
+   "name": "Twilio",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
    "sym": "TYL",
    "name": "Tyler Technologies",
    "type": "stock",
@@ -3536,6 +3536,13 @@
    "auto": true
   },
   {
+   "sym": "VYLR",
+   "name": "Vylor",
+   "type": "stock",
+   "sector": "必需消費",
+   "auto": true
+  },
+  {
    "sym": "WRB",
    "name": "W. R. Berkley Corporation",
    "type": "stock",
@@ -3554,13 +3561,6 @@
    "name": "Wabtec",
    "type": "stock",
    "sector": "工業",
-   "auto": true
-  },
-  {
-   "sym": "WBD",
-   "name": "Warner Bros. Discovery",
-   "type": "stock",
-   "sector": "通訊服務",
    "auto": true
   },
   {
