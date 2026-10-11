@@ -32,6 +32,13 @@ jobs:
 
       - run: pip install -r twflow/requirements.txt
 
+      # 市場傳導艙校準用的美股／海外 ETF 長歷史（Yahoo），只補最近幾個月；放 Actions 快取，不進 repo
+      - uses: actions/cache@v4
+        with:
+          path: /tmp/capsule_cache
+          key: capsule-hist-${{ github.run_id }}
+          restore-keys: capsule-hist-
+
       # 只抓缺的交易日；已落檔的日期完全不碰來源站
       - name: 抓當日盤後資料
         working-directory: twflow
@@ -73,8 +80,11 @@ jobs:
           ( cd .. && timeout 10m python -u -X utf8 swing/scripts/fetch_official.py --budget 8 ) || echo "::warning::官方長歷史抓取失敗"
           # 官方日線（含日後下市股票）：補最新幾天，並順便回補十年歷史 20 分鐘
           ( cd .. && python -X utf8 swing/scripts/fetch_prices.py --days 2550 --budget 20 ) || echo "::warning::官方日線抓取失敗"
-          # 市場傳導艙：全市場板塊對照＋事件研究校準（β、分布區間、填息統計），頁面開啟時線上讀取
-          ( cd .. && python -X utf8 tools/capsule/gen_twall.py twflow tools/capsule/twall.json && timeout 10m python -X utf8 tools/capsule/calibrate.py . twflow/web/data/capsule_calib.json /tmp/capsule_cache ) || echo "::warning::傳導艙校準失敗"
+          # 市場傳導艙：全市場板塊對照＋台美股事件研究校準（β、分布區間、填息統計），頁面開啟時線上讀取
+          # 美股長歷史抓不到時沿用快取；快取也沒有時沿用上一份校準的美股部分
+          ( cd .. && python -X utf8 tools/capsule/gen_twall.py twflow tools/capsule/twall.json \
+              && { timeout 8m python -X utf8 tools/capsule/fetch_hist.py /tmp/capsule_cache || true; } \
+              && timeout 10m python -X utf8 tools/capsule/calibrate.py . twflow/web/data/capsule_calib.json /tmp/capsule_cache ) || echo "::warning::傳導艙校準失敗"
           # 波段實驗室：五年日線回測（約 3 分鐘）
           # 官方日線滿一千天時取代 Yahoo（消除倖存者偏差），否則沿用 Yahoo
           ( cd .. && python -X utf8 swing/scripts/fetch_hist.py && { python -X utf8 swing/scripts/build_ohlcv.py || true; } \

@@ -8,7 +8,8 @@ rep('''/* ── 幾何：漏斗 ── */''', '''/* ════════ �
    · 沒有意外值的事件：事件窗 |CAR| 減非事件日 |CAR| → 超額波動（不分方向）
    · 分布：每次事件後 T+0～T+19 的板塊超額報酬，依意外值正負拆成兩個情境
    · 個股 β：近 500 個交易日對所屬板塊（排除自身）回歸
-   美股板塊與美股個股沒有足夠歷史日線，不在這份校準裡，仍以情境標籤推導。
+   美股板塊與美股個股：Yahoo 還原日線（市場基準 SPY，事件時間換成美東時刻對應美股交易日）。
+   台股債券／海外 ETF 板塊：官方日線沒有，同樣用 Yahoo 還原日線組籃子。
    ════════════════════════════════════════════════════════════ */
 const CAL_REAL=''' + _cal + ''';
 let BETA_FULL_DIR=BETA_FULL, BETA_FULL_ABS=BETA_FULL;
@@ -85,7 +86,7 @@ rep('''          ? `已載入實際校準：${CAL.window}，估出 ${CAL.meta.ed
              其中 <b>${CAL.meta.sig||0}</b> 條在 95% 信賴水準下顯著；個股對板塊 β ${CAL.meta.stocks||0} 檔。
              <br>有意外值、可估方向 β 的事件：${Object.keys(CAL.surprise||{}).length} 種（FRED 總經數據、公開資訊觀測站月營收）；
              其餘只估事件窗超額波動。FOMC 日期：${CAL.fomcSrc}；其他事件日期依規則推算。
-             <br><strong style="color:var(--dim)">美股板塊與美股個股沒有足夠歷史日線，仍以情境標籤推導。</strong>
+             <br><strong style="color:var(--dim)">美股板塊與個股、台股債券／海外 ETF 板塊用 Yahoo 還原日線（美股以 SPY 為市場基準）。</strong>
              顯著比例不高是實情：多數事件對單一板塊的平均衝擊很小，強度會依 t 值收縮。`''')
 
 # 6) 除息資訊：實證填息統計
@@ -93,18 +94,18 @@ rep('''      <p class="cone-note">資料快照 ${DIV_SNAPSHOT}；標示預估者
     '''      ${(()=>{const fl=CAL.fill&&CAL.fill[v.code];
         return fl?`<p class="cone-note"><b>近五年實際填息紀錄</b>：除息 ${fl.n} 次，20 個交易日內填息 <b>${Math.round(fl.r20*100)}%</b>，
           ${fl.med!==null?`填息天數中位數 <b>${fl.med}</b> 個交易日`:"尚無完成填息的紀錄"}（120 個交易日內填息 ${fl.filled} 次）。</p>`
-          :`<p class="cone-note">官方日線回補資料沒有收錄這檔 ETF 足夠的歷史，暫無填息統計。</p>`})()}
+          :`<p class="cone-note">這檔 ETF 近五年的除息紀錄不足（可能上市未滿一年），暫無填息統計。</p>`})()}
       <p class="cone-note">資料快照 ${DIV_SNAPSHOT}；標示預估者為投信預告值，正式金額以除息前公告為準。</p></div>`;''')
 
 # 7) 頂欄標記
 rep('''<span class="chip" title="β、t 值、歷史分布區間為模擬佔位值，不是實際估計">統計示意</span>''',
-    '''<span class="chip on" id="calChip" title="台股：β、t 值、分布區間為實證估計（官方日線 2021-04～最新，事件研究法）。美股板塊仍為情境標籤推導。">統計 · 實證</span>''')
+    '''<span class="chip on" id="calChip" title="台股：β、t 值、分布區間為實證估計（台股官方日線＋美股 Yahoo 還原日線，近五年事件研究法）。">統計 · 實證</span>''')
 
-# 8) 實證模式下，沒有實證估計的邊（美股板塊、債券／海外 ETF 板塊）用標籤推導，強度打五折，避免壓過實證邊
+# 8) 實證模式下，沒有實證估計的邊（少數樣本不足的板塊）用標籤推導，強度打五折，避免壓過實證邊
 rep('''    const w=+clamp(v*0.60,0,.88).toFixed(3);''',
     '''    const w=+clamp(v*0.60*(CAL.src==="real"?0.5:1),0,.88).toFixed(3);''')
 rep('''權重為示意先驗，不是機率預測。方向由「板塊對該情境的敏感度 × 這條鏈的強度」推得，''',
-    '''權重為示意先驗，不是機率預測。${CAL.src==="real"?"台股板塊的方向與區間取自實際歷史分布（美股與 ETF 板塊仍由情境敏感度推得），":"方向由「板塊對該情境的敏感度 × 這條鏈的強度」推得，"}''')
+    '''權重為示意先驗，不是機率預測。${CAL.src==="real"?"台美股板塊的方向與區間取自實際歷史分布（台股官方日線、美股與海外／債券 ETF 用 Yahoo 還原日線），":"方向由「板塊對該情境的敏感度 × 這條鏈的強度」推得，"}''')
 
 # 9) 開場自動推演：挑「未來 30 天內、傳導到標的池最多檔」的事件，而不是單純最近的一件
 rep('''setTimeout(()=>{const e=NODES.filter(n=>n.L===1&&inMkt(n)&&n.lvl===3).sort((a,b)=>a.days-b.days)[0]
@@ -125,7 +126,7 @@ function updateCalChip(){
   c.textContent="統計 · 實證"+(CAL.asof?" "+CAL.asof.slice(5).replace("-","/"):"");
   c.title=`台股 β、t 值、分布區間為實證估計（${CAL.window}，事件研究法）。
 校準資料：${CAL_LIVE}；每個交易日盤後由 GitHub Actions 自動重算。
-美股板塊仍為情境標籤推導。`;
+台股：證交所＋櫃買官方日線；美股與海外／債券 ETF：Yahoo 還原日線。`;
 }
 async function refreshCal(){
   try{

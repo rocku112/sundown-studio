@@ -41,7 +41,7 @@ function updateDataChip(){
   const t=$("#dataTxt"); if(!t)return;
   t.textContent=`收盤 ${PX_DATE.slice(5).replace("-","/")}`;
   $("#dataChip").title=`台股收盤價：${PX_SRC}（${PX_DATE}，來源 twflow／證交所＋櫃買中心）。
-美股報價、板塊資金流、籌碼與 β／分布區間等統計仍為示意。`;
+美股報價、板塊資金流與籌碼仍為示意；β 與分布區間見「統計 · 實證」。`;
   $("#dataChip").classList.toggle("live",PX_SRC==="線上最新");
 }
 async function refreshLive(){

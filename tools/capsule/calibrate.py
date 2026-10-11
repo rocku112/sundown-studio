@@ -75,7 +75,32 @@ for s in SECTORS:
     M = RET[mem]; cnt = np.sum(~np.isnan(M), 0); sm = np.nansum(M, 0)
     r = np.where(cnt >= 2, sm / np.maximum(cnt, 1), np.nan)
     SR[s], SSUM[s], SCNT[s], MEMBERS[s] = r, sm, cnt, set(mem)
-print(f'板塊籃子 {len(SR)} 個', flush=True)
+
+# 長歷史（fetch_hist.py：Yahoo）：美股、台股債券／海外 ETF、配息 ETF
+HP = CACHE / 'hist.json.gz'
+HIST = json.loads(gzip.decompress(HP.read_bytes()).decode('utf-8')) if HP.exists() else {}
+def hist_ret(sym, days):
+    h = HIST.get(sym)
+    if not h: return None
+    m = {d: a for d, a in zip(h['d'], h['a']) if a}
+    out = np.full(len(days), np.nan); prev = None
+    for j, d in enumerate(days):
+        a = m.get(d)
+        if a is not None and prev is not None: out[j] = (a / prev - 1) * 100
+        if a is not None: prev = a
+        elif d in m: prev = None
+    return np.clip(out, -25, 25)
+# 官方日線沒有的 ETF 板塊（債券 ETF、海外 ETF）：用 Yahoo 還原收盤組等權籃子
+EXT_TW = {}
+for s in SECTORS:
+    if s in SR: continue
+    mem = [c for c, sv in SEC.items() if sv == s and c in HIST and KIND.get(c, 0) == 1]
+    R = [r for r in (hist_ret(c, tdays) for c in mem) if r is not None]
+    if len(R) < 2: continue
+    M = np.array(R); cnt = np.sum(~np.isnan(M), 0); sm = np.nansum(M, 0)
+    SR[s] = np.where(cnt >= 2, sm / np.maximum(cnt, 1), np.nan); SSUM[s], SCNT[s] = sm, cnt
+    EXT_TW[s] = dict(zip(mem, R)); MEMBERS[s] = set()
+print(f'板塊籃子 {len(SR)} 個（Yahoo ETF 籃子：{sorted(EXT_TW)}）', flush=True)
 
 def ols(x, y):
     x, y = np.asarray(x, float), np.asarray(y, float)
@@ -210,7 +235,6 @@ def mom(s):
 def diff(s):
     return lambda ym: s[ym] - s[prev_ym(ym)] if ym in s and prev_ym(ym) in s else None
 
-SURP_SRC = {}
 cpi, nfp_s, pce_s, ret_s, um = (monthly(fred(x)) for x in ['CPILFESL', 'PAYEMS', 'PCEPILFE', 'RSXFS', 'UMCSENT'])
 dgs2 = fred('DGS2')
 rev = json.loads((ROOT / 'swing/data/revenue.json').read_text(encoding='utf-8'))['months']
@@ -239,52 +263,58 @@ SURP = {
 # ───────────────────────── 5. 事件研究 ─────────────────────────
 H_BY_KIND = {'總經': 2, '央行': 2, '市場': 2, '財報': 4, '法說': 4}
 DIST_H = 20
-def car(r, i, h):
-    if i is None or i + h >= ND: return np.nan
+def car(r, i, h, nd):
+    if i is None or i + h >= nd: return np.nan
     w = r[i:i + h + 1]
     return np.nan if np.isnan(w).sum() > 1 else float(np.nansum(w))
-edges, dist, cone_pool, n_occ, mode = [], defaultdict(dict), defaultdict(list), {}, {}
-for k, t in TPL.items():
-    H = H_BY_KIND[t['kind']]
-    idx = [react_idx(d, t['rt']) for d in EVENTS[k]]
-    keep = [(d, i) for d, i in zip(EVENTS[k], idx) if i is not None and i + DIST_H < ND]
-    u = None
-    if k in SURP:
-        raw = [SURP[k][0](d) for d, _ in keep]
-        ok = [(d, i, x) for (d, i), x in zip(keep, raw) if x is not None]
-        if len(ok) >= 12:
-            xs = np.array([x for *_, x in ok]); z = (xs - xs.mean()) / (xs.std() or 1)
-            keep = [(d, i) for d, i, _ in ok]; u = z
-            SURP_SRC[k] = SURP[k][1]
-    mode[k] = 'dir' if u is not None else 'abs'
-    n_occ[k] = len(keep)
-    ev_set = set()
-    for _, i in keep: ev_set.update(range(i - 5, i + H + 6))
-    for s, r in AR.items():
-        cars = np.array([car(r, i, H) for _, i in keep])
-        c20 = np.array([car(r, i, DIST_H - 1) for _, i in keep])
-        cone_pool[t['kind']].extend(c20[~np.isnan(c20)].tolist())
-        if u is not None:
-            m = ols(u, cars)
-            if m:
-                edges.append(dict(frm=k, to=s, beta=m['b'], se=m['se'], t=m['t'], r2=m['r2'], n=m['n'], lag=H, kind='dir'))
-            cell = {}
-            for key, sel in (('A', u > 0), ('B', u <= 0)):
-                v = c20[sel]; v = v[~np.isnan(v)]
-                if len(v) >= 6: cell[key] = [*np.percentile(v, [10, 50, 90]).round(2).tolist(), len(v)]
-            v = c20[~np.isnan(c20)]
-            if len(v) >= 6: cell['U'] = [*np.percentile(v, [10, 50, 90]).round(2).tolist(), len(v)]
-            if cell: dist[k][s] = cell
-        else:
-            ev = np.abs(cars[~np.isnan(cars)])
-            null = np.array([car(r, i, H) for i in range(30, ND - H - 1, 3) if i not in ev_set])
-            null = np.abs(null[~np.isnan(null)])
-            if len(ev) >= 8 and len(null) > 50:
-                b = ev.mean() - null.mean(); se = math.sqrt(ev.var(ddof=1) / len(ev) + null.var(ddof=1) / len(null))
-                edges.append(dict(frm=k, to=s, beta=b, se=se, t=b / se if se else 0, r2=0.0, n=len(ev), lag=H, kind='abs'))
-            v = c20[~np.isnan(c20)]
-            if len(v) >= 6: dist[k][s] = {'U': [*np.percentile(v, [10, 50, 90]).round(2).tolist(), len(v)]}
-    print(f'{k:8s} {t["kind"]} {mode[k]} N={n_occ[k]}', flush=True)
+def study(AR, nd, react, tag):
+    """AR：{板塊: 超額報酬序列}；react(事件日, 模板) → 該市場第一個能反應的交易日索引"""
+    edges, dist, cone_pool, n_occ, mode = [], defaultdict(dict), defaultdict(list), {}, {}
+    for k, t in TPL.items():
+        H = H_BY_KIND[t['kind']]
+        idx = [react(d, t) for d in EVENTS[k]]
+        keep = [(d, i) for d, i in zip(EVENTS[k], idx) if i is not None and i + DIST_H < nd]
+        u = None
+        if k in SURP:
+            raw = [SURP[k][0](d) for d, _ in keep]
+            ok = [(d, i, x) for (d, i), x in zip(keep, raw) if x is not None]
+            if len(ok) >= 12:
+                xs = np.array([x for *_, x in ok]); z = (xs - xs.mean()) / (xs.std() or 1)
+                keep = [(d, i) for d, i, _ in ok]; u = z
+                SURP_SRC[k] = SURP[k][1]
+        mode[k] = 'dir' if u is not None else 'abs'
+        n_occ[k] = len(keep)
+        ev_set = set()
+        for _, i in keep: ev_set.update(range(i - 5, i + H + 6))
+        for s, r in AR.items():
+            cars = np.array([car(r, i, H, nd) for _, i in keep])
+            c20 = np.array([car(r, i, DIST_H - 1, nd) for _, i in keep])
+            cone_pool[t['kind']].extend(c20[~np.isnan(c20)].tolist())
+            if u is not None:
+                m = ols(u, cars)
+                if m:
+                    edges.append(dict(frm=k, to=s, beta=m['b'], se=m['se'], t=m['t'], r2=m['r2'], n=m['n'], lag=H, kind='dir'))
+                cell = {}
+                for key, sel in (('A', u > 0), ('B', u <= 0)):
+                    v = c20[sel]; v = v[~np.isnan(v)]
+                    if len(v) >= 6: cell[key] = [*np.percentile(v, [10, 50, 90]).round(2).tolist(), len(v)]
+                v = c20[~np.isnan(c20)]
+                if len(v) >= 6: cell['U'] = [*np.percentile(v, [10, 50, 90]).round(2).tolist(), len(v)]
+                if cell: dist[k][s] = cell
+            else:
+                ev = np.abs(cars[~np.isnan(cars)])
+                null = np.array([car(r, i, H, nd) for i in range(30, nd - H - 1, 3) if i not in ev_set])
+                null = np.abs(null[~np.isnan(null)])
+                if len(ev) >= 8 and len(null) > 50:
+                    b = ev.mean() - null.mean(); se = math.sqrt(ev.var(ddof=1) / len(ev) + null.var(ddof=1) / len(null))
+                    edges.append(dict(frm=k, to=s, beta=b, se=se, t=b / se if se else 0, r2=0.0, n=len(ev), lag=H, kind='abs'))
+                v = c20[~np.isnan(c20)]
+                if len(v) >= 6: dist[k][s] = {'U': [*np.percentile(v, [10, 50, 90]).round(2).tolist(), len(v)]}
+        print(f'{tag} {k:8s} {t["kind"]} {mode[k]} N={n_occ[k]}', flush=True)
+    return edges, dist, cone_pool, n_occ, mode
+
+SURP_SRC = {}
+edges, dist, cone_pool, n_occ, mode = study(AR, ND, lambda d, t: react_idx(d, t['rt']), '台股')
 
 cone = {}
 for kind, v in cone_pool.items():
@@ -307,12 +337,99 @@ for c, s in SEC.items():
     if m and m['n'] >= 200:
         stock_beta[c] = [round(m['b'], 3), round(m['se'], 3), round(m['t'], 1), round(m['r2'], 3), m['n']]
 
+def loo_beta(own_r, sm, cnt, lo, in_basket):
+    y = own_r[lo:]
+    if in_basket:
+        valid = ~np.isnan(y); c2 = cnt[lo:] - valid
+        x = np.where(c2 >= 2, (sm[lo:] - np.nan_to_num(y)) / np.maximum(c2, 1), np.nan)
+    else:
+        x = sm[lo:] / np.maximum(cnt[lo:], 1)
+    m = ols(x, y)
+    return [round(m['b'], 3), round(m['se'], 3), round(m['t'], 1), round(m['r2'], 3), m['n']] if m and m['n'] >= 200 else None
+for s, mem in EXT_TW.items():
+    for c, r in mem.items():
+        b = loo_beta(r, SSUM[s], SCNT[s], lo, True)
+        if b: stock_beta[c] = b
+
+# ───────────────────────── 6b. 美股 ─────────────────────────
+# 美股事件時間換成美東：夏令（3 月第二個週日～11 月第一個週日）台北 −12 小時，其餘 −13 小時。
+# 美股 09:30～16:00 交易；公布時刻在當天收盤前 → 當天反應，收盤後 → 下一個交易日。
+def us_dst(d):
+    m2 = nth_dow(d.year, 2, 2, 0); n1 = nth_dow(d.year, 10, 1, 0)
+    return m2 <= d < n1
+mu_src = orig[orig.index('const MASTER_US=['):]; mu_src = mu_src[:mu_src.index('];')]
+US_SEC = dict(re.findall(r'\["([\w.]+)","[^"]+","(us_\w+)"', mu_src))
+us_ok = 'SPY' in HIST and sum(1 for c in US_SEC if c in HIST) >= 100
+US_INFO = ''
+if us_ok:
+    lo_us = (dt.date.fromisoformat(LOAD_FROM + '-01')).isoformat()
+    udays = sorted(d for d in HIST['SPY']['d'] if d >= lo_us)
+    UND = len(udays)
+    umkt = hist_ret('SPY', udays)
+    URET = {c: r for c in US_SEC if c in HIST for r in [hist_ret(c, udays)] if r is not None}
+    USR, USUM, UCNT = {}, {}, {}
+    for s in sorted(set(US_SEC.values())):
+        mem = [c for c, sv in US_SEC.items() if sv == s and c in URET]
+        if len(mem) < 2: continue
+        M = np.array([URET[c] for c in mem]); cnt = np.sum(~np.isnan(M), 0); sm = np.nansum(M, 0)
+        USR[s] = np.where(cnt >= 2, sm / np.maximum(cnt, 1), np.nan); USUM[s], UCNT[s] = sm, cnt
+    UAR = {}
+    for s, r in USR.items():
+        m = ols(umkt, r)
+        UAR[s] = r - (m['a'] + m['b'] * umkt) if m else r
+    def react_us(d, t):
+        rel = dt.datetime(d.year, d.month, d.day) + dt.timedelta(hours=t['rt'] - (12 if us_dst(d) else 13))
+        key = rel.date().isoformat(); after = (rel.hour, rel.minute) >= (16, 0)
+        for i, td in enumerate(udays):
+            if td > key or (td == key and not after): return i
+        return None
+    e2, d2, _, n2, mo2 = study(UAR, UND, react_us, '美股')
+    edges += e2
+    for k, v in d2.items(): dist[k].update(v)
+    lo_u = UND - BETA_DAYS
+    for c, s in US_SEC.items():
+        if c in URET and s in USR:
+            b = loo_beta(URET[c], USUM[s], UCNT[s], lo_u, True)
+            if b: stock_beta[c] = b
+    US_INFO = f'；美股 Yahoo 還原日線 {udays[0]}～{udays[-1]}（{len(URET)} 檔、{len(USR)} 個板塊，市場基準 SPY）'
+    print(f'美股：{UND} 個交易日、{len(URET)} 檔、板塊 {len(USR)} 個', flush=True)
+else:
+    # 抓不到美股長歷史：沿用上一份輸出的美股部分，避免整段消失
+    try:
+        prev = json.loads(OUT.read_text(encoding='utf-8'))
+        edges += [dict(frm=e['from'], to=e['to'], beta=e['beta'], se=e['se'], t=e['t'], r2=e['r2'], n=e['n'], lag=e['lag'], kind=e['kind'])
+                  for e in prev.get('edges', []) if e['to'].startswith('us_')]
+        for k, v in prev.get('dist', {}).items():
+            for s, cell in v.items():
+                if s.startswith('us_'): dist[k][s] = cell
+        for c, b in prev.get('stock_beta', {}).items():
+            if c in US_SEC: stock_beta[c] = b
+        US_INFO = '；美股沿用上一份校準（本次無法取得美股日線）'
+    except Exception:
+        US_INFO = '；美股本次無法校準'
+    print('美股：', US_INFO, flush=True)
+
 # ───────────────────────── 7. 除息填息 ─────────────────────────
 div_codes = re.findall(r'\["(\w+)", ?"(?:季配|月配|半年配)"', (SCRATCH / 'build.py').read_text(encoding='utf-8'))
 fill = {}
+five_ago = (dt.date.fromisoformat(tdays[-1]) - dt.timedelta(days=365 * 5)).isoformat()
+for c in sorted(set(div_codes)):
+    h = HIST.get(c)
+    if not h or not h.get('v'): continue
+    dd, cc = h['d'], h['c']; pos = {d: i for i, d in enumerate(dd)}
+    days_to = []; n = 0; f20 = 0
+    for ex in sorted(h['v']):
+        if ex < five_ago or ex not in pos or pos[ex] == 0: continue
+        j = pos[ex]; pc = cc[j - 1]
+        if not pc: continue
+        n += 1
+        hit = next((k - j for k in range(j, min(len(dd), j + 120)) if cc[k] and cc[k] >= pc), None)
+        if hit is not None: days_to.append(hit); f20 += hit < 20
+    if n: fill[c] = {'n': n, 'r20': round(f20 / n, 2), 'med': (int(np.median(days_to)) if days_to else None),
+                     'filled': len(days_to)}
 five_i = TIDX[min(d for d in tdays if d >= (dt.date.fromisoformat(tdays[-1]) - dt.timedelta(days=365 * 5)).isoformat())]
 for c in sorted(set(div_codes)):
-    if c not in CIDX: continue
+    if c not in CIDX or c in fill: continue
     i = CIDX[c]; days_to = []; n = 0; f20 = 0
     for j in range(max(1, five_i), ND):
         pc, cl, r = CLOSE[i, j - 1], CLOSE[i, j], RET[i, j]
@@ -333,7 +450,7 @@ full = {'dir': round(p95([e['beta'] for e in edges if e['kind'] == 'dir']), 3),
         'abs': round(p95([e['beta'] for e in edges if e['kind'] == 'abs' and e['beta'] > 0]), 3)}
 out = {
   'src': 'real',
-  'window': f'台股官方日線 {tdays[0]}～{tdays[-1]}（事件 {EV_START}～{EV_END}，個股 β 近 {BETA_DAYS} 日）',
+  'window': f'台股官方日線 {tdays[0]}～{tdays[-1]}（事件 {EV_START}～{EV_END}，個股 β 近 {BETA_DAYS} 日）' + US_INFO,
   'asof': tdays[-1], 'n_events': sum(n_occ.values()), 'full': full,
   'edges': [dict(**{'from': e['frm']}, to=e['to'], beta=round(e['beta'], 3), se=round(e['se'], 3), t=round(e['t'], 2),
                  r2=round(e['r2'], 3), n=e['n'], lag=e['lag'], kind=e['kind']) for e in edges],
