@@ -20,11 +20,7 @@ src = src[:_a] + src[_b:]
 rep('''  if(!document.hidden){tickClock();if(SND.ctx&&SND.on&&SND.ctx.state==="suspended")SND.ctx.resume();}''',
     '''  if(!document.hidden)tickClock();''')
 
-# ── 2) 沒有官方排程來源的事件拿掉（台灣 CPI、出口、央行理監事會）──
-for _k in ('twcpi', 'twexp', 'cbc'):
-    _m = _re.search(r'\n \{k:"' + _k + r'".*?(?=\n \{k:"|\n\];)', src, _re.S)
-    assert _m, _k
-    src = src[:_m.start()] + src[_m.end():]
+# ── 2) 台灣 CPI、出口、央行理監事會：日期改由 fetch_tw_macro.py 從主計總處、財政部、央行官網抓 ──
 
 # ── 3) 即時資料載入（calibrate.py 每天盤後產出，跟校準結果同一個檔）──
 rep('''  CAL.meta={edges:Object.keys(e).length,stocks:Object.keys(s).length,evOcc:''', '''  applyLive(j);
@@ -36,6 +32,7 @@ const AMP_WATCH={c_fgn:"外資近 5 日買賣超是否延續、與台指期未�
   f_mom:"近 20 日相對大盤的漲跌是否過熱或超跌",f_vol:"近期波動是否明顯高於常態"};
 function applyLive(j){
   CAL.upcoming=j.upcoming||[]; CAL.live=j.live||{}; CAL.amp=j.amp||{}; CAL.dateSrc=j.date_src||{};
+  CAL.regime=j.regime||null; CAL.scenFreq=j.scen_freq||{};
   const L=CAL.live;
   IND.forEach(d=>{
     if(d.mkt==="tw"&&L.tw_flow){d.flow=+(L.tw_flow[d.id]||0); d.unit="億"; d.flowLbl="三大法人近 5 日買賣超";}
@@ -58,8 +55,8 @@ function applyLive(j){
 }
 /* 情境權重：過去 5 年意外值為正（情境 A）與為負（情境 B）的次數比例；不分方向的事件不給權重 */
 function scenFor(t){
-  const D=CAL.dist&&CAL.dist[t.k]; let nA=0,nB=0;
-  if(D)for(const c of Object.values(D)){if(c.A&&c.B){nA=c.A[3];nB=c.B[3];break;}}
+  const F=CAL.scenFreq&&CAL.scenFreq[t.k]; let nA=0,nB=0;
+  if(F){nA=F[0];nB=F[1];}   /* 過去 5 年意外值為正／為負的次數（剛好等於共識的不算） */
   if(nA+nB>0)return t.scen.map((s,i)=>({...s,p:i===0?nA/(nA+nB):nB/(nA+nB),pN:nA+nB,pReal:true}));
   return t.scen.map(s=>({...s,p:1/t.scen.length,pReal:false}));
 }
@@ -169,11 +166,11 @@ rep('''<em>權重 ${(c.s.p*100)|0}%</em>''', '''<em>${scenW(c.s)}</em>''')
 # ── 9) 拿掉沒有資料來源的綜合情境；板塊頁改成「這個板塊對各事件的實證反應」──
 _a = src.index('    <div class="res-sec">\n      <h3>綜合情境 · 把上游事件合起來看')
 _b = src.index('    </div>`;', _a) + len('    </div>')
-src = src[:_a].rstrip() + src[_b:]
+src = src[:_a] + '    ${regimeBlock(node)}' + src[_b:]
 rep('''  else if(src.L===2)       analysis=`<div class="res-sec">
         <h3>這個板塊在三個巨觀情境下的方向<em>示意</em></h3>${macroForSector(src)}
         <p class="cone-note">方向由板塊的情境敏感度推得；區間是歷史上同向環境的後續分布，不指涉這一次。</p></div>`;''',
-    '''  else if(src.L===2)       analysis=sectorEvidence(src);''')
+    '''  else if(src.L===2)       analysis=sectorEvidence(src)+regimeBlock(src);''')
 rep('''function macroForSector(sec){''', '''/* 板塊頁：過去 5 年各類事件對這個板塊的實證衝擊（依 |t| 排序） */
 function sectorEvidence(sec){
   const lab=k=>{const t=EV_TPL.find(x=>x.k===k); return t?t.name(TODAY).replace(/\\d+ 月/,"").replace(/（\\d+ 月）/,"").trim():k;};
@@ -185,6 +182,28 @@ function sectorEvidence(sec){
       ?`事件窗超額波動 ${m.b>0?"+":""}${m.b.toFixed(2)}%`
       :`β ${m.b>0?"+":""}${m.b.toFixed(2)}%／1σ 意外值`}（t ${m.t.toFixed(1)} · N ${m.n}）${Math.abs(m.t)>=1.96?" <b>顯著</b>":""}</p>`).join("")}
     <p class="cone-note">β 是「意外值每多 1 個標準差，板塊超額報酬平均多幾 %」；超額波動是事件窗的 |報酬| 比平常多幾 %，不分方向。</p></div>`;
+}
+/* 巨觀環境：用實際數據判斷目前處於哪種環境，顯示這個板塊（或個股 × 實證 β）在同樣環境下之後 20 個交易日的歷史分布 */
+const REG_LAB={rate:{up:"利率上行",down:"利率下行"},growth:{exp:"景氣擴張",con:"景氣收縮"},infl:{up:"通膨升溫",down:"通膨降溫"}};
+function regimeBlock(node){
+  const R=CAL.regime; if(!R||!R.sec)return "";
+  const sec=node.L===4?node.ind:node.id, cell=R.sec[sec]; if(!cell)return "";
+  const m=node.L===4?stockStat(node.id):null, k=m?m.b:1;
+  const f=q=>{const lo=q[0]*k,hi=q[2]*k; return `中位數 <b>${PCT(q[1]*k)}</b>（P10 ${PCT(Math.min(lo,hi))} ~ P90 ${PCT(Math.max(lo,hi))} · 約 ${Math.max(1,Math.round(q[4]/20))} 個獨立月份）`;};
+  const cur=R.current||{}, v=R.values||{};
+  const now=["rate","growth","infl"].map(dm=>cur[dm]?REG_LAB[dm][cur[dm]]:"—").join("＋");
+  const rows=["rate","growth","infl"].map(dm=>{
+    const c=cell[dm]; if(!c||!cur[dm])return "";
+    const other=Object.keys(REG_LAB[dm]).find(x=>x!==cur[dm]);
+    return `<p class="cone-note"><b>${REG_LAB[dm][cur[dm]]}</b>（目前）：${c[cur[dm]]?f(c[cur[dm]]):"樣本不足"}
+      ${other&&c[other]?`<br>對照 ${REG_LAB[dm][other]}：${f(c[other])}`:""}</p>`;}).join("");
+  return `<div class="res-sec"><h3>目前巨觀環境下的歷史表現<em>${now}</em></h3>
+    ${cell.combo?`<p class="cone-note"><b>三個條件都和現在一樣的日子</b>：${f(cell.combo)}</p>`:""}
+    ${rows}
+    <p class="cone-note">環境用當天已公布的數據判斷：${(R.def||{}).rate||""}；${(R.def||{}).growth||""}；${(R.def||{}).infl||""}。
+      目前 ISM ${v.ism??"—"}、2 年期殖利率 3 個月變動 ${v.dgs2_chg!=null?(v.dgs2_chg>0?"+":"")+v.dgs2_chg+" 個百分點":"—"}。
+      數字是${node.L===4?`板塊（${INDBY[sec]?INDBY[sec].n:sec}）超額報酬乘上這檔的實證 β ${k.toFixed(2)}`:"板塊超額報酬"}；
+      相鄰日子的 20 日區間重疊，獨立樣本以月份計，月份少時參考價值低。</p></div>`;
 }
 function macroForSector(sec){''')
 

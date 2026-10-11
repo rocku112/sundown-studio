@@ -166,6 +166,9 @@ print('FOMC：', FOMC_SRC, '；官網解析差異（跨月會議／非例會）�
 
 # 與頁面 EV_TPL 相同的排程規則（m 為 0-based 月份）
 TPL = {
+ 'twcpi':  dict(kind='總經', rt=16,   at=None),
+ 'twexp':  dict(kind='總經', rt=16,   at=None),
+ 'cbc':    dict(kind='央行', rt=16.5, at=None),
  'twrev':  dict(kind='財報', rt=17,   at=lambda y, m: clamp_day(y, m, 10)),
  'tsmcrev':dict(kind='財報', rt=14,   at=lambda y, m: clamp_day(y, m, 10)),
  'uscpi':  dict(kind='總經', rt=20.5, at=lambda y, m: clamp_day(y, m, 11)),
@@ -250,9 +253,24 @@ for k, (sym, default) in EARN_MAP.items():
         x = num(row[4])
         if x is not None and num(row[2]) is not None: CAL_X[k][d] = x
     CAL_INFO[k] = f'Nasdaq 財報行事曆：{sym} EPS 驚喜幅度（%）'
+# 台灣總經（fetch_tw_macro.py → tw_macro.json：央行決議列表、主計總處與財政部新聞稿）
+TWM_FILE = SCRATCH / 'tw_macro.json'
+TWM = json.loads(TWM_FILE.read_text(encoding='utf-8')) if TWM_FILE.exists() else {}
+TW_SRC = {'cbc': '中央銀行理監事聯席會議決議', 'twcpi': '主計總處新聞稿', 'twexp': '財政部新聞稿'}
+for k in ('cbc', 'twexp'):
+    for x in TWM.get(k, []): CAL_EV[k].append(dt.date.fromisoformat(x))
+    CAL_INFO[k] = TW_SRC[k] + '：發布日（無市場共識，只估超額波動）'
+_cpi = sorted(TWM.get('twcpi', []))
+for i, (x, v) in enumerate(_cpi):
+    d = dt.date.fromisoformat(x); CAL_EV['twcpi'].append(d)
+    prev = [w for _, w in _cpi[max(0, i - 3):i]]
+    if len(prev) == 3: CAL_X['twcpi'][d] = v - sum(prev) / 3
+CAL_INFO['twcpi'] = '主計總處新聞稿：CPI 年增率 − 前 3 個月平均（台灣沒有公開的市場共識）'
 EVENTS, DATE_SRC = {}, {}
 for k, t in TPL.items():
     t['k'] = k
+    if t['at'] is None and k != 'fomc' and len(CAL_EV.get(k, [])) < 8:
+        EVENTS[k] = []; DATE_SRC[k] = '無資料'; continue
     if len(CAL_EV.get(k, [])) >= 8:
         ds = sorted(set(CAL_EV[k])); DATE_SRC[k] = CAL_INFO[k].split('：')[0]
     elif k == 'fomc':
@@ -337,6 +355,7 @@ def study(AR, nd, react, tag):
     edges, dist, cone_pool, n_occ, mode = [], defaultdict(dict), defaultdict(list), {}, {}
     for k, t in TPL.items():
         H = H_BY_KIND[t['kind']]
+        if not EVENTS[k]: continue
         idx = [react(d, t) for d in EVENTS[k]]
         keep = [(d, i) for d, i in zip(EVENTS[k], idx) if i is not None and i + DIST_H < nd]
         u = None
@@ -346,6 +365,7 @@ def study(AR, nd, react, tag):
             if len(ok) >= 12:
                 xs = np.array([x for *_, x in ok]); z = (xs - xs.mean()) / (xs.std() or 1)
                 keep = [(d, i) for d, i, _ in ok]; u = z; raw = xs
+                SCEN_FREQ.setdefault(k, [int((xs > 0).sum()), int((xs < 0).sum()), int((xs == 0).sum())])
                 SURP_SRC[k] = SURP[k][1]
         mode[k] = 'dir' if u is not None else 'abs'
         n_occ[k] = len(keep)
@@ -379,12 +399,12 @@ def study(AR, nd, react, tag):
         print(f'{tag} {k:8s} {t["kind"]} {mode[k]} N={n_occ[k]}', flush=True)
     return edges, dist, cone_pool, n_occ, mode
 
-SURP_SRC = {}
+SURP_SRC, SCEN_FREQ = {}, {}
 edges, dist, cone_pool, n_occ, mode = study(AR, ND, lambda d, t: react_idx(d, rt_of(d, t)), '台股')
 
 cone = {}
 for kind, v in cone_pool.items():
-    v = np.array(v); n_ev = sum(n_occ[k] for k, t in TPL.items() if t['kind'] == kind)
+    v = np.array(v); n_ev = sum(n_occ.get(k, 0) for k, t in TPL.items() if t['kind'] == kind)
     cone[kind] = {'n': n_ev, 'shape': np.percentile(v, [10, 25, 50, 75, 90]).round(2).tolist()}
 
 # ───────────────────────── 6. 個股 β ─────────────────────────
@@ -734,6 +754,11 @@ if not any(u['k'] == 'fomc' for u in upcoming):
         if today_iso <= x <= horizon:
             d = dt.date.fromisoformat(x); dd, tt = tpe_dt(d, et_to_tpe_hours(d, 14, 0))
             upcoming.append({'k': 'fomc', 'd': dd, 't': tt, 'cons': None, 'prev': None, 'src': 'Fed 官網行事曆'})
+for k, src_txt in (('cbc', '中央銀行理監事聯席會議預定日期'), ('twcpi', '主計總處預告統計資料發布時間表'), ('twexp', '財政部新聞稿「下次發布日期」')):
+    for x in TWM.get('next', {}).get(k, []):
+        if today_iso <= x <= horizon:
+            upcoming.append({'k': k, 'd': x, 't': {'cbc': '16:30', 'twcpi': '16:00', 'twexp': '16:00'}[k], 'cons': None,
+                             'prev': (f"{_cpi[-1][1]}%" if k == 'twcpi' and _cpi else None), 'src': src_txt})
 for k in ('twrev', 'tsmcrev', 'twq', 'quad'):   # 法定期限與交易所固定規則
     t = TPL[k]
     for y, m in months(dt.date.today(), dt.date.fromisoformat(horizon)):
@@ -747,6 +772,71 @@ upcoming.sort(key=lambda u: (u['d'], u['t']))
 print(f'即時資料：台股資金流 {len(live.get("tw_flow", {}))} 板塊、美股 {len(live.get("us_ret5", {}))} 板塊、'
       f'匯率 {live.get("fx", {}).get("usdtwd")}、除息預告 {len(live["div"])} 檔、未來排程 {len(upcoming)} 件', flush=True)
 
+
+# ───────────────────────── 7e. 巨觀環境（實證）─────────────────────────
+# 三組環境都用「當天已經公布」的數據判斷（不偷看未來）：
+#   利率：美國 2 年期公債殖利率近 63 個交易日（約 3 個月）上升或下降（FRED DGS2）
+#   景氣：最近一次公布的 ISM 製造業指數 ≥ 50 或 < 50（Nasdaq 經濟行事曆實際值）
+#   通膨：最近 3 次核心 CPI 月增率平均 高於或低於 最近 12 次平均（Nasdaq 經濟行事曆實際值）
+# 每個交易日標上環境，算各板塊之後 20 個交易日的累積超額報酬；相鄰日子的 20 日窗重疊，獨立樣本約為天數 ÷ 20。
+def asof_series(points, days):
+    """points：[(公布日 ISO, 值)]，回傳每個交易日當下已公布的最新值"""
+    pts = sorted(points); out = []; j = -1
+    for d in days:
+        while j + 1 < len(pts) and pts[j + 1][0] < d: j += 1     # 公布日當天盤中還不知道，隔天起才算
+        out.append(pts[j][1] if j >= 0 else None)
+    return out
+ism_pts, ccpi_pts = [], []
+for iso in sorted(ECAL['econ']):
+    for name, lst in (('ISM Manufacturing PMI', ism_pts), ('Core CPI', ccpi_pts)):
+        rows = [r for r in ECAL['econ'][iso] if r[2] == 'United States' and r[0] == name]
+        if rows:
+            v = num(pick_row(rows)[3])
+            if v is not None: lst.append((iso, v))
+ccpi_trend = []
+for i in range(len(ccpi_pts)):
+    if i >= 12:
+        a3 = sum(v for _, v in ccpi_pts[i - 2:i + 1]) / 3; a12 = sum(v for _, v in ccpi_pts[i - 11:i + 1]) / 12
+        ccpi_trend.append((ccpi_pts[i][0], a3 - a12))
+def regime_labels(days):
+    d2 = [dgs2.get(d) for d in days]
+    for i in range(1, len(d2)):
+        if d2[i] is None: d2[i] = d2[i - 1]
+    rate = [None if i < 63 or d2[i] is None or d2[i - 63] is None else ('up' if d2[i] > d2[i - 63] else 'down') for i in range(len(days))]
+    ism = asof_series(ism_pts, days); cp = asof_series(ccpi_trend, days)
+    growth = [None if v is None else ('exp' if v >= 50 else 'con') for v in ism]
+    infl = [None if v is None else ('up' if v > 0 else 'down') for v in cp]
+    return {'rate': rate, 'growth': growth, 'infl': infl}, {'ism': ism[-1] if ism else None, 'ccpi_gap': cp[-1] if cp else None,
+            'dgs2_chg': (round(d2[-1] - d2[-64], 2) if len(d2) > 64 and d2[-1] is not None and d2[-64] is not None else None)}
+def regime_study(ARm, days):
+    labs, nowv = regime_labels(days)
+    out = {}
+    fwd = {sec: np.array([np.nansum(r[i + 1:i + 21]) if i + 21 <= len(r) and np.isnan(r[i + 1:i + 21]).sum() <= 2 else np.nan
+                          for i in range(len(r))]) for sec, r in ARm.items()}
+    for sec, f in fwd.items():
+        cell = {}
+        for dim, lab in labs.items():
+            for val in set(x for x in lab if x):
+                v = np.array([f[i] for i in range(len(days)) if lab[i] == val]); v = v[~np.isnan(v)]
+                if len(v) >= 60:
+                    cell.setdefault(dim, {})[val] = [*np.percentile(v, [10, 50, 90]).round(2).tolist(), round(float(v.mean()), 2), len(v)]
+        # 三個環境同時符合目前狀態的日子
+        cur = {dim: next((x for x in reversed(lab) if x), None) for dim, lab in labs.items()}
+        v = np.array([f[i] for i in range(len(days)) if all(labs[dm][i] == cur[dm] for dm in labs)]); v = v[~np.isnan(v)]
+        if len(v) >= 40: cell['combo'] = [*np.percentile(v, [10, 50, 90]).round(2).tolist(), round(float(v.mean()), 2), len(v)]
+        out[sec] = cell
+    cur = {dim: next((x for x in reversed(lab) if x), None) for dim, lab in labs.items()}
+    return out, cur, nowv
+reg_tw, cur_tw, now_tw = regime_study(AR, tdays)
+regime = {'sec': reg_tw, 'current': cur_tw, 'values': now_tw,
+          'def': {'rate': '美國 2 年期殖利率近 3 個月上升／下降（FRED DGS2）',
+                  'growth': 'ISM 製造業指數 ≥ 50（擴張）／< 50（收縮），取最近一次公布值',
+                  'infl': '核心 CPI 月增率：近 3 次平均高於／低於近 12 次平均'}}
+if us_ok:
+    reg_us, _, _ = regime_study(UAR, udays)
+    regime['sec'].update(reg_us)
+print(f'巨觀環境：目前 {cur_tw}（{now_tw}），板塊 {len(regime["sec"])} 個', flush=True)
+
 # ───────────────────────── 8. 輸出 ─────────────────────────
 def p95(v): return float(np.percentile(np.abs(v), 95)) if len(v) else 1.0
 full = {'dir': round(p95([e['beta'] for e in edges if e['kind'] == 'dir']), 3),
@@ -759,7 +849,7 @@ out = {
                  r2=round(e['r2'], 3), n=e['n'], lag=e['lag'], kind=e['kind']) for e in edges],
   'stock_beta': stock_beta, 'dist': dist, 'cone': cone, 'fill': fill,
   'mode': mode, 'n_occ': n_occ, 'surprise': SURP_SRC, 'fomc_src': FOMC_SRC, 'date_src': DATE_SRC,
-  'amp': AMP, 'chain': chain, 'live': live, 'upcoming': upcoming,
+  'amp': AMP, 'chain': chain, 'live': live, 'upcoming': upcoming, 'regime': regime, 'scen_freq': SCEN_FREQ,
 }
 OUT.write_text(json.dumps(out, ensure_ascii=False, separators=(',', ':')), encoding='utf-8')
 sig = sum(1 for e in edges if abs(e['t']) >= 1.96)
