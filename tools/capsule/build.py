@@ -437,7 +437,7 @@ src = src.replace('fill="#6B7C96" font-family="JetBrains Mono,monospace"', 'fill
 exec((d / 'twall_patch.py').read_text(encoding='utf-8'))
 exec((d / 'calib_patch.py').read_text(encoding='utf-8'))
 exec((d / 'us_patch.py').read_text(encoding='utf-8'))
-exec((d / 'sound_patch.py').read_text(encoding='utf-8'))
+exec((d / 'real_patch.py').read_text(encoding='utf-8'))
 OUT_HTML.parent.mkdir(parents=True, exist_ok=True)
 OUT_HTML.write_text(src, encoding='utf-8')
 for bad in ['JetBrains', 'Barlow', '#04060A', '242,179,61', '167,139,250', '69,200,240', '#E4EDF8', '#FFDC96', '#F2B33D']:

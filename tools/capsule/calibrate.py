@@ -166,8 +166,6 @@ print('FOMC：', FOMC_SRC, '；官網解析差異（跨月會議／非例會）�
 
 # 與頁面 EV_TPL 相同的排程規則（m 為 0-based 月份）
 TPL = {
- 'twcpi':  dict(kind='總經', rt=16,   at=lambda y, m: clamp_day(y, m, 5)),
- 'twexp':  dict(kind='總經', rt=16,   at=lambda y, m: clamp_day(y, m, 9)),
  'twrev':  dict(kind='財報', rt=17,   at=lambda y, m: clamp_day(y, m, 10)),
  'tsmcrev':dict(kind='財報', rt=14,   at=lambda y, m: clamp_day(y, m, 10)),
  'uscpi':  dict(kind='總經', rt=20.5, at=lambda y, m: clamp_day(y, m, 11)),
@@ -175,7 +173,6 @@ TPL = {
  'usret':  dict(kind='總經', rt=20.5, at=lambda y, m: clamp_day(y, m, 16)),
  'twq':    dict(kind='財報', rt=17,   at=lambda y, m: clamp_day(y, m, {2: 31, 4: 15, 7: 14, 10: 14}[m]) if m in (2, 4, 7, 10) else None),
  'fomc':   dict(kind='央行', rt=26,   at=None),
- 'cbc':    dict(kind='央行', rt=17,   at=lambda y, m: nth_dow(y, m, 3, 4) if m in (2, 5, 8, 11) else None),
  'quad':   dict(kind='市場', rt=21,   at=lambda y, m: nth_dow(y, m, 3, 5) if m in (2, 5, 8, 11) else None),
  'mu':     dict(kind='財報', rt=28.5, at=lambda y, m: clamp_day(y, m, 24) if m in (2, 5, 8, 11) else None),
  'pce':    dict(kind='總經', rt=20.5, at=lambda y, m: clamp_day(y, m, 26)),
@@ -201,18 +198,81 @@ def react_idx(d, rt):
     for i, td in enumerate(tdays):
         if td > key or (td == key and not after_close): return i
     return None
-EVENTS = {}
+# ── 官方排程（fetch_calendar.py → econ_cal.json：Nasdaq 經濟／財報行事曆）──
+# 有排程的事件：實際公布日＋公布時刻＋「實際值 − 市場共識」；沒有排程的事件才用法定日期規則
+CAL_FILE = SCRATCH / 'econ_cal.json'
+ECAL = json.loads(CAL_FILE.read_text(encoding='utf-8')) if CAL_FILE.exists() else {'econ': {}, 'earn': {}}
+ECON_MAP = {'uscpi': ('United States', 'Core CPI'), 'nfp': ('United States', 'Nonfarm Payrolls'),
+            'pce': ('United States', 'Core PCE Price Index'), 'usret': ('United States', 'Retail Sales'),
+            'umich': ('United States', 'Michigan Consumer Sentiment'), 'ism': ('United States', 'ISM Manufacturing PMI'),
+            'fomc': ('United States', 'Fed Interest Rate Decision'), 'cnpmi': ('China', 'Manufacturing PMI')}
+EARN_MAP = {'nvda': ('NVDA', 'after'), 'aapl': ('AAPL', 'after'), 'mu': ('MU', 'after'), 'banks': ('JPM', 'pre'), 'tsmc': ('TSM', 'pre')}
+def num(v):
+    if v is None: return None
+    v = v.replace(',', '').replace('$', '').strip(); mult = 1
+    if v[-1:] in ('K', 'M', 'B') and v[:-1]: mult = {'K': 1e3, 'M': 1e6, 'B': 1e9}[v[-1]]; v = v[:-1]
+    v = v.rstrip('%')
+    try: return float(v) * mult
+    except ValueError: return None
+def us_dst(d):
+    return nth_dow(d.year, 2, 2, 0) <= d < nth_dow(d.year, 10, 1, 0)
+def et_to_tpe_hours(d, hh, mm, fixed_utc4=False):
+    """美東時刻 → 自台北 d 日 00:00 起算的小時數。經濟行事曆的時刻是固定 UTC−4，財報時段是真美東時間"""
+    off = 12 if (fixed_utc4 or us_dst(d)) else 13
+    return hh + mm / 60 + off
+def pick_row(rows):
+    """同名事件有月增與年增兩列（例如核心 CPI 0.3% 與 2.4%）：取數值較小、也就是月增那一列"""
+    def key(r):
+        v = num(r[4]) if num(r[4]) is not None else num(r[3])
+        return abs(v) if v is not None else 9e9
+    return min(rows, key=key)
+CAL_EV, CAL_RT, CAL_X, CAL_INFO = defaultdict(list), defaultdict(dict), defaultdict(dict), {}
+for k, (ctry, name) in ECON_MAP.items():
+    seen_month = set()
+    for iso in sorted(ECAL['econ']):
+        rows = [r for r in ECAL['econ'][iso] if r[2] == ctry and r[0] == name]
+        if not rows: continue
+        d = dt.date.fromisoformat(iso)
+        if k == 'umich':                         # 只取每月第一次（初值）
+            if (d.year, d.month) in seen_month: continue
+            seen_month.add((d.year, d.month))
+        r = pick_row(rows)
+        hh, mm = map(int, (r[1] or '08:30').split(':'))
+        CAL_EV[k].append(d); CAL_RT[k][d] = et_to_tpe_hours(d, hh, mm, fixed_utc4=True)
+        a, c = num(r[3]), num(r[4])
+        if a is not None and c is not None: CAL_X[k][d] = a - c
+    CAL_INFO[k] = f'Nasdaq 經濟行事曆：{name}（實際值 − 市場共識）'
+for k, (sym, default) in EARN_MAP.items():
+    for row in ECAL['earn'].get(sym, []):
+        d = dt.date.fromisoformat(row[0]); tm = row[1]
+        when = 'pre' if 'pre' in tm else 'after' if 'after' in tm else default
+        CAL_EV[k].append(d); CAL_RT[k][d] = et_to_tpe_hours(d, 8, 0) if when == 'pre' else et_to_tpe_hours(d, 16, 30)
+        x = num(row[4])
+        if x is not None and num(row[2]) is not None: CAL_X[k][d] = x
+    CAL_INFO[k] = f'Nasdaq 財報行事曆：{sym} EPS 驚喜幅度（%）'
+EVENTS, DATE_SRC = {}, {}
 for k, t in TPL.items():
-    ds = [dt.date.fromisoformat(x) for x in FOMC] if k == 'fomc' else \
-         [t['at'](y, m) for y, m in months(EV_START, EV_END)]
+    t['k'] = k
+    if len(CAL_EV.get(k, [])) >= 8:
+        ds = sorted(set(CAL_EV[k])); DATE_SRC[k] = CAL_INFO[k].split('：')[0]
+    elif k == 'fomc':
+        ds = [dt.date.fromisoformat(x) for x in FOMC]; DATE_SRC[k] = 'Fed 官網行事曆'
+    else:
+        ds = [t['at'](y, m) for y, m in months(EV_START, EV_END)]; DATE_SRC[k] = '法定／交易所規則日期'
     EVENTS[k] = [d for d in ds if d and EV_START <= d <= EV_END]
+def rt_of(d, t): return CAL_RT.get(t['k'], {}).get(d, t['rt'])
+print('事件日期來源：', DATE_SRC, flush=True)
 
 # ───────────────────────── 4. 意外值 ─────────────────────────
 def fred(sid):
     p = CACHE / f'{sid}.csv'
     if not p.exists() or (dt.datetime.now().timestamp() - p.stat().st_mtime) > 20 * 3600:
-        raw = urllib.request.urlopen(f'https://fred.stlouisfed.org/graph/fredgraph.csv?id={sid}', timeout=120).read()
-        p.write_bytes(raw)
+        try:
+            raw = urllib.request.urlopen(f'https://fred.stlouisfed.org/graph/fredgraph.csv?id={sid}', timeout=120).read()
+            p.write_bytes(raw)
+        except Exception as e:
+            if not p.exists(): raise
+            print(f'FRED {sid} 更新失敗，沿用快取：{e}', flush=True)
     out = {}
     for line in p.read_text().splitlines()[1:]:
         d, v = line.split(',')
@@ -249,7 +309,7 @@ def fomc_surp(d):
     keys = sorted(k for k in dgs2 if k <= d.isoformat())
     if len(keys) < 2 or keys[-1] != d.isoformat(): return None
     return (dgs2[keys[-1]] - dgs2[keys[-2]]) * 100          # 基點
-SURP = {
+SURP_FALLBACK = {
  'uscpi':  (lambda d: trend_surprise(mom(cpi), prev_ym(ymk(d)), 12),   'FRED CPILFESL：核心 CPI 月增率 − 前 12 個月平均'),
  'nfp':    (lambda d: trend_surprise(diff(nfp_s), prev_ym(ymk(d)), 12),'FRED PAYEMS：非農新增 − 前 12 個月平均'),
  'pce':    (lambda d: trend_surprise(mom(pce_s), prev_ym(ymk(d)), 12), 'FRED PCEPILFE：核心 PCE 月增率 − 前 12 個月平均'),
@@ -259,6 +319,11 @@ SURP = {
  'tsmcrev':(lambda d: trend_surprise(yoy_tsmc, prev_ym(ymk(d)), 3),    '台積電月營收年增率 − 前 3 個月平均'),
  'twrev':  (lambda d: trend_surprise(yoy_all, prev_ym(ymk(d)), 3),     '全體上市櫃月營收年增率 − 前 3 個月平均'),
 }
+# 有市場共識的事件一律用「實際 − 共識」；FOMC 的利率共識幾乎總是猜中，改用決議日 2 年期殖利率變動
+SURP = dict(SURP_FALLBACK)
+for k in CAL_X:
+    if k != 'fomc' and len(CAL_X[k]) >= 12:
+        SURP[k] = ((lambda kk: lambda d: CAL_X[kk].get(d))(k), CAL_INFO[k])
 
 # ───────────────────────── 5. 事件研究 ─────────────────────────
 H_BY_KIND = {'總經': 2, '央行': 2, '市場': 2, '財報': 4, '法說': 4}
@@ -280,7 +345,7 @@ def study(AR, nd, react, tag):
             ok = [(d, i, x) for (d, i), x in zip(keep, raw) if x is not None]
             if len(ok) >= 12:
                 xs = np.array([x for *_, x in ok]); z = (xs - xs.mean()) / (xs.std() or 1)
-                keep = [(d, i) for d, i, _ in ok]; u = z
+                keep = [(d, i) for d, i, _ in ok]; u = z; raw = xs
                 SURP_SRC[k] = SURP[k][1]
         mode[k] = 'dir' if u is not None else 'abs'
         n_occ[k] = len(keep)
@@ -295,7 +360,8 @@ def study(AR, nd, react, tag):
                 if m:
                     edges.append(dict(frm=k, to=s, beta=m['b'], se=m['se'], t=m['t'], r2=m['r2'], n=m['n'], lag=H, kind='dir'))
                 cell = {}
-                for key, sel in (('A', u > 0), ('B', u <= 0)):
+                # 情境 A＝意外值為正（高於共識／趨勢）、B＝為負；剛好符合的不列入兩邊（只算在 U）
+                for key, sel in (('A', raw > 0), ('B', raw < 0)):
                     v = c20[sel]; v = v[~np.isnan(v)]
                     if len(v) >= 6: cell[key] = [*np.percentile(v, [10, 50, 90]).round(2).tolist(), len(v)]
                 v = c20[~np.isnan(c20)]
@@ -314,7 +380,7 @@ def study(AR, nd, react, tag):
     return edges, dist, cone_pool, n_occ, mode
 
 SURP_SRC = {}
-edges, dist, cone_pool, n_occ, mode = study(AR, ND, lambda d, t: react_idx(d, t['rt']), '台股')
+edges, dist, cone_pool, n_occ, mode = study(AR, ND, lambda d, t: react_idx(d, rt_of(d, t)), '台股')
 
 cone = {}
 for kind, v in cone_pool.items():
@@ -354,9 +420,6 @@ for s, mem in EXT_TW.items():
 # ───────────────────────── 6b. 美股 ─────────────────────────
 # 美股事件時間換成美東：夏令（3 月第二個週日～11 月第一個週日）台北 −12 小時，其餘 −13 小時。
 # 美股 09:30～16:00 交易；公布時刻在當天收盤前 → 當天反應，收盤後 → 下一個交易日。
-def us_dst(d):
-    m2 = nth_dow(d.year, 2, 2, 0); n1 = nth_dow(d.year, 10, 1, 0)
-    return m2 <= d < n1
 mu_src = orig[orig.index('const MASTER_US=['):]; mu_src = mu_src[:mu_src.index('];')]
 US_SEC = dict(re.findall(r'\["([\w.]+)","[^"]+","(us_\w+)"', mu_src))
 us_ok = 'SPY' in HIST and sum(1 for c in US_SEC if c in HIST) >= 100
@@ -378,7 +441,7 @@ if us_ok:
         m = ols(umkt, r)
         UAR[s] = r - (m['a'] + m['b'] * umkt) if m else r
     def react_us(d, t):
-        rel = dt.datetime(d.year, d.month, d.day) + dt.timedelta(hours=t['rt'] - (12 if us_dst(d) else 13))
+        rel = dt.datetime(d.year, d.month, d.day) + dt.timedelta(hours=rt_of(d, t) - (12 if us_dst(d) else 13))
         key = rel.date().isoformat(); after = (rel.hour, rel.minute) >= (16, 0)
         for i, td in enumerate(udays):
             if td > key or (td == key and not after): return i
@@ -444,6 +507,246 @@ for c in sorted(set(div_codes)):
     if n: fill[c] = {'n': n, 'r20': round(f20 / n, 2), 'med': (int(np.median(days_to)) if days_to else None),
                      'filled': len(days_to)}
 
+
+# ───────────────────────── 7b. 放大器（實證）─────────────────────────
+# 放大器回答的是：「事件發生時，如果板塊正處於某種狀態（外資大買、波動升溫…），衝擊會不會比平常大？」
+# 做法：每次事件 × 每個板塊，算事件前 5 日的狀態 z 值；|z|≥1 視為「狀態異常」。
+#      放大倍數 ＝ 異常時的 |CAR| ÷ 正常時的 |CAR|（|CAR| 先除以該板塊平常的 |CAR|，讓各板塊可以合併比較）。
+#      同向比例 ＝ 狀態異常時，事件後板塊超額報酬方向與狀態方向一致的比例（只對有方向的狀態有意義）。
+def roll_sum(x, w):
+    c = np.nancumsum(np.nan_to_num(x)); out = np.full_like(x, np.nan)
+    out[w:] = c[w:] - c[:-w]; return out
+def zscore_hist(x, look=250):
+    """x[i] 對它自己過去 look 天的標準差標準化（只用 i 之前的資料）"""
+    out = np.full_like(x, np.nan)
+    for i in range(look, len(x)):
+        h = x[i - look:i]; h = h[~np.isnan(h)]
+        if len(h) > 60 and h.std() > 1e-9: out[i] = (x[i] - h.mean()) / h.std()
+    return out
+def cond_series(ARm):
+    """價量狀態：近 20 日累積超額報酬（動能）、20 日波動 ÷ 250 日波動（波動升溫）"""
+    out = {}
+    for sec, r in ARm.items():
+        mom20 = roll_sum(r, 20)
+        sd20 = np.array([np.nanstd(r[max(0, i - 20):i]) if i >= 20 else np.nan for i in range(len(r))])
+        sd250 = np.array([np.nanstd(r[max(0, i - 250):i]) if i >= 120 else np.nan for i in range(len(r))])
+        out[sec] = {'mom': zscore_hist(mom20), 'vol': (sd20 / np.where(sd250 > 1e-9, sd250, np.nan) - 1) / 0.25}
+    return out
+
+# 台股籌碼（swing/data/chips：證交所／櫃買三大法人與信用交易，前 450 大權值股）→ 板塊 5 日金額（億元）
+chip_files = [f for f in sorted(glob.glob(str(ROOT / 'swing/data/chips/*.json'))) if pathlib.Path(f).name[:7] >= LOAD_FROM]
+CH = {k: {} for k in ('fgn', 'itc', 'marg', 'short')}
+for f in chip_files:
+    dd = json.loads(pathlib.Path(f).read_text(encoding='utf-8'))
+    cs = dd['codes']
+    for day, rows in dd['days'].items():
+        j = TIDX.get(day)
+        if j is None: continue
+        for c, v in zip(cs, rows):
+            if c not in CIDX or not v: continue
+            px = CLOSE[CIDX[c], j]
+            if np.isnan(px): continue
+            k2 = 1000 * px / 1e8          # 張 → 億元
+            for key, idx in (('fgn', 0), ('itc', 1), ('marg', 2), ('short', 3)):
+                if v[idx] is not None: CH[key].setdefault(c, {})[j] = v[idx] * k2
+def chip_sector(key, diff=False):
+    out = {}
+    for sec in SR:
+        mem = [c for c in CH[key] if SEC.get(c) == sec]
+        if len(mem) < 2: continue
+        x = np.zeros(ND); cnt = np.zeros(ND)
+        for c in mem:
+            for j, v in CH[key][c].items():
+                x[j] += v; cnt[j] += 1
+        x[cnt == 0] = np.nan
+        if diff:                           # 融資／融券是餘額：取 5 日變化
+            x5 = np.full(ND, np.nan); x5[5:] = x[5:] - x[:-5]
+        else:
+            x5 = roll_sum(x, 5)
+        out[sec] = {'z': zscore_hist(x5), 'now': x5}
+    return out
+CH_LAST = max((j for d in CH['fgn'].values() for j in d), default=ND - 1)   # 籌碼最後一個有資料的交易日
+CHS = {'fgn': chip_sector('fgn'), 'itc': chip_sector('itc'), 'marg': chip_sector('marg', True), 'short': chip_sector('short', True)}
+TWC = cond_series(AR)
+
+def null_abs(r, H, nd):
+    v = np.array([car(r, i, H, nd) for i in range(30, nd - H - 1, 2)]); v = np.abs(v[~np.isnan(v)])
+    return float(np.mean(v)) if len(v) else np.nan
+def amp_est(ARm, nd, react, cond_of, directional):
+    strong, weak, same = [], [], []
+    base = {}
+    for k, t in TPL.items():
+        H = H_BY_KIND[t['kind']]
+        for d in EVENTS[k]:
+            i = react(d, t)
+            if i is None or i < 6 or i + H >= nd: continue
+            for sec, r in ARm.items():
+                z = cond_of(sec)
+                if z is None or np.isnan(z[i - 1]): continue
+                if (sec, H) not in base: base[(sec, H)] = null_abs(r, H, nd)
+                c = car(r, i, H, nd); b = base[(sec, H)]
+                if np.isnan(c) or not b: continue
+                v = abs(c) / b
+                if abs(z[i - 1]) >= 1:
+                    strong.append(v)
+                    if directional and c != 0: same.append(np.sign(c) == np.sign(z[i - 1]))
+                else:
+                    weak.append(v)
+    if len(strong) < 30 or len(weak) < 30: return None
+    a, b = np.array(strong), np.array(weak)
+    ratio = a.mean() / b.mean()
+    se = ratio * math.sqrt(a.var(ddof=1) / (len(a) * a.mean() ** 2) + b.var(ddof=1) / (len(b) * b.mean() ** 2))
+    out = {'amp': round(float(ratio), 3), 'se': round(float(se), 3), 't': round(float((ratio - 1) / se), 2) if se else 0,
+           'n_strong': len(a), 'n_weak': len(b)}
+    if directional and same: out['same'] = round(float(np.mean(same)), 3)
+    return out
+
+react_tw = lambda d, t: react_idx(d, rt_of(d, t))
+AMP = {}
+AMP_DEF = {
+  'c_fgn':   ('tw', '外資買賣超', '三大法人日報 · 板塊近 5 日', lambda sec: CHS['fgn'].get(sec, {}).get('z'), True),
+  'c_itc':   ('tw', '投信買賣超', '三大法人日報 · 板塊近 5 日', lambda sec: CHS['itc'].get(sec, {}).get('z'), True),
+  'c_marg':  ('tw', '融資增減',   '信用交易 · 板塊融資餘額 5 日變化', lambda sec: CHS['marg'].get(sec, {}).get('z'), True),
+  'c_short': ('tw', '融券增減',   '信用交易 · 板塊融券餘額 5 日變化', lambda sec: CHS['short'].get(sec, {}).get('z'), True),
+  'c_mom':   ('tw', '價格動能',   '板塊近 20 日累積超額報酬', lambda sec: TWC.get(sec, {}).get('mom'), True),
+  'c_vol':   ('tw', '波動升溫',   '板塊 20 日波動 ÷ 250 日波動', lambda sec: TWC.get(sec, {}).get('vol'), False),
+}
+for aid, (mk, name, src_txt, fn, dirn) in AMP_DEF.items():
+    est = amp_est(AR, ND, react_tw, fn, dirn)
+    jn = CH_LAST if aid in ('c_fgn', 'c_itc', 'c_marg', 'c_short') else ND - 1
+    now = {}
+    for sec in AR:
+        z = fn(sec)
+        if z is not None and not np.isnan(z[jn]): now[sec] = round(float(z[jn]), 2)
+    AMP[aid] = {'mkt': mk, 'n': name, 's': src_txt, 'est': est, 'now': now, 'asof': tdays[jn]}
+if us_ok:
+    USC = cond_series(UAR)
+    for aid, name, src_txt, key, dirn in (('f_mom', '價格動能', '板塊近 20 日累積超額報酬（對 SPY）', 'mom', True),
+                                           ('f_vol', '波動升溫', '板塊 20 日波動 ÷ 250 日波動', 'vol', False)):
+        fn = (lambda kk: lambda sec: USC.get(sec, {}).get(kk))(key)
+        est = amp_est(UAR, UND, react_us, fn, dirn)
+        now = {sec: round(float(fn(sec)[-1]), 2) for sec in UAR if fn(sec) is not None and not np.isnan(fn(sec)[-1])}
+        AMP[aid] = {'mkt': 'us', 'n': name, 's': src_txt, 'est': est, 'now': now}
+# 籌碼金額的目前值（億元，近 5 日）給頁面顯示
+for aid, key in (('c_fgn', 'fgn'), ('c_itc', 'itc'), ('c_marg', 'marg'), ('c_short', 'short')):
+    AMP[aid]['val'] = {sec: round(float(v['now'][CH_LAST]), 2) for sec, v in CHS[key].items() if not np.isnan(v['now'][CH_LAST])}
+for aid, a in AMP.items():
+    e = a['est']
+    print(f'放大器 {aid:7s} {a["n"]}：' + (f'×{e["amp"]}（t={e["t"]}，異常 {e["n_strong"]}／正常 {e["n_weak"]}）'
+          + (f'，同向 {e["same"]:.0%}' if 'same' in e else '') if e else '樣本不足'), flush=True)
+
+# ───────────────────────── 7c. 板塊上下游連動（實證）─────────────────────────
+# 上下游配對沿用頁面的產業鏈結構；強度與時間差改用近 500 日板塊超額報酬的領先落後相關
+chain_src = orig[orig.index('const CHAIN=['):]; chain_src = chain_src[:chain_src.index('];')]
+CHAIN_PAIRS = re.findall(r'\["(\w+)","(\w+)",[\d.]+,\d\]', chain_src)
+chain = []
+for a_, b_ in CHAIN_PAIRS:
+    src_ar = AR if a_ in AR and b_ in AR else (UAR if us_ok and a_ in UAR and b_ in UAR else None)
+    if src_ar is None: continue
+    x, y = src_ar[a_][-500:], src_ar[b_][-500:]
+    best = None
+    for lag in range(0, 4):
+        xa, yb = (x, y) if lag == 0 else (x[:-lag], y[lag:])
+        ok = ~(np.isnan(xa) | np.isnan(yb))
+        if ok.sum() < 200: continue
+        c = float(np.corrcoef(xa[ok], yb[ok])[0, 1])
+        if best is None or abs(c) > abs(best[1]): best = (lag, c, int(ok.sum()))
+    if best:
+        chain.append([a_, b_, round(abs(best[1]), 3), max(1, best[0]), round(best[1], 3), best[2]])
+print(f'上下游連動：{len(chain)} 條，相關係數中位數 {np.median([c[4] for c in chain]):.2f}', flush=True)
+
+# ───────────────────────── 7d. 即時資料（頁面開啟時讀）─────────────────────────
+live = {'asof_tw': tdays[-1]}
+try:   # 台股板塊資金流：twflow 盤後彙整的三大法人近 5 日買賣超（億元），涵蓋全部上市櫃
+    lt = json.loads((ROOT / 'twflow/web/data/latest.json').read_text(encoding='utf-8'))
+    flow = defaultdict(float); fgn = itc = 0.0
+    for c, v in lt['stock_data'].items():
+        if v.get('net_5d_yi') is not None and SEC.get(c): flow[SEC[c]] += v['net_5d_yi']
+        fgn += v.get('foreign_5d') or 0; itc += v.get('trust_5d') or 0
+    live['tw_flow'] = {k: round(v, 2) for k, v in flow.items()}
+    live['tw_flow_date'] = lt.get('date'); live['tw_fgn_5d'] = round(fgn, 1); live['tw_itc_5d'] = round(itc, 1)
+except Exception as e:
+    print('台股資金流讀取失敗：', e)
+if us_ok:   # 美股沒有公開的板塊資金流；改給板塊近 5 日超額報酬（對 SPY，%）
+    live['us_ret5'] = {sec: round(float(np.nansum(r[-5:])), 2) for sec, r in UAR.items()}
+    live['asof_us'] = udays[-1]
+try:
+    ul = json.loads((ROOT / 'twflow/web/data/us/latest.json').read_text(encoding='utf-8'))
+    fx = ul['stock_data'].get('TWD=X') or {}
+    if fx.get('price'): live['fx'] = {'usdtwd': fx['price'], 'date': ul.get('date'), 'src': 'Yahoo TWD=X（usflow）'}
+except Exception as e:
+    print('匯率讀取失敗：', e)
+
+# 台股 ETF 除息預告：證交所 TWT48U ＋ 櫃買 exright_prepost（官方，含尚未公告金額者）
+def roc(sv):
+    m = re.match(r'(\d{2,3})\D?(\d{2})\D?(\d{2})', sv.replace('年', '/').replace('月', '/').replace('日', ''))
+    return f'{int(m.group(1)) + 1911}-{m.group(2)}-{m.group(3)}' if m else None
+divs = []
+try:
+    req = urllib.request.Request('https://www.twse.com.tw/rwd/zh/exRight/TWT48U?response=json', headers={'User-Agent': 'Mozilla/5.0'})
+    j = json.loads(urllib.request.urlopen(req, timeout=40).read().decode('utf-8'))
+    for r in j.get('data', []):
+        if not r[1].startswith('00') or '息' not in r[3]: continue
+        amt = re.sub(r'<[^>]+>', '', r[7]); amt = float(amt) if re.match(r'^[\d.]+$', amt.strip()) and float(amt) > 0 else None
+        divs.append([r[1], r[2].strip(), roc(r[0]), amt, '證交所除權除息預告表'])
+except Exception as e:
+    print('證交所除息預告讀取失敗：', e)
+try:
+    req = urllib.request.Request('https://www.tpex.org.tw/openapi/v1/tpex_exright_prepost', headers={'User-Agent': 'Mozilla/5.0'})
+    for r in json.loads(urllib.request.urlopen(req, timeout=40).read().decode('utf-8')):
+        c = r.get('SecuritiesCompanyCode', '')
+        if not c.startswith('00') or '息' not in r.get('ExRrightsExDividend', ''): continue
+        try: amt = float(r.get('CashDividend') or 0) or None
+        except ValueError: amt = None      # 「尚未公告」
+        divs.append([c, r.get('CompanyName', '').strip(), roc(r.get('ExRrightsExDividendDate', '')), amt, '櫃買中心除權除息預告'])
+except Exception as e:
+    print('櫃買除息預告讀取失敗：', e)
+today_iso = dt.date.today().isoformat()
+live['div'] = sorted([d for d in divs if d[2] and d[2] >= today_iso], key=lambda d: d[2])
+
+# 未來 120 天的官方排程（頁面的事件行事曆直接用這份，不再用規則推算）
+upcoming = []
+horizon = (dt.date.today() + dt.timedelta(days=120)).isoformat()
+def tpe_dt(d, rt):
+    x = dt.datetime(d.year, d.month, d.day) + dt.timedelta(hours=rt); return x.date().isoformat(), x.strftime('%H:%M')
+for k, (ctry, name) in ECON_MAP.items():
+    seen_month = set()
+    for iso in sorted(ECAL['econ']):
+        if iso < (dt.date.today() - dt.timedelta(days=1)).isoformat() or iso > horizon: continue
+        rows = [r for r in ECAL['econ'][iso] if r[2] == ctry and r[0] == name]
+        if not rows: continue
+        d = dt.date.fromisoformat(iso)
+        if k == 'umich':
+            if (d.year, d.month) in seen_month: continue
+            seen_month.add((d.year, d.month))
+        r = pick_row(rows); hh, mm = map(int, (r[1] or '08:30').split(':'))
+        dd, tt = tpe_dt(d, et_to_tpe_hours(d, hh, mm, fixed_utc4=True))
+        upcoming.append({'k': k, 'd': dd, 't': tt, 'cons': r[4], 'prev': r[5], 'src': 'Nasdaq 經濟行事曆'})
+for k, (sym, default) in EARN_MAP.items():
+    for row in ECAL['earn'].get(sym, []):
+        if row[0] < today_iso or row[0] > horizon: continue
+        d = dt.date.fromisoformat(row[0]); tm = row[1]
+        when = 'pre' if 'pre' in tm else 'after' if 'after' in tm else default
+        dd, tt = tpe_dt(d, et_to_tpe_hours(d, 8, 0) if when == 'pre' else et_to_tpe_hours(d, 16, 30))
+        upcoming.append({'k': k, 'd': dd, 't': tt, 'cons': row[3], 'prev': None, 'src': f'Nasdaq 財報行事曆（{sym}）'})
+if not any(u['k'] == 'fomc' for u in upcoming):
+    for x in FOMC:
+        if today_iso <= x <= horizon:
+            d = dt.date.fromisoformat(x); dd, tt = tpe_dt(d, et_to_tpe_hours(d, 14, 0))
+            upcoming.append({'k': 'fomc', 'd': dd, 't': tt, 'cons': None, 'prev': None, 'src': 'Fed 官網行事曆'})
+for k in ('twrev', 'tsmcrev', 'twq', 'quad'):   # 法定期限與交易所固定規則
+    t = TPL[k]
+    for y, m in months(dt.date.today(), dt.date.fromisoformat(horizon)):
+        d = t['at'](y, m)
+        if d and today_iso <= d.isoformat() <= horizon:
+            dd, tt = tpe_dt(d, t['rt'])
+            upcoming.append({'k': k, 'd': dd, 't': tt, 'cons': None, 'prev': None,
+                             'src': {'twrev': '證券交易法：每月 10 日前公告營收', 'tsmcrev': '證券交易法：每月 10 日前公告營收',
+                                     'twq': '證券交易法：季報法定期限', 'quad': '期交所／CBOE：季月第三個星期五'}[k]})
+upcoming.sort(key=lambda u: (u['d'], u['t']))
+print(f'即時資料：台股資金流 {len(live.get("tw_flow", {}))} 板塊、美股 {len(live.get("us_ret5", {}))} 板塊、'
+      f'匯率 {live.get("fx", {}).get("usdtwd")}、除息預告 {len(live["div"])} 檔、未來排程 {len(upcoming)} 件', flush=True)
+
 # ───────────────────────── 8. 輸出 ─────────────────────────
 def p95(v): return float(np.percentile(np.abs(v), 95)) if len(v) else 1.0
 full = {'dir': round(p95([e['beta'] for e in edges if e['kind'] == 'dir']), 3),
@@ -455,7 +758,8 @@ out = {
   'edges': [dict(**{'from': e['frm']}, to=e['to'], beta=round(e['beta'], 3), se=round(e['se'], 3), t=round(e['t'], 2),
                  r2=round(e['r2'], 3), n=e['n'], lag=e['lag'], kind=e['kind']) for e in edges],
   'stock_beta': stock_beta, 'dist': dist, 'cone': cone, 'fill': fill,
-  'mode': mode, 'n_occ': n_occ, 'surprise': SURP_SRC, 'fomc_src': FOMC_SRC,
+  'mode': mode, 'n_occ': n_occ, 'surprise': SURP_SRC, 'fomc_src': FOMC_SRC, 'date_src': DATE_SRC,
+  'amp': AMP, 'chain': chain, 'live': live, 'upcoming': upcoming,
 }
 OUT.write_text(json.dumps(out, ensure_ascii=False, separators=(',', ':')), encoding='utf-8')
 sig = sum(1 for e in edges if abs(e['t']) >= 1.96)

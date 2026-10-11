@@ -81,8 +81,11 @@ jobs:
           # 官方日線（含日後下市股票）：補最新幾天，並順便回補十年歷史 20 分鐘
           ( cd .. && python -X utf8 swing/scripts/fetch_prices.py --days 2550 --budget 20 ) || echo "::warning::官方日線抓取失敗"
           # 市場傳導艙：全市場板塊對照＋台美股事件研究校準（β、分布區間、填息統計），頁面開啟時線上讀取
-          # 美股長歷史抓不到時沿用快取；快取也沒有時沿用上一份校準的美股部分
+          # 美股長歷史抓不到時沿用快取；快取也沒有時沿用上一份校準的美股部分。
+          # 官方排程（Nasdaq 經濟／財報行事曆）只重抓最近 10 天與未來 120 天；全美股清單失敗時保留舊檔
           ( cd .. && python -X utf8 tools/capsule/gen_twall.py twflow tools/capsule/twall.json \
+              && { timeout 12m python -X utf8 tools/capsule/fetch_calendar.py || echo "::warning::官方排程更新失敗"; } \
+              && { python -X utf8 tools/capsule/gen_usall.py || echo "::warning::全美股清單更新失敗"; } \
               && { timeout 8m python -X utf8 tools/capsule/fetch_hist.py /tmp/capsule_cache || true; } \
               && timeout 10m python -X utf8 tools/capsule/calibrate.py . twflow/web/data/capsule_calib.json /tmp/capsule_cache ) || echo "::warning::傳導艙校準失敗"
           # 波段實驗室：五年日線回測（約 3 分鐘）
@@ -116,7 +119,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add twflow/data/market/days twflow/data/market/stock_meta.json $(ls -d twflow/data/etf twflow/data/taifex 2>/dev/null) \
                   $(ls swing/data/revenue.json 2>/dev/null) $(ls -d swing/data/chips swing/data/fund swing/data/tdcc swing/data/prices swing/data/forward swing/data/extra swing/data/official 2>/dev/null) \
-                  twflow/data/market/market.json twflow/web/data tools/capsule/twall.json \
+                  twflow/data/market/market.json twflow/web/data tools/capsule/twall.json tools/capsule/econ_cal.json \
                   twflow/web/snapshot.html
           if git diff --staged --quiet; then
             echo "沒有變動（非交易日或來源尚未更新）"

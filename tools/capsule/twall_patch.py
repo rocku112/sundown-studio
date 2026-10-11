@@ -55,7 +55,7 @@ async function refreshLive(){
     const rows=j.rows.filter(x=>x[2]==="s"||x[2]==="e"||x[2]==="d").map(([id,n,t,m,px,chg,vol])=>{
       const lev=t==="e"&&/正2|反1|反向|槓桿/.test(n);
       const tt=(vol||0)*1000*(px||0);
-      return [id,n,t==="e"?(lev?2:1):0,guessIndTW(id),tt>0?clamp(Math.round((Math.log10(tt)-6)*9),5,40):5,px,chg];
+      return [id,n,t==="e"?(lev?2:1):0,guessIndTW(id),tt>0?clamp(Math.round((Math.log10(tt)-6)*22),5,100):5,px,chg];
     });
     mergeTwRows(rows); PX_DATE=j.date; PX_SRC="線上最新";
     buildGraph(); refreshPoolViews(); updateDataChip();

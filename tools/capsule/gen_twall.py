@@ -99,7 +99,7 @@ for code, name, typ, mkt, px, chg, vol in tw['rows']:
         stat['ic' if sec else 'code'] += 1
         sec = sec or sector_from_code(code)
     t = (vol or 0) * 1000 * (px or 0)
-    w = int(max(5, min(40, round((math.log10(t) - 6) * 9)))) if t > 0 else 5
+    w = int(max(5, min(100, round((math.log10(t) - 6) * 22)))) if t > 0 else 5   # 成交值（元）取對數：台積電約 100
     pxs = '' if px is None else ('%g' % px)
     chs = '' if chg is None else ('%g' % chg)
     nm = name.replace('|', '／')
