@@ -8,6 +8,7 @@
 | `build.py` | 套 SunDown 樣式、除息事件、修正，再依序載入下面三個 patch，輸出 `dist/index.html` |
 | `twall_patch.py` | 全台股搜尋、線上收盤價（讀 `twflow/web/data/tw_all.json`） |
 | `calib_patch.py` | 內嵌實證校準，並在頁面開啟時線上讀取最新的 `capsule_calib.json` |
+| `us_patch.py` | 美股收盤價（讀 `twflow/web/data/us/all.json`，usflow 每日從 Nasdaq 官網選股器抓）|
 | `sound_patch.py` | 音效 |
 | `gen_twall.py` | 全市場清單＋產業價值鏈 → `twall.json`（代號、板塊、影響力） |
 | `fetch_hist.py` | Yahoo 長歷史：美股 197 檔＋SPY、台股債券／海外 ETF、配息 ETF（含配息紀錄）→ 快取目錄 `hist.json.gz` |
