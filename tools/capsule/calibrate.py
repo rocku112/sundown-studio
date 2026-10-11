@@ -773,6 +773,56 @@ print(f'即時資料：台股資金流 {len(live.get("tw_flow", {}))} 板塊、�
       f'匯率 {live.get("fx", {}).get("usdtwd")}、除息預告 {len(live["div"])} 檔、未來排程 {len(upcoming)} 件', flush=True)
 
 
+
+# ───────────────────────── 7f. 事件 → 個別 ETF（除權息雷達用）─────────────────────────
+# 持有人看的是 ETF 本身的漲跌，所以用原始報酬（不扣大盤）：有意外值的事件估 β，沒有的估事件窗超額波動。
+etf_ret = {}
+for c, k in KIND.items():
+    if k != 1: continue
+    if c in CIDX and np.sum(~np.isnan(RET[CIDX[c]])) > 500: etf_ret[c] = RET[CIDX[c]]
+    elif c in HIST:
+        r = hist_ret(c, tdays)
+        if r is not None and np.sum(~np.isnan(r)) > 500: etf_ret[c] = r
+_save_scen = dict(SCEN_FREQ)
+e_etf, _, _, _, _ = study(etf_ret, ND, lambda d, t: react_idx(d, rt_of(d, t)), 'ETF')
+SCEN_FREQ.clear(); SCEN_FREQ.update(_save_scen)
+etf_impact = defaultdict(list)
+for e in e_etf:
+    etf_impact[e['frm']].append([e['to'], round(e['beta'], 3), round(e['t'], 2), e['n'], e['kind']])
+for k in etf_impact:
+    etf_impact[k] = sorted(etf_impact[k], key=lambda x: -abs(x[2]))[:12]
+print(f'事件 → ETF：{len(etf_ret)} 檔 ETF、{len(e_etf)} 條（顯著 {sum(1 for e in e_etf if abs(e["t"]) >= 1.96)}）', flush=True)
+
+# ETF 配息頻率（twflow 的 ETF 體質表：近 12 個月官方配息次數）與近 45 天已除息清單（填息追蹤）
+try:
+    ep = json.loads((ROOT / 'twflow/web/data/etf_profile.json').read_text(encoding='utf-8'))
+    ni = ep['fields'].index('n_div')
+    FREQ = {c: {12: '月配', 4: '季配', 2: '半年配', 1: '年配'}.get(int(v[ni] or 0)) for c, v in ep['rows'].items() if v[ni]}
+except Exception as e:
+    FREQ = {}; print('ETF 體質表讀取失敗：', e)
+live['div'] = [d + [FREQ.get(d[0])] for d in live['div']]
+recent = []
+_end = dt.date.today(); _st = _end - dt.timedelta(days=45)
+try:
+    u = f'https://www.twse.com.tw/rwd/zh/exRight/TWT49U?response=json&startDate={_st:%Y%m%d}&endDate={_end:%Y%m%d}'
+    j = json.loads(urllib.request.urlopen(urllib.request.Request(u, headers={'User-Agent': 'Mozilla/5.0'}), timeout=40).read().decode('utf-8'))
+    for r in j.get('data', []):
+        if r[1].startswith('00') and '息' in r[6]:
+            recent.append([r[1], r[2].strip(), roc(r[0]), float(r[3].replace(',', '')), float(r[5]), '證交所除權除息計算結果表'])
+except Exception as e:
+    print('證交所除權息結果讀取失敗：', e)
+try:
+    u = f'https://www.tpex.org.tw/www/zh-tw/bulletin/exDailyQ?startDate={_st:%Y/%m/%d}&endDate={_end:%Y/%m/%d}&response=json'
+    j = json.loads(urllib.request.urlopen(urllib.request.Request(u, headers={'User-Agent': 'Mozilla/5.0'}), timeout=40).read().decode('utf-8'))
+    for r in j['tables'][0]['data']:
+        if r[1].startswith('00') and float(r[6] or 0) > 0:
+            recent.append([r[1], r[2].strip(), roc(r[0]), float(r[3].replace(',', '')), float(r[6]), '櫃買中心除權除息計算結果'])
+except Exception as e:
+    print('櫃買除權息結果讀取失敗：', e)
+live['div_recent'] = sorted(recent, key=lambda x: x[2], reverse=True)
+live['freq'] = FREQ
+print(f'除息：預告 {len(live["div"])} 檔、近 45 天已除息 {len(recent)} 檔', flush=True)
+
 # ───────────────────────── 7e. 巨觀環境（實證）─────────────────────────
 # 三組環境都用「當天已經公布」的數據判斷（不偷看未來）：
 #   利率：美國 2 年期公債殖利率近 63 個交易日（約 3 個月）上升或下降（FRED DGS2）
@@ -849,7 +899,7 @@ out = {
                  r2=round(e['r2'], 3), n=e['n'], lag=e['lag'], kind=e['kind']) for e in edges],
   'stock_beta': stock_beta, 'dist': dist, 'cone': cone, 'fill': fill,
   'mode': mode, 'n_occ': n_occ, 'surprise': SURP_SRC, 'fomc_src': FOMC_SRC, 'date_src': DATE_SRC,
-  'amp': AMP, 'chain': chain, 'live': live, 'upcoming': upcoming, 'regime': regime, 'scen_freq': SCEN_FREQ,
+  'amp': AMP, 'chain': chain, 'live': live, 'upcoming': upcoming, 'regime': regime, 'scen_freq': SCEN_FREQ, 'etf_impact': etf_impact,
 }
 OUT.write_text(json.dumps(out, ensure_ascii=False, separators=(',', ':')), encoding='utf-8')
 sig = sum(1 for e in edges if abs(e['t']) >= 1.96)

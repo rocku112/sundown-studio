@@ -4,6 +4,7 @@
   · 美股：頁面內建的 197 檔美股／美國 ETF ＋ SPY（市場模型基準）
   · 台股債券 ETF、海外 ETF：兩個板塊各取成交值前 15 檔（官方日線只回補了少數 ETF）
   · 配息 ETF：頁面除息表裡的每一檔（含原始收盤與配息紀錄，算填息用）
+  · 成交值前 40 大的台股 ETF（除權息雷達的事件影響）
 
 輸出 <快取目錄>/hist.json.gz：{代號: {"d": [日期], "c": [收盤], "a": [還原收盤], "v": {除息日: 配息}}}
 已有的檔案只補最近三個月；Yahoo 失敗的代號沿用舊資料。快取目錄由 GitHub Actions cache 保存，不進 repo。
@@ -26,6 +27,8 @@ TW_ETF = []
 for sec in ('tw_bond', 'tw_ovs'):
     TW_ETF += [r[0] for r in sorted((r for r in rows if r[3] == sec and r[2] == '1'), key=lambda r: -int(r[4]))[:15]]
 TW_ETF += re.findall(r'\["(\w+)", ?"(?:季配|月配|半年配)"', (HERE / 'build.py').read_text(encoding='utf-8'))
+# 除權息雷達要看各類事件對 ETF 的實證影響：再加成交值前 40 大的台股 ETF（不含槓桿反向）
+TW_ETF += [r[0] for r in sorted((r for r in rows if r[2] == '1'), key=lambda r: -int(r[4]))[:40]]
 TW_ETF = list(dict.fromkeys(TW_ETF))
 
 old = json.loads(gzip.decompress(OUT.read_bytes()).decode('utf-8')) if OUT.exists() else {}
