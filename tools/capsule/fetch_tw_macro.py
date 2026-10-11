@@ -43,10 +43,10 @@ for p in range(1, 15 if first_run else 3):
     got = [roc(*m.groups()) for x in titles for m in [re.search(r'(\d{2,3})年(\d{1,2})月(\d{1,2})日央行理監事會', x)] if m]
     cbc.update(got)
     for href, ttl in re.findall(r'href="(/tw/cp-357-[^"]+)"[^>]*title="(\d{3}年中央銀行理監事聯席會議預定日期)"', t):
-        y = re.match(r'(\d{3})', ttl).group(1)
         art = get('https://www.cbc.gov.tw' + href) or ''
-        body = re.sub(r'<[^>]+>', ' ', art)
-        cbc_next += [roc(y, m, d) for m, d in re.findall(r'(\d{1,2})月(\d{1,2})日', body[body.find('預定日期'):][:3000])]
+        body = re.sub(r'\s+', ' ', re.sub(r'<[^>]+>', ' ', art))
+        seg = body[body.find('茲預定'):][:400] if '茲預定' in body else ''
+        cbc_next += [roc(yy, m, d) for yy, m, d in re.findall(r'(\d{3})年(\d{1,2})月(\d{1,2})日', seg)]
     if got and min(got) < STOP: break
     time.sleep(1)
 
@@ -66,38 +66,43 @@ for p in range(1, 70 if first_run else 3):
 
 print(f'CPI：{len(cpi)} 次', flush=True)
 # ── 台灣出口（財政部新聞稿：發布日期與下次發布日期）──
+# 財政部列表的翻頁要靠 JavaScript，只能讀第一頁（最新發布與下次發布日期）；
+# 較早的發布日取自主計總處「最新訊息」（彙整各機關發布，約回溯兩年），之後每天累積
 exp, exp_next = set(old.get('twexp', [])), None
-for p in range(1, 320 if first_run else 3):
-    if p % 20 == 0: print(f'  財政部第 {p} 頁', flush=True)
-    t = get('https://www.mof.gov.tw/multiplehtml/384fb3077bb349ea973e7fc6f13b6974' + (f'?page={p}' if p > 1 else ''))
+t = get('https://www.mof.gov.tw/List.aspx?n=1009')
+for blk in re.findall(r"title='\d+年\d+月海關進出口貿易初步統計'.*?</a>", t or '', re.S):
+    m = re.search(r'(?<!下次)發布日期：?\s*(\d{3})年(\d{1,2})月(\d{1,2})日', blk)
+    if m: exp.add(roc(*m.groups()))
+    n = re.search(r'下次發布日期：?\s*(\d{3})年(\d{1,2})月(\d{1,2})日', blk)
+    if n and exp_next is None: exp_next = roc(*n.groups())
+for p in range(1, 9 if first_run else 2):
+    t = get(f'https://www.stat.gov.tw/News.aspx?n=3635&sms=10980&page={p}&PageSize=50')
     if not t: break
-    for blk in re.findall(r"title='\d+年\d+月海關進出口貿易初步統計'.*?</a>", t, re.S):
-        m = re.search(r'發布日期：?\s*(\d{3})年(\d{1,2})月(\d{1,2})日', blk)
-        if m: exp.add(roc(*m.groups()))
-        n = re.search(r'下次發布日期：?\s*(\d{3})年(\d{1,2})月(\d{1,2})日', blk)
-        if n and exp_next is None: exp_next = roc(*n.groups())
-    times = re.findall(r'class="time">(\d{4}-\d{2}-\d{2})', t)
-    if times and min(times) < STOP: break
-    time.sleep(1)
+    for py, pm, pd in re.findall(r'title="\d+年\d+月海關進出口貿易初步統計"[^<]*</a>.*?<span>(\d{3})-(\d{2})-(\d{2})</span>', t, re.S):
+        exp.add(roc(py, pm, pd))
+    time.sleep(0.5)
 
 # ── 未來的 CPI 發布日：主計總處預告統計資料發布時間表 ──
 cpi_next = []
-for y in (dt.date.today().year, dt.date.today().year + 1):
-    for mth in range(1, 13):
-        if dt.date(y, mth, 28) < dt.date.today(): continue
-        t = get(f'https://www.stat.gov.tw/News_NoticeCalendar.aspx?n=3717&page=1&PageSize=50&year={y}&month={mth}&Dept=4527&_Query=消費者物價&_Showtype=2')
-        if not t: continue
-        for d in re.findall(r'(\d{4})[/-](\d{1,2})[/-](\d{1,2})[^<]{0,80}</[^>]+>[^<]*消費者物價', t):
-            cpi_next.append(f'{d[0]}-{int(d[1]):02d}-{int(d[2]):02d}')
-        if len(cpi_next) >= 3: break
-    if len(cpi_next) >= 3: break
+t = get(f'https://www.stat.gov.tw/News_NoticeCalendar.aspx?n=3717&page=1&PageSize=100&year={dt.date.today().year}&month=1&Dept=4527&_Showtype=0')
+if t and 'var VueData = ' in t:
+    vd, _ = json.JSONDecoder().raw_decode(t[t.index('var VueData = ') + len('var VueData = '):])
+    for it in vd.get('list', []):
+        if it.get('name') != '消費者物價指數': continue
+        for month in it.get('timedatas', []):
+            for x in month:
+                n = re.match(r'\((\d{3})(\d{2})\)', x.get('notice', ''))
+                if not n: continue
+                yy, mm = int(n.group(1)) + 1911, int(n.group(2)) + 1        # 資料月份的下一個月發布
+                if mm == 13: yy, mm = yy + 1, 1
+                cpi_next.append(f'{yy}-{mm:02d}-{int(x["date"]):02d}')
 
 today = dt.date.today().isoformat()
 out = {'cbc': sorted(d for d in cbc if d >= STOP), 'twcpi': sorted([d, v] for d, v in cpi.items() if d >= STOP),
        'twexp': sorted(d for d in exp if d >= STOP),
        'next': {'cbc': sorted(set(d for d in cbc_next if d >= today) | set(old.get('next', {}).get('cbc', [])) - {x for x in cbc if x < today}),
                 'twexp': [exp_next] if exp_next and exp_next >= today else [d for d in old.get('next', {}).get('twexp', []) if d >= today],
-                'twcpi': sorted(set(cpi_next)) or [d for d in old.get('next', {}).get('twcpi', []) if d >= today]},
+                'twcpi': sorted(d for d in set(cpi_next) if d >= today) or [d for d in old.get('next', {}).get('twcpi', []) if d >= today]},
        'fetched': today}
 out['next']['cbc'] = [d for d in out['next']['cbc'] if d >= today]
 OUT.write_text(json.dumps(out, ensure_ascii=False, indent=0), encoding='utf-8')

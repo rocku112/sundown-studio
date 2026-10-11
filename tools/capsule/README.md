@@ -16,6 +16,7 @@
 | `gen_twall.py` | 台股全市場清單＋產業價值鏈 → `twall.json`（板塊、成交值影響力） |
 | `gen_usall.py` | Nasdaq 選股器 → `twflow/web/data/capsule_usall.json`（全美股＋ETF，產業對應板塊） |
 | `fetch_calendar.py` | Nasdaq 經濟／財報行事曆 → `econ_cal.json`（公布日、時刻、實際值、市場共識、EPS 驚喜） |
+| `fetch_tw_macro.py` | 央行理監事會（央行決議列表與年度預定日期）、台灣 CPI（主計總處新聞稿與預告發布時間表）、出口（財政部新聞稿） → `tw_macro.json` |
 | `fetch_hist.py` | Yahoo 長歷史：美股、台股債券／海外 ETF、配息 ETF（含配息紀錄）→ 快取目錄 `hist.json.gz` |
 | `calibrate.py` | 事件研究校準＋放大器＋上下游＋即時資料＋未來排程 → `twflow/web/data/capsule_calib.json` |
 
@@ -34,12 +35,14 @@
 | 匯率 | Yahoo TWD=X（usflow） |
 | 台美股收盤價 | twflow／usflow 每日管線 |
 
-台灣 CPI、出口、央行理監事會找不到可自動抓取的官方排程，已從事件中移除。
+台灣沒有公開的市場共識：CPI 用「年增率 − 前 3 個月平均」當意外值；央行與出口只估事件窗超額波動。出口的歷史發布日只能回溯到 2024-11（主計總處彙整列表），之後每天累積。
+
+巨觀環境（利率、景氣、通膨）用當天已公布的 FRED 2 年期殖利率、ISM、核心 CPI 實際值判斷，算各板塊在同樣環境下之後 20 個交易日的超額報酬。
 
 ## 自動更新
 
 `.github/workflows/twflow-daily.yml` 每個交易日盤後，在官方日線更新後依序執行
-`gen_twall.py` → `fetch_calendar.py` → `gen_usall.py` → `fetch_hist.py` → `calibrate.py`。
+`gen_twall.py` → `fetch_calendar.py` → `gen_usall.py` → `fetch_tw_macro.py` → `fetch_hist.py` → `calibrate.py`。
 `econ_cal.json` 與 `twall.json` 進 repo；Yahoo 長歷史放 Actions cache（`/tmp/capsule_cache`）。
 任何一步失敗都沿用上一份資料，不會擋住其他盤後更新。頁面開啟時會抓 GitHub Pages 上的最新檔案。
 
@@ -49,6 +52,7 @@
 python -X utf8 tools/capsule/gen_twall.py twflow tools/capsule/twall.json
 python -X utf8 tools/capsule/fetch_calendar.py
 python -X utf8 tools/capsule/gen_usall.py
+python -X utf8 tools/capsule/fetch_tw_macro.py
 python -X utf8 tools/capsule/fetch_hist.py tools/capsule/cache
 python -X utf8 tools/capsule/calibrate.py . twflow/web/data/capsule_calib.json tools/capsule/cache
 python -X utf8 tools/capsule/build.py
