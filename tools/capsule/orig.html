@@ -1,0 +1,3356 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>市場傳導艙 (Copy)</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
+<style>
+:root{
+  --void:#04060A;
+  --line:rgba(126,152,190,.14); --line-hi:rgba(126,152,190,.34);
+  --ink:#E4EDF8; --dim:#8397B4; --faint:#55657F; --ghost:#36435A;
+  --l1:#A78BFA; --l1-ink:#CDBEFF;
+  --l2:#45C8F0; --l2-ink:#96E4FF;
+  --l3:#F2B33D; --l3-ink:#FFDC96;
+  --l4:#E4EDF8;
+  --bull:#FF4D5E; --bear:#17D492;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --cond:"Barlow Condensed","Noto Sans TC",system-ui,sans-serif;
+  --sans:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--void);color:var(--ink);font-family:var(--sans);overflow:hidden}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;padding:0}
+input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--l3);outline-offset:2px}
+#app{position:fixed;inset:0;background:radial-gradient(140% 100% at 50% 46%,#0C1020 0%,#070A12 46%,#04060A 100%)}
+#stage{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#stage.dragging{cursor:grabbing}
+.hud{position:absolute;inset:0;display:grid;
+  grid-template-columns:minmax(286px,21vw) 1fr minmax(340px,25vw);
+  grid-template-rows:auto minmax(0,1fr) auto;gap:12px 20px;padding:14px 20px 16px;pointer-events:none}
+.hud>*{pointer-events:auto}
+.gap{grid-column:2;grid-row:2;pointer-events:none}
+
+.bar{grid-column:1/-1;display:flex;align-items:center;gap:15px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:11px}
+.glyph{width:31px;height:31px;flex:none;position:relative;border:1px solid rgba(242,179,61,.5);
+  background:#120E05;display:grid;place-items:center}
+.glyph::before{content:"";position:absolute;inset:4px;border:1px solid rgba(242,179,61,.28)}
+.glyph span{font-family:var(--cond);font-weight:700;font-size:14px;color:var(--l3)}
+.brand h1{margin:0;font-size:clamp(15px,1.2vw,20px);font-weight:900;letter-spacing:.2em}
+.brand .en{font-family:var(--mono);font-size:9px;letter-spacing:.3em;color:var(--faint);
+  text-transform:uppercase;margin-top:3px}
+.tabs{display:flex;border:1px solid var(--line)}
+.tabs button{padding:0 13px;height:27px;font-family:var(--cond);font-size:11.5px;letter-spacing:.12em;
+  text-transform:uppercase;font-weight:600;color:var(--faint);border-right:1px solid var(--line);transition:.16s}
+.tabs button:last-child{border-right:none}
+.tabs button:hover{color:var(--dim)}
+.tabs button[aria-pressed="true"]{color:var(--l3);background:rgba(242,179,61,.09)}
+.chip{display:inline-flex;align-items:center;gap:7px;height:27px;padding:0 12px;border:1px solid var(--line);
+  font-size:11.5px;letter-spacing:.1em;color:var(--dim);font-family:var(--cond);
+  text-transform:uppercase;font-weight:600;transition:.18s}
+.chip:hover{border-color:var(--line-hi);color:var(--ink)}
+.chip.on{border-color:rgba(242,179,61,.5);color:var(--l3);background:rgba(242,179,61,.08)}
+.chip.demo{border-color:rgba(242,179,61,.4);color:var(--l3);background:rgba(242,179,61,.06)}
+.chip .dot{width:6px;height:6px;border-radius:50%;background:currentColor;box-shadow:0 0 7px currentColor;
+  animation:blip 2.6s ease-in-out infinite}
+@keyframes blip{0%,100%{opacity:1}50%{opacity:.3}}
+.bar .right{margin-left:auto;display:flex;align-items:center;gap:14px}
+.stamp{text-align:right;line-height:1.3}
+.stamp .k{font-size:9px;letter-spacing:.18em;color:var(--faint);font-family:var(--cond);text-transform:uppercase}
+.stamp .v{font-family:var(--mono);font-size:15px;color:var(--ink);font-variant-numeric:tabular-nums}
+.stamp .v i{font-style:normal;color:var(--l3)}
+
+.col{grid-row:2;display:flex;flex-direction:column;gap:14px;min-height:0;overflow:hidden}
+.pnl{min-height:0;display:flex;flex-direction:column}
+.pnl:first-child{flex:1 1 44%}
+.pnl:last-child{flex:1 1 56%}
+.scroll{flex:1 1 auto;min-height:0;overflow-y:auto;
+  scrollbar-width:thin;scrollbar-color:rgba(126,152,190,.24) transparent}
+.scroll::-webkit-scrollbar{width:5px}
+.scroll::-webkit-scrollbar-thumb{background:rgba(126,152,190,.24)}
+.pnl-h{flex:none} .pnl-s{flex:none}
+.pnl-h{display:flex;align-items:baseline;gap:9px;padding-bottom:7px;border-bottom:1px solid var(--line)}
+.pnl-h h2{margin:0;font-size:12px;font-weight:700;letter-spacing:.14em}
+.pnl-h .n{font-family:var(--mono);font-size:10.5px;color:var(--faint);margin-left:auto}
+.pnl-s{font-size:10.5px;color:var(--faint);line-height:1.7;margin:8px 0}
+
+.ev{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;align-items:center;
+  width:100%;text-align:left;padding:7px 6px 7px 0;transition:background .16s}
+.ev:hover{background:rgba(126,152,190,.08)}
+.ev.on{background:rgba(167,139,250,.16)}
+.ev .d{font-family:var(--mono);font-size:10px;color:var(--l1-ink);text-align:center;line-height:1.25;
+  border:1px solid rgba(167,139,250,.28);padding:3px 0}
+.ev .d b{display:block;font-size:13px;font-weight:500}
+.ev .nm{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev .nm s{display:block;text-decoration:none;font-size:10px;color:var(--faint);margin-top:2px;font-family:var(--mono)}
+.ev .lv{width:5px;height:5px;border-radius:50%;background:var(--l1);flex:none;box-shadow:0 0 7px var(--l1)}
+.ev .lv.l2{opacity:.6;box-shadow:none} .ev .lv.l1{opacity:.32;box-shadow:none}
+
+/* 可刪減的列：本體 + 刪除鍵 */
+.row{display:grid;grid-template-columns:minmax(0,1fr) 24px;align-items:stretch;
+  position:relative;transition:background .16s}
+.row:hover{background:rgba(126,152,190,.08)}
+.row .fill{position:absolute;left:0;top:0;bottom:0;width:0;z-index:0;
+  background:linear-gradient(90deg,rgba(242,179,61,.16),rgba(242,179,61,.01));
+  transition:width .8s cubic-bezier(.2,.8,.25,1)}
+.row>*{position:relative;z-index:1}
+.del{width:24px;color:var(--ghost);font-size:12px;line-height:1;display:grid;place-items:center;
+  transition:.16s;border-left:1px solid transparent}
+.del:hover{color:#FF8A97;background:rgba(92,30,39,.3)}
+.xp{display:grid;grid-template-columns:20px minmax(0,1fr) 68px;gap:9px;align-items:center;
+  width:100%;text-align:left;padding:6px 4px 6px 0}
+.xp .rk{font-family:var(--mono);font-size:10px;color:var(--faint);text-align:right}
+.row.top .xp .rk{color:var(--l3)}
+.xp .nm{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.xp .nm s{display:block;text-decoration:none;font-size:10px;color:var(--faint);margin-top:2px;font-family:var(--mono)}
+.xp .nm i{font-style:normal;font-size:9px;color:var(--l2);border:1px solid rgba(69,200,240,.4);
+  padding:0 3px;margin-left:5px;vertical-align:1px}
+.xp .sc{text-align:right;font-family:var(--mono);line-height:1.25}
+.xp .sc b{display:block;font-size:14px;color:var(--l3-ink);font-weight:500;font-variant-numeric:tabular-nums}
+.xp .sc s{display:block;text-decoration:none;font-size:9px;color:var(--faint);white-space:nowrap}
+.row.pl .xp{grid-template-columns:20px minmax(0,1fr) 86px}
+.row.pl .xp .sc b{font-size:12.5px;white-space:nowrap}
+
+.rcol{grid-column:3;grid-row:2/4;display:grid;grid-template-rows:minmax(220px,1.5fr) minmax(300px,1fr);
+  gap:12px;min-height:0}
+.res{display:flex;flex-direction:column;min-height:0;overflow-y:auto;
+  border:1px solid var(--line-hi);background:linear-gradient(180deg,rgba(9,13,22,.96),rgba(6,9,16,.93));
+  scrollbar-width:thin;scrollbar-color:rgba(126,152,190,.24) transparent}
+.res::-webkit-scrollbar{width:5px}
+.res::-webkit-scrollbar-thumb{background:rgba(126,152,190,.24)}
+.res-hd{padding:14px 16px 12px;border-bottom:1px solid var(--line)}
+.res-k{font-family:var(--cond);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--l1)}
+.res-hd h2{margin:5px 0 0;font-size:15.5px;font-weight:900;line-height:1.45}
+.res-sub{margin-top:6px;font-size:11px;color:var(--faint);font-family:var(--mono)}
+.res-date{margin-top:9px;display:flex;align-items:baseline;gap:10px;padding:8px 10px;
+  border:1px solid rgba(167,139,250,.3);background:rgba(167,139,250,.07)}
+.res-date b{font-family:var(--mono);font-size:16px;color:var(--l1-ink)}
+.res-date span{font-size:11px;color:var(--dim)}
+.res-date em{font-style:normal;margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--l1)}
+.res-note{margin-top:9px;font-size:11.5px;color:var(--dim);line-height:1.75}
+.res-empty{padding:22px 18px;color:var(--faint);font-size:12.5px;line-height:1.95}
+.res-empty b{color:var(--dim);display:block;font-size:13.5px;margin-bottom:8px;font-weight:700}
+.res-sec{padding:13px 16px;border-bottom:1px solid var(--line)}
+.res-sec:last-child{border-bottom:none}
+.res-sec h3{margin:0 0 10px;font-family:var(--cond);font-size:10px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--faint);display:flex;align-items:center;gap:8px}
+.res-sec h3 em{font-style:normal;margin-left:auto;font-family:var(--mono);font-size:10px;text-transform:none;letter-spacing:0}
+
+/* 標的池（右下） */
+.pool{display:flex;flex-direction:column;min-height:0;overflow:hidden;
+  border:1px solid var(--line-hi);background:linear-gradient(180deg,rgba(9,13,22,.96),rgba(6,9,16,.93))}
+.pool-h{flex:none;display:flex;align-items:baseline;gap:9px;padding:11px 14px 9px;border-bottom:1px solid var(--line)}
+.pool-h h2{margin:0;font-size:12px;font-weight:700;letter-spacing:.14em}
+.pool-h .n{font-family:var(--mono);font-size:10.5px;color:var(--faint);margin-left:auto}
+.pool-h .rst{font-family:var(--cond);font-size:10.5px;letter-spacing:.14em;color:var(--faint);
+  border:1px solid var(--line);padding:1px 7px;transition:.16s}
+.pool-h .rst:hover{color:var(--l3);border-color:rgba(242,179,61,.45)}
+.pool-add{flex:none;display:flex;gap:8px;padding:10px 14px 4px}
+.pool-add input{flex:1 1 auto;min-width:0;height:28px;padding:0 9px;background:rgba(126,152,190,.06);
+  border:1px solid var(--line);color:var(--ink);font-family:var(--mono);font-size:12px;letter-spacing:.04em}
+.pool-add input::placeholder{color:var(--ghost);letter-spacing:0;font-family:var(--sans);font-size:11px}
+.pool-add input:focus{border-color:rgba(242,179,61,.5);outline:none;background:rgba(242,179,61,.05)}
+.pool-add button{flex:none;height:28px;padding:0 14px;border:1px solid rgba(242,179,61,.45);color:var(--l3);
+  font-family:var(--cond);font-size:12px;letter-spacing:.12em;font-weight:600;background:rgba(242,179,61,.08);transition:.16s}
+.pool-add button:hover{background:rgba(242,179,61,.18)}
+.pool-msg{flex:none;padding:5px 14px 0;font-size:10.5px;line-height:1.55;color:var(--faint);
+  max-height:34px;overflow:hidden}
+.pool-msg.err{color:#FF8A97} .pool-msg.ok{color:var(--l3-ink)}
+.pool-list{flex:1 1 auto;min-height:90px;overflow-y:auto;padding:4px 8px 8px 14px;
+  scrollbar-width:thin;scrollbar-color:rgba(126,152,190,.24) transparent}
+.pool-list::-webkit-scrollbar{width:5px}
+.pool-list::-webkit-scrollbar-thumb{background:rgba(126,152,190,.24)}
+.row.pl .xp .sc b{color:var(--l4)}
+
+/* ── 情境分析區塊 ── */
+.an{border:1px solid var(--line);background:rgba(126,152,190,.04);padding:10px 11px;margin-bottom:9px}
+.an:last-child{margin-bottom:0}
+.an-h{display:flex;align-items:baseline;gap:10px;margin-bottom:6px}
+.an-t{font-size:13px;font-weight:700;color:var(--ink)}
+.an-t s{text-decoration:none;font-family:var(--mono);font-size:10px;color:var(--faint);margin-left:7px}
+.an-m{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--faint);white-space:nowrap}
+.an-why{margin:0 0 8px;font-size:11.5px;line-height:1.75;color:var(--dim)}
+.an-why b{color:var(--l2-ink);font-weight:500}
+.an-why em{font-style:normal;font-family:var(--mono);color:var(--l3-ink)}
+.an-f{margin:7px 0 0;font-size:10.5px;color:var(--faint);line-height:1.7}
+.an-f b{font-weight:500;color:var(--dim)}
+.an-w{margin:5px 0 0;font-size:10.5px;color:var(--faint);line-height:1.7;
+  border-left:2px solid rgba(242,179,61,.4);padding-left:8px}
+.sc{padding:6px 0;border-top:1px solid rgba(126,152,190,.10)}
+.sc-h{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--ink)}
+.sc-h b{font-weight:500}
+.sc-h em{font-style:normal;margin-left:auto;font-family:var(--mono);font-size:9.5px;color:var(--faint)}
+.sc-b{display:flex;align-items:baseline;gap:9px;margin-top:4px;flex-wrap:wrap}
+.rng{font-size:11px;color:var(--faint);font-family:var(--mono)}
+.rng b{color:var(--ink);font-weight:500}
+.rng s{text-decoration:none;color:var(--ghost)}
+.dot{width:7px;height:7px;border-radius:50%;flex:none}
+.dot.pos,.tag.pos{color:var(--bull)} .dot.neg,.tag.neg{color:var(--bear)}
+.dot.pos{background:var(--bull);box-shadow:0 0 7px var(--bull)}
+.dot.neg{background:var(--bear);box-shadow:0 0 7px var(--bear)}
+.dot.neu{background:var(--faint)}
+.tag{font-size:10px;font-family:var(--cond);letter-spacing:.1em;font-weight:600;
+  border:1px solid currentColor;padding:1px 6px;color:var(--faint)}
+.cpos{color:var(--bull)} .cneg{color:var(--bear)}
+.cast{border:1px solid var(--line);padding:9px 10px;margin-bottom:8px;background:rgba(126,152,190,.04)}
+.cast-h{display:flex;align-items:baseline;gap:8px;font-size:12px}
+.cast-h b{font-weight:700}
+.cast-h em{font-style:normal;margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--faint)}
+.cast-b{margin-top:5px;font-size:11.5px;color:var(--dim);font-family:var(--mono)}
+.cast-l{margin-top:5px;font-size:10.5px;color:var(--faint);line-height:1.8}
+.cast-l s{text-decoration:none;font-family:var(--mono);color:var(--dim)}
+.kb{display:grid;grid-template-columns:64px 1fr 38px;gap:8px;align-items:center;
+  font-size:10.5px;color:var(--dim);margin-bottom:5px}
+.kb i{display:block;height:6px;background:linear-gradient(90deg,rgba(167,139,250,.35),var(--l1));min-width:2px}
+.kb em{font-style:normal;font-family:var(--mono);font-size:10px;color:var(--faint);text-align:right}
+
+/* ── 自訂標的表單 ── */
+.pool-form{display:none;padding:8px 14px 2px}
+.pool-form.on{display:block}
+.pf-h{font-size:11px;color:var(--l3-ink);line-height:1.7;margin-bottom:7px}
+.pf-r{display:flex;gap:7px;margin-bottom:7px}
+.pf-r input,.pf-r select{flex:1 1 auto;min-width:0;height:26px;padding:0 7px;
+  background:rgba(126,152,190,.06);border:1px solid var(--line);color:var(--ink);font-size:11.5px}
+.pf-r button{flex:none;height:26px;padding:0 11px;border:1px solid rgba(242,179,61,.45);
+  color:var(--l3);background:rgba(242,179,61,.08);font-size:11.5px}
+.pf-r button.ghost{border-color:var(--line);color:var(--faint);background:none}
+
+/* ── 因子條 · 集中度 · 持倉 ── */
+.fb-h,.fb{display:grid;grid-template-columns:78px 1fr 34px 78px;gap:8px;align-items:center}
+.fb-h{font-size:9.5px;color:var(--ghost);font-family:var(--cond);letter-spacing:.12em;
+  text-transform:uppercase;margin-bottom:6px}
+.fb-h span:last-child,.fb-h span:nth-child(3){text-align:right}
+.fb{margin-bottom:6px;font-size:11px}
+.fb-n{color:var(--dim)}
+.fb-t{height:8px;background:rgba(126,152,190,.10);position:relative;display:block}
+.fb-t i{position:absolute;left:0;top:0;bottom:0;display:block}
+.fb-t i.p{background:linear-gradient(90deg,rgba(255,77,94,.35),var(--bull))}
+.fb-t i.m{background:linear-gradient(90deg,rgba(23,212,146,.35),var(--bear))}
+.fb-v{font-family:var(--mono);font-size:10.5px;color:var(--faint);text-align:right}
+.fb-s{font-family:var(--mono);font-size:10.5px;color:var(--ink);text-align:right}
+.conc{font-size:12px;color:var(--dim);line-height:1.8;padding:8px 10px;
+  border:1px solid var(--line);background:rgba(126,152,190,.05)}
+.conc b{color:var(--ink);font-weight:500}
+.conc.warn{border-color:rgba(242,179,61,.45);background:rgba(242,179,61,.07)}
+.conc.warn b{color:var(--l3-ink)}
+.an-s{margin:6px 0 0;font-size:10px;font-family:var(--mono);color:var(--faint);line-height:1.7;
+  border-top:1px dashed rgba(126,152,190,.16);padding-top:5px}
+.an-s b{color:var(--dim);font-weight:500}
+.an-s em{font-style:normal;color:var(--bear);margin-left:4px}
+.an-s em.warn{color:#FF8A97}
+.tabs.sm button{height:20px;padding:0 9px;font-size:10px}
+.row.po{grid-template-columns:minmax(0,1fr) 24px;padding:5px 0;border-bottom:1px solid rgba(126,152,190,.08)}
+.pos{display:grid;grid-template-columns:minmax(0,1fr) 56px 56px 56px;gap:4px;align-items:center;padding-right:2px}
+.pos-h{display:grid;grid-template-columns:minmax(0,1fr) 56px 56px 56px 24px;gap:4px;
+  font-family:var(--cond);font-size:9px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ghost);padding:2px 4px 5px 0;border-bottom:1px solid var(--line);margin-bottom:4px}
+.pos-h span:not(:first-child){text-align:center}
+.pos .nm{font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pos .nm s{display:block;text-decoration:none;font-size:9.5px;color:var(--faint);font-family:var(--mono);margin-top:2px}
+.qi{height:24px;padding:0 4px;background:rgba(126,152,190,.06);border:1px solid var(--line);
+  color:var(--ink);font-family:var(--mono);font-size:10.5px;min-width:0;width:100%;
+  text-align:right;font-variant-numeric:tabular-nums;-moz-appearance:textfield}
+.qi::-webkit-outer-spin-button,.qi::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.qi:focus{border-color:rgba(242,179,61,.5);outline:none}
+.pv{grid-column:1/-1;font-family:var(--mono);font-size:10.5px;color:var(--l3-ink);
+  white-space:nowrap;text-align:right;padding-top:2px}
+.pv s{text-decoration:none;margin-left:7px}
+.pv s.up{color:var(--bull)} .pv s.down{color:var(--bear)}
+#poolTot{color:var(--l3-ink)}
+
+/* ── 互動特效 ── */
+.flare{position:fixed;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;
+  border:1px solid var(--l3);pointer-events:none;z-index:99;opacity:.9;
+  box-shadow:0 0 12px rgba(242,179,61,.6),inset 0 0 8px rgba(242,179,61,.4);
+  animation:flare .6s cubic-bezier(.2,.7,.3,1) forwards}
+.flare.neg{border-color:#FF8A97;box-shadow:0 0 12px rgba(255,138,151,.6)}
+@keyframes flare{
+  0%{transform:scale(.35);opacity:.95}
+  55%{opacity:.55}
+  100%{transform:scale(3.4);opacity:0}}
+@keyframes rowAdd{
+  0%{background:rgba(242,179,61,.32);box-shadow:inset 0 0 24px rgba(242,179,61,.35)}
+  100%{background:transparent;box-shadow:none}}
+.fx-add{animation:rowAdd .95s ease-out}
+.chip,.tabs button,.pool-add button,.pf-r button{position:relative;overflow:hidden}
+.chip::after,.tabs button::after{content:"";position:absolute;inset:0;
+  background:linear-gradient(105deg,transparent 30%,rgba(242,179,61,.22) 50%,transparent 70%);
+  transform:translateX(-120%);transition:transform .5s ease}
+.chip:hover::after,.tabs button:hover::after{transform:translateX(120%)}
+.chip:active,.tabs button:active,.pool-add button:active{transform:scale(.96)}
+.ev,.row,.hitrow{position:relative}
+.ev::before,.hitrow::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;
+  background:var(--l1);transform:scaleY(0);transform-origin:center;transition:transform .22s ease}
+.ev:hover::before,.hitrow:hover::before{transform:scaleY(1)}
+.hitrow::before{background:var(--l3)}
+.ev:active,.hitrow:active,.xp:active{transform:translateX(1px)}
+.del:active{transform:scale(.88)}
+.res-sec{animation:secIn .38s ease-out both}
+@keyframes secIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.calbtn{margin-top:8px;height:26px;padding:0 12px;border:1px solid rgba(69,200,240,.45);
+  color:var(--l2);background:rgba(69,200,240,.08);font-size:11.5px;transition:.16s}
+.calbtn:hover{background:rgba(69,200,240,.18)}
+@media (prefers-reduced-motion:reduce){
+  .flare,.fx-add,.res-sec{animation:none}
+}
+
+/* ── 底部結論摘要卡 ── */
+.sumcards{display:flex;gap:9px;margin-top:13px;flex-wrap:wrap}
+.card{flex:0 1 auto;min-width:158px;max-width:270px;padding:8px 11px 9px;
+  border:1px solid var(--line);border-left:2px solid var(--l3);
+  background:linear-gradient(180deg,rgba(9,13,22,.88),rgba(6,9,16,.8))}
+.card.c1{border-left-color:var(--l1)} .card.c2{border-left-color:var(--l2)}
+.card.c4{border-left-color:var(--l4)}
+.card .k{font-family:var(--cond);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--faint);display:flex;align-items:center;gap:6px}
+.card .v{font-size:13.5px;font-weight:700;color:var(--ink);margin-top:4px;line-height:1.45}
+.card .v b{font-family:var(--mono);font-weight:500;color:var(--l3)}
+.card .v em{font-style:normal;color:var(--l2)}
+.card .h{font-size:10.5px;color:var(--faint);margin-top:5px;line-height:1.65}
+.card .h b{color:var(--dim);font-weight:500}
+.story h3{max-width:56ch}
+@media (max-width:1280px){.sumcards{flex-direction:column}.card{max-width:none}}
+
+.hitrow{display:grid;grid-template-columns:auto minmax(0,1fr) 44px 50px;gap:9px;align-items:center;
+  padding:7px 0;border-bottom:1px solid rgba(126,152,190,.08);width:100%;text-align:left;transition:background .16s}
+.hitrow:hover{background:rgba(126,152,190,.08)}
+.hitrow:last-child{border-bottom:none}
+.hitrow .step{font-family:var(--mono);font-size:9.5px;color:var(--faint);border:1px solid var(--line);padding:1px 5px;white-space:nowrap}
+.hitrow .nm{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hitrow .nm i{font-style:normal;color:var(--l3);margin-left:5px;font-size:10px}
+.hitrow .nm s{display:block;text-decoration:none;font-size:10px;color:var(--faint);margin-top:2px}
+.hitrow .lag{font-family:var(--mono);font-size:11px;color:var(--dim);text-align:right;font-variant-numeric:tabular-nums}
+.hitrow .str{position:relative;height:16px}
+.hitrow .str i{position:absolute;left:0;top:5px;height:6px;background:linear-gradient(90deg,rgba(242,179,61,.32),var(--l3))}
+.hitrow .str b{position:absolute;right:0;top:0;font-family:var(--mono);font-size:10px;color:var(--l3-ink)}
+.hitrow.two{grid-template-columns:auto minmax(0,1fr) 44px 76px}
+.hitrow.two .str{position:static;height:auto;text-align:right;line-height:1.3}
+.hitrow.two .str b{position:static;display:block;font-size:12px;font-family:var(--mono)}
+.hitrow.two .str s{position:static;display:block;text-decoration:none;font-size:8.5px;color:var(--ghost);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hitrow.two .lag{font-size:10px;line-height:1.3}
+.hitrow .str s{position:absolute;right:0;bottom:-2px;text-decoration:none;font-family:var(--mono);
+  font-size:8.5px;color:var(--ghost);white-space:nowrap}
+
+.cone svg{display:block;width:100%;height:auto}
+.cone-x{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9.5px;color:var(--faint);margin-top:5px}
+.cone-note{margin-top:9px;font-size:10.5px;color:var(--faint);line-height:1.75}
+.cone-note b{color:var(--l3-ink);font-family:var(--mono);font-weight:500}
+.path{font-size:11.5px;color:var(--dim);line-height:1.95}
+.path i{font-style:normal;color:var(--ghost);margin:0 6px}
+.path .n1{color:var(--l1-ink)} .path .n2{color:var(--l2-ink)}
+.path .n3{color:var(--l3-ink)} .path .n4{color:var(--ink)}
+
+.story{grid-column:1/3;grid-row:3;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:24px;align-items:end}
+.story .eyebrow{font-family:var(--cond);font-size:10px;letter-spacing:.26em;color:var(--faint);
+  text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:9px}
+.story .eyebrow::before{content:"";width:20px;height:1px;background:var(--l3)}
+.story h3{margin:0;font-size:clamp(17px,1.3vw,23px);font-weight:700;line-height:1.46;
+  text-wrap:balance;max-width:48ch;text-shadow:0 2px 18px rgba(4,6,10,.96),0 0 44px rgba(4,6,10,.86)}
+.story h3 b{color:var(--l3);font-family:var(--mono);font-weight:500}
+.story h3 em{font-style:normal;color:var(--l2)}
+.story p{margin:9px 0 0;font-size:11.5px;line-height:1.8;color:var(--faint);max-width:66ch;
+  text-shadow:0 1px 12px rgba(4,6,10,.96)}
+.legend{display:flex;flex-direction:column;gap:5px;font-size:10.5px;color:var(--faint);
+  text-align:right;white-space:nowrap;line-height:1.3}
+.legend span{display:inline-flex;align-items:center;gap:8px;justify-content:flex-end}
+.legend i{width:8px;height:8px;flex:none}
+
+@media (max-height:820px){:root:not(.m) .rcol{grid-template-rows:minmax(180px,1.35fr) minmax(268px,1fr)}}
+@media (max-width:1280px){
+  :root:not(.m) #app{position:relative;min-height:100vh}
+  :root:not(.m) .hud{position:relative;inset:auto;grid-template-columns:1fr;grid-template-rows:auto;padding:14px}
+  :root:not(.m) .col,:root:not(.m) .rcol{grid-row:auto;grid-column:1;overflow:visible}
+  :root:not(.m) .rcol{display:block;grid-row:auto}
+  :root:not(.m) .res{min-height:420px;max-height:none;margin-bottom:12px}
+  :root:not(.m) .pool{min-height:360px;max-height:none;margin-bottom:12px}
+  :root:not(.m) .gap{display:none}
+  :root:not(.m) .story{grid-column:1;grid-row:auto;grid-template-columns:1fr}
+  :root:not(.m) .legend{margin-top:10px}
+  :root:not(.m) .legend{text-align:left} :root:not(.m) .legend span{justify-content:flex-start}
+  :root:not(.m) #stage{position:fixed;inset:0;opacity:.4}
+}
+
+/* ════════ 版面切換：電腦版 / 手機版 ════════ */
+.vsw{display:flex}
+.stage-slot,.mnav,.zbtns,.stage-hint{display:none}
+
+:root.m body{overflow-x:hidden;overflow-y:auto}
+:root.m #app{position:relative;inset:auto;min-height:100vh}
+:root.m .hud{position:relative;inset:auto;display:flex;flex-direction:column;gap:12px;
+  padding:10px 12px 28px;pointer-events:auto}
+:root.m .col,:root.m .rcol{display:contents}
+:root.m .gap{display:none}
+/* 順序：頂欄 → 分頁導覽 → 圖譜 → 推演結果 → 今天的傳導 → 事件 → 曝險 → 標的池 */
+:root.m .bar{order:0} :root.m .mnav{order:1} :root.m .stage-slot{order:2}
+:root.m .res{order:3} :root.m .story{order:4}
+:root.m .col .pnl:first-child{order:5} :root.m .col .pnl:last-child{order:6}
+:root.m .pool{order:7}
+
+/* 頂欄 */
+:root.m .bar{gap:10px 8px}
+:root.m .brand{order:0} :root.m .bar .right{order:1;margin-left:auto}
+:root.m .bar>.tabs,:root.m .bar>.chip,:root.m .bar>.vsw{order:2}
+:root.m .brand .en{display:none}
+:root.m .brand h1{font-size:17px;letter-spacing:.14em}
+:root.m .stamp .v{font-size:12px}
+:root.m .tabs button{height:34px;padding:0 12px;font-size:13px}
+:root.m .chip{height:34px;font-size:12.5px;padding:0 11px}
+:root.m .tabs.sm button{height:28px;font-size:11.5px}
+
+/* 分頁導覽（黏在上方，不蓋住圖譜） */
+:root.m .mnav{display:flex;position:sticky;top:env(safe-area-inset-top,0px);z-index:20;margin:0 -12px;padding:6px 12px;
+  gap:6px;overflow-x:auto;scrollbar-width:none;
+  background:rgba(4,6,10,.92);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line)}
+:root.m .mnav::-webkit-scrollbar{display:none}
+.mnav button{flex:1 0 auto;height:32px;padding:0 12px;border:1px solid var(--line);
+  font-size:12.5px;color:var(--dim);white-space:nowrap}
+.mnav button.on{color:var(--l3);border-color:rgba(242,179,61,.5);background:rgba(242,179,61,.08)}
+
+/* 圖譜：獨立一格，不再墊在面板底下 */
+:root.m .stage-slot{display:flex;flex-direction:column;width:100%;
+  border:1px solid var(--line-hi);overflow:hidden;
+  background:radial-gradient(120% 100% at 50% 45%,#0C1020 0%,#070A12 55%,#04060A 100%)}
+.stage-cv{position:relative;width:100%;height:clamp(300px,86vw,500px)}
+:root.m #stage{position:absolute;inset:0;width:100%;height:100%;opacity:1;touch-action:pan-y}
+/* 控制列放在圖譜「下方」，不疊在圖上 */
+.stage-bar{display:flex;align-items:center;gap:8px;padding:6px 8px;border-top:1px solid var(--line);
+  background:rgba(5,8,14,.9)}
+:root.m .stage-hint{display:block;flex:1 1 auto;min-width:0;font-size:11px;color:var(--faint);line-height:1.4}
+:root.m .zbtns{display:flex;gap:6px;flex:none}
+.zbtns button{min-width:38px;height:36px;padding:0 8px;border:1px solid var(--line-hi);background:rgba(126,152,190,.05);
+  color:var(--dim);font-size:16px;line-height:1}
+.zbtns #zReset{font-size:12px}
+.zbtns button:active{color:var(--l3);border-color:rgba(242,179,61,.5)}
+
+/* 面板 */
+:root.m .pnl{border:1px solid var(--line);background:rgba(6,9,16,.9);padding:10px 12px}
+:root.m .pnl .scroll{max-height:min(62vh,460px)}
+:root.m .res{max-height:min(78vh,680px);overflow-y:auto;min-height:0}
+:root.m .pool{overflow:visible;min-height:0}
+:root.m .pool-list{max-height:min(64vh,520px);min-height:120px}
+:root.m .pool-msg{max-height:none}
+:root.m .pnl-h h2,:root.m .pool-h h2{font-size:14px}
+:root.m .pnl-s{font-size:12px}
+:root.m .pool-h{flex-wrap:wrap;row-gap:6px}
+:root.m .mnav~*,:root.m .res,:root.m .pnl,:root.m .pool,:root.m .story,:root.m .stage-slot{scroll-margin-top:54px}
+
+/* 列表：加大觸控區 */
+:root.m .ev{padding:10px 6px 10px 0}
+:root.m .ev .nm,:root.m .xp .nm{font-size:13.5px}
+:root.m .xp{padding:9px 4px 9px 0}
+:root.m .row{grid-template-columns:minmax(0,1fr) 40px}
+:root.m .del{width:40px;font-size:14px}
+:root.m .row.po{grid-template-columns:minmax(0,1fr) 36px}
+:root.m .pos{grid-template-columns:minmax(0,1fr) 52px 52px 52px}
+:root.m .pos-h{grid-template-columns:minmax(0,1fr) 52px 52px 52px 36px}
+:root.m .qi{height:32px;font-size:16px}
+/* iOS 字級小於 16px 會自動放大畫面，這裡統一提高 */
+:root.m .pool-add input,:root.m .pf-r input,:root.m .pf-r select{height:40px;font-size:16px}
+:root.m .pool-add button,:root.m .pf-r button{height:40px}
+:root.m .calbtn{height:36px}
+:root.m .hitrow{padding:10px 0}
+
+/* 今天的傳導 */
+:root.m .story{display:block;grid-template-columns:none}
+:root.m .story h3{font-size:17px;max-width:none}
+:root.m .sumcards{flex-direction:column}
+:root.m .card{max-width:none}
+:root.m .legend{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;text-align:left;
+  white-space:normal;margin-top:12px;font-size:11px}
+:root.m .legend span{justify-content:flex-start;flex-direction:row-reverse}
+</style>
+<script>
+/* 版面：手動選擇優先，否則依螢幕寬度自動判斷 */
+(function(){
+  var v=null; try{v=localStorage.getItem("mtc.view")}catch(e){}
+  var small=Math.min(screen.width,screen.height)<=820||matchMedia("(max-width:820px)").matches;
+  if(v!=="m"&&v!=="d")v=small?"m":"d";
+  window.__VIEW=v;
+  if(v==="m")document.documentElement.classList.add("m");
+  else if(Math.min(screen.width,innerWidth)<1100&&small){
+    var mv=document.querySelector('meta[name=viewport]'); if(mv)mv.content="width=1440,viewport-fit=cover";
+  }
+})();
+</script>
+<div id="app">
+  <canvas id="stage"></canvas>
+  <div class="hud">
+    <div class="bar">
+      <div class="brand">
+        <div class="glyph"><span>方</span></div>
+        <div><h1>市場傳導艙</h1><div class="en">Transmission · 方舟運算</div></div>
+      </div>
+      <div class="tabs" role="group" aria-label="市場">
+        <button data-mkt="tw" aria-pressed="true">台股</button>
+        <button data-mkt="us" aria-pressed="false">美股</button>
+        <button data-mkt="all" aria-pressed="false">全球</button>
+      </div>
+      <span class="chip demo"><span class="dot"></span>示意資料</span>
+      <button class="chip on" id="cSpin">擺盪</button>
+      <button class="chip on" id="cSnd">音效</button>
+      <div class="tabs vsw" id="viewSw" role="group" aria-label="版面">
+        <button data-view="d" aria-pressed="false">電腦版</button>
+        <button data-view="m" aria-pressed="false">手機版</button>
+      </div>
+      <input type="file" id="calFile" accept="application/json,.json" hidden>
+      <div class="right">
+        <div class="stamp">
+          <div class="k" id="clockK">台北時間</div>
+          <div class="v" id="clockV">—</div>
+        </div>
+      </div>
+    </div>
+
+    <nav class="mnav" id="mnav" aria-label="區塊">
+      <button data-go="stageSlot">圖譜</button>
+      <button data-go="res">推演結果</button>
+      <button data-go="storyBox">今天</button>
+      <button data-go="evPnl">事件</button>
+      <button data-go="expoPnl">曝險</button>
+      <button data-go="poolBox">標的池</button>
+    </nav>
+    <div class="stage-slot" id="stageSlot">
+      <div class="stage-cv" id="stageCv"></div>
+      <div class="stage-bar">
+        <span class="stage-hint">左右拖曳旋轉 · 點節點看傳導</span>
+        <div class="zbtns">
+          <button id="zOut" aria-label="縮小">－</button>
+          <button id="zIn" aria-label="放大">＋</button>
+          <button id="zReset" aria-label="重設視角">重設視角</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="col" style="grid-column:1">
+      <section class="pnl" id="evPnl">
+        <div class="pnl-h"><h2>接下來會發生的事</h2><span class="n" id="evN">—</span></div>
+        <p class="pnl-s">總經公布與重大排程，<strong style="color:var(--dim)">每天自動汰除過期事件、補進新的高影響力排程</strong>。
+          點一件事，看它沿著傳導鏈走到你手上的東西。排程為示意，實際以官方公告為準。</p>
+        <div class="scroll" id="evList"></div>
+      </section>
+      <section class="pnl" id="expoPnl">
+        <div class="pnl-h"><h2>接下來最被牽動的標的</h2><span class="n" id="expoN">—</span></div>
+        <p class="pnl-s">把未來 30 天所有排程事件的傳導強度加總，打到最重的排在前面。
+          <strong style="color:var(--dim)">這是曝險，不是報酬預測</strong>。
+          點一檔可反查是哪幾件事在牽動它；右側 <b style="color:var(--l3)">✕</b> 可把它從清單與白色圓環移除。</p>
+        <div class="scroll" id="expoList"></div>
+      </section>
+    </div>
+
+    <div class="gap"></div>
+
+    <div class="rcol">
+      <section class="res" id="res"></section>
+      <section class="pool" id="poolBox">
+        <div class="pool-h"><h2>標的池</h2>
+          <div class="tabs sm" id="poolMode" role="group" aria-label="模式">
+            <button data-mode="list" aria-pressed="true">清單</button>
+            <button data-mode="pos" aria-pressed="false">持倉</button>
+          </div>
+          <button class="rst" id="poolReset" title="回到預設的高影響力標的">重設</button>
+          <span class="n" id="poolTot"></span><span class="n" id="poolN">—</span></div>
+        <div class="pool-add">
+          <input id="poolInput" maxlength="10" autocomplete="off" spellcheck="false"
+                 placeholder="輸入代號：2330 / 00631L / 00679B / NVDA / QQQ">
+          <button id="poolAdd">加入</button>
+        </div>
+        <div class="pool-msg" id="poolMsg">預設為高影響力標的。台股可輸入任一上市櫃個股與 ETF（含海外型、債券型、槓桿反向），美股可輸入任一上市個股與 ETF；上限 20 檔，依影響力排序。</div>
+        <div class="pool-form" id="poolForm"></div>
+        <div class="pool-list" id="poolList"></div>
+      </section>
+    </div>
+
+    <div class="story" id="storyBox">
+      <div>
+        <div class="eyebrow">今天的傳導</div>
+        <h3 id="headline">—</h3>
+        <div class="sumcards" id="sumCards"></div>
+      </div>
+      <div class="legend">
+        <span id="lg1">事件排程 · 未來會發生的事<i style="background:var(--l1);box-shadow:0 0 8px var(--l1)"></i></span>
+        <span>產業板塊 · 方舟觀測<i style="background:var(--l2);box-shadow:0 0 8px var(--l2)"></i></span>
+        <span id="lg3">籌碼 · 傳導的放大器<i style="background:var(--l3);box-shadow:0 0 8px var(--l3)"></i></span>
+        <span>產業個股 · 金環＝事件曝險前五<i style="background:var(--l4)"></i></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const clamp=(v,a,b)=>v<a?a:v>b?b:v, lerp=(a,b,t)=>a+(b-a)*t;
+const reduced=matchMedia("(prefers-reduced-motion:reduce)").matches;
+/* ════════ 資料層 ══════════════════════════════════════════════
+   L1 未來事件行事曆（依真實日期每日重算）· L2 產業板塊（含情境敏感度標籤）
+   L3 籌碼／基本面放大器 · L4 標的池（台股全市場＋美股全市場，可自行增刪）
+   數值為示意；板塊淨流取自方舟盤面快照。
+   ════════════════════════════════════════════════════════════ */
+
+/* 情境標籤：正值＝該情境方向對這個板塊有利
+   rate 利率下行(偏鴿) · growth 景氣擴張 · ai AI資本支出 · semi 半導體循環
+   mem 記憶體價格 · cons 終端消費 · china 中國需求 · oil 油價上行
+   fx 台幣貶值 · credit 信用寬鬆 · ship 運價上行 · def 防禦性 */
+
+/* ── L2 台股板塊：id, 名稱, 資金淨流(億), 事件波動係數, 標籤 ── */
+const IND_TW=[
+ ["tw_fnd","晶圓代工",      -34.22,1.15,{semi:1,ai:.8,growth:.5,fx:.5,rate:.3}],
+ ["tw_icd","IC設計",        -84.89,1.30,{semi:.9,ai:.6,cons:.5,growth:.4,rate:.4}],
+ ["tw_dram","DRAM",         -53.89,1.55,{mem:1,semi:.7,ai:.6,growth:.4}],
+ ["tw_fls","FLASH",         -33.71,1.50,{mem:1,semi:.6,cons:.4}],
+ ["tw_osat","IC封裝測試",   +19.87,1.20,{semi:.9,ai:.6,growth:.4,fx:.4}],
+ ["tw_ate","IC封裝測試設備",-51.63,1.35,{semi:.8,ai:.5,growth:.5}],
+ ["tw_ip","矽智財",         -25.32,1.40,{semi:.7,ai:.8,rate:.5}],
+ ["tw_pc","電腦及周邊產品", +25.34,1.15,{ai:.9,cons:.5,growth:.5,fx:.5}],
+ ["tw_thm","散熱模組",      +29.77,1.45,{ai:1,growth:.4}],
+ ["tw_psu","電源供應器",    -23.60,1.25,{ai:.8,growth:.4,fx:.4}],
+ ["tw_net","網通設備",      +22.41,1.25,{ai:.7,growth:.5,cons:.3}],
+ ["tw_opt","光通訊設備",    -63.87,1.45,{ai:.9,semi:.4,growth:.4}],
+ ["tw_mlcc","MLCC",         -46.33,1.30,{cons:.6,china:.5,growth:.5,semi:.4}],
+ ["tw_fpc","軟板／載板",    -32.75,1.30,{cons:.6,ai:.5,semi:.4}],
+ ["tw_lcd","TFT-LCD",       +28.55,1.40,{china:.7,cons:.6,growth:.4}],
+ ["tw_gaas","砷化鎵代工",   -18.55,1.40,{cons:.6,semi:.5,ai:.3}],
+ ["tw_opl","光學鏡頭",       -8.40,1.35,{cons:.8,china:.4,ai:.3}],
+ ["tw_case","機殼機構件",    -6.20,1.25,{cons:.7,ai:.4,fx:.4}],
+ ["tw_fin","金融",          -15.62,0.85,{rate:-.5,credit:.7,growth:.5}],
+ ["tw_shp","航運",          +16.85,1.50,{ship:1,china:.6,growth:.5,oil:-.4}],
+ ["tw_air","航空",           +4.20,1.30,{cons:.7,oil:-.6,growth:.4}],
+ ["tw_tele","電信",          +6.10,0.60,{def:1,rate:.4}],
+ ["tw_stl","鋼鐵",           -9.30,1.25,{china:.8,growth:.6,oil:.3}],
+ ["tw_pls","塑化",          -12.40,1.20,{oil:.5,china:.7,growth:.5}],
+ ["tw_cem","水泥",           -4.60,1.05,{china:.7,growth:.4,def:.3}],
+ ["tw_food","食品",          +3.80,0.65,{def:1,cons:.4,oil:-.3}],
+ ["tw_text","紡織",          -5.40,1.15,{cons:.8,growth:.4,fx:.4}],
+ ["tw_mach","電機機械",      +7.20,1.20,{growth:.8,ai:.4,china:.4}],
+ ["tw_auto","汽車",          -3.10,1.20,{cons:.7,rate:.5,growth:.4}],
+ ["tw_cons","建材營造",      -2.80,1.10,{rate:.8,growth:.4}],
+ ["tw_tour","觀光餐旅",      +2.40,1.15,{cons:.9,china:.5}],
+ ["tw_bio","生技醫療",       +5.60,1.35,{def:.7,rate:.5}],
+ ["tw_dept","貿易百貨",      +1.90,0.85,{cons:.9,def:.3}],
+ ["tw_bond","債券ETF",       +9.80,0.70,{rate:1,def:.8,credit:.4}],
+ ["tw_ovs","海外連結ETF",   +14.60,1.10,{ai:.7,semi:.5,rate:.4,growth:.5}],
+ ["tw_etc","其他／綜合",     -1.20,1.00,{growth:.6,cons:.5,rate:.4,fx:.3,china:.3}]
+].map(r=>({id:r[0],n:r[1],flow:r[2],vol:r[3],tags:r[4],mkt:"tw",unit:"億"}));
+
+/* ── L2 美股板塊 ── */
+const IND_US=[
+ ["us_semi","半導體",          +21.84,1.45,{semi:1,ai:.9,growth:.5,rate:.4}],
+ ["us_semieq","半導體設備及材料",+4.42,1.40,{semi:.9,ai:.7,growth:.5,china:-.3}],
+ ["us_soft","軟體 - 基礎設施", +10.52,1.25,{ai:.8,rate:.7,growth:.5}],
+ ["us_net","互聯網內容及資訊", +10.60,1.20,{ai:.7,cons:.6,rate:.5,growth:.5}],
+ ["us_comm","通信設備",        +17.60,1.10,{cons:.7,ai:.4,china:.4}],
+ ["us_auto","汽車製造商",      +10.36,1.55,{cons:.7,rate:.7,growth:.5,china:.3}],
+ ["us_aero","航空航天與國防",   +8.36,1.05,{growth:.5,def:.6,oil:-.3}],
+ ["us_elec","電氣設備及零件",   +3.71,1.20,{ai:.7,growth:.8}],
+ ["us_instr","科學及技術儀器",  +2.65,1.15,{growth:.7,semi:.4}],
+ ["us_ent","娛樂",             +3.66,1.25,{cons:.8,rate:.5}],
+ ["us_appr","服裝零售",         +2.73,1.30,{cons:1,growth:.4}],
+ ["us_retail","折扣零售",       +4.85,0.95,{cons:.9,def:.5}],
+ ["us_food","食品飲料",         +2.10,0.65,{def:1,cons:.4,oil:-.3}],
+ ["us_drug","製藥",             +6.12,0.85,{def:.9,rate:.4}],
+ ["us_biotech","生技",          +3.40,1.55,{rate:.9,def:.3}],
+ ["us_med","醫療設備",          -3.47,0.95,{def:.7,rate:.5,growth:.3}],
+ ["us_bank","銀行",             -5.24,1.15,{rate:-.5,credit:.8,growth:.6}],
+ ["us_asset","資產管理",        -3.57,1.20,{rate:.5,credit:.7,growth:.6}],
+ ["us_ins","保險 - 多元化",     -2.93,0.80,{rate:-.4,credit:.5,def:.5}],
+ ["us_trav","旅行服務",         -3.56,1.35,{cons:1,oil:-.5,growth:.5}],
+ ["us_transp","運輸物流",       -1.80,1.20,{growth:.8,oil:-.5,ship:.5}],
+ ["us_energy","石油與天然氣",   -4.16,1.25,{oil:1,growth:.5}],
+ ["us_util","公用事業",         +1.60,0.70,{def:1,rate:.8,ai:.4}],
+ ["us_china","中概股",          -2.40,1.60,{china:1,rate:.5,cons:.5}],
+ ["us_crypto","加密資產相關",   +5.20,2.10,{rate:.9,credit:.6,growth:.4}],
+ ["us_etf","指數／槓桿 ETF",   +18.40,1.30,{ai:.6,semi:.4,rate:.5,growth:.6}]
+].map(r=>({id:r[0],n:r[1],flow:r[2],vol:r[3],tags:r[4],mkt:"us",unit:"億美元"}));
+
+const IND=IND_TW.concat(IND_US);
+const INDBY={}; IND.forEach(d=>INDBY[d.id]=d);
+
+/* ── L3 台股籌碼（放大器）── */
+const CHIP_TW=[
+ {id:"c_dev", n:"成本背離",   s:"現價 vs 法人推估成本", amp:1.42, v:"最大 +38.4%",
+  watch:"現價與法人推估成本的差距是否收斂",
+  covers:["tw_dram","tw_fls","tw_thm","tw_opt","tw_fnd","tw_osat","tw_net","tw_ip"]},
+ {id:"c_itc", n:"投信買賣超", s:"三大法人日報",         amp:1.18, v:"+38.2 億",
+  watch:"投信是否連續買超、季底作帳時點",
+  covers:["tw_dram","tw_fls","tw_thm","tw_pc","tw_opt","tw_ip","tw_shp","tw_bio","tw_mach"]},
+ {id:"c_fgn", n:"外資買賣超", s:"三大法人日報",         amp:1.28, v:"−121.6 億",
+  watch:"外資現貨買賣超與台指期未平倉的方向是否一致", covers:"*"},
+ {id:"c_marg",n:"融資餘額",   s:"信用交易",             amp:1.12, v:"−38.4 億",
+  watch:"融資餘額是否隨股價同步墊高（追高）或背離",
+  covers:["tw_lcd","tw_gaas","tw_fpc","tw_ip","tw_ate","tw_shp","tw_air","tw_tour","tw_stl","tw_cons"]},
+ {id:"c_fund",n:"基金持股",   s:"主動式台股基金持股變化", amp:1.22, v:"總買超 87 張",
+  watch:"主動型基金月報的加減碼方向",
+  covers:["tw_fnd","tw_icd","tw_pc","tw_psu","tw_osat","tw_net","tw_bio","tw_fin","tw_ovs"]},
+ {id:"c_dly", n:"籌碼日報",   s:"主力動向 · 券商分點",   amp:1.15, v:"小賣 −1,740 張",
+  watch:"前十大分點的買賣家數差與集中度", covers:"*"}
+];
+/* ── L3 美股基本面（放大器）── */
+const FUND_US=[
+ {id:"f_rev",  n:"營收動能",   s:"季營收與年成長率",   amp:1.34, v:"YoY +31.15%",
+  watch:"下一季財測是否上修、營收年增率的二階變化", covers:"*"},
+ {id:"f_cf",   n:"現金流",     s:"營業／投資／融資",   amp:1.20, v:"淨現金流 −17.94 億",
+  watch:"營業現金流與獲利的落差、資本支出節奏",
+  covers:["us_soft","us_aero","us_auto","us_elec","us_asset","us_energy","us_util","us_transp"]},
+ {id:"f_fcf",  n:"自由現金流", s:"營業現金流 − 資本支出", amp:1.28, v:"7.88 億",
+  watch:"資本支出高峰是否壓縮自由現金流",
+  covers:["us_net","us_soft","us_comm","us_ent","us_med","us_drug","us_retail","us_food"]},
+ {id:"f_eff",  n:"營運效率",   s:"資產與應收存貨週轉",  amp:1.10, v:"應收週轉 4.57",
+  watch:"存貨週轉天數與應收帳款的變化",
+  covers:["us_appr","us_trav","us_auto","us_instr","us_med","us_retail","us_transp","us_china"]},
+ {id:"f_prof", n:"獲利能力",   s:"毛利／營益／純益率 · ROE", amp:1.38, v:"毛利 67.6%　營益 −6.1%",
+  watch:"毛利率的方向與營業槓桿是否兌現", covers:"*"}
+];
+
+/* ── L4 標的資料庫 ──
+   [代號, 名稱, 板塊, 影響力, 參考價, 漲跌%, 型別(0股 1ETF 2槓桿/反向)] ── */
+const MASTER_TW=[
+ ["2330","台積電","tw_fnd",100,2470,0.41],["2317","鴻海","tw_pc",88,205,1.24],
+ ["2454","聯發科","tw_icd",78,4710,-1.05],["2308","台達電","tw_psu",62,1065,-2.74],
+ ["2382","廣達","tw_pc",60,310,1.31],["6669","緯穎","tw_pc",57,2890,2.42],
+ ["2345","智邦","tw_net",56,1120,2.81],["3711","日月光投控","tw_osat",55,215,1.42],
+ ["2303","聯電","tw_fnd",54,137,-4.19],["3231","緯創","tw_pc",50,168,-2.61],
+ ["2327","國巨","tw_mlcc",47,567,-3.74],["2379","瑞昱","tw_icd",44,612,0.82],
+ ["2408","南亞科","tw_dram",43,531,2.71],["2344","華邦電","tw_fls",42,188,4.44],
+ ["3017","奇鋐","tw_thm",41,1145,-2.97],["2357","華碩","tw_pc",40,682,0.94],
+ ["3034","聯詠","tw_icd",38,486,-1.62],["6488","環球晶","tw_fnd",38,428,-1.21],
+ ["3661","世芯-KY","tw_ip",36,3120,-2.64],["3037","欣興","tw_fpc",35,168,-1.52],
+ ["2409","友達","tw_lcd",34,19.35,2.93],["3443","創意","tw_ip",34,1420,-1.83],
+ ["3481","群創","tw_lcd",33,16.80,3.70],["8299","群聯","tw_fls",33,812,3.24],
+ ["4958","臻鼎-KY","tw_fpc",31,128,-1.92],["5274","信驊","tw_icd",30,3980,1.44],
+ ["2337","旺宏","tw_fls",29,34.20,5.23],["2449","京元電","tw_osat",28,128,2.40],
+ ["4966","譜瑞-KY","tw_icd",28,682,-1.22],["3081","聯亞","tw_opt",27,356,3.49],
+ ["2376","技嘉","tw_pc",26,298,1.84],["6415","矽力-KY","tw_icd",26,268,-2.14],
+ ["2377","微星","tw_pc",26,168,-1.12],["3105","穩懋","tw_gaas",25,118,-1.67],
+ ["3529","力旺","tw_ip",24,1980,-2.22],["2360","致茂","tw_ate",24,402,-1.42],
+ ["2356","英業達","tw_pc",23,58.60,1.03],["2301","光寶科","tw_psu",22,128,0.79],
+ ["5347","世界先進","tw_fnd",22,96.20,1.16],["4979","華星光","tw_opt",21,268,-2.90],
+ ["2492","華新科","tw_mlcc",20,96.80,9.99],["3702","大聯大","tw_pc",20,82.40,0.42],
+ ["3324","雙鴻","tw_thm",19,742,-1.85],["6269","台郡","tw_fpc",17,108,-2.26],
+ ["3583","辛耘","tw_ate",16,318,-3.05],["6285","啟碁","tw_net",16,118,0.84],
+ ["8086","宏捷科","tw_gaas",14,92.40,-1.28],["3532","台勝科","tw_fnd",14,82.00,0.62],
+ ["3006","晶豪科","tw_dram",14,68.00,2.14],["6643","M31","tw_ip",13,1215,-1.94],
+ ["8271","宇瞻","tw_dram",12,38.20,3.42],["6187","萬潤","tw_ate",12,118,-0.92],
+ ["2455","全新","tw_gaas",12,78.00,-1.44], ["3008","大立光","tw_opl",58,2680,-1.42],["3406","玉晶光","tw_opl",30,586,-2.14],
+ ["2474","可成","tw_case",24,182,0.62],["2354","鴻準","tw_case",22,98.40,1.02],
+ ["3653","健策","tw_thm",28,1420,-2.42],["2059","川湖","tw_mach",34,1680,1.24],
+ ["1590","亞德客-KY","tw_mach",32,782,0.84],["2049","上銀","tw_mach",24,218,1.12],
+ ["2881","富邦金","tw_fin",62,92.40,0.44],["2882","國泰金","tw_fin",58,68.50,0.32],
+ ["2891","中信金","tw_fin",54,42.80,0.61],["2886","兆豐金","tw_fin",46,41.20,0.24],
+ ["2884","玉山金","tw_fin",40,29.60,0.52],["2892","第一金","tw_fin",36,30.10,0.33],
+ ["2885","元大金","tw_fin",38,32.40,0.42],["2887","台新金","tw_fin",30,18.60,0.28],
+ ["2890","永豐金","tw_fin",30,24.80,0.34],["2880","華南金","tw_fin",28,24.20,0.22],
+ ["2603","長榮","tw_shp",48,205,2.14],["2609","陽明","tw_shp",40,78.40,1.82],
+ ["2615","萬海","tw_shp",36,92.60,1.42],["2606","裕民","tw_shp",16,62.40,1.24],
+ ["2610","華航","tw_air",26,21.40,0.62],["2618","長榮航","tw_air",28,38.20,0.54],
+ ["2412","中華電","tw_tele",52,128,0.16],["3045","台灣大","tw_tele",34,112,0.22],
+ ["4904","遠傳","tw_tele",30,92.40,0.18],
+ ["2002","中鋼","tw_stl",38,21.80,0.46],["2027","大成鋼","tw_stl",16,42.60,1.02],
+ ["2015","豐興","tw_stl",14,72.40,0.42],["1101","台泥","tw_cem",30,32.40,0.62],
+ ["1102","亞泥","tw_cem",22,42.80,0.48],["1301","台塑","tw_pls",40,42.60,0.72],
+ ["1303","南亞","tw_pls",38,38.40,0.66],["1326","台化","tw_pls",32,32.80,0.58],
+ ["6505","台塑化","tw_pls",34,68.20,0.44],["1216","統一","tw_food",44,86.40,0.34],
+ ["1210","大成","tw_food",18,54.20,0.28],["1229","聯華","tw_food",14,72.60,0.32],
+ ["1476","儒鴻","tw_text",30,428,0.84],["1477","聚陽","tw_text",24,308,0.72],
+ ["1402","遠東新","tw_text",20,32.40,0.42],["9910","豐泰","tw_text",22,128,0.54],
+ ["2207","和泰車","tw_auto",36,628,0.62],["2227","裕日車","tw_auto",16,168,0.42],
+ ["1560","中砂","tw_mach",14,168,1.24],["1519","華城","tw_mach",34,428,2.14],
+ ["1503","士電","tw_mach",30,248,1.62],["1513","中興電","tw_mach",28,182,1.44],
+ ["2542","興富發","tw_cons",16,48.60,0.62],["2597","潤弘","tw_cons",14,128,0.84],
+ ["5871","中租-KY","tw_fin",34,142,0.52],["2801","彰銀","tw_fin",22,18.40,0.16],
+ ["2707","晶華","tw_tour",18,268,0.42],["2739","寒舍","tw_tour",10,32.40,0.62],
+ ["5904","寶雅","tw_dept",22,428,0.34],["2912","統一超","tw_dept",38,268,0.28],
+ ["5903","全家","tw_dept",18,182,0.32],["8454","富邦媒","tw_dept",26,382,-0.62],
+ ["6446","藥華藥","tw_bio",34,428,1.84],["6472","保瑞","tw_bio",26,682,1.42],
+ ["4174","浩鼎","tw_bio",14,142,2.24],["1795","美時","tw_bio",22,268,1.12],
+ ["6104","創惟","tw_icd",12,68.40,1.42], /* 台股 ETF：市值型 · 高股息 · 產業型 · 海外型 · 債券型 · 槓桿反向 */
+ ["0050","元大台灣50","tw_fnd",95,210,0.82,1],["006208","富邦台50","tw_fnd",88,118,0.80,1],
+ ["0056","元大高股息","tw_pc",82,36.40,0.41,1],["00878","國泰永續高股息","tw_pc",78,22.80,0.34,1],
+ ["00919","群益台灣精選高息","tw_fnd",74,24.60,0.42,1],["00929","復華台灣科技優息","tw_icd",70,19.20,0.53,1],
+ ["00940","元大台灣價值高息","tw_fin",60,10.40,0.24,1],["00713","元大高息低波","tw_fin",58,58.20,0.31,1],
+ ["00881","國泰台灣5G+","tw_icd",56,24.80,0.74,1],["00891","中信關鍵半導體","tw_fnd",54,22.40,0.92,1],
+ ["00892","富邦台灣半導體","tw_fnd",52,28.60,0.91,1],["0052","富邦科技","tw_fnd",50,218,1.02,1],
+ ["0055","元大MSCI金融","tw_fin",44,32.80,0.30,1],["0053","元大電子","tw_icd",40,108,0.82,1],
+ ["0057","富邦摩台","tw_pc",38,138,0.72,1],["006203","元大MSCI台灣","tw_fnd",36,92.00,0.71,1],
+ ["0051","元大中型100","tw_etc",26,78.40,0.62,1],["0054","元大台商50","tw_etc",18,42.60,0.52,1],
+ ["00692","富邦公司治理","tw_fnd",44,42.80,0.74,1],["00850","元大臺灣ESG永續","tw_fnd",42,42.20,0.72,1],
+ ["00921","兆豐龍頭等權重","tw_fnd",32,24.80,0.64,1],["00923","群益台ESG低碳","tw_fnd",30,22.40,0.62,1],
+ ["00927","群益半導體收益","tw_fnd",34,18.60,0.84,1],["00935","野村臺灣新科技50","tw_icd",36,18.20,0.92,1],
+ ["00939","統一台灣高息動能","tw_pc",44,12.80,0.42,1],["00943","兆豐台灣晶圓製造","tw_fnd",34,14.60,0.88,1],
+ ["00944","野村趨勢動能高息","tw_pc",34,13.80,0.44,1],["00946","群益科技高息成長","tw_icd",32,16.40,0.62,1],
+ ["00733","富邦臺灣中小","tw_etc",24,68.40,0.82,1],["00757","統一FANG+","tw_ovs",44,92.60,1.12,1],
+ ["00662","富邦NASDAQ","tw_ovs",56,86.40,0.92,1],["00646","元大S&P500","tw_ovs",58,72.80,0.62,1],
+ ["00830","國泰費城半導體","tw_ovs",52,68.40,1.62,1], ["00893","國泰智能電動車","tw_ovs",32,18.60,1.24,1],["00895","富邦未來車","tw_ovs",24,16.80,1.14,1],
+ ["00885","富邦越南","tw_ovs",26,18.40,0.82,1],["00888","永豐台灣ESG","tw_fnd",24,16.20,0.62,1],
+ ["00937B","群益ESG投等債20+","tw_bond",34,15.80,0.42,1],["00679B","元大美債20年","tw_bond",48,28.40,0.52,1],
+ ["00687B","國泰20年美債","tw_bond",42,28.80,0.54,1],["00772B","中信高評級公司債","tw_bond",32,32.40,0.44,1],
+ ["00947","台新臺灣IC設計","tw_icd",26,14.20,0.94,1],["00918","大華優利高填息30","tw_pc",32,20.40,0.42,1],
+ ["00631L","元大台灣50正2","tw_fnd",72,268,1.64,2],["00675L","富邦臺灣加權正2","tw_fnd",44,42.60,1.58,2],
+ ["00663L","國泰臺灣加權正2","tw_fnd",36,68.40,1.60,2],["00670L","富邦NASDAQ正2","tw_ovs",42,128,1.86,2],
+ ["00680L","元大美債20正2","tw_bond",22,32.40,1.04,2],["00715L","街口布蘭特油正2","tw_pls",18,28.60,2.24,2],
+ ["00632R","元大台灣50反1","tw_fnd",40,4.620,-0.84,2],["00664R","國泰臺灣加權反1","tw_fnd",24,8.420,-0.82,2],
+ ["00676R","富邦臺灣加權反1","tw_fnd",22,9.240,-0.80,2],["00669R","國泰美國道瓊反1","tw_ovs",16,12.40,-0.54,2]
+].filter(Boolean).map(r=>{const inv=/反/.test(r[1])||(r[6]===2&&/R$/.test(r[0]));
+  return {id:r[0],n:r[1],ind:r[2],w:r[3],px:r[4],chg:r[5],
+  kind:r[6]||0,etf:!!r[6],inv,lev:r[6]===2?2.0:1,mkt:"tw"}});
+
+const MASTER_US=[
+ ["NVDA","NVIDIA","us_semi",100,182.4,1.86],["MSFT","Microsoft","us_soft",96,512.8,0.62],
+ ["AAPL","Apple","us_comm",94,246.2,0.44],["AVGO","Broadcom","us_semi",92,1680,1.42],
+ ["GOOGL","Alphabet","us_net",90,236.8,1.12],["AMZN","Amazon","us_net",88,231.4,-0.38],
+ ["META","Meta","us_net",84,748.6,0.91],["TSLA","Tesla","us_auto",82,412.3,2.24],
+ ["LLY","Eli Lilly","us_drug",88,862.0,0.58],["JPM","JPMorgan","us_bank",86,268.4,-0.92],
+ ["WMT","Walmart","us_retail",78,108.2,0.44],["AMD","AMD","us_semi",74,226.8,11.68],
+ ["COST","Costco","us_retail",74,942.6,0.62],["ORCL","Oracle","us_soft",72,286.4,3.12],
+ ["XOM","Exxon Mobil","us_energy",72,118.4,-0.64],["MU","Micron","us_semi",70,148.2,3.24],
+ ["ASML","ASML","us_semieq",70,842.1,2.14],["BRK.B","Berkshire","us_ins",68,486.2,-0.22],
+ ["CVX","Chevron","us_energy",66,158.2,-0.52],["PLTR","Palantir","us_soft",66,178.4,2.18],
+ ["BAC","Bank of America","us_bank",66,46.20,-1.14],["AMAT","Applied Materials","us_semieq",64,218.4,2.06],
+ ["HD","Home Depot","us_retail",62,402.6,0.52],["GS","Goldman Sachs","us_bank",62,618.2,-0.84],
+ ["ABBV","AbbVie","us_drug",62,208.4,0.54],["CSCO","Cisco","us_comm",62,72.80,0.68],
+ ["NFLX","Netflix","us_ent",62,1204,1.36],["NOW","ServiceNow","us_soft",62,968.4,1.22],
+ ["QCOM","Qualcomm","us_semi",60,172.4,0.82],["CRM","Salesforce","us_soft",60,262.8,-0.74],
+ ["CRWD","CrowdStrike","us_soft",58,462.1,-3.05],["BA","Boeing","us_aero",58,214.6,1.42],
+ ["INTC","Intel","us_semi",58,34.20,1.14],["WFC","Wells Fargo","us_bank",58,74.20,-1.02],
+ ["ADBE","Adobe","us_soft",58,382.4,-0.62],["ANET","Arista","us_comm",56,148.2,1.94],
+ ["LRCX","Lam Research","us_semieq",56,108.7,2.41],["MRK","Merck","us_drug",56,92.60,0.24],
+ ["TXN","Texas Instruments","us_semi",56,208.4,0.61],["MS","Morgan Stanley","us_bank",54,132.4,-0.72],
+ ["KLAC","KLA","us_semieq",54,942.3,1.88],["ARM","Arm Holdings","us_semi",54,142.6,2.22],
+ ["BLK","BlackRock","us_asset",54,1042,-0.86],["PANW","Palo Alto","us_soft",52,214.7,2.28],
+ ["RTX","RTX","us_aero",52,148.9,0.88],["TMO","Thermo Fisher","us_instr",52,542.6,-0.48],
+ ["SNOW","Snowflake","us_soft",50,238.6,-1.57],["LMT","Lockheed","us_aero",50,468.2,0.62],
+ ["INTU","Intuit","us_soft",50,642.4,0.42],["MRVL","Marvell","us_semi",50,92.40,1.62],
+ ["BKNG","Booking","us_trav",50,5284,-0.74],["COP","ConocoPhillips","us_energy",48,102.4,-0.92],
+ ["ETN","Eaton","us_elec",48,368.4,1.24],["ABT","Abbott","us_med",48,134.6,-0.58],
+ ["DIS","Disney","us_ent",48,112.4,0.52],["UBER","Uber","us_trav",48,82.40,0.94],
+ ["LOW","Lowe's","us_retail",46,262.4,0.42],["BX","Blackstone","us_asset",46,168.2,-1.24],
+ ["MSI","Motorola Sol","us_comm",44,428.6,0.31],["TJX","TJX","us_appr",44,138.2,0.64],
+ ["ADI","Analog Devices","us_semi",44,238.4,0.72],["PFE","Pfizer","us_drug",44,26.40,-0.42],
+ ["EMR","Emerson","us_elec",42,128.6,0.86],["GM","General Motors","us_auto",40,58.20,1.06],
+ ["CB","Chubb","us_ins",40,284.6,-0.64],["KKR","KKR","us_asset",40,142.6,-1.08],
+ ["TGT","Target","us_retail",40,148.2,-0.84],["OKTA","Okta","us_soft",38,96.40,-4.11],
+ ["MDT","Medtronic","us_med",38,92.40,-0.86],["MSTR","Strategy","us_crypto",48,328.4,3.82],
+ ["USB","US Bancorp","us_bank",36,48.60,-1.42],["ABNB","Airbnb","us_trav",36,128.4,-1.32],
+ ["SYK","Stryker","us_med",36,384.2,-0.42],["NXPI","NXP","us_semi",36,224.6,0.54],
+ ["F","Ford","us_auto",34,12.84,0.78],["PNC","PNC","us_bank",34,198.4,-1.28],
+ ["SLB","Schlumberger","us_energy",34,42.20,-1.24],["BMY","Bristol Myers","us_drug",34,52.40,-0.32],
+ ["ROST","Ross","us_appr",32,152.8,0.42],["KEYS","Keysight","us_instr",30,168.4,1.02],
+ ["HUBB","Hubbell","us_elec",30,412.8,0.94],["ON","ON Semi","us_semi",30,62.40,1.22],
+ ["OXY","Occidental","us_energy",30,48.20,-1.12],["GRMN","Garmin","us_instr",28,214.8,0.36],
+ ["AIG","AIG","us_ins",28,78.40,-0.92],["TFC","Truist","us_bank",28,44.20,-1.16],
+ ["WBD","Warner Bros","us_ent",26,12.60,-1.18],["EXPE","Expedia","us_trav",24,186.2,-0.96],
+ ["GAP","Gap","us_appr",18,24.60,1.86],
+ /* NASDAQ 其他權值與熱門標的 */
+ ["PEP","PepsiCo","us_food",56,148.2,0.24],["KO","Coca-Cola","us_food",54,68.40,0.18],
+ ["MDLZ","Mondelez","us_food",34,62.40,0.22],["MNST","Monster","us_food",28,58.20,0.42],
+ ["SBUX","Starbucks","us_appr",44,92.40,0.52],["MCD","McDonald's","us_appr",52,298.4,0.32],
+ ["CMCSA","Comcast","us_ent",42,38.40,0.28],["TMUS","T-Mobile","us_comm",56,228.4,0.34],
+ ["AMGN","Amgen","us_biotech",52,298.4,0.62],["GILD","Gilead","us_biotech",44,108.2,0.54],
+ ["REGN","Regeneron","us_biotech",42,682.4,1.02],["VRTX","Vertex","us_biotech",46,428.6,0.82],
+ ["MRNA","Moderna","us_biotech",26,28.40,2.42],["BIIB","Biogen","us_biotech",22,142.6,1.14],
+ ["ISRG","Intuitive Surgical","us_med",46,528.4,0.62],["DXCM","Dexcom","us_med",26,72.40,1.02],
+ ["IDXX","IDEXX","us_med",24,482.6,0.44],["ILMN","Illumina","us_biotech",22,102.4,1.62],
+ ["ADP","ADP","us_soft",42,308.4,0.24],["FTNT","Fortinet","us_soft",40,82.40,1.42],
+ ["DDOG","Datadog","us_soft",38,142.6,1.82],["TEAM","Atlassian","us_soft",34,198.4,1.44],
+ ["ZS","Zscaler","us_soft",30,238.4,1.62],["NET","Cloudflare","us_soft",34,142.8,2.04],
+ ["MDB","MongoDB","us_soft",28,282.4,1.86],["WDAY","Workday","us_soft",34,238.6,0.84],
+ ["ROP","Roper","us_soft",30,542.8,0.42],["CDNS","Cadence","us_semieq",46,308.4,1.44],
+ ["SNPS","Synopsys","us_semieq",46,482.6,1.32],["ANSS","Ansys","us_semieq",26,342.8,0.84],
+ ["MCHP","Microchip","us_semi",34,62.40,1.22],["SWKS","Skyworks","us_semi",24,82.40,0.94],
+ ["QRVO","Qorvo","us_semi",18,78.20,0.86],["TER","Teradyne","us_semieq",30,142.6,1.64],
+ ["ENPH","Enphase","us_util",18,42.60,2.14],["FSLR","First Solar","us_util",30,208.4,1.84],
+ ["VRT","Vertiv","us_elec",44,142.8,2.42],["SMCI","Super Micro","us_elec",42,48.60,3.84],
+ ["DELL","Dell","us_elec",44,142.4,1.86],["HPQ","HP","us_elec",26,32.40,0.62],
+ ["COIN","Coinbase","us_crypto",52,282.4,3.42],["MARA","MARA Holdings","us_crypto",26,18.40,4.62],
+ ["RIOT","Riot Platforms","us_crypto",22,12.80,4.24],["HOOD","Robinhood","us_crypto",42,82.40,3.12],
+ ["PDD","PDD Holdings","us_china",48,128.4,1.62],["JD","JD.com","us_china",34,38.40,1.42],
+ ["BIDU","Baidu","us_china",32,102.4,1.24],["NTES","NetEase","us_china",34,118.6,0.84],
+ ["TCOM","Trip.com","us_china",30,68.40,1.02],["LI","Li Auto","us_china",22,24.60,2.24],
+ ["NIO","NIO","us_china",20,6.420,3.14],["XPEV","XPeng","us_china",22,18.40,2.84],
+ ["RIVN","Rivian","us_auto",26,14.20,2.62],["LCID","Lucid","us_auto",14,2.480,3.24],
+ ["CSX","CSX","us_transp",30,34.20,0.62],["ODFL","Old Dominion","us_transp",28,182.4,0.84],
+ ["JBHT","JB Hunt","us_transp",20,148.2,0.72],["FAST","Fastenal","us_transp",26,78.40,0.44],
+ ["PAYX","Paychex","us_soft",30,142.6,0.24],["CTAS","Cintas","us_transp",34,208.4,0.42],
+ ["CPRT","Copart","us_auto",30,52.40,0.62],["LULU","Lululemon","us_appr",30,268.4,1.02],
+ ["MAR","Marriott","us_trav",34,268.4,0.62],["EA","Electronic Arts","us_ent",30,148.2,0.84],
+ ["TTWO","Take-Two","us_ent",28,182.4,0.94],["ROKU","Roku","us_ent",20,82.40,2.14],
+ ["SHOP","Shopify","us_net",44,118.4,1.84],["SPOT","Spotify","us_net",42,682.4,1.42],
+  ["AEP","American Electric","us_util",28,102.4,0.32],["EXC","Exelon","us_util",26,42.60,0.28],
+ ["XEL","Xcel Energy","us_util",24,68.40,0.34],["CEG","Constellation Energy","us_util",46,282.4,1.62],
+ ["VST","Vistra","us_util",42,168.4,1.84],["TLN","Talen Energy","us_util",26,242.6,1.62],
+ /* 美股 ETF ＋ 槓桿 */
+ ["SPY","SPDR S&P 500","us_etf",98,682.4,0.52,1],["QQQ","Invesco QQQ","us_etf",96,528.6,0.74,1],
+ ["QQQM","Invesco QQQ M","us_etf",68,218.4,0.74,1],["VOO","Vanguard S&P 500","us_etf",90,628.2,0.51,1],
+ ["VTI","Vanguard 全市場","us_etf",84,302.6,0.48,1],["IWM","iShares 羅素2000","us_etf",66,238.4,0.82,1],
+ ["DIA","道瓊 SPDR","us_etf",64,448.2,0.44,1],["SMH","VanEck 半導體","us_semi",86,312.4,1.82,1],
+ ["SOXX","iShares 半導體","us_semi",80,268.4,1.74,1],["XLK","科技類股 SPDR","us_etf",72,268.4,0.84,1],
+ ["XLF","金融類股 SPDR","us_bank",68,52.40,-0.62,1],["XLE","能源類股 SPDR","us_energy",62,92.40,-0.72,1],
+ ["XLV","醫療類股 SPDR","us_drug",60,148.2,0.22,1],["XLY","非必需消費 SPDR","us_appr",58,218.4,0.62,1],
+ ["XLI","工業類股 SPDR","us_aero",56,148.6,0.54,1],["XLP","必需消費 SPDR","us_food",48,78.40,0.22,1],
+ ["XLU","公用事業 SPDR","us_util",46,82.40,0.34,1],["XBI","生技 SPDR","us_biotech",44,102.4,1.24,1],
+ ["IBB","iShares 生技","us_biotech",38,148.6,1.12,1],["VGT","Vanguard 資訊科技","us_etf",54,682.4,0.82,1],
+ ["ARKK","ARK 創新","us_etf",48,68.40,1.42,1],["IBIT","iShares 比特幣","us_crypto",62,68.40,2.84,1],
+ ["KWEB","中概互聯網","us_china",42,38.40,1.62,1],["EWT","iShares 台灣","us_etf",40,62.40,0.92,1],
+ ["TQQQ","QQQ 3X","us_etf",74,108.2,2.14,2],["SQQQ","QQQ -3X","us_etf",44,8.420,-2.12,2],
+ ["QLD","QQQ 2X","us_etf",38,128.4,1.46,2],["SOXL","半導體 3X","us_semi",70,42.60,5.12,2],
+ ["SOXS","半導體 -3X","us_semi",32,6.240,-5.02,2],["NVDL","NVIDIA 2X","us_semi",48,68.40,3.62,2],
+ ["TSLL","Tesla 2X","us_auto",42,18.40,4.24,2],["UPRO","S&P500 3X","us_etf",42,98.40,1.52,2],
+ ["TMF","20年美債 3X","us_etf",30,42.60,1.24,2],["TLT","iShares 20年美債","us_etf",58,92.40,0.42,1]
+].filter(Boolean).map(r=>{const inv=/-\d?X/.test(r[1])&&/-/.test(r[1].split(" ").pop());
+  return {id:r[0],n:r[1],ind:r[2],w:r[3],px:r[4],chg:r[5],
+  kind:r[6]||0,etf:!!r[6],inv,lev:r[6]===2?2.4:1,mkt:"us"}});
+
+/* ── 使用者自訂標的（不在內建清單，但可在市場交易）── */
+const CKEY="tcapsule.custom.v8";
+let CUSTOM=[];
+try{const raw=localStorage.getItem(CKEY); if(raw){const a=JSON.parse(raw); if(Array.isArray(a))CUSTOM=a;}}catch(e){}
+function saveCustom(){try{localStorage.setItem(CKEY,JSON.stringify(CUSTOM))}catch(e){}}
+function customNode(c){
+  return {id:c.id,n:c.n||c.id,ind:c.ind,w:c.w||30,px:c.px||0,chg:c.chg||0,
+          kind:c.etf?1:0,etf:!!c.etf,lev:c.lev||1,mkt:c.mkt,custom:true};
+}
+let MASTER=[],LOOKUP={};
+function rebuildMaster(){
+  MASTER=MASTER_TW.concat(MASTER_US).concat(CUSTOM.map(customNode));
+  LOOKUP={}; MASTER.forEach(s=>LOOKUP[s.id.toUpperCase()]=s);
+}
+rebuildMaster();
+
+/* 代號格式：台股 4–6 位數字（可帶 L/R/B/U 等後綴）；美股 1–5 位英文（可帶 .A/.B） */
+const RE_TW=/^\d{4,6}[A-Z]?$/, RE_US=/^[A-Z]{1,5}(\.[A-Z])?$/;
+function guessMkt(code){
+  const k=code.toUpperCase();
+  if(RE_TW.test(k))return "tw";
+  if(RE_US.test(k))return "us";
+  return null;
+}
+/* 台股代號前綴 → 預設板塊（僅用於未收錄代號的初始猜測，使用者可改） */
+function guessIndTW(code){
+  if(/^00/.test(code))return /B$/.test(code)?"tw_bond":"tw_ovs";
+  if(/^0/.test(code))return "tw_fnd";
+  const n=parseInt(code.slice(0,2),10);
+  if(n===11)return "tw_cem"; if(n===12)return "tw_food";
+  if(n===13)return "tw_pls"; if(n===14)return "tw_text";
+  if(n===15)return "tw_mach"; if(n===16)return "tw_mach";
+  if(n===17||n===18)return "tw_bio"; if(n===20)return "tw_stl";
+  if(n===22)return "tw_auto"; if(n===25)return "tw_cons";
+  if(n===26)return "tw_shp"; if(n===27)return "tw_tour";
+  if(n===28)return "tw_fin"; if(n===29)return "tw_dept";
+  if(n===23||n===24||n===30||n===31||n===32||n===33||n===34||n===35||n===36||n===37||n===38)return "tw_etc";
+  if(n===49||n===60||n===64)return "tw_bio";
+  return "tw_etc";
+}
+
+/* ════════ 方舟觀測池 ═══════════════════════════════════════════
+   來源：方舟各價值區／升溫區的當日清單（ETF價值區、美股價值區、
+   產業價值區、美股ETF價值區與升溫區）。這一池有兩個用途：
+     1) 「降低集中度的候選」只從這裡挑，不再掃整個資料庫
+     2) 「未來事件預期受惠」也只從這裡挑
+   欄位：[代號, 名稱, 板塊, 影響力, 參考價, 漲跌%, 型別(0股1ETF2槓桿), 區]
+   參考價與漲跌幅取自清單當下的快照，會隨你重新匯入而更新。
+   ════════════════════════════════════════════════════════════ */
+const ZONE={etfv:"ETF價值區",etfh:"ETF升溫區",usv:"美股價值區",ush:"美股升溫區",
+  indv:"產業價值區",indh:"產業升溫區",uetfv:"美股ETF價值區",uetfh:"美股ETF升溫區"};
+
+const ARK_TW=[
+ /* ── ETF 價值區 ── */
+ ["0053","元大電子","tw_icd",44,238.95,-0.91,1,"etfv"],
+ ["00631L","元大台灣50正2","tw_fnd",72,35.40,-1.61,2,"etfv"],
+ ["0057","富邦摩台","tw_fnd",40,318.35,-0.90,1,"etfv"],
+ ["0052","富邦科技","tw_fnd",50,61.90,-1.04,1,"etfv"],
+ ["006208","富邦台50","tw_fnd",88,244.65,-0.59,1,"etfv"],
+ ["0050","元大台灣50","tw_fnd",95,106.90,-0.74,1,"etfv"],
+ ["006203","元大MSCI台灣","tw_fnd",36,194.60,-0.84,1,"etfv"],
+ ["0056","元大高股息","tw_pc",82,55.40,0.18,1,"etfv"],
+ ["0055","元大MSCI金融","tw_fin",44,50.30,1.99,1,"etfv"],
+ ["00960","野村全球航運龍頭","tw_shp",30,22.12,0.82,1,"etfv"],
+ /* ── 產業價值區 ── */
+ ["2059","川湖","tw_mach",34,11990,-0.75,0,"indv"],
+ ["6285","啟碁","tw_net",16,222.0,-0.22,0,"indv"],
+ ["1785","光洋科","tw_etc",14,95.10,-0.83,0,"indv"],
+ ["2324","仁寶","tw_pc",24,37.90,0.26,0,"indv"],
+ ["2345","智邦","tw_net",56,1875,-0.53,0,"indv"],
+ ["2313","華通","tw_fpc",22,221.0,-0.23,0,"indv"],
+ ["6223","旺矽","tw_ate",26,5595,-0.44,0,"indv"],
+ ["3037","欣興","tw_fpc",35,970.0,-0.72,0,"indv"],
+ ["3034","聯詠","tw_icd",38,556.0,1.65,0,"indv"],
+ ["3711","日月光投控","tw_osat",55,612.0,-0.97,0,"indv"],
+ ["2454","聯發科","tw_icd",78,4560,-0.55,0,"indv"],
+ ["2455","全新","tw_gaas",14,535.0,3.88,0,"indv"],
+ ["2449","京元電子","tw_osat",28,261.5,-0.57,0,"indv"],
+ ["2327","國巨","tw_mlcc",47,545.0,0.18,0,"indv"],
+ ["6274","台燿","tw_fpc",22,1410,3.30,0,"indv"],
+ ["2360","致茂","tw_ate",24,2140,-0.93,0,"indv"],
+ ["4958","臻鼎-KY","tw_fpc",31,489.5,-1.11,0,"indv"],
+ ["5274","信驊","tw_icd",30,17980,0.53,0,"indv"],
+ ["2379","瑞昱","tw_icd",44,713.0,1.28,0,"indv"],
+ ["3189","景碩","tw_fpc",20,798.0,-2.92,0,"indv"],
+ ["6239","力成","tw_osat",24,271.5,-0.55,0,"indv"],
+ ["2330","台積電","tw_fnd",100,2380,-1.24,0,"indv"],
+ ["6515","穎崴","tw_ate",18,6600,-4.21,0,"indv"],
+ ["2382","廣達","tw_pc",60,332.5,-1.19,0,"indv"],
+ ["3008","大立光","tw_opl",58,5995,-9.98,0,"indv"],
+ ["3665","貿聯-KY","tw_net",30,1955,4.27,0,"indv"],
+ ["2308","台達電","tw_psu",62,1620,0.00,0,"indv"],
+ ["6415","矽力*-KY","tw_icd",26,414.0,3.24,0,"indv"],
+ ["2383","台光電","tw_fpc",34,5345,-0.37,0,"indv"],
+ ["6213","聯茂","tw_fpc",20,515.0,1.18,0,"indv"]
+];
+const ARK_US=[
+ /* ── 美股價值區 ── */
+ ["PANW","Palo Alto Networks","us_soft",52,330.65,-2.32,0,"usv"],
+ ["CRWD","CrowdStrike","us_soft",58,206.74,-1.02,0,"usv"],
+ ["PBF","PBF Energy","us_energy",26,78.30,1.58,0,"usv"],
+ ["AMD","超微半導體","us_semi",74,516.13,2.49,0,"usv"],
+ ["PARR","Par Pacific","us_energy",18,84.65,1.27,0,"usv"],
+ ["MPC","Marathon Petroleum","us_energy",44,395.93,0.89,0,"usv"],
+ ["PSX","Phillips 66","us_energy",42,259.47,0.37,0,"usv"],
+ ["CRGY","Crescent Energy","us_energy",16,14.66,1.73,0,"usv"],
+ ["VLO","Valero","us_energy",40,390.42,1.29,0,"usv"],
+ ["CLMT","Calumet","us_energy",14,56.80,0.64,0,"usv"],
+ /* ── 美股 ETF 價值區 ── */
+ ["BWET","Breakwave 油輪運價","us_transp",22,726.92,11.83,1,"uetfv"],
+ ["ISRL","Defiance 以色列","us_etf",14,24.98,1.27,1,"uetfv"],
+ ["MRNX","Defiance MRNA 2X","us_biotech",16,81.41,10.25,2,"uetfv"],
+ ["OKTG","Okta 2X","us_soft",16,37.47,-5.58,2,"uetfv"],
+ ["NRGU","油氣 3X","us_energy",28,60.95,0.96,2,"uetfv"],
+ ["ASTN","AST 2X","us_aero",14,19.34,0.55,2,"uetfv"],
+ ["CRAK","VanEck 煉油 ETF","us_energy",24,65.65,0.06,1,"uetfv"],
+ ["NETG","Cloudflare 2X","us_soft",18,18.99,-3.48,2,"uetfv"],
+ ["DIG","ProShares 油氣 2X","us_energy",26,72.28,0.54,2,"uetfv"],
+ ["HPEL","HPE 2X","us_elec",14,21.72,24.76,2,"uetfv"],
+ ["TTXU","Direxion 科技 2X","us_etf",24,34.57,1.11,2,"uetfv"],
+ ["TECL","Direxion 科技 3X","us_etf",46,206.01,3.90,2,"uetfv"],
+ /* ── 美股 ETF 升溫區 ── */
+ ["UCO","ProShares 原油 2X","us_energy",30,51.56,-1.28,2,"uetfh"],
+ ["PANG","Palo Alto 2X","us_soft",18,27.29,-4.97,2,"uetfh"],
+ ["UGA","美國汽油基金","us_energy",20,138.70,-1.78,1,"uetfh"],
+ ["USO","美國石油基金","us_energy",36,154.90,-2.20,1,"uetfh"],
+ ["SNOU","Snowflake 2X","us_soft",18,63.82,-0.58,2,"uetfh"],
+ ["GUSH","油氣探勘 2X","us_energy",24,48.41,0.60,2,"uetfh"],
+ ["AMDL","AMD 2X","us_semi",26,57.67,4.87,2,"uetfh"],
+ ["AMUU","AMD 2X（Direxion）","us_semi",30,204.10,4.88,2,"uetfh"],
+ ["STSM","半導體 2X","us_semi",20,33.24,-2.12,2,"uetfh"],
+ ["AMDG","AMD 2X（LS）","us_semi",22,97.74,4.60,2,"uetfh"],
+ ["CRWL","CrowdStrike 2X","us_soft",20,66.06,-1.80,2,"uetfh"],
+ ["PALU","Palantir 2X","us_soft",24,44.61,-4.59,2,"uetfh"],
+ ["BNO","美國布蘭特原油","us_energy",22,61.37,-2.79,1,"uetfh"],
+ ["DBE","Invesco 能源基金","us_energy",16,37.18,-2.97,1,"uetfh"],
+ ["WTIB","USCF 原油+比特幣","us_crypto",16,35.72,-1.73,1,"uetfh"],
+ ["DBO","Invesco 原油基金","us_energy",18,25.22,-2.59,1,"uetfh"],
+ ["CHNU","Chainlink 2X","us_crypto",16,28.78,0.11,2,"uetfh"],
+ ["ERX","Direxion 能源 2X","us_energy",26,112.08,0.57,2,"uetfh"]
+];
+/* 併進主資料庫：已存在的更新報價並貼上分區標籤，沒有的新增 */
+function applyArk(){
+  const put=(rows,arr,mkt)=>{
+    rows.forEach(r=>{
+      const [id,n,ind,w,px,chg,kind,zone]=r;
+      const hit=arr.find(x=>x.id.toUpperCase()===id.toUpperCase());
+      if(hit){
+        hit.px=px; hit.chg=chg;
+        hit.ark=(hit.ark||[]).concat(zone);
+        if(w>hit.w)hit.w=w;
+      }else{
+        const inv=/反/.test(n)||/-\d?X/.test(n);
+        arr.push({id,n,ind,w,px,chg,kind,etf:!!kind,inv,
+          lev:kind===2?(mkt==="tw"?2.0:2.4):1,mkt,ark:[zone]});
+      }
+    });
+  };
+  put(ARK_TW,MASTER_TW,"tw");
+  put(ARK_US,MASTER_US,"us");
+  rebuildMaster();
+}
+applyArk();
+const arkUniverse=()=>MASTER.filter(d=>d.ark&&d.ark.length);
+const arkTag=d=>(d.ark&&d.ark.length)?ZONE[d.ark[0]]:"";
+
+/* ════════ L1 事件行事曆：以「今天」為基準每日重算 ══════════════
+   規則式排程 → 過期事件自動淘汰，後方自動補進新的高影響力排程。
+   每個事件帶兩個情境（A／B）與情境的方向傾斜（tilt），供推演時做情境分析。
+   排程為示意，實際日期以官方公告為準。
+   ════════════════════════════════════════════════════════════ */
+function taipeiParts(){
+  const f=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Taipei",
+    year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+  return f.split("-").map(Number);
+}
+let TODAY=(()=>{const p=taipeiParts();return new Date(p[0],p[1]-1,p[2])})();
+const DAY=86400000;
+const daysTo=d=>Math.round((d-TODAY)/DAY);
+const fmtD=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const clampDay=(y,m,day)=>new Date(y,m,Math.min(day,new Date(y,m+1,0).getDate()));
+function nthDow(y,m,n,w){const first=new Date(y,m,1).getDay();
+  return new Date(y,m,1+((w-first)+7)%7+(n-1)*7)}
+function firstBiz(y,m){const d=new Date(y,m,1);while(d.getDay()===0||d.getDay()===6)d.setDate(d.getDate()+1);return d}
+const lastOf=(y,m)=>new Date(y,m+1,0);
+const prevMon=d=>((d.getMonth()+11)%12)+1;
+const QN=["第一季","第二季","第三季","第四季"];
+const repQ=d=>QN[((Math.floor(d.getMonth()/3)+3)%4)];
+
+const EV_TPL=[
+ {k:"twcpi", rt:16, kind:"總經", mkt:"tw", lvl:1, src:"主計總處",
+  name:d=>`台灣 ${prevMon(d)} 月 CPI`, note:"通膨與實質薪資，影響央行語氣",
+  at:(y,m)=>clampDay(y,m,5), tagW:{rate:.5},
+  hits:[["tw_fin",.42]],
+  scen:[{t:"通膨高於預期，央行語氣轉緊",p:.4,tilt:{rate:-.8}},
+        {t:"通膨回落，寬鬆空間打開",p:.6,tilt:{rate:.8}}],
+  watch:"核心 CPI 年增率與房租分項"},
+ {k:"twexp", rt:16, kind:"總經", mkt:"tw", lvl:2, src:"財政部",
+  name:d=>`台灣 ${prevMon(d)} 月出口統計`, note:"電子零組件與資通訊出口年增率，領先台廠營收",
+  at:(y,m)=>clampDay(y,m,9), tagW:{growth:.6,semi:.5,ai:.4,fx:.3,ship:.3},
+  hits:[["tw_fnd",.52],["tw_pc",.48],["tw_icd",.44],["tw_osat",.38],["tw_net",.36]],
+  scen:[{t:"出口年增優於預期（AI 拉貨延續）",p:.55,tilt:{growth:.8,ai:.7,semi:.6,ship:.4}},
+        {t:"出口年增放緩（拉貨提前結束）",p:.45,tilt:{growth:-.8,ai:-.6,semi:-.6}}],
+  watch:"電子零組件與資通訊兩項的年增率背離"},
+ {k:"twrev", rt:17, kind:"財報", mkt:"tw", lvl:3, src:"公開資訊觀測站",
+  name:d=>`台股 ${prevMon(d)} 月營收公布截止`, note:"全體上市櫃單月營收，記憶體與散熱是近月焦點",
+  at:(y,m)=>clampDay(y,m,10), tagW:{semi:.5,ai:.5,mem:.5,growth:.4},
+  hits:[["tw_dram",.72],["tw_fls",.68],["tw_thm",.62],["tw_opt",.54],["tw_pc",.50],["tw_mlcc",.44]],
+  scen:[{t:"月營收年增創高、旺季動能延續",p:.5,tilt:{semi:.7,ai:.8,mem:.7,growth:.5}},
+        {t:"月營收月減、旺季不旺",p:.5,tilt:{semi:-.7,ai:-.7,mem:-.7,growth:-.5}}],
+  watch:"月增率與去年同期基期，以及是否連三月正成長"},
+ {k:"tsmcrev", rt:14, kind:"財報", mkt:"tw", lvl:3, src:"公開資訊觀測站",
+  name:d=>`台積電 ${prevMon(d)} 月營收`, note:"月營收年增率，整條半導體鏈的錨",
+  at:(y,m)=>clampDay(y,m,10), tagW:{semi:.8,ai:.6},
+  hits:[["tw_fnd",.88],["tw_osat",.56],["tw_ate",.48],["tw_icd",.44],["us_semieq",.42],["us_semi",.40]],
+  scen:[{t:"月營收年增 >30%，先進製程滿載",p:.55,tilt:{semi:.9,ai:.8,growth:.4}},
+        {t:"月營收年增收斂至個位數",p:.45,tilt:{semi:-.9,ai:-.7,growth:-.4}}],
+  watch:"月營收與該季財測的達成率（月營收 ÷ 季財測）"},
+ {k:"uscpi", rt:20.5, kind:"總經", mkt:"gl", lvl:3, src:"BLS",
+  name:d=>`美國 ${prevMon(d)} 月 CPI`, note:"核心通膨決定下一次 FOMC 的空間",
+  at:(y,m)=>clampDay(y,m,11), tagW:{rate:.9,credit:.4,cons:.3},
+  hits:[["us_soft",.54],["us_bank",.44],["tw_fin",.30]],
+  scen:[{t:"核心 CPI 高於預期（降息延後）",p:.45,tilt:{rate:-1,credit:-.5,cons:-.3,def:.4}},
+        {t:"核心 CPI 低於預期（降息提前）",p:.55,tilt:{rate:1,credit:.5,cons:.3,def:-.2}}],
+  watch:"核心服務（扣除房租）月增率與三個月年化"},
+ {k:"umich", rt:22, kind:"總經", mkt:"us", lvl:1, src:"密西根大學",
+  name:d=>`密大消費者信心初值（${d.getMonth()+1} 月）`, note:"消費動能與通膨預期",
+  at:(y,m)=>nthDow(y,m,2,5), tagW:{cons:.7,growth:.3},
+  hits:[["us_appr",.46],["us_retail",.44],["us_trav",.42]],
+  scen:[{t:"信心回升、通膨預期下滑",p:.5,tilt:{cons:.7,growth:.4,rate:.3}},
+        {t:"信心下滑、通膨預期黏著",p:.5,tilt:{cons:-.7,growth:-.4,rate:-.3}}],
+  watch:"一年期通膨預期是否落回 3% 以下"},
+ {k:"usret", rt:20.5, kind:"總經", mkt:"us", lvl:2, src:"Census Bureau",
+  name:d=>`美國 ${prevMon(d)} 月零售銷售`, note:"實質消費，零售與旅行服務最先反應",
+  at:(y,m)=>clampDay(y,m,16), tagW:{cons:.9,growth:.5},
+  hits:[["us_retail",.64],["us_appr",.62],["us_trav",.54],["us_auto",.44]],
+  scen:[{t:"控制組銷售優於預期，消費韌性延續",p:.5,tilt:{cons:.9,growth:.6,rate:-.2}},
+        {t:"控制組轉負，消費開始降溫",p:.5,tilt:{cons:-.9,growth:-.6,rate:.4}}],
+  watch:"控制組（control group）而不是總額"},
+ {k:"twq", rt:17, kind:"財報", mkt:"tw", lvl:2, src:"公開資訊觀測站",
+  name:d=>`台股 ${repQ(d)}財報公布截止`, note:"全體上市櫃季報，毛利率與存貨是重點",
+  at:(y,m)=>({2:31,4:15,7:14,10:14}[m]!==undefined?clampDay(y,m,{2:31,4:15,7:14,10:14}[m]):null),
+  tagW:{growth:.5,semi:.4,cons:.3},
+  hits:[["tw_fnd",.54],["tw_icd",.50],["tw_pc",.46],["tw_fin",.40]],
+  scen:[{t:"毛利率優於預期、存貨去化完成",p:.5,tilt:{growth:.6,semi:.5,cons:.4}},
+        {t:"毛利率下滑、存貨天數再拉長",p:.5,tilt:{growth:-.6,semi:-.5,cons:-.4}}],
+  watch:"毛利率季變化與存貨週轉天數"},
+ {k:"fomc", rt:26, kind:"央行", mkt:"gl", lvl:3, src:"Federal Reserve",
+  name:d=>[2,5,8,11].indexOf(d.getMonth())>=0?"FOMC 利率決議 · 點陣圖":"FOMC 利率決議",
+  note:"利率路徑的定價中心，全層級傳導",
+  at:(y,m)=>({0:28,2:18,3:29,5:17,6:29,8:16,9:28,11:9}[m]!==undefined?clampDay(y,m,{0:28,2:18,3:29,5:17,6:29,8:16,9:28,11:9}[m]):null),
+  tagW:{rate:1,credit:.6,growth:.3},
+  hits:[["us_bank",.72],["us_asset",.66],["tw_fin",.44]],
+  scen:[{t:"偏鷹：點陣圖上調／措辭轉硬",p:.4,tilt:{rate:-1,credit:-.6,growth:-.3,def:.4}},
+        {t:"偏鴿：確認降息路徑",p:.6,tilt:{rate:1,credit:.6,growth:.4,def:-.2}}],
+  watch:"點陣圖中位數與記者會對「就業下行風險」的措辭"},
+ {k:"cbc", rt:17, kind:"央行", mkt:"tw", lvl:2, src:"中央銀行",
+  name:()=>"台灣央行理監事會", note:"利率與匯率政策，影響外資匯出入",
+  at:(y,m)=>([2,5,8,11].indexOf(m)>=0?nthDow(y,m,3,4):null),
+  tagW:{rate:.8,fx:.5,credit:.4},
+  hits:[["tw_fin",.62],["tw_cons",.48],["tw_fnd",.36]],
+  scen:[{t:"升息或再祭房市信用管制",p:.35,tilt:{rate:-.8,credit:-.7,fx:-.3}},
+        {t:"利率不變、匯率放手貶值",p:.65,tilt:{rate:.5,fx:.8,credit:.3}}],
+  watch:"理監事會後的新台幣走勢與選擇性信用管制條文"},
+ {k:"quad", rt:21, kind:"市場", mkt:"gl", lvl:2, src:"交易所",
+  name:()=>"四巫日 · 期權到期", note:"指數期貨與選擇權同日結算，量能與波動放大",
+  at:(y,m)=>([2,5,8,11].indexOf(m)>=0?nthDow(y,m,3,5):null),
+  tagW:{growth:.3},
+  hits:[["us_etf",.52],["us_semi",.44],["tw_fnd",.38],["tw_ovs",.40]],
+  scen:[{t:"結算前多方守住價位、結算後續強",p:.5,tilt:{growth:.3,ai:.3}},
+        {t:"結算日賣壓集中、波動放大",p:.5,tilt:{growth:-.3,ai:-.3}}],
+  twoSided:true,
+  watch:"未平倉最大量的履約價位置與結算前三日的量能"},
+ {k:"mu", rt:28.5, kind:"財報", mkt:"gl", lvl:3, src:"公司法說",
+  name:()=>"Micron 財報", note:"記憶體循環的指標財報，合約價指引最關鍵",
+  at:(y,m)=>([2,5,8,11].indexOf(m)>=0?clampDay(y,m,24):null),
+  tagW:{mem:1,semi:.6,ai:.4},
+  hits:[["tw_dram",.86],["tw_fls",.78],["us_semi",.62]],
+  scen:[{t:"合約價指引上修、供給仍緊",p:.55,tilt:{mem:1,semi:.6,ai:.4}},
+        {t:"庫存回補結束、合約價轉弱",p:.45,tilt:{mem:-1,semi:-.6,ai:-.3}}],
+  watch:"下一季毛利率財測與 HBM 出貨占比"},
+ {k:"pce", rt:20.5, kind:"總經", mkt:"us", lvl:2, src:"BEA",
+  name:d=>`美國 ${prevMon(d)} 月 PCE 物價`, note:"Fed 偏好的通膨指標",
+  at:(y,m)=>clampDay(y,m,26), tagW:{rate:.8,cons:.3},
+  hits:[["us_soft",.48],["us_bank",.40]],
+  scen:[{t:"核心 PCE 黏著在 3% 上方",p:.45,tilt:{rate:-.8,credit:-.4}},
+        {t:"核心 PCE 續降",p:.55,tilt:{rate:.8,credit:.4}}],
+  watch:"核心 PCE 三個月年化率"},
+ {k:"cnpmi", rt:9.5, kind:"總經", mkt:"gl", lvl:1, src:"國家統計局",
+  name:d=>`中國 ${d.getMonth()+1} 月官方 PMI`, note:"製造業景氣，面板、被動元件、航運與原物料的需求前哨",
+  at:(y,m)=>lastOf(y,m), tagW:{china:.9,ship:.4,growth:.3},
+  hits:[["tw_lcd",.52],["tw_mlcc",.46],["tw_shp",.44],["us_china",.56]],
+  scen:[{t:"PMI 重回 50 上方（政策見效）",p:.45,tilt:{china:.9,ship:.5,growth:.4,oil:.3}},
+        {t:"PMI 續在收縮區（內需疲弱）",p:.55,tilt:{china:-.9,ship:-.5,growth:-.4}}],
+  watch:"新訂單與新出口訂單分項"},
+ {k:"ism", rt:22, kind:"總經", mkt:"us", lvl:2, src:"ISM",
+  name:d=>`美國 ${prevMon(d)} 月 ISM 製造業`, note:"新訂單分項是製造循環的領先指標",
+  at:(y,m)=>firstBiz(y,m), tagW:{growth:.8,oil:.3,semi:.3},
+  hits:[["us_elec",.54],["us_instr",.46],["us_semieq",.44]],
+  scen:[{t:"新訂單站上 50，製造循環落底翻揚",p:.45,tilt:{growth:.8,semi:.5,oil:.4}},
+        {t:"新訂單再探低，製造仍在收縮",p:.55,tilt:{growth:-.8,semi:-.4,oil:-.4}}],
+  watch:"新訂單減客戶端存貨的差值"},
+ {k:"nfp", rt:20.5, kind:"總經", mkt:"gl", lvl:3, src:"BLS",
+  name:d=>`美國 ${prevMon(d)} 月非農就業`, note:"就業與薪資，決定降息路徑",
+  at:(y,m)=>nthDow(y,m,1,5), tagW:{rate:.8,growth:.6,credit:.4},
+  hits:[["us_bank",.62],["us_asset",.56],["tw_fin",.32]],
+  scen:[{t:"就業強、薪資年增回升（降息延後）",p:.45,tilt:{rate:-.7,growth:.6,credit:-.2}},
+        {t:"就業明顯轉弱（降息提前，但衰退疑慮升）",p:.55,tilt:{rate:.8,growth:-.6,def:.5,credit:-.3}}],
+  watch:"薪資年增率與前兩月的修正值"},
+ {k:"banks", rt:20, kind:"財報", mkt:"us", lvl:2, src:"公司法說",
+  name:d=>`美股 ${repQ(d)}財報季開跑 · 大型銀行`, note:"淨利差與信用成本，財報季的第一份定調",
+  at:(y,m)=>([0,3,6,9].indexOf(m)>=0?clampDay(y,m,14):null),
+  tagW:{credit:.8,rate:.4,growth:.3},
+  hits:[["us_bank",.74],["us_asset",.62],["us_ins",.52]],
+  scen:[{t:"信用成本低於預期、放款成長回升",p:.55,tilt:{credit:.8,growth:.5}},
+        {t:"提列準備跳升、消費信用轉壞",p:.45,tilt:{credit:-.8,growth:-.5,def:.4}}],
+  watch:"信用卡與商用不動產的呆帳提列"},
+ {k:"tsmc", rt:15, kind:"法說", mkt:"tw", lvl:3, src:"公司法說",
+  name:d=>`台積電${repQ(d)}法說會`, note:"資本支出與先進封裝指引，整年展望的定調",
+  at:(y,m)=>([0,3,6,9].indexOf(m)>=0?clampDay(y,m,16):null),
+  tagW:{semi:.9,ai:.8},
+  hits:[["tw_fnd",.92],["tw_osat",.72],["tw_ate",.66],["us_semieq",.58]],
+  scen:[{t:"資本支出上調、AI 營收占比再提高",p:.55,tilt:{semi:.9,ai:1,growth:.4}},
+        {t:"資本支出持平偏保守、消費性需求疲弱",p:.45,tilt:{semi:-.8,ai:-.7,growth:-.4}}],
+  watch:"全年資本支出區間、先進封裝（CoWoS）產能翻倍幅度"},
+ {k:"aapl", rt:28.5, kind:"財報", mkt:"us", lvl:2, src:"公司法說",
+  name:d=>`Apple ${repQ(d)}財報`, note:"終端需求與服務營收，牽動整條組裝與零組件鏈",
+  at:(y,m)=>([0,3,6,9].indexOf(m)>=0?clampDay(y,m,30):null),
+  tagW:{cons:.7,ai:.3,china:.4},
+  hits:[["us_comm",.78],["tw_pc",.62],["tw_fpc",.54],["tw_opl",.58],["tw_case",.56]],
+  scen:[{t:"iPhone 換機潮優於預期、服務營收創高",p:.5,tilt:{cons:.8,ai:.4,china:.3}},
+        {t:"大中華區銷售續弱、拉貨動能下修",p:.5,tilt:{cons:-.8,china:-.6,ai:-.3}}],
+  watch:"大中華區營收年增與下一季財測口徑"},
+ {k:"nvda", rt:28.5, kind:"財報", mkt:"gl", lvl:3, src:"公司法說",
+  name:()=>"NVIDIA 季度財報", note:"AI 資本支出循環的總指標，台廠供應鏈同步反應",
+  at:(y,m)=>([1,4,7,10].indexOf(m)>=0?clampDay(y,m,19):null),
+  tagW:{ai:1,semi:.8},
+  hits:[["us_semi",.92],["tw_pc",.72],["tw_thm",.68],["tw_opt",.50],["tw_net",.48]],
+  scen:[{t:"資料中心營收與下季財測雙超預期",p:.55,tilt:{ai:1,semi:.8,growth:.4}},
+        {t:"財測僅符合預期、雲端資本支出鬆動",p:.45,tilt:{ai:-1,semi:-.7,growth:-.4}}],
+  watch:"下一季財測相對市場共識的幅度、資料中心毛利率"}
+];
+
+/* 事件 → 板塊：優先用校準回歸的 β／t；沒有估計值時退回標籤推導 */
+function hitsFor(tpl){
+  const out={};
+  const inMktSec=s=>tpl.mkt==="gl"||s.mkt===tpl.mkt||(tpl.hits||[]).some(h=>h[0]===s.id);
+  const cands=[];
+  for(const s of IND){
+    if(!inMktSec(s))continue;
+    const m=edgeStat(tpl.k,s.id), cs=strFromStat(m);
+    if(m&&cs!==null){
+      if(cs>=0.06)cands.push([s.id,+cs.toFixed(3),m]);
+      continue;
+    }
+    let v=0;
+    for(const t in tpl.tagW||{}){const st=s.tags[t]; if(st===undefined)continue; v+=tpl.tagW[t]*Math.abs(st);}
+    const w=+clamp(v*0.60,0,.88).toFixed(3);
+    if(w>=.13)cands.push([s.id,w,null]);
+  }
+  cands.sort((a,b)=>b[1]-a[1]);
+  cands.slice(0,24).forEach(([id,w,m])=>{out[id]=[w,m]});
+  /* 明確指定的板塊一定保留（沒有估計值時用設定值） */
+  (tpl.hits||[]).forEach(([id,w])=>{if(INDBY[id]&&!out[id])out[id]=[w,edgeStat(tpl.k,id)]});
+  return Object.entries(out).map(([id,v])=>[id,v[0],v[1]]);
+}
+
+let EVENTS=[], NEXT_EXPIRY=Infinity;
+/* 公布時刻（台北）：rt 為小時，超過 24 表示隔天凌晨。
+   台北現在的時間戳，用來判斷「今天但已經公布」的事件要不要淘汰。 */
+function taipeiNowMs(){
+  const p=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Taipei",year:"numeric",month:"2-digit",
+    day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false}).formatToParts(new Date());
+  const g=t=>+p.find(x=>x.type===t).value;
+  return new Date(g("year"),g("month")-1,g("day"),g("hour")%24,g("minute")).getTime();
+}
+function releaseMs(d,rt){
+  const h=rt===undefined?16:rt;
+  const t=new Date(d.getFullYear(),d.getMonth(),d.getDate());
+  t.setMinutes(Math.round((h%1)*60)); t.setHours(t.getHours()+Math.floor(h));
+  return t.getTime();
+}
+function genEvents(){
+  const out=[],seen={};
+  const now=taipeiNowMs();
+  const y0=TODAY.getFullYear(), m0=TODAY.getMonth();
+  let nextExp=Infinity;
+  for(let k=0;k<8;k++){
+    const y=y0+Math.floor((m0+k)/12), m=(m0+k)%12;
+    EV_TPL.forEach(t=>{
+      const d=t.at(y,m); if(!d)return;
+      const dd=daysTo(d); if(dd<0||dd>170)return;
+      const rms=releaseMs(d,t.rt);
+      if(rms<=now)return;                       /* 已經公布 → 直接淘汰 */
+      if(rms<nextExp)nextExp=rms;
+      const id=`${t.k}_${fmtD(d)}`; if(seen[id])return; seen[id]=1;
+      out.push({id,tpl:t.k,n:t.name(d),date:fmtD(d),dObj:d,kind:t.kind,mkt:t.mkt,lvl:t.lvl,
+                src:t.src,note:t.note,hits:hitsFor(t),scen:t.scen,watch:t.watch,rt:t.rt,rms,
+                twoSided:!!t.twoSided,days:dd});
+    });
+  }
+  out.sort((a,b)=>a.rms-b.rms);
+  EVENTS=out; NEXT_EXPIRY=nextExp;
+}
+/* 顯示用：今天的事寫出時刻 */
+function evWhen(e){
+  if(e.days>0)return `還有 ${e.days} 天`;
+  const h=e.rt===undefined?16:e.rt;
+  const hh=String(Math.floor(h)%24).padStart(2,"0"), mm=String(Math.round((h%1)*60)).padStart(2,"0");
+  return `今天 ${hh}:${mm}${h>=24?"（隔日凌晨）":""}`;
+}
+
+/* ── 組裝節點與邊 ─────────────────────────────────────────── */
+let NODES=[],EDGES=[],BY={},OUT={},IN={};
+const AMPS=CHIP_TW.concat(FUND_US);
+function coversOf(c,mkt){
+  return c.covers==="*"?IND.filter(s=>s.mkt===mkt).map(s=>s.id):c.covers;
+}
+function buildGraph(){
+  NODES=[];EDGES=[];
+  EVENTS.forEach(e=>NODES.push({...e,L:1,score:(e.lvl*1.6)/(1+e.days*0.045)}));
+  IND.forEach(d=>NODES.push({...d,L:2,score:Math.abs(d.flow)}));
+  CHIP_TW.forEach(d=>NODES.push({...d,L:3,mkt:"tw",score:d.amp}));
+  FUND_US.forEach(d=>NODES.push({...d,L:3,mkt:"us",score:d.amp}));
+  MASTER.forEach(d=>NODES.push({...d,L:4,score:d.w,tags:INDBY[d.ind]?INDBY[d.ind].tags:{},
+    vol:(INDBY[d.ind]?INDBY[d.ind].vol:1.1)*(d.lev||1)*(d.etf&&d.lev===1?0.78:1)
+        *clamp(1+(55-d.w)/260,0.85,1.35)}));
+  BY={}; NODES.forEach(n=>BY[n.id]=n);
+
+  EVENTS.forEach(e=>e.hits.forEach(([t,w,m])=>{
+    if(!BY[t])return;
+    EDGES.push([e.id,t,w,m?m.lag:Math.max(1,Math.min(3,e.lvl)),m]);
+  }));
+  CHAIN.forEach(c=>{if(BY[c[0]]&&BY[c[1]])EDGES.push(c)});
+  AMPS.forEach(c=>{
+    const mkt=CHIP_TW.indexOf(c)>=0?"tw":"us";
+    coversOf(c,mkt).forEach(ind=>{if(BY[ind])EDGES.push([ind,c.id,+(0.34+(c.amp-1)*0.62).toFixed(3),1])});
+  });
+  AMPS.forEach(c=>{
+    const mkt=CHIP_TW.indexOf(c)>=0?"tw":"us", cov=new Set(coversOf(c,mkt));
+    MASTER.forEach(s=>{
+      if(s.mkt!==mkt||!cov.has(s.ind))return;
+      const w=clamp(0.30+(c.amp-1)*0.70+s.w/100*0.30,0.15,0.82);
+      EDGES.push([c.id,s.id,+w.toFixed(3),1]);
+    });
+  });
+  MASTER.forEach(s=>{
+    if(!BY[s.ind])return;
+    const m=stockStat(s.id);
+    const w=m?clamp(0.24+0.40*Math.abs(m.b),0.24,0.92)*clamp(0.55+0.45*m.r2,0.55,1)
+            :clamp(0.46+s.w/100*0.34,0.3,0.82);
+    EDGES.push([s.ind,s.id,+w.toFixed(3),1,m]);
+  });
+
+  OUT={};IN={};
+  EDGES.forEach(([a,b,w,l,st])=>{(OUT[a]=OUT[a]||[]).push({to:b,w,lag:l,st});
+    (IN[b]=IN[b]||[]).push({from:a,w,lag:l,st})});
+}
+
+/* ── L2 → L2 供應鏈上下游 ── */
+const CHAIN=[
+ ["tw_fnd","tw_osat",.48,2],["tw_fnd","tw_ate",.42,3],["tw_fnd","tw_icd",.34,3],
+ ["tw_dram","tw_osat",.32,3],["tw_fls","tw_osat",.28,3],
+ ["tw_icd","tw_ip",.44,2],["tw_icd","tw_gaas",.26,4],
+ ["tw_pc","tw_thm",.58,2],["tw_pc","tw_psu",.52,2],["tw_pc","tw_fpc",.36,3],
+ ["tw_pc","tw_net",.40,2],["tw_net","tw_opt",.42,2],["tw_pc","tw_case",.38,3],
+ ["tw_thm","tw_mlcc",.30,3],["tw_opt","tw_gaas",.40,3],["tw_opl","tw_case",.30,3],
+ ["tw_fin","tw_cons",.34,3],["tw_shp","tw_stl",.26,4],["tw_pls","tw_text",.30,4],
+ ["tw_stl","tw_mach",.28,4],["tw_food","tw_dept",.24,4],["tw_tour","tw_air",.42,2],
+ ["tw_bond","tw_fin",.30,2],["tw_ovs","tw_fnd",.34,1],
+ ["us_semi","us_semieq",.56,2],["us_semi","us_comm",.38,3],
+ ["us_semieq","us_comm",.44,3],["us_soft","us_net",.42,2],
+ ["us_net","us_comm",.38,3],["us_elec","us_auto",.36,4],
+ ["us_aero","us_elec",.32,4],["us_asset","us_bank",.46,1],["us_ins","us_asset",.34,2],
+ ["us_retail","us_appr",.40,2],["us_energy","us_elec",.26,4],["us_drug","us_med",.32,3],
+ ["us_drug","us_biotech",.38,2],["us_util","us_elec",.34,3],["us_transp","us_retail",.30,3],
+ ["us_etf","us_semi",.38,1],["us_etf","us_soft",.40,1],["us_crypto","us_asset",.30,2],
+ ["us_china","us_comm",.22,4],["us_food","us_retail",.26,3]
+];
+
+/* 歷史後續分位帶：依事件類型 */
+const CONE={
+ "總經":{n:64,shape:[-2.8,-.9,.6,2.4,4.6],vol:1.10},
+ "央行":{n:34,shape:[-3.2,-.6,1.8,4.4,7.2],vol:1.28},
+ "財報":{n:26,shape:[-3.6,.4,3.8,8.0,13.2],vol:1.48},
+ "法說":{n:18,shape:[-4.0,-.2,3.2,7.4,12.4],vol:1.55},
+ "市場":{n:44,shape:[-2.2,-.8,.2,1.6,3.2],vol:0.92}
+};
+
+/* ── 推演 ── */
+const CUT=0.08;
+function walk(startId,dir){
+  const s0=BY[startId];
+  const stockInd=(s0&&s0.L===4)?s0.ind:null;
+  const best={}; best[startId]={str:1,lag:0,path:[startId],sec:(s0&&s0.L===2)?startId:null,stats:[]};
+  const q=[startId]; let g=0;
+  while(q.length&&g++<20000){
+    const cur=q.shift(), cs=best[cur], cd=BY[cur];
+    const list=dir>0?(OUT[cur]||[]):(IN[cur]||[]);
+    for(const e of list){
+      const nx=dir>0?e.to:e.from, nd=BY[nx]; if(!nd)continue;
+      /* 放大器（L3）是修飾層不是轉運站：它不能把 A 板塊的衝擊送進 B 板塊的個股 */
+      if(cd.L===3){
+        if(dir>0&&nd.L===4&&cs.sec&&nd.ind!==cs.sec)continue;
+        if(dir<0&&nd.L===2&&stockInd&&nx!==stockInd)continue;
+      }
+      const str=cs.str*e.w; if(str<CUT)continue;
+      const lag=cs.lag+e.lag;
+      if(!best[nx]||str>best[nx].str){
+        const stats=(cs.stats||[]).concat(e.st?[{...e.st,from:dir>0?cur:nx,to:dir>0?nx:cur}]:[]);
+        best[nx]={str,lag,path:dir>0?[...cs.path,nx]:[nx,...cs.path],
+                  sec:nd.L===2?nx:cs.sec,stats};
+        q.push(nx);
+      }
+    }
+  }
+  return best;
+}
+
+/* ── 標的池（白色圓環 = 這個池子）── */
+const CAP=20, DEFAULT_N=16;      /* 預設留 4 個空位給使用者自己加 */
+const PKEY="tcapsule.pool.v8";
+function defaultPool(m){
+  return MASTER.filter(s=>s.mkt===m&&!s.etf&&!s.custom).sort((a,b)=>b.w-a.w).slice(0,DEFAULT_N).map(s=>s.id);
+}
+let POOL={tw:defaultPool("tw"),us:defaultPool("us")};
+try{const raw=localStorage.getItem(PKEY);
+  if(raw){const o=JSON.parse(raw);
+    ["tw","us"].forEach(m=>{if(Array.isArray(o[m]))
+      POOL[m]=o[m].filter(id=>LOOKUP[String(id).toUpperCase()]&&LOOKUP[String(id).toUpperCase()].mkt===m).slice(0,CAP)});
+  }}catch(e){}
+function savePool(){try{localStorage.setItem(PKEY,JSON.stringify(POOL))}catch(e){}}
+function poolIds(){
+  if(S.mkt==="all")
+    return [...POOL.tw,...POOL.us].sort((a,b)=>(BY[b]?BY[b].w:0)-(BY[a]?BY[a].w:0)).slice(0,CAP);
+  return POOL[S.mkt]||[];
+}
+function poolRemove(id){
+  const s=LOOKUP[String(id).toUpperCase()]; if(!s)return false;
+  const i=POOL[s.mkt].indexOf(s.id); if(i<0)return false;
+  POOL[s.mkt].splice(i,1); savePool(); return true;
+}
+function poolHas(id){const s=LOOKUP[String(id).toUpperCase()];return s&&POOL[s.mkt].indexOf(s.id)>=0}
+function poolPush(s){
+  if(POOL[s.mkt].length>=CAP)return false;
+  POOL[s.mkt].push(s.id); savePool(); return true;
+}
+
+/* ── 事件曝險：因子先加總，再還原到個股 ──
+   同一個因子上的多件事是高度相關的，直接把事件強度相加會重複計算；
+   這裡改成：同因子線性相加 → 不同因子平方相加（視為近似獨立）→ 再乘上
+   標的的因子載荷。naive 欄位保留「直接加總」的結果，用來顯示高估幅度。 */
+const HORIZON=30;
+function stockLoad(d){
+  const sec=INDBY[d.ind]; if(!sec)return null;
+  const L=toFactors(sec.tags), m=stockStat(d.id);
+  const beta=(m?Math.abs(m.b):clamp(0.72+d.w/100*0.55,0.6,1.5))*(d.inv?-1:1);
+  const o={}; FIDS.forEach(k=>o[k]=L[k]*beta);
+  return o;
+}
+function eventLoad(e){
+  const tpl=EV_TPL.find(t=>t.k===e.tpl); if(!tpl)return null;
+  return eventFactorVec(tpl);
+}
+function computeExposure(mkt){
+  const inM=n=>mkt==="all"||n.mkt===mkt||n.mkt==="gl";
+  const pool=poolIds();
+  const poolSet=new Set(pool);
+  const evs=NODES.filter(n=>n.L===1&&inM(n)&&n.days<=HORIZON&&n.days>=0);
+  /* 1) 未來 30 天的因子衝擊（σ 單位，時間衰減後） */
+  const FS={}; FIDS.forEach(k=>FS[k]=0);
+  const evVec={};
+  evs.forEach(e=>{
+    const v=eventLoad(e); if(!v)return;
+    const w=(0.6+0.2*e.lvl)/(1+e.days*0.03);
+    evVec[e.id]={v,w};
+    FIDS.forEach(k=>FS[k]+=Math.abs(v[k])*w);
+  });
+  /* 2) 每檔標的的因子曝險與事件歸因 */
+  const naiveBy={},byEv={},near={},best={},hits={},reachBy={};
+  evs.forEach(e=>{
+    const reach=walk(e.id,1); reachBy[e.id]=reach;
+    const wl=0.6+0.2*e.lvl, dc=1/(1+e.days*0.03);
+    Object.entries(reach).forEach(([id,r])=>{
+      const nd=BY[id]; if(!nd||nd.L!==4||!poolSet.has(id))return;
+      const contrib=r.str*wl*dc;
+      naiveBy[id]=(naiveBy[id]||0)+contrib;
+      hits[id]=(hits[id]||0)+1;
+      (byEv[id]=byEv[id]||[]).push({ev:e,str:r.str,lag:r.lag,path:r.path,contrib,stats:r.stats});
+      if(near[id]===undefined||e.days<near[id])near[id]=e.days;
+      if(!best[id]||r.str>best[id].str)best[id]={str:r.str,lag:r.lag,ev:e,path:r.path,stats:r.stats};
+    });
+  });
+  const raw={},prof={},naiveF={};
+  pool.forEach(id=>{
+    const d=BY[id]; if(!d)return;
+    const L=stockLoad(d); if(!L){raw[id]=0;prof[id]={};naiveF[id]=0;return}
+    let q=0; const p={};
+    FIDS.forEach(k=>{const v=FS[k]*L[k]; p[k]=v; q+=v*v});
+    prof[id]=p; raw[id]=Math.sqrt(q);
+    /* 直接加總：每件事各自算一次大小再相加（同一個因子被重複計算） */
+    let nv=0;
+    Object.values(evVec).forEach(({v,w})=>{
+      let s=0; FIDS.forEach(k=>{const x=Math.abs(v[k])*w*L[k]; s+=x*x});
+      nv+=Math.sqrt(s);
+    });
+    naiveF[id]=nv;
+  });
+  const ids=Object.keys(raw);
+  const mx=Math.max(...ids.map(i=>raw[i]),1e-6);
+  const list=ids.map(id=>({d:BY[id],score:Math.round(raw[id]/mx*100),
+    raw:raw[id],naive:naiveF[id]||0,naiveEv:naiveBy[id]||0,prof:prof[id],
+    hits:hits[id]||0,near:near[id],best:best[id],
+    evs:(byEv[id]||[]).sort((a,b)=>b.contrib-a.contrib)}))
+    .sort((a,b)=>b.raw-a.raw);
+  return {list,evN:evs.length,FS,evVec,reachBy,evs};
+}
+
+/* ════════ 因子模型 ＋ 邊的校準（事件研究法 OLS）════════════════
+   這一層做兩件事：
+   1) 把 12 個情境標籤投影成 6 個正交因子，事件曝險改用「因子先加總、
+      再還原到個股」，避免同一個因子被十件事重複計算。
+   2) 用 36 個月日資料跑事件研究回歸，估出每條 事件→板塊 邊的
+      β（每 1 個標準差意外的 T+n 累積異常報酬 %）、標準誤、t 值、R²、
+      樣本數與 95% 信賴區間，並以 t 值做收縮後才當成傳導強度。
+   資料來源有兩種：CAL.src==="sim" 為程式生成的面板（統計是真的，
+   資料是模擬的，種子固定可重現）；載入 calibrate.py 產生的 edges.json
+   之後 CAL.src==="real"，同一套欄位換成實際估計值。
+   ════════════════════════════════════════════════════════════ */
+const FACTORS=[
+ {id:"rate", n:"利率",       pos:"降息／殖利率下行",  sd:0.55},
+ {id:"ai",   n:"AI 資本支出", pos:"雲端資本支出上修",  sd:1.10},
+ {id:"cycle",n:"景氣循環",    pos:"需求與新訂單回升",  sd:0.70},
+ {id:"china",n:"中國需求",    pos:"中國內需與出口回溫",sd:0.80},
+ {id:"comm", n:"原物料與油價",pos:"油價與運價走揚",    sd:0.90},
+ {id:"fx",   n:"匯率",       pos:"新台幣貶值",        sd:0.35}
+];
+const FIDS=FACTORS.map(f=>f.id), FBY={}; FACTORS.forEach(f=>FBY[f.id]=f);
+/* 標籤 → 因子 的投影矩陣 */
+const TAG2F={
+ rate:{rate:1}, def:{rate:.45}, credit:{rate:.55,cycle:.45},
+ ai:{ai:1}, semi:{ai:.72,cycle:.28}, mem:{ai:.55,cycle:.45},
+ growth:{cycle:1}, cons:{cycle:.8},
+ china:{china:1}, ship:{china:.45,comm:.55}, oil:{comm:1}, fx:{fx:1}
+};
+function toFactors(tags){
+  const f={}; FIDS.forEach(k=>f[k]=0);
+  for(const t in tags||{}){
+    const m=TAG2F[t]; if(!m)continue;
+    for(const k in m)f[k]+=tags[t]*m[k];
+  }
+  return f;
+}
+const dotF=(a,b)=>FIDS.reduce((s,k)=>s+(a[k]||0)*(b[k]||0),0);
+const normF=a=>Math.sqrt(FIDS.reduce((s,k)=>s+(a[k]||0)**2,0));
+function cosF(a,b){const d=normF(a)*normF(b); return d>1e-9?dotF(a,b)/d:0}
+
+/* ── 亂數：固定種子，結果可重現 ── */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;
+  let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;
+  return((t^t>>>14)>>>0)/4294967296}}
+function gauss(rnd){let u=0,v=0;while(!u)u=rnd();while(!v)v=rnd();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(6.283185307*v)}
+
+/* ── OLS：y = a + b·x，回傳 β、se、t、R²、n ── */
+function ols(x,y){
+  const n=x.length; if(n<6)return null;
+  let sx=0,sy=0; for(let i=0;i<n;i++){sx+=x[i];sy+=y[i]}
+  const mx=sx/n,my=sy/n;
+  let sxx=0,sxy=0,syy=0;
+  for(let i=0;i<n;i++){const dx=x[i]-mx,dy=y[i]-my;sxx+=dx*dx;sxy+=dx*dy;syy+=dy*dy}
+  if(sxx<1e-12)return null;
+  const b=sxy/sxx, a=my-b*mx;
+  let sse=0; for(let i=0;i<n;i++){const e=y[i]-(a+b*x[i]);sse+=e*e}
+  const s2=sse/Math.max(1,n-2), se=Math.sqrt(s2/sxx);
+  const r2=syy>1e-12?clamp(1-sse/syy,0,1):0;
+  const t=se>1e-9?b/se:0;
+  return {b,se,t,r2,n,ci:[b-1.96*se,b+1.96*se]};
+}
+/* t 值收縮：樣本少或不顯著的邊，強度會被壓下來 */
+const shrink=t=>{const t2=t*t; return t2/(t2+4)};
+
+/* ── 事件的因子衝擊向量：由情境 tilt 推得（A 情境為正方向）── */
+function eventFactorVec(tpl){
+  const up=(tpl.scen&&tpl.scen[0])?tpl.scen[0].tilt:{};
+  const f=toFactors(up);
+  const nm=normF(f)||1;
+  const mag=(0.6+0.25*tpl.lvl);          /* 重要度越高，意外的因子衝擊越大 */
+  const out={}; FIDS.forEach(k=>out[k]=f[k]/nm*mag);
+  return out;
+}
+
+/* ── 36 個月歷史事件表（用同一套排程規則往回推）── */
+function pastEventDates(tpl,months){
+  const out=[], y0=TODAY.getFullYear(), m0=TODAY.getMonth();
+  for(let k=months;k>=1;k--){
+    const y=y0+Math.floor((m0-k)/12), m=((m0-k)%12+12)%12;
+    const d=tpl.at(y,m); if(!d)continue;
+    const dd=Math.round((TODAY-d)/DAY);
+    if(dd>0&&dd<=months*31)out.push(d);
+  }
+  return out;
+}
+
+/* ── 校準主程式 ────────────────────────────────────────────── */
+const CAL={src:"sim",window:"",edges:{},stock:{},built:false,meta:{}};
+const CAL_MONTHS=36, CAL_DAYS=756, MAXH=10;
+function calibrateSim(){
+  const rnd=mulberry32(20260910);
+  /* 1) 因子日報酬面板 */
+  const F={}; FIDS.forEach(k=>F[k]=new Float64Array(CAL_DAYS));
+  for(let d=0;d<CAL_DAYS;d++)FIDS.forEach(k=>{F[k][d]=gauss(rnd)*FBY[k].sd});
+  /* 2) 把歷史事件的意外打進因子面板（含 3 日擴散） */
+  const evHist=[];
+  EV_TPL.forEach(tpl=>{
+    const vec=eventFactorVec(tpl);
+    pastEventDates(tpl,CAL_MONTHS).forEach(dt=>{
+      const idx=CAL_DAYS-1-Math.round((TODAY-dt)/DAY*0.69);   /* 日曆日→交易日 */
+      if(idx<5||idx>CAL_DAYS-MAXH-2)return;
+      const u=gauss(rnd);                                     /* 這一次的意外，單位為標準差 */
+      evHist.push({k:tpl.k,idx,u});
+      const prof=[0.55,0.25,0.12,0.08];
+      prof.forEach((w,j)=>FIDS.forEach(f=>{F[f][idx+j]+=vec[f]*u*w}));
+    });
+  });
+  /* 3) 板塊日報酬 = 因子載荷 × 因子 + 個別噪音 */
+  const SR={}, LOAD={};
+  IND.forEach(s=>{
+    const L=toFactors(s.tags); LOAD[s.id]=L;
+    const r=new Float64Array(CAL_DAYS), idio=s.vol*0.85;
+    for(let d=0;d<CAL_DAYS;d++){
+      let v=0; FIDS.forEach(k=>v+=L[k]*F[k][d]);
+      r[d]=v+gauss(rnd)*idio;
+    }
+    SR[s.id]=r;
+  });
+  /* 4) 個股日報酬 = 板塊 β × 板塊 + 個別噪音 */
+  const KR={};
+  MASTER.forEach(st=>{
+    const base=SR[st.ind]; if(!base)return;
+    const beta=clamp(0.72+st.w/100*0.55,0.6,1.5)*(st.lev||1)*(st.etf&&st.lev===1?0.82:1);
+    const idio=(INDBY[st.ind]?INDBY[st.ind].vol:1.1)*0.9;
+    const r=new Float64Array(CAL_DAYS);
+    for(let d=0;d<CAL_DAYS;d++)r[d]=beta*base[d]+gauss(rnd)*idio;
+    KR[st.id]=r;
+  });
+  /* 5) 事件研究：CAR[0..H] 對意外 u 回歸，取 |t| 最大的 H 當時滯 */
+  const edges={};
+  EV_TPL.forEach(tpl=>{
+    const occ=evHist.filter(e=>e.k===tpl.k); if(occ.length<6)return;
+    IND.forEach(s=>{
+      const r=SR[s.id]; let best=null;
+      for(let H=1;H<=MAXH;H++){
+        const x=[],y=[];
+        occ.forEach(e=>{let car=0;for(let j=0;j<=H;j++)car+=r[e.idx+j];x.push(e.u);y.push(car)});
+        const m=ols(x,y); if(!m)continue;
+        if(!best||Math.abs(m.t)>Math.abs(best.t))best={...m,lag:H};
+      }
+      if(best)edges[tpl.k+">"+s.id]=best;
+    });
+  });
+  /* 6) 個股對板塊的 β（全期回歸） */
+  const stock={};
+  MASTER.forEach(st=>{
+    const base=SR[st.ind], r=KR[st.id]; if(!base||!r)return;
+    const x=[],y=[];
+    for(let d=0;d<CAL_DAYS;d++){x.push(base[d]);y.push(r[d])}
+    const m=ols(x,y); if(m)stock[st.id]=m;
+  });
+  CAL.src="sim"; CAL.edges=edges; CAL.stock=stock; CAL.built=true;
+  CAL.window=`模擬 ${CAL_MONTHS} 個月 · ${CAL_DAYS} 個交易日 · 種子 20260910`;
+  CAL.meta={edges:Object.keys(edges).length,stocks:Object.keys(stock).length,
+            evOcc:evHist.length,sig:Object.values(edges).filter(e=>Math.abs(e.t)>=1.96).length};
+}
+/* 由校準結果換算成圖上的傳導強度（0–1）；β 以 4%／1σ 為滿格，再依 t 值收縮 */
+const BETA_FULL=4.0;
+function edgeStat(tplKey,secId){return CAL.edges[tplKey+">"+secId]||null}
+function strFromStat(m){
+  if(!m)return null;
+  return clamp(Math.abs(m.b)/BETA_FULL,0,.95)*shrink(m.t);
+}
+function stockStat(id){return CAL.stock[id]||null}
+
+/* ── 載入 calibrate.py 產生的真實校準檔 ── */
+function applyCalibration(json){
+  const e={},s={};
+  (json.edges||[]).forEach(r=>{
+    if(!r||!r.from||!r.to)return;
+    const se=+r.se||0, b=+r.beta||0, t=+r.t||(se?b/se:0);
+    e[r.from+">"+r.to]={b,se,t,r2:+r.r2||0,n:+r.n||0,lag:Math.max(1,Math.round(+r.lag||1)),
+      ci:r.ci&&r.ci.length===2?r.ci.map(Number):[b-1.96*se,b+1.96*se]};
+  });
+  (json.stock_beta||[]).forEach(r=>{
+    if(!r||!r.stock)return;
+    const se=+r.se||0,b=+r.beta||1;
+    s[r.stock]={b,se,t:+r.t||(se?b/se:0),r2:+r.r2||0,n:+r.n||0,ci:[b-1.96*se,b+1.96*se]};
+  });
+  if(!Object.keys(e).length)throw new Error("校準檔沒有可用的 edges");
+  CAL.edges=e; CAL.stock=Object.keys(s).length?s:CAL.stock;
+  CAL.src="real"; CAL.window=json.window||"實際資料";
+  CAL.meta={edges:Object.keys(e).length,stocks:Object.keys(s).length,
+            evOcc:json.n_events||0,sig:Object.values(e).filter(x=>Math.abs(x.t)>=1.96).length};
+  return CAL.meta;
+}
+const statTxt=m=>m?`β ${m.b>0?"+":""}${m.b.toFixed(2)}% ／1σ　CI[${m.ci[0].toFixed(2)}, ${m.ci[1].toFixed(2)}]　t ${m.t.toFixed(1)}　R² ${m.r2.toFixed(2)}　N ${m.n}`:"";
+
+/* ── 幾何：漏斗 ── */
+const LAYER=[
+  {z:-2.10,r:1.12,col:[167,139,250]},
+  {z:-0.62,r:0.62,col:[69,200,240]},
+  {z: 0.52,r:0.34,col:[242,179,61]},
+  {z: 1.55,r:0.82,col:[228,237,248]}
+];
+const S={t:0,rotY:0.95,rotX:-0.15,rotXBase:-0.15,zoom:1,spin:true,mkt:"tw",
+  nodes:[],edges:[],idx:{},emap:{},res:null,pulses:[],hover:null,intro:0};
+
+/* 擺盪：幅度大幅加大、速度微幅加快 */
+const SWING_BASE=0.95, SWING_A=0.58, SWING_F=0.215, SWING_AX=0.13, SWING_FX=0.137;
+
+function inMkt(n){
+  if(S.mkt==="all")return true;
+  return n.mkt===S.mkt||n.mkt==="gl";
+}
+function layout(){
+  const byL=[[],[],[],[]];
+  NODES.filter(n=>n.L!==4&&inMkt(n)).forEach(n=>byL[n.L-1].push(n));
+  byL.forEach(l=>l.sort((a,b)=>b.score-a.score));
+  const keep=byL.map(l=>l.slice(0,CAP));
+  /* 目前正在推演的事件一定要留在環上，否則點了會看不到它 */
+  if(S.res&&BY[S.res.src]&&BY[S.res.src].L===1&&keep[0].indexOf(BY[S.res.src])<0)
+    keep[0]=[BY[S.res.src]].concat(keep[0]).slice(0,CAP);
+  const pool=poolIds().map(id=>BY[id]).filter(Boolean).sort((a,b)=>b.w-a.w);
+  keep[3]=pool;
+  /* L2 必須先容納「池內標的所屬的板塊」，否則那幾檔會斷鏈 */
+  const need={}; pool.forEach(d=>{need[d.ind]=(need[d.ind]||0)+d.w});
+  const needIds=Object.keys(need).sort((a,b)=>need[b]-need[a]).filter(id=>BY[id]&&inMkt(BY[id]));
+  const rest=byL[1].filter(s=>needIds.indexOf(s.id)<0);
+  keep[1]=needIds.map(id=>BY[id]).concat(rest).slice(0,CAP);
+  S.counts=keep.map(l=>l.length);
+  S.nodes=[];
+  keep.forEach((list,li)=>{
+    const L=LAYER[li], m=list.length||1;
+    list.forEach((d,i)=>{
+      const a=(i/m)*Math.PI*2+li*0.42;
+      S.nodes.push({d,li,a,base:{x:Math.cos(a)*L.r,y:Math.sin(a)*L.r*0.94,z:L.z},
+        col:L.col,glow:0,ph:Math.random()*6.28});
+    });
+  });
+  const idx={}; S.nodes.forEach(n=>idx[n.d.id]=n); S.idx=idx;
+  S.edges=EDGES.filter(([a,b])=>idx[a]&&idx[b]).map(([a,b,w,l])=>{
+    const A=idx[a],B=idx[b],pts=[],N=16;
+    for(let i=0;i<=N;i++){
+      const t=i/N, bow=Math.sin(Math.PI*t)*0.05;
+      const x=lerp(A.base.x,B.base.x,t),y=lerp(A.base.y,B.base.y,t),z=lerp(A.base.z,B.base.z,t);
+      const rr=Math.hypot(x,y)||1;
+      pts.push({x:x+x/rr*bow,y:y+y/rr*bow,z});
+    }
+    return {a,b,w,lag:l,A,B,pts,lit:0};
+  });
+  const em={}; S.edges.forEach(e=>em[e.a+">"+e.b]=e); S.emap=em;
+  const ex=computeExposure(S.mkt);
+  S.expo=ex.list; S.expoEvN=ex.evN; S.FS=ex.FS; S.evVec=ex.evVec;
+  S.reachBy=ex.reachBy; S.horizonEvs=ex.evs;
+  S.topExpo=new Set(ex.list.filter(x=>x.score>0).slice(0,5).map(x=>x.d.id));
+  S.expoBy={}; ex.list.forEach(x=>S.expoBy[x.d.id]=x);
+}
+
+/* ── 畫布 ── */
+const cv=$("#stage"), ctx=cv.getContext("2d");
+let W=0,H=0,CX=0,CY=0,SC=200,DPR=1,stars=[];
+const FOCAL=5.6;
+const IS_M=()=>document.documentElement.classList.contains("m");
+const MSC_W=.19, MSC_H=.25;
+function resize(){
+  DPR=Math.min(devicePixelRatio||1,2);
+  const b=cv.getBoundingClientRect(); W=b.width; H=b.height;
+  cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  if(IS_M()){SC=Math.min(W*MSC_W,H*MSC_H)*S.zoom; CX=W*.5+SC*.39; CY=H*.5+SC*.16;}
+  else{CX=W*.47; CY=H*.45; SC=Math.min(W*.112,H*.222)*S.zoom;}
+  stars=Array.from({length:Math.round(W*H/6000)},()=>({
+    x:Math.random()*W,y:Math.random()*H,
+    r:Math.random()<.88?Math.random()*.8+.2:Math.random()*1.3+.8,
+    a:Math.random()*.45+.12,tw:Math.random()*6.28,sp:Math.random()*.5+.15}));
+}
+addEventListener("resize",resize);
+function proj(p){
+  const cy=Math.cos(S.rotY),sy=Math.sin(S.rotY);
+  let x=p.x*cy+p.z*sy, z=-p.x*sy+p.z*cy;
+  const cx=Math.cos(S.rotX),sx=Math.sin(S.rotX);
+  const y=p.y*cx-z*sx; z=p.y*sx+z*cx;
+  const k=FOCAL/(FOCAL-z);
+  return {x:CX+x*k*SC,y:CY-y*k*SC,z,k};
+}
+const rgba=(c,a)=>`rgba(${c[0]},${c[1]},${c[2]},${a})`;
+const WHITE=[255,255,255];
+
+function drawStars(t){
+  for(const s of stars){
+    ctx.globalAlpha=s.a*(.6+.4*Math.sin(t*s.sp+s.tw));
+    ctx.fillStyle=s.r>1?"#c9d8f2":"#7b8ca8";
+    ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,6.2832); ctx.fill();
+  }
+  ctx.globalAlpha=1;
+}
+function drawHoops(){
+  for(let li=0;li<4;li++){
+    const L=LAYER[li];
+    ctx.beginPath();
+    for(let i=0;i<=96;i++){
+      const a=i/96*6.2832;
+      const s=proj({x:Math.cos(a)*L.r,y:Math.sin(a)*L.r*.94,z:L.z});
+      i?ctx.lineTo(s.x,s.y):ctx.moveTo(s.x,s.y);
+    }
+    ctx.strokeStyle=rgba(L.col,li===3?.16:.11); ctx.lineWidth=li===3?1.2:1; ctx.stroke();
+    if(!reduced){
+      const head=(S.t*.16+li*.25)%1;
+      ctx.beginPath();
+      for(let i=0;i<=22;i++){
+        const a=(head+i/22*.16)*6.2832;
+        const s=proj({x:Math.cos(a)*L.r,y:Math.sin(a)*L.r*.94,z:L.z});
+        i?ctx.lineTo(s.x,s.y):ctx.moveTo(s.x,s.y);
+      }
+      ctx.strokeStyle=rgba(L.col,.32); ctx.lineWidth=1.6; ctx.stroke();
+    }
+  }
+  const a=proj({x:0,y:0,z:LAYER[0].z-.30}), b=proj({x:0,y:0,z:LAYER[3].z+.30});
+  const g=ctx.createLinearGradient(a.x,a.y,b.x,b.y);
+  g.addColorStop(0,"rgba(167,139,250,.16)");g.addColorStop(.5,"rgba(242,179,61,.14)");
+  g.addColorStop(1,"rgba(228,237,248,.10)");
+  ctx.strokeStyle=g; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+}
+function drawLayerTags(){
+  const names=["L1 事件排程","L2 產業板塊",S.mkt==="us"?"L3 基本面":"L3 籌碼","L4 標的池"];
+  ctx.textAlign="center";
+  for(let li=0;li<4;li++){
+    const L=LAYER[li], s=proj({x:0,y:-L.r*.94,z:L.z});
+    ctx.font='600 11px "Barlow Condensed","Noto Sans TC",sans-serif';
+    ctx.fillStyle=rgba(L.col,.55);
+    ctx.fillText(names[li]+"　"+(S.counts?S.counts[li]:0),s.x,s.y+20);
+  }
+  ctx.textAlign="left";
+}
+function drawEdges(){
+  const sel=!!S.res;
+  for(const e of S.edges){
+    const on=sel&&S.res.edgeSet.has(e.a+">"+e.b);
+    const dim=sel?(on?1:.14):1;
+    const N=e.pts.length-1;
+    ctx.lineWidth=on?(1.0+e.w*2.2):(0.45+e.w*.7);
+    for(let i=0;i<N;i++){
+      const p=proj(e.pts[i]),q=proj(e.pts[i+1]);
+      const depth=clamp((FOCAL-p.z)/(FOCAL+1.5),0,1), t=i/N;
+      const c=[Math.round(lerp(e.A.col[0],e.B.col[0],t)),
+               Math.round(lerp(e.A.col[1],e.B.col[1],t)),
+               Math.round(lerp(e.A.col[2],e.B.col[2],t))];
+      const a=(on? .32+.58*e.lit : .030)*dim*depth;
+      if(a<.005)continue;
+      ctx.beginPath(); ctx.strokeStyle=rgba(c,a.toFixed(3));
+      ctx.moveTo(p.x,p.y); ctx.lineTo(q.x,q.y); ctx.stroke();
+    }
+  }
+}
+function drawPulses(){
+  for(const p of S.pulses){
+    const e=p.e; if(!e)continue;
+    const N=e.pts.length-1;
+    for(let k=0;k<5;k++){
+      const u=p.u-k*.045; if(u<0||u>1)continue;
+      const ix=u*N,i0=clamp(Math.floor(ix),0,N-1),f=ix-i0;
+      const a=e.pts[i0],b=e.pts[i0+1];
+      const s=proj({x:lerp(a.x,b.x,f),y:lerp(a.y,b.y,f),z:lerp(a.z,b.z,f)});
+      const al=(1-k*.19)*p.life;
+      ctx.fillStyle=rgba(WHITE,(al*.5).toFixed(3));
+      ctx.beginPath(); ctx.arc(s.x,s.y,(2.6-k*.4)*s.k,0,6.2832); ctx.fill();
+      ctx.fillStyle=rgba(e.B.col,(al*.22).toFixed(3));
+      ctx.beginPath(); ctx.arc(s.x,s.y,(8-k*1.1)*s.k,0,6.2832); ctx.fill();
+    }
+  }
+}
+function drawNodes(){
+  const sel=!!S.res;
+  const list=S.nodes.map(n=>({n,s:proj(n.base)})).sort((a,b)=>a.s.z-b.s.z);
+  for(const {n,s} of list){
+    const inRes=sel&&S.res.reach[n.d.id];
+    const isSrc=sel&&S.res.src===n.d.id;
+    const dim=sel?(inRes?1:.13):1;
+    const depth=clamp((FOCAL-s.z)/(FOCAL+1.5),.25,1);
+    const strength=inRes?S.res.reach[n.d.id].str:0;
+    const breathe=reduced?1:1+.10*Math.sin(S.t*1.5+n.ph);
+    let r=n.d.L===4?3.3:n.d.L===3?4.0:n.d.L===1?3.8:4.2;
+    if(n.d.L===3&&n.d.amp)r=3.2+n.d.amp*1.4;
+    if(n.d.L===2)r=3.0+Math.min(1,Math.abs(n.d.flow)/70)*3.0;
+    if(n.d.L===4)r=2.6+n.d.w/100*3.0;
+    if(n.d.L===1)r=2.8+n.d.lvl*1.1;
+    r=r*s.k*breathe*(1+n.glow*.45)*(1+strength*.45);
+    const a=depth*dim*(.55+.45*S.intro);
+    ctx.fillStyle=rgba(n.col,(.11*a*(1+n.glow*1.1)).toFixed(3));
+    ctx.beginPath(); ctx.arc(s.x,s.y,r*(2.7+n.glow*1.3),0,6.2832); ctx.fill();
+    ctx.fillStyle=rgba(n.glow>.25?WHITE:n.col,Math.min(1,a*(.85+n.glow)).toFixed(3));
+    ctx.beginPath(); ctx.arc(s.x,s.y,r,0,6.2832); ctx.fill();
+    ctx.strokeStyle=rgba(n.col,(.40*a).toFixed(3)); ctx.lineWidth=1;
+    ctx.beginPath(); ctx.arc(s.x,s.y,r*2.0,0,6.2832); ctx.stroke();
+    if(S.topExpo&&S.topExpo.has(n.d.id)){
+      ctx.strokeStyle=rgba([242,179,61],(.9*a).toFixed(3)); ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.arc(s.x,s.y,r*3.0,0,6.2832); ctx.stroke();
+      ctx.strokeStyle=rgba([242,179,61],(.26*a).toFixed(3)); ctx.lineWidth=1;
+      ctx.beginPath(); ctx.arc(s.x,s.y,r*4.1,0,6.2832); ctx.stroke();
+    }
+    if(n.glow>.02){
+      ctx.strokeStyle=rgba(WHITE,(n.glow*.55*a).toFixed(3)); ctx.lineWidth=1.4;
+      ctx.beginPath(); ctx.arc(s.x,s.y,r*2.2+(1-n.glow)*38*s.k,0,6.2832); ctx.stroke();
+    }
+    if(isSrc){
+      const cyc=(S.t*.7)%1;
+      ctx.strokeStyle=rgba(n.col,((1-cyc)*.7*a).toFixed(3)); ctx.lineWidth=1.6;
+      ctx.beginPath(); ctx.arc(s.x,s.y,r*2.4+cyc*46*s.k,0,6.2832); ctx.stroke();
+    }
+    n._s=s; n._r=r; n._a=a;
+  }
+}
+function overlaps(a,b){return Math.abs(a.cx-b.cx)*2<(a.w+b.w)&&Math.abs(a.cy-b.cy)*2<(a.h+b.h)}
+function drawLabels(){
+  const boxes=[]; ctx.textAlign="center";
+  const sel=!!S.res;
+  const list=S.nodes.slice().sort((a,b)=>{
+    const sa=sel&&S.res.reach[a.d.id]?S.res.reach[a.d.id].str:a.d.score/1000;
+    const sb=sel&&S.res.reach[b.d.id]?S.res.reach[b.d.id].str:b.d.score/1000;
+    return sb-sa;
+  });
+  for(const n of list){
+    const s=n._s; if(!s||s.z>FOCAL-.5)continue;
+    if(sel&&!S.res.reach[n.d.id])continue;
+    const y=s.y-n._r*2.4-7;
+    ctx.font='700 11.5px "Noto Sans TC",system-ui,sans-serif';
+    const tw=ctx.measureText(n.d.n).width;
+    const b={cx:s.x,cy:y-4,w:Math.max(tw,46)+14,h:26};
+    if(boxes.some(o=>overlaps(b,o)))continue;
+    boxes.push(b);
+    const a=clamp(n._a,0,1)*(sel?1:.86);
+    ctx.fillStyle=rgba(WHITE,(a*.94).toFixed(3));
+    ctx.fillText(n.d.n,s.x,y);
+    ctx.font='500 10px "JetBrains Mono",monospace';
+    let sub="";
+    if(sel&&S.res.reach[n.d.id]&&n.d.L>1){
+      const rc=S.res.reach[n.d.id];
+      sub=`${(rc.str*100).toFixed(0)}% · T+${rc.lag}`;
+    } else if(n.d.L===1) sub=`D-${n.d.days}`;
+    else if(n.d.L===2) sub=`${n.d.flow>0?"+":""}${n.d.flow.toFixed(1)}`;
+    if(sub){ctx.fillStyle=rgba(n.col,(a*.9).toFixed(3)); ctx.fillText(sub,s.x,y+12);}
+  }
+  ctx.textAlign="left";
+}
+function drawHover(){
+  const n=S.hover; if(!n||!n._s)return;
+  const s=n._s,d=n.d,ls=[d.n];
+  if(d.L===1)ls.push(`${d.date}　${d.days>0?"D-"+d.days:"今日"}`,`${d.kind} · ${d.src}`,d.note);
+  else if(d.L===2)ls.push(`板塊資金淨流 ${d.flow>0?"+":""}${d.flow} ${d.unit}`,"點一下＝看它往下打到誰");
+  else if(d.L===3)ls.push(d.s,`放大係數 ×${d.amp.toFixed(2)}`,d.v?("目前 "+d.v):"");
+  else {const x=S.expoBy&&S.expoBy[d.id];
+    ls.push(d.id+(d.etf?" · ETF":"")+(x?`　· 事件曝險 ${x.score}`:""),`${d.px}　${d.chg>0?"+":""}${d.chg}%`,
+            (BY[d.ind]?("板塊 "+BY[d.ind].n):"")+(x&&x.hits?`　${x.hits} 件事 · 最近 D-${x.near}`:""));}
+  const L=ls.filter(Boolean);
+  ctx.font='500 12px "Noto Sans TC",system-ui,sans-serif';
+  const w=Math.max(...L.map(l=>ctx.measureText(l).width))+22, h=L.length*17+14;
+  let x=s.x+18,y=s.y-h/2;
+  if(x+w>W-14)x=s.x-w-18;
+  if(x<8)x=clamp(s.x-w/2,8,Math.max(8,W-w-8));
+  y=clamp(y,10,H-h-20);
+  ctx.fillStyle="rgba(5,8,14,.95)"; ctx.strokeStyle=rgba(n.col,.42); ctx.lineWidth=1;
+  ctx.beginPath(); ctx.rect(x,y,w,h); ctx.fill(); ctx.stroke();
+  L.forEach((l,i)=>{
+    ctx.fillStyle=i===0?"#E4EDF8":i===1?rgba(n.col,.95):"#8397B4";
+    ctx.font=i===0?'700 12.5px "Noto Sans TC",system-ui,sans-serif':'500 11.5px "Noto Sans TC",system-ui,sans-serif';
+    ctx.fillText(l,x+11,y+18+i*17);
+  });
+}
+function drawVignette(){
+  const g=ctx.createRadialGradient(CX,CY,SC*.9,CX,CY,Math.max(W,H)*.8);
+  g.addColorStop(0,"rgba(4,6,10,0)"); g.addColorStop(1,"rgba(3,4,8,.78)");
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+}
+
+let last=performance.now();
+function frame(now){
+  const dt=Math.min((now-last)/1000,.05); last=now;
+  S.t+=dt; S.intro=Math.min(1,S.intro+dt*.5);
+  if(S.spin&&!dragging&&!reduced){
+    S.rotY=SWING_BASE+Math.sin(S.t*SWING_F)*SWING_A;
+    S.rotX=clamp(S.rotXBase+Math.sin(S.t*SWING_FX+1.1)*SWING_AX,-1.1,1.1);
+  }
+  for(const n of S.nodes)if(n.glow>0)n.glow=Math.max(0,n.glow-dt*.9);
+  for(const e of S.edges)if(e.lit>0)e.lit=Math.max(0,e.lit-dt*.55);
+  for(let i=S.pulses.length-1;i>=0;i--){
+    const p=S.pulses[i];
+    if(p.delay>0){p.delay-=dt;continue;}
+    p.u+=dt*p.sp;
+    if(p.e)p.e.lit=Math.min(1,p.e.lit+dt*3.2);
+    if(p.u>=1){const tn=S.idx[p.e.b]; if(tn)tn.glow=1; p.life-=dt*3; if(p.life<=0)S.pulses.splice(i,1);}
+  }
+  ctx.clearRect(0,0,W,H);
+  drawStars(S.t);
+  drawHoops();
+  drawEdges();
+  drawNodes();
+  drawPulses();
+  drawFX(dt);
+  drawVignette();
+  drawLabels();
+  drawLayerTags();
+  drawReticle();
+  drawHover();
+  requestAnimationFrame(frame);
+}
+
+/* ════════ 情境分析引擎 ════════════════════════════════════════
+   把「強度數值」翻成可讀的情境：方向偏向、歷史分布區間、時間窗、
+   可靠度、要盯的東西。所有數字都是歷史統計的示意值，不是預測。
+   ════════════════════════════════════════════════════════════ */
+const PCT=v=>`${v>0?"+":""}${v.toFixed(1)}%`;
+
+function tiltScore(tags,tilt){
+  let s=0,mag=0;
+  for(const t in tilt){
+    const v=(tags||{})[t]; if(v===undefined)continue;
+    s+=tilt[t]*v; mag+=Math.abs(tilt[t])*Math.abs(v);
+  }
+  return {s,mag,dir:mag>1e-6?clamp(s/mag,-1,1):0,cover:mag};
+}
+/* 歷史分布區間：事件類型的分位帶 × 標的波動係數 × 這條鏈的強度 */
+function bandFor(ev,node,str,tilt,p){
+  const c=CONE[ev.kind]||CONE["總經"];
+  const nv=node.vol||1.1;
+  let spread=(c.shape[4]-c.shape[0])*c.vol*nv*clamp(.42+str*.95,.42,1.7);
+  const t=tiltScore(node.tags,tilt||{});
+  let med=t.dir*spread*.26*clamp(.55+str,.55,1.6);
+  /* 兩個非對稱：機率權重越低的情境，市場定價越少、反應越大；下行尾部較肥 */
+  if(p!==undefined)med*=clamp(1.35-p*.7,.85,1.35);
+  if(t.dir<0)spread*=1.14;
+  return {med,lo:med-spread*.44,hi:med+spread*.46,dir:t.dir,cover:t.cover,spread,n:c.n};
+}
+function dirLabel(d){
+  if(d>=.35)return {t:"偏正向",c:"pos"};
+  if(d>=.12)return {t:"略偏正向",c:"pos"};
+  if(d<=-.35)return {t:"偏負向",c:"neg"};
+  if(d<=-.12)return {t:"略偏負向",c:"neg"};
+  return {t:"方向中性",c:"neu"};
+}
+function confOf(str,steps,n,stats){
+  /* 可靠度改由回歸統計決定：最弱一條邊的 |t| 與 R²，再扣鏈長 */
+  let v=clamp(str*1.0+(n/64)*.3-(steps-1)*.08,0,1);
+  if(stats&&stats.length){
+    const w=stats.reduce((p,s)=>Math.abs(s.t)<Math.abs(p.t)?s:p,stats[0]);
+    v=clamp(shrink(w.t)*.72+w.r2*.28-(steps-1)*.06,0,1);
+    return {v,t:v>.55?"高":v>.28?"中":"低",weak:w};
+  }
+  return {v,t:v>.62?"高":v>.36?"中":"低",weak:null};
+}
+function statLine(stats){
+  if(!stats||!stats.length)return "";
+  const w=stats.reduce((p,s)=>Math.abs(s.t)<Math.abs(p.t)?s:p,stats[0]);
+  const A=BY[w.from],B=BY[w.to];
+  return `<p class="an-s">最弱一段 <b>${A?A.n:w.from} → ${B?B.n:w.to}</b>：
+    β ${w.b>0?"+":""}${w.b.toFixed(2)}%／1σ ·
+    95%CI [${w.ci[0].toFixed(2)}, ${w.ci[1].toFixed(2)}] ·
+    t ${w.t.toFixed(1)} · R² ${w.r2.toFixed(2)} · N ${w.n}
+    ${Math.abs(w.t)<1.96?'<em class="warn">未達 95% 顯著</em>':'<em>顯著</em>'}</p>`;
+}
+/* 路徑上的板塊與放大器 */
+function pathParts(path){
+  const secs=[],amps=[];
+  path.forEach(id=>{const d=BY[id]; if(!d)return;
+    if(d.L===2)secs.push(d); if(d.L===3)amps.push(d);});
+  return {secs,amps};
+}
+function pathWhy(path,str){
+  const {secs,amps}=pathParts(path);
+  const s=secs[secs.length-1]||secs[0];
+  let t="";
+  if(s)t+=`先打到板塊 <b>${s.n}</b>`;
+  if(secs.length>1)t+=`（經 ${secs.slice(0,-1).map(x=>x.n).join("→")} 上下游轉一手）`;
+  if(amps.length)t+=`，再由 <b>${amps.map(a=>a.n).join(" ＋ ")}</b> 放大 <em>×${amps.reduce((p,a)=>p*a.amp,1).toFixed(2)}</em>`;
+  else t+=`，直接落到個股（沒有經過放大器層）`;
+  return t+`；整條鏈保留強度 <em>${(str*100).toFixed(0)}%</em>。`;
+}
+function watchOf(ev,path){
+  const {amps}=pathParts(path);
+  const a=[];
+  if(ev&&ev.watch)a.push(ev.watch);
+  amps.forEach(x=>{if(x.watch)a.push(x.watch)});
+  return a;
+}
+function timeWindow(lag,kind){
+  const end=lag+(kind==="財報"||kind==="法說"?8:6);
+  return `T+${lag} 起，約 T+${end} 前後最密集`;
+}
+/* 單一「事件 × 標的」的情境卡 */
+function scenCard(ev,node,r,opts){
+  const o=opts||{};
+  const conf=confOf(r.str,r.path.length-1,(CONE[ev.kind]||CONE["總經"]).n,r.stats);
+  const rows=(ev.scen||[]).map(sc=>{
+    const b=bandFor(ev,node,r.str,sc.tilt,sc.p);
+    const dl=dirLabel(b.dir);
+    return `<div class="sc">
+      <div class="sc-h"><span class="dot ${dl.c}"></span><b>${sc.t}</b>
+        <em>權重 ${(sc.p*100)|0}%</em></div>
+      <div class="sc-b">
+        <span class="tag ${dl.c}">${dl.t}</span>
+        <span class="rng">歷史同類分布 <b>${PCT(b.med)}</b>
+          <s>（${PCT(b.lo)} ~ ${PCT(b.hi)}）</s></span>
+      </div></div>`;
+  }).join("");
+  const w=watchOf(ev,r.path);
+  return `<div class="an">
+    <div class="an-h">
+      <span class="an-t">${o.title||node.n}</span>
+      <span class="an-m">${r.path.length-1} 步 · ${timeWindow(r.lag,ev.kind)}</span>
+    </div>
+    <p class="an-why">${o.why||pathWhy(r.path,r.str)}</p>
+    ${rows}
+    <p class="an-f">可靠度 <b class="${conf.t==="高"?"cpos":conf.t==="低"?"cneg":""}">${conf.t}</b>
+      （樣本 ${(CONE[ev.kind]||CONE["總經"]).n} 次 · 鏈長 ${r.path.length-1} 步 · 強度 ${(r.str*100).toFixed(0)}%）
+      ${o.share!==undefined?`　·　占${o.shareLabel||"總曝險"} <b>${o.share}%</b>`:""}</p>
+    ${statLine(r.stats)}
+    ${w.length?`<p class="an-w">要盯的東西：${w.join("；")}</p>`:""}
+  </div>`;
+}
+
+/* ── 正向：一件事 → 標的池的情境分析 ── */
+function forwardAnalysis(ev,hits){
+  if(!hits.length)return "";
+  const sc=ev.scen||[];
+  /* 情境下整池的方向分布 */
+  const cast=sc.map(s=>{
+    const rows=hits.map(h=>{
+      const b=bandFor(ev,h.d,h.str,s.tilt,s.p);
+      return {d:h.d,dir:b.dir,med:b.med,str:h.str,lag:h.lag};
+    }).sort((a,b)=>b.med-a.med);
+    return {s,rows,pos:rows.filter(r=>r.dir>=.12).length,neg:rows.filter(r=>r.dir<=-.12).length};
+  });
+  const cards=hits.slice(0,6).map(h=>scenCard(ev,h.d,h,{
+    title:`${h.d.n}<s>${h.d.id}</s>`
+  })).join("");
+  const spread=cast.map(c=>`<div class="cast">
+      <div class="cast-h"><b>${c.s.t}</b><em>權重 ${(c.s.p*100)|0}%</em></div>
+      <div class="cast-b">池內 <b class="cpos">${c.pos}</b> 檔偏正向 ·
+        <b class="cneg">${c.neg}</b> 檔偏負向 ·
+        <b>${c.rows.length-c.pos-c.neg}</b> 檔中性</div>
+      <div class="cast-l">最受惠：${c.rows.slice(0,3).map(r=>`${r.d.n} <s>${PCT(r.med)}</s>`).join("、")||"—"}<br>
+        最受壓：${c.rows.slice(-3).reverse().map(r=>`${r.d.n} <s>${PCT(r.med)}</s>`).join("、")||"—"}</div>
+    </div>`).join("");
+  return `
+    <div class="res-sec">
+      <h3>情境推演 · 這件事的兩種走法<em>${ev.date} · ${ev.kind}</em></h3>
+      ${spread}
+      <p class="cone-note" style="margin-top:10px">兩個情境是這類事件最常見的兩種結果，
+        權重為示意先驗，不是機率預測。方向由「板塊對該情境的敏感度 × 這條鏈的強度」推得，
+        <strong style="color:var(--dim)">數字是歷史同類事件的後續分布，不指涉這一次</strong>。</p>
+    </div>
+    <div class="res-sec">
+      <h3>逐檔情境<em>強度前 ${Math.min(6,hits.length)} 檔</em></h3>
+      ${cards}
+    </div>`;
+}
+
+/* ── 反查：一檔標的 ← 未來事件的情境分析 ── */
+const MACRO=[
+ {t:"利率下行 ＋ AI 資本支出續強", tilt:{rate:1,ai:1,semi:.7,growth:.5,credit:.5},
+  hint:"降息路徑確認、雲端資本支出再上修"},
+ {t:"通膨黏著 ＋ 終端需求轉弱", tilt:{rate:-1,growth:-.8,ai:-.5,cons:-.7,credit:-.5},
+  hint:"通膨數據高於預期、消費與新訂單同步走弱"},
+ {t:"中國需求回溫 ＋ 原物料與運價走揚", tilt:{china:1,ship:.8,oil:.6,growth:.5},
+  hint:"中國 PMI 站回 50、運價與油價同步上行"}
+];
+function reverseAnalysis(node,upEvents,expoRow){
+  if(!upEvents.length)return "";
+  const total=upEvents.reduce((p,x)=>p+x.str,0)||1;
+  const kinds={};
+  upEvents.forEach(x=>{kinds[x.d.kind]=(kinds[x.d.kind]||0)+x.str});
+  const kbar=Object.entries(kinds).sort((a,b)=>b[1]-a[1]).map(([k,v])=>
+    `<div class="kb"><span>${k}</span><i style="width:${(v/total*100).toFixed(0)}%"></i>
+      <em>${(v/total*100).toFixed(0)}%</em></div>`).join("");
+  /* 綜合情境：把巨觀情境套到這檔標的上 */
+  const macro=MACRO.map(m=>{
+    const b=bandFor({kind:"總經"},node,clamp(upEvents[0].str*1.1,.2,.9),m.tilt);
+    const dl=dirLabel(b.dir);
+    const trig=upEvents.filter(x=>{
+      const sc=(x.d.scen||[]).find(s=>tiltScore(node.tags,s.tilt).dir*b.dir>0);
+      return !!sc;
+    }).slice(0,3);
+    return `<div class="an">
+      <div class="an-h"><span class="an-t">${m.t}</span>
+        <span class="an-m"><span class="tag ${dl.c}">${dl.t}</span></span></div>
+      <p class="an-why">若這個組合成立（${m.hint}），依 ${node.n} 所屬板塊
+        <b>${BY[node.ind]?BY[node.ind].n:"—"}</b> 的敏感度，歷史上同向情境的後續 20 個交易日分布中位約
+        <b>${PCT(b.med)}</b>，區間 ${PCT(b.lo)} ~ ${PCT(b.hi)}。</p>
+      ${trig.length?`<p class="an-w">最可能觸發它的排程：${trig.map(x=>`${x.d.n}（${x.d.days>0?"D-"+x.d.days:"今日"}）`).join("、")}</p>`:""}
+    </div>`;
+  }).join("");
+  /* 同一種排程（例如每月的 PMI）只留最近一次，避免逐事件卡片重複 */
+  const seenT={}, uniq=upEvents.filter(x=>{const k=x.d.tpl||x.d.id;
+    if(seenT[k])return false; seenT[k]=1; return true;});
+  const cards=uniq.slice(0,5).map(x=>scenCard(x.d,node,x,{
+    title:`${x.d.n}<s>${x.d.date}　${x.d.days>0?"D-"+x.d.days:"今日"}</s>`,
+    share:Math.round(x.str/total*100), shareLabel:"上游強度"
+  })).join("");
+  const nearest=upEvents.slice().sort((a,b)=>a.d.days-b.d.days)[0];
+  const cluster=(()=>{
+    const inWin=upEvents.filter(x=>x.d.days<=14).length;
+    return inWin>=3?`未來兩週有 <b>${inWin}</b> 件事同時連到它，事件密度偏高，單一事件的歸因會變困難。`
+      :`未來兩週有 ${inWin} 件事連到它，事件密度不高，單一事件的歸因相對乾淨。`;
+  })();
+  return `
+    <div class="res-sec">
+      <h3>曝險組成<em>${upEvents.length} 件事 · 依事件類型</em></h3>
+      ${kbar}
+      <p class="cone-note">${cluster}
+        最快到來的是 <b>${nearest.d.n}</b>（${nearest.d.days>0?"D-"+nearest.d.days:"今日"}）。</p>
+    </div>
+    <div class="res-sec">
+      <h3>逐事件情境<em>去重後強度前 ${Math.min(5,uniq.length)} 件</em></h3>
+      ${cards}
+    </div>
+    <div class="res-sec">
+      <h3>綜合情境 · 把上游事件合起來看<em>示意</em></h3>
+      ${macro}
+      <p class="cone-note">綜合情境不是預測，而是把幾件事的方向合併之後，
+        這檔標的在歷史上同向環境中的分布。三個情境可以同時部分成立，也可能都不成立。</p>
+    </div>`;
+}
+
+/* ════════ 持倉模式 ＋ 因子集中度 ＋ 反向候選 ═════════════════
+   持倉把「曝險分數」換算成金額；因子分解讓十件事不會被重複計算；
+   反向候選用因子向量的餘弦相似度找方向相反、且流動性夠的標的。
+   這一層只描述曝險，不給動作建議。
+   ════════════════════════════════════════════════════════════ */
+const FXRATE=32.5;                       /* 美元兌台幣（示意固定值） */
+const POSKEY="tcapsule.pos.v9";
+let POS={};
+try{const raw=localStorage.getItem(POSKEY); if(raw){const o=JSON.parse(raw); if(o&&typeof o==="object")POS=o;}}catch(e){}
+function savePos(){try{localStorage.setItem(POSKEY,JSON.stringify(POS))}catch(e){}}
+function posOf(id){return POS[id]||null}
+function unitOf(d){return d.mkt==="tw"?(d.etf?1000:1000):1}   /* 台股 1 張 = 1000 股 */
+function posValue(d){                      /* 換算成新台幣 */
+  const p=posOf(d.id); if(!p||!p.q)return 0;
+  const px=p.px||d.px||0; if(!px)return 0;
+  const v=p.q*unitOf(d)*px;
+  return d.mkt==="us"?v*FXRATE:v;
+}
+function posCost(d){
+  const p=posOf(d.id); if(!p||!p.q||!p.c)return 0;
+  const v=p.q*unitOf(d)*p.c;
+  return d.mkt==="us"?v*FXRATE:v;
+}
+function hasPositions(){return poolIds().some(id=>BY[id]&&posValue(BY[id])>0)}
+const NT=v=>{
+  const a=Math.abs(v);
+  if(a>=1e8)return `${v<0?"−":""}${(a/1e8).toFixed(2)} 億`;
+  if(a>=1e4)return `${v<0?"−":""}${(a/1e4).toFixed(1)} 萬`;
+  return `${v<0?"−":""}${Math.round(a).toLocaleString()}`;
+};
+
+/* ── 組合的因子曝險 ──
+   權重：有持倉用金額，沒有持倉用影響力權重（等於「觀察清單」模式） */
+function portfolioFactors(){
+  const ids=poolIds(), money=hasPositions();
+  let tot=0; const rows=[];
+  ids.forEach(id=>{
+    const d=BY[id]; if(!d)return;
+    const L=stockLoad(d); if(!L)return;
+    const wgt=money?posValue(d):d.w;
+    if(wgt<=0)return;
+    tot+=wgt; rows.push({d,wgt,L});
+  });
+  const exp={}; FIDS.forEach(k=>exp[k]=0);
+  rows.forEach(r=>FIDS.forEach(k=>exp[k]+=r.wgt*r.L[k]));
+  const FS=(S.FS||{});
+  const shock={},absSum=FIDS.reduce((s,k)=>s+Math.abs(exp[k]),0)||1;
+  /* 未來 30 天：因子 1σ 衝擊下，這個組合的 20 日歷史分布中位（金額或 %） */
+  FIDS.forEach(k=>{
+    const sd=FBY[k].sd*Math.sqrt(20)/100;             /* 20 個交易日的 1σ 幅度 */
+    shock[k]=exp[k]*sd;
+  });
+  const share={}; FIDS.forEach(k=>share[k]=Math.abs(exp[k])/absSum);
+  const sorted=FIDS.slice().sort((a,b)=>share[b]-share[a]);
+  const hhi=FIDS.reduce((s,k)=>s+share[k]*share[k],0);
+  const top2=share[sorted[0]]+share[sorted[1]];
+  return {rows,tot,exp,share,shock,sorted,hhi,top2,money,ids};
+}
+/* 加入某一檔之後，前兩大因子集中度會變多少（以 12% 權重試算） */
+function concentrationIfAdd(pf,cand){
+  const L=stockLoad(cand); if(!L)return null;
+  const add=pf.tot*0.12, exp={};
+  FIDS.forEach(k=>exp[k]=pf.exp[k]+add*L[k]);
+  const abs=FIDS.reduce((s,k)=>s+Math.abs(exp[k]),0)||1;
+  const share={}; FIDS.forEach(k=>share[k]=Math.abs(exp[k])/abs);
+  const sorted=FIDS.slice().sort((a,b)=>share[b]-share[a]);
+  const totNow=FIDS.reduce((s,k)=>s+Math.abs(pf.exp[k]),0)||1;
+  return {top2:share[sorted[0]]+share[sorted[1]],
+          hhi:FIDS.reduce((s,k)=>s+share[k]*share[k],0),
+          dTot:(abs/(totNow+add)-1)*100};
+}
+/* 同一個板塊最多留幾檔，讓清單有分散度 */
+function capPerSector(rows,k){
+  const cnt={},out=[];
+  rows.forEach(r=>{const s=r.d.ind; cnt[s]=(cnt[s]||0)+1; if(cnt[s]<=k)out.push(r)});
+  return out;
+}
+/* ── 候選的母體：方舟各價值區／升溫區清單 ── */
+function candidatePool(mkt){
+  const pool=new Set(poolIds());
+  return arkUniverse().filter(d=>!pool.has(d.id)&&(mkt==="all"||d.mkt===mkt));
+}
+/* ── 降低集中度的候選：因子向量方向相反或無關 ── */
+function hedgeCandidates(vec,mkt,n){
+  const out=[];
+  candidatePool(mkt).forEach(d=>{
+    const L=stockLoad(d); if(!L)return;
+    out.push({d,cos:cosF(L,vec),L});
+  });
+  out.sort((a,b)=>a.cos-b.cos||b.d.w-a.d.w);
+  return capPerSector(out,2).slice(0,n||5);
+}
+/* ── 未來事件預期受惠：把未來 30 天每件事的兩種走法，
+   依情境權重加權後落到每一檔候選身上，取期望值為正的前幾名。
+   expected = Σ事件 Σ情境 [ 機率權重 × 歷史同類分布中位 × 時間衰減 ]
+   這是「情境權重下的歷史分布期望」，不是報酬預測。 ── */
+function benefitCandidates(mkt,n){
+  const reachBy=S.reachBy||{}, evs=S.horizonEvs||[];
+  if(!evs.length)return [];
+  const out=[];
+  candidatePool(mkt).forEach(d=>{
+    const nd=BY[d.id]; if(!nd)return;        /* 要用帶標籤的圖節點才算得出方向 */
+    let exp=0, top=null, hitN=0;
+    evs.forEach(e=>{
+      const r=(reachBy[e.id]||{})[d.id]; if(!r)return;
+      const dc=1/(1+e.days*0.03);
+      let ev=0;
+      (e.scen||[]).forEach(sc=>{ev+=sc.p*bandFor(e,nd,r.str,sc.tilt,sc.p).med});
+      ev*=dc; exp+=ev; hitN++;
+      if(!top||Math.abs(ev)>Math.abs(top.ev))top={e,ev,lag:r.lag,str:r.str};
+    });
+    if(hitN)out.push({d,exp,top,hitN});
+  });
+  const pos=out.filter(r=>r.exp>0).sort((a,b)=>b.exp-a.exp||b.d.w-a.d.w);
+  /* 槓桿產品的期望值天生是倍數，最多留兩檔，免得整張清單都是 2X */
+  let lev=0;
+  const keep=capPerSector(pos,2).filter(r=>{
+    if((r.d.lev||1)>1){lev++; return lev<=2;}
+    return true;
+  });
+  return keep.slice(0,n||5);
+}
+function factorBars(exp,share,shock,money){
+  const mx=Math.max(...FIDS.map(k=>Math.abs(exp[k])),1e-9);
+  const key=money?(k=>Math.abs(shock[k])):(k=>Math.abs(exp[k]));
+  return FIDS.slice().sort((a,b)=>key(b)-key(a)).map(k=>{
+    const v=exp[k], pos=v>=0, wpc=Math.abs(v)/mx*100;
+    return `<div class="fb">
+      <span class="fb-n">${FBY[k].n}</span>
+      <span class="fb-t"><i class="${pos?"p":"m"}" style="width:${wpc.toFixed(0)}%"></i></span>
+      <span class="fb-v">${(share[k]*100).toFixed(0)}%</span>
+      <span class="fb-s">${money?NT(shock[k]):((S.FS&&S.FS[k]||0).toFixed(1)+"σ")}</span>
+    </div>`;
+  }).join("");
+}
+/* ── 組合體檢（沒有選推演時的預設畫面）── */
+function renderDashboard(){
+  const pf=portfolioFactors();
+  if(!pf.rows.length)return `<div class="res-empty"><b>標的池是空的</b>
+    在右下角加入標的之後，這裡會變成組合體檢：因子曝險、集中度、以及方向相反的候選。</div>`;
+  const money=pf.money;
+  const val=money?pf.rows.reduce((s,r)=>s+r.wgt,0):0;
+  const cost=money?poolIds().reduce((s,id)=>s+(BY[id]?posCost(BY[id]):0),0):0;
+  const pl=money&&cost?val-cost:0;
+  /* 事件加總 vs 因子加總 的高估幅度 */
+  const naive=(S.expo||[]).reduce((s,x)=>s+(x.naive||0),0);
+  const fac=(S.expo||[]).reduce((s,x)=>s+(x.raw||0),0);
+  const over=fac>0?(naive/fac-1)*100:0;
+  const worst=pf.sorted[0], second=pf.sorted[1];
+  const benefit=benefitCandidates(S.mkt,5).map(x=>`
+    <button class="hitrow two" data-id="${x.d.id}">
+      <span class="step">${arkTag(x.d)}</span>
+      <span class="nm">${x.d.n}${(x.d.lev||1)>1?'<i>槓桿</i>':x.d.etf?'<i>ETF</i>':""}<s>${x.d.id}　${BY[x.d.ind]?BY[x.d.ind].n:""}　${x.d.px||"—"}</s></span>
+      <span class="lag">${x.hitN} 件<br>${x.top?"T+"+x.top.lag:""}</span>
+      <span class="str"><b class="cpos">${x.exp>0?"+":""}${x.exp.toFixed(2)}%</b>
+        <s>${x.top?x.top.e.n.slice(0,10):""}</s></span>
+    </button>`).join("");
+  const hedge=hedgeCandidates(pf.exp,S.mkt,4).map(h=>{
+    const c=concentrationIfAdd(pf,h.d);
+    return `<button class="hitrow two" data-id="${h.d.id}">
+      <span class="step">cos ${h.cos.toFixed(2)}</span>
+      <span class="nm">${h.d.n}${h.d.etf?'<i>ETF</i>':""}<s>${h.d.id}　${arkTag(h.d)}　${BY[h.d.ind]?BY[h.d.ind].n:""}</s></span>
+      <span class="lag">${h.d.w}</span>
+      <span class="str"><b>${c?`${c.dTot>=0?"+":""}${c.dTot.toFixed(0)}%`:""}</b>
+        <s>${c?`集中度 ${(c.top2*100).toFixed(0)}%`:""}</s></span>
+    </button>`;
+  }).join("");
+  return `
+    <div class="res-hd">
+      <div class="res-k">組合體檢 · 因子分解</div>
+      <h2>${money?`部位 NT$ ${NT(val)}`:`觀察清單 ${pf.rows.length} 檔`}</h2>
+      <div class="res-sub">${money
+        ? `成本 NT$ ${NT(cost)}　·　未實現 ${pl>=0?"+":"−"}NT$ ${NT(Math.abs(pl))}（${cost?((pl/cost*100).toFixed(1)):"—"}%）`
+        : `未輸入持倉，以影響力權重當作等效權重。右下角切到「持倉」可輸入張數與成本。`}</div>
+    </div>
+    <div class="res-sec">
+      <h3>因子曝險<em>未來 ${HORIZON} 天 · ${S.expoEvN||0} 件排程</em></h3>
+      <div class="fb-h"><span>因子</span><span>方向與相對大小</span><span>占比</span><span>${money?"1σ 衝擊金額":"30 天衝擊"}</span></div>
+      ${factorBars(pf.exp,pf.share,pf.shock,money)}
+      <p class="cone-note">正值＝該因子往<strong style="color:var(--dim)">有利方向</strong>走時組合受惠
+        （利率＝降息、匯率＝台幣貶值、原物料＝油價上行）。
+        ${money?"金額為「該因子出現 1 個標準差衝擊、20 個交易日後」的歷史分布中位，不是預測。"
+               :"未輸入持倉時只顯示相對大小。"}</p>
+    </div>
+    <div class="res-sec">
+      <h3>集中度<em>HHI ${pf.hhi.toFixed(2)}</em></h3>
+      <div class="conc ${pf.top2>0.66?"warn":""}">
+        前兩大因子 <b>${FBY[worst].n} ＋ ${FBY[second].n}</b> 占了
+        <b>${(pf.top2*100).toFixed(0)}%</b> 的曝險
+        ${pf.top2>0.66?"　—　這個組合實際上只押了兩個因子":"　—　分散度尚可"}
+      </div>
+      <p class="cone-note">${over>1?`同一批事件如果<strong style="color:var(--dim)">直接加總</strong>，
+        曝險會高估 <b>${over.toFixed(0)}%</b>——因為未來 30 天的 ${S.expoEvN||0} 件事其實共用少數幾個因子。
+        這裡採用「同因子線性相加、跨因子平方相加」。`
+        :`目前排程分散在多個因子上，重複計算的幅度不大（${over.toFixed(0)}%）。`}</p>
+    </div>
+    <div class="res-sec">
+      <h3>未來事件預期受惠<em>方舟觀測池 · 未來 ${HORIZON} 天</em></h3>
+      ${benefit||`<p class="cone-note" style="margin:0">目前沒有候選被未來 30 天的排程打到。</p>`}
+      <p class="cone-note">期望值＝<b>Σ（情境權重 × 該情境的歷史同類分布中位 × 時間衰減）</b>。
+        左欄是它所屬的方舟分區，右欄是最主要的那件事與它的時滯。
+        槓桿產品的期望值天生放大，已限制最多兩檔。
+        <strong style="color:var(--dim)">這是情境權重下的歷史分布期望值，不是報酬預測</strong>；
+        情境權重是示意先驗，不是市場機率。</p>
+    </div>
+    <div class="res-sec">
+      <h3>降低集中度的候選<em>方舟觀測池 · 因子相關性最低</em></h3>
+      ${hedge||`<p class="cone-note" style="margin:0">目前市場篩選下沒有候選。</p>`}
+      <p class="cone-note">cos 是候選與這個組合的因子相關性：<b>負值＝方向相反（真對沖）</b>，
+        接近 0＝幾乎無關（稀釋集中度）。候選只從<b>方舟各價值區／升溫區</b>的清單裡挑。右欄是「以 12% 權重加入後，
+        <b>每單位資金的總因子曝險變化</b>」與加入後的前兩大因子集中度。
+        這是<strong style="color:var(--dim)">因子關係的描述，不是買賣建議</strong>；
+        真實對沖還要看成本、流動性、追蹤誤差與你的持有期。</p>
+    </div>
+    <div class="res-sec">
+      <h3>邊的估計來源<em>${CAL.src==="real"?"實際資料":"尚未接真實資料"}</em></h3>
+      <p class="cone-note" style="margin-top:0">
+        ${CAL.src==="real"
+          ? `已載入實際校準：${CAL.window}，估出 ${CAL.meta.edges||0} 條事件→板塊邊，
+             其中 <b>${CAL.meta.sig||0}</b> 條在 95% 信賴水準下顯著；個股對板塊 β ${CAL.meta.stocks||0} 檔。`
+          : `目前每條邊的 β／t／R²／信賴區間<strong style="color:var(--l3-ink)">都是佔位值</strong>——
+             統計程序是真的，但底下的面板是程式生成的，<strong style="color:var(--dim)">不能當成實際估計來讀</strong>。
+             用 calibrate.py 跑你自己的 36 個月日線與事件表，載入 edges.json 之後這一整層才有意義。`}</p>
+      <button class="calbtn" id="calLoad">載入 edges.json</button>
+    </div>`;
+}
+
+/* ════════ 音景引擎 ════════════════════════════════════════════
+   全部即時合成，沒有外部音檔。訊號鏈：
+   聲源 → 聲像(pan) → [乾 / 乒乓延遲 / 殘響] → 限幅 → 輸出
+   互動音以 FM ＋ 濾波掃頻 ＋ 噪音瞬態三種材料組成，不同動作
+   用不同的音色家族，耳朵可以分辨「我剛剛做了什麼」。
+   ════════════════════════════════════════════════════════════ */
+const SND={ctx:null,on:true,master:null,rev:null,dly:null,started:false,
+  bus:null,amb:null,lastHover:0,chord:0};
+function makeIR(ctx,dur,decay,bright){
+  const rate=ctx.sampleRate,len=Math.floor(rate*dur),b=ctx.createBuffer(2,len,rate);
+  for(let c=0;c<2;c++){
+    const d=b.getChannelData(c);
+    for(let i=0;i<len;i++){
+      const t=i/len, damp=Math.pow(1-t,decay);
+      d[i]=(Math.random()*2-1)*damp*(1-t*(1-(bright||.4)));
+    }
+  }
+  return b;
+}
+function noiseBuf(ctx,sec){
+  const b=ctx.createBuffer(1,ctx.sampleRate*sec,ctx.sampleRate),d=b.getChannelData(0);
+  let last=0;
+  for(let i=0;i<d.length;i++){const w=Math.random()*2-1;last=(last+0.02*w)/1.02;d[i]=last*3.2}
+  return b;
+}
+function audioStart(){
+  if(SND.ctx){if(SND.ctx.state==="suspended")SND.ctx.resume();return;}
+  const AC=window.AudioContext||window.webkitAudioContext; if(!AC)return;
+  const ctx=new AC(); SND.ctx=ctx;
+  const master=ctx.createGain(); master.gain.value=0; SND.master=master;
+  const lim=ctx.createDynamicsCompressor();
+  lim.threshold.value=-14; lim.knee.value=12; lim.ratio.value=8;
+  lim.attack.value=.003; lim.release.value=.18;
+  master.connect(lim); lim.connect(ctx.destination);
+  /* 殘響 */
+  const conv=ctx.createConvolver(); conv.buffer=makeIR(ctx,2.8,3.0,.55);
+  const wet=ctx.createGain(); wet.gain.value=.42; conv.connect(wet); wet.connect(master); SND.rev=conv;
+  /* 乒乓延遲 */
+  const dl=ctx.createDelay(1), dr=ctx.createDelay(1);
+  dl.delayTime.value=.28; dr.delayTime.value=.42;
+  const fbl=ctx.createGain(), fbr=ctx.createGain();
+  fbl.gain.value=.24; fbr.gain.value=.22;
+  const pl=ctx.createStereoPanner(), pr=ctx.createStereoPanner();
+  pl.pan.value=-.75; pr.pan.value=.75;
+  const dtone=ctx.createBiquadFilter(); dtone.type="highpass"; dtone.frequency.value=420;
+  dl.connect(fbl); fbl.connect(dr); dr.connect(fbr); fbr.connect(dl);
+  dl.connect(pl); dr.connect(pr);
+  pl.connect(dtone); pr.connect(dtone); dtone.connect(master);
+  const dsend=ctx.createGain(); dsend.gain.value=1; dsend.connect(dl); SND.dly=dsend;
+  SND.noise=noiseBuf(ctx,3);
+  master.gain.setTargetAtTime(SND.on?.8:0,ctx.currentTime,1.4);
+  buildAmbient();
+  SND.started=true;
+}
+/* ── 材料 ───────────────────────────────────────────────── */
+function chan(pan,dry,dl,rv,bus){
+  const ctx=SND.ctx, p=ctx.createStereoPanner(); p.pan.value=pan||0;
+  if(bus&&SND.bus){                     /* 環境音：整條（含殘響）都掛在可獨立關掉的匯流排上 */
+    const g=ctx.createGain(); g.gain.value=dry===undefined?1:dry;
+    p.connect(g); g.connect(SND.bus); return p;
+  }
+  const g=ctx.createGain(); g.gain.value=dry===undefined?1:dry; p.connect(g); g.connect(SND.master);
+  if(dl){const s=ctx.createGain(); s.gain.value=dl; p.connect(s); s.connect(SND.dly)}
+  if(rv){const s=ctx.createGain(); s.gain.value=rv; p.connect(s); s.connect(SND.rev)}
+  return p;
+}
+/* FM 敲擊：金屬感的 UI 點擊 */
+function fm(o){
+  if(!SND.ctx||!SND.on)return;
+  const ctx=SND.ctx, t=ctx.currentTime+(o.at||0);
+  const car=ctx.createOscillator(), mod=ctx.createOscillator(), mg=ctx.createGain(), g=ctx.createGain();
+  car.type=o.wave||"sine"; mod.type="sine";
+  car.frequency.setValueAtTime(o.f,t);
+  if(o.f2)car.frequency.exponentialRampToValueAtTime(o.f2,t+o.dur);
+  mod.frequency.setValueAtTime(o.f*(o.ratio||2.4),t);
+  mg.gain.setValueAtTime(o.f*(o.idx||1.6),t);
+  mg.gain.exponentialRampToValueAtTime(Math.max(1,o.f*.02),t+o.dur*.7);
+  mod.connect(mg); mg.connect(car.frequency);
+  g.gain.setValueAtTime(0,t);
+  g.gain.linearRampToValueAtTime(o.vol,t+.004);
+  g.gain.exponentialRampToValueAtTime(.0004,t+o.dur);
+  car.connect(g); g.connect(chan(o.pan,o.dry,o.dl,o.rv===undefined?.3:o.rv,o.bus));
+  car.start(t); mod.start(t); car.stop(t+o.dur+.03); mod.stop(t+o.dur+.03);
+}
+/* 濾波掃頻：起飛、下墜、清除 */
+function sweep(o){
+  if(!SND.ctx||!SND.on)return;
+  const ctx=SND.ctx,t=ctx.currentTime+(o.at||0);
+  const osc=ctx.createOscillator(); osc.type=o.wave||"sawtooth";
+  osc.frequency.setValueAtTime(o.f,t);
+  osc.frequency.exponentialRampToValueAtTime(Math.max(20,o.f2),t+o.dur);
+  const bp=ctx.createBiquadFilter(); bp.type=o.filter||"lowpass";
+  bp.Q.value=o.q||6;
+  bp.frequency.setValueAtTime(o.c||o.f*2.2,t);
+  bp.frequency.exponentialRampToValueAtTime(Math.max(60,(o.c2||o.f2*2.2)),t+o.dur);
+  const g=ctx.createGain();
+  g.gain.setValueAtTime(0,t);
+  g.gain.linearRampToValueAtTime(o.vol,t+(o.a||.012));
+  g.gain.exponentialRampToValueAtTime(.0004,t+o.dur);
+  osc.connect(bp); bp.connect(g); g.connect(chan(o.pan,o.dry,o.dl,o.rv===undefined?.35:o.rv));
+  osc.start(t); osc.stop(t+o.dur+.03);
+}
+/* 噪音瞬態：空氣感與資料閃爍 */
+function noise(o){
+  if(!SND.ctx||!SND.on)return;
+  const ctx=SND.ctx,t=ctx.currentTime+(o.at||0);
+  const src=ctx.createBufferSource(); src.buffer=SND.noise; src.loop=true;
+  src.playbackRate.value=.8+Math.random()*.6;
+  const bp=ctx.createBiquadFilter(); bp.type=o.filter||"bandpass"; bp.Q.value=o.q||3;
+  bp.frequency.setValueAtTime(o.f,t);
+  bp.frequency.exponentialRampToValueAtTime(Math.max(80,o.f2||o.f),t+o.dur);
+  const g=ctx.createGain();
+  g.gain.setValueAtTime(0,t);
+  g.gain.linearRampToValueAtTime(o.vol,t+(o.a||.006));
+  g.gain.exponentialRampToValueAtTime(.0004,t+o.dur);
+  src.connect(bp); bp.connect(g); g.connect(chan(o.pan,o.dry,o.dl,o.rv===undefined?.3:o.rv,o.bus));
+  src.start(t); src.stop(t+o.dur+.05);
+}
+/* ── 背景音景：稀疏的星塵，不是持續的和聲牆 ──
+   壓迫感的三個來源：持續不斷的低頻墊音、密集的殘響尾巴、會呼吸的音量起伏。
+   這一版把持續墊音整個抽掉，只留：
+     · 一層極輕、幾乎聽不見的高音空氣（400Hz 以上，音量 0.012）
+     · 稀疏的鐘聲，平均 7–16 秒才一顆，長尾巴自己散掉
+     · 每 40 秒換一次調式，讓長時間聽不會膩
+   沒有低頻、沒有節拍、沒有週期性起伏，所以不會有壓迫感。 */
+const AMB_GAIN=0.5;
+const SCALES=[
+  [523.25,587.33,659.25,783.99,880,1046.5,1174.7],   /* C 大調五聲 */
+  [440,493.88,554.37,659.25,739.99,880,987.77],      /* A 掛留 */
+  [466.16,523.25,622.25,698.46,783.99,932.33,1046.5] /* Bb 利地亞 */
+];
+function buildAmbient(){
+  const ctx=SND.ctx;
+  const bus=ctx.createGain(); bus.gain.value=AMB_GAIN; SND.bus=bus;
+  const hp=ctx.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=380; hp.Q.value=.4;
+  bus.connect(hp); hp.connect(SND.master);
+  const rs=ctx.createGain(); rs.gain.value=.5; hp.connect(rs); rs.connect(SND.rev);
+  /* 空氣：固定音量、不呼吸，只是一層很薄的底 */
+  const ns=ctx.createBufferSource(); ns.buffer=SND.noise; ns.loop=true;
+  const nf=ctx.createBiquadFilter(); nf.type="highpass"; nf.frequency.value=3200; nf.Q.value=.3;
+  const ng=ctx.createGain(); ng.gain.value=.012;
+  const npan=ctx.createStereoPanner();
+  const nplfo=ctx.createOscillator(); nplfo.type="sine"; nplfo.frequency.value=.011;
+  const npg=ctx.createGain(); npg.gain.value=.5; nplfo.connect(npg); npg.connect(npan.pan); nplfo.start();
+  ns.connect(nf); nf.connect(ng); ng.connect(npan); npan.connect(bus); ns.start();
+  /* 一顆很輕的持續泛音，只有一個音、沒有起伏，用來把空間撐住 */
+  const drone=ctx.createOscillator(); drone.type="sine"; drone.frequency.value=880;
+  const dg=ctx.createGain(); dg.gain.value=.012;
+  const dpan=ctx.createStereoPanner(); dpan.pan.value=-.25;
+  drone.connect(dg); dg.connect(dpan); dpan.connect(bus); drone.start();
+  /* 星塵：稀疏的鐘，兩顆一組，偶爾疊一個五度 */
+  const bell=()=>{
+    if(!SND.ctx)return;
+    if(SND.on&&SND.bus&&SND.bus.gain.value>0.01){
+      const sc=SCALES[SND.chord], f=sc[(Math.random()*sc.length)|0];
+      const pan=Math.random()*1.5-.75;
+      fm({f,ratio:2.002,idx:.42,dur:3.6,vol:.055,pan,dry:1,bus:true});
+      if(Math.random()<.45)
+        fm({f:f*(Math.random()<.5?1.5:2),ratio:2.002,idx:.3,dur:3.0,vol:.030,
+            at:.35+Math.random()*.5,pan:-pan*.7,dry:1,bus:true});
+    }
+    setTimeout(bell,7000+Math.random()*9000);
+  };
+  setTimeout(bell,2200);
+  /* 每 40 秒換一次調式 */
+  const modeTick=()=>{
+    if(!SND.ctx)return;
+    SND.chord=(SND.chord+1)%SCALES.length;
+    drone.frequency.setTargetAtTime([880,880,932.33][SND.chord],ctx.currentTime,8);
+    setTimeout(modeTick,40000);
+  };
+  setTimeout(modeTick,40000);
+}
+/* ── 互動音色表 ────────────────────────────────────────── */
+const NOTE=[523.25,587.33,659.25,783.99,880,1046.5,1174.7];
+const sfx={
+  /* 介面點擊：短、亮、帶一點金屬 */
+  tap(pan){fm({f:1180,ratio:3.2,idx:1.4,dur:.075,vol:.075,pan:pan||0,dl:.18});
+           noise({f:5200,f2:2600,dur:.05,vol:.03,pan:pan||0,q:2});},
+  /* 切換：兩段上行 */
+  toggleOn(){fm({f:660,ratio:2,idx:1.2,dur:.09,vol:.07,dl:.2});
+             fm({f:990,ratio:2,idx:1.0,dur:.12,vol:.055,at:.055,dl:.25});},
+  toggleOff(){fm({f:880,ratio:2,idx:1.2,dur:.09,vol:.06});
+              fm({f:587,ratio:2,idx:1.0,dur:.14,vol:.05,at:.055});},
+  /* 推演：低頻推進 ＋ 掃頻起飛 ＋ 三音琶音 */
+  run(){
+    sweep({f:110,f2:52,dur:.34,vol:.10,wave:"sine",c:700,c2:180,rv:.2});
+    sweep({f:420,f2:2600,dur:.30,vol:.045,q:9,c:900,c2:5200,dl:.3});
+    [0,1,2].forEach(i=>fm({f:NOTE[i*2],ratio:2.01,idx:1.1,dur:.28,vol:.055-i*.008,
+      at:.05+i*.055,pan:(i-1)*.35,dl:.35,rv:.45}));
+    noise({f:3000,f2:9000,dur:.22,vol:.028,q:1.6,dl:.3});
+  },
+  /* 點節點：音高依層級，越內層越高 */
+  node(L){
+    const f=[196,262,392,523][clamp((L||1)-1,0,3)];
+    fm({f,ratio:2.5,idx:1.8,dur:.22,vol:.075,dl:.28,rv:.4});
+    fm({f:f*3,ratio:1.5,idx:.8,dur:.12,vol:.03,at:.02});
+    noise({f:4200,f2:1800,dur:.09,vol:.025,q:2.4});
+  },
+  hover(){
+    const now=performance.now(); if(now-SND.lastHover<130)return; SND.lastHover=now;
+    fm({f:2400+Math.random()*600,ratio:4,idx:.6,dur:.035,vol:.016,pan:Math.random()*1.2-.6,rv:.2});
+  },
+  /* 加入：四音上行 ＋ 高頻閃亮 */
+  add(){
+    [0,2,4,5].forEach((n,i)=>fm({f:NOTE[n],ratio:2,idx:1.2,dur:.30,vol:.06-i*.007,
+      at:i*.055,pan:(i-1.5)*.25,dl:.4,rv:.5}));
+    noise({f:6000,f2:12000,dur:.4,vol:.02,q:1.2,dl:.4});
+  },
+  /* 刪除：下墜掃頻 ＋ 悶擊 */
+  del(){
+    sweep({f:760,f2:120,dur:.26,vol:.075,q:7,c:1800,c2:220});
+    fm({f:98,ratio:1.4,idx:2.2,dur:.22,vol:.06,wave:"triangle"});
+    noise({f:2600,f2:400,dur:.18,vol:.025,q:1.8});
+  },
+  /* 錯誤：兩個失諧方波，短促 */
+  err(){
+    fm({f:156,ratio:1.02,idx:3.4,dur:.16,vol:.055,wave:"square"});
+    fm({f:147,ratio:1.02,idx:3.4,dur:.20,vol:.045,wave:"square",at:.05});
+  },
+  /* 清除：反向吸氣 */
+  clear(){
+    sweep({f:180,f2:1400,dur:.26,vol:.05,q:5,c:400,c2:3200,a:.14,dl:.3,rv:.5});
+    noise({f:800,f2:5200,dur:.3,vol:.022,q:1.4,a:.18,dl:.3});
+  },
+  /* 市場切換：三音下行掃過 */
+  market(){
+    sweep({f:1800,f2:600,dur:.22,vol:.04,q:8,c:3200,c2:900,dl:.25});
+    fm({f:784,ratio:2,idx:1.2,dur:.16,vol:.055,dl:.2});
+  }
+};
+addEventListener("pointerdown",audioStart);
+addEventListener("keydown",audioStart);
+
+/* ════════ 視覺互動特效 ═══════════════════════════════════════
+   艙體上的漣漪、粒子、掃描面；HUD 上的點擊光斑與列閃光。
+   全部有生命週期上限，不會累積。
+   ════════════════════════════════════════════════════════════ */
+const FX={rip:[],par:[],scan:[],ring:[]};
+function fxRipple(x,y,col,r1,life,w){
+  if(FX.rip.length>14)FX.rip.shift();
+  FX.rip.push({x,y,col:col||[242,179,61],r1:r1||120,life:life||.7,t:0,w:w||1.4});
+}
+function fxParticles(x,y,n,col,spd){
+  for(let i=0;i<(n||14);i++){
+    if(FX.par.length>240)FX.par.shift();
+    const a=Math.random()*6.2832, v=(spd||90)*(.35+Math.random());
+    FX.par.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:.5+Math.random()*.5,t:0,
+      col:col||[228,237,248],r:.8+Math.random()*1.6});
+  }
+}
+function fxScan(col){
+  if(FX.scan.length>2)FX.scan.shift();
+  FX.scan.push({t:0,life:1.15,col:col||[69,200,240]});
+}
+function fxNodeHit(n,col){
+  if(!n||!n._s)return;
+  fxRipple(n._s.x,n._s.y,col||n.col,70*n._s.k+40,.62,1.6);
+  fxParticles(n._s.x,n._s.y,16,col||n.col,110);
+  if(FX.ring.length>4)FX.ring.shift();
+  FX.ring.push({n,t:0,life:.9,col:col||n.col});
+}
+function drawFX(dt){
+  /* 掃描面：沿著艙體軸向掃過去 */
+  for(let i=FX.scan.length-1;i>=0;i--){
+    const s=FX.scan[i]; s.t+=dt; if(s.t>s.life){FX.scan.splice(i,1);continue}
+    const u=s.t/s.life, z=lerp(LAYER[0].z-.5,LAYER[3].z+.5,u);
+    const a=Math.sin(u*Math.PI)*.5;
+    ctx.strokeStyle=rgba(s.col,(a*.55).toFixed(3)); ctx.lineWidth=1.4;
+    ctx.beginPath();
+    for(let k=0;k<=48;k++){
+      const ang=k/48*6.2832, rr=lerp(LAYER[0].r,LAYER[3].r,u)*1.06;
+      const p=proj({x:Math.cos(ang)*rr,y:Math.sin(ang)*rr*.94,z});
+      k?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y);
+    }
+    ctx.stroke();
+  }
+  /* 節點外擴的環 */
+  for(let i=FX.ring.length-1;i>=0;i--){
+    const r=FX.ring[i]; r.t+=dt; if(r.t>r.life||!r.n._s){FX.ring.splice(i,1);continue}
+    const u=r.t/r.life, s=r.n._s;
+    ctx.strokeStyle=rgba(r.col,((1-u)*.5).toFixed(3));
+    ctx.lineWidth=1.2+(1-u)*1.6;
+    ctx.beginPath(); ctx.arc(s.x,s.y,(r.n._r*2.2+u*70*s.k),0,6.2832); ctx.stroke();
+    ctx.strokeStyle=rgba(WHITE,((1-u)*.22).toFixed(3)); ctx.lineWidth=1;
+    ctx.beginPath(); ctx.arc(s.x,s.y,(r.n._r*2.2+u*46*s.k),0,6.2832); ctx.stroke();
+  }
+  /* 漣漪 */
+  for(let i=FX.rip.length-1;i>=0;i--){
+    const r=FX.rip[i]; r.t+=dt; if(r.t>r.life){FX.rip.splice(i,1);continue}
+    const u=r.t/r.life, rad=r.r1*(1-Math.pow(1-u,2.2));
+    ctx.strokeStyle=rgba(r.col,((1-u)*.55).toFixed(3)); ctx.lineWidth=r.w*(1-u*.6);
+    ctx.beginPath(); ctx.arc(r.x,r.y,rad,0,6.2832); ctx.stroke();
+    ctx.strokeStyle=rgba(r.col,((1-u)*.18).toFixed(3)); ctx.lineWidth=1;
+    ctx.beginPath(); ctx.arc(r.x,r.y,rad*.62,0,6.2832); ctx.stroke();
+  }
+  /* 粒子 */
+  for(let i=FX.par.length-1;i>=0;i--){
+    const p=FX.par[i]; p.t+=dt; if(p.t>p.life){FX.par.splice(i,1);continue}
+    const u=p.t/p.life, dr=Math.pow(.06,dt);
+    p.x+=p.vx*dt; p.y+=p.vy*dt; p.vx*=dr; p.vy*=dr;
+    ctx.fillStyle=rgba(p.col,((1-u)*.75).toFixed(3));
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.r*(1-u*.5),0,6.2832); ctx.fill();
+  }
+}
+/* 停留在節點上的準星 */
+function drawReticle(){
+  const n=S.hover; if(!n||!n._s)return;
+  const s=n._s, r=n._r*3.4+9, a=S.t*.9;
+  ctx.strokeStyle=rgba(n.col,.55); ctx.lineWidth=1.2;
+  for(let k=0;k<4;k++){
+    const b=a+k*1.5708;
+    ctx.beginPath();
+    ctx.arc(s.x,s.y,r,b-.28,b+.28);
+    ctx.stroke();
+  }
+  ctx.strokeStyle=rgba(n.col,.22); ctx.lineWidth=1;
+  ctx.beginPath(); ctx.arc(s.x,s.y,r*1.35,0,6.2832); ctx.stroke();
+}
+/* HUD 點擊光斑（DOM） */
+function domFlare(x,y,cls){
+  const el=document.createElement("i");
+  el.className="flare"+(cls?" "+cls:"");
+  el.style.left=x+"px"; el.style.top=y+"px";
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),620);
+}
+function flashRow(sel,cls){
+  const el=document.querySelector(sel); if(!el)return;
+  el.classList.add(cls); setTimeout(()=>el.classList.remove(cls),950);
+}
+document.addEventListener("pointerdown",e=>{
+  const t=e.target.closest&&e.target.closest("button,.chip,input,select");
+  if(!t)return;
+  domFlare(e.clientX,e.clientY,t.classList.contains("del")?"neg":"");
+},true);
+
+/* ── 互動：畫布 ── */
+let dragging=false,lx=0,ly=0,moved=0;
+cv.addEventListener("pointerdown",e=>{dragging=true;moved=0;lx=e.clientX;ly=e.clientY;
+  cv.classList.add("dragging");cv.setPointerCapture(e.pointerId)});
+cv.addEventListener("pointermove",e=>{
+  if(dragging){
+    const dx=e.clientX-lx,dy=e.clientY-ly; moved+=Math.abs(dx)+Math.abs(dy);
+    lx=e.clientX;ly=e.clientY;
+    S.rotY+=dx*.006; S.rotX=clamp(S.rotX+dy*.005,-1.1,1.1); S.rotXBase=S.rotX;
+    if(S.spin){S.spin=false; $("#cSpin").classList.remove("on");}
+  } else {
+    const h=nodeAt(e.clientX,e.clientY);
+    if(h&&h!==S.hover)sfx.hover();
+    S.hover=h;
+  }
+});
+cv.addEventListener("pointerup",e=>{cv.classList.remove("dragging");
+  if(dragging&&moved<6){
+    const b=cv.getBoundingClientRect(), mx=e.clientX-b.left, my=e.clientY-b.top;
+    const n=nodeAt(e.clientX,e.clientY);
+    if(IS_M())S.hover=n;
+    if(!n){
+      if(S.res){sfx.clear();fxRipple(mx,my,[126,152,190],150,.8,1);}
+      else fxRipple(mx,my,[126,152,190],70,.5,1);
+      clearRes();
+    } else {
+      sfx.node(n.d.L); fxNodeHit(n); fxScan(n.col);
+      run(n.d.id,n.d.L===4?-1:1);
+    }
+  }
+  dragging=false;});
+cv.addEventListener("pointerleave",e=>{dragging=false;if(e.pointerType==="mouse")S.hover=null;cv.classList.remove("dragging")});
+cv.addEventListener("pointercancel",()=>{dragging=false;cv.classList.remove("dragging")});
+cv.addEventListener("wheel",e=>{e.preventDefault();
+  S.zoom=clamp(S.zoom*(e.deltaY>0?.93:1.075),.6,2.4);resize();},{passive:false});
+function nodeAt(clx,cly){
+  const b=cv.getBoundingClientRect(),mx=clx-b.left,my=cly-b.top;
+  let best=null,bd=IS_M()?30*30:22*22;
+  for(const n of S.nodes){if(!n._s)continue;
+    const d=(n._s.x-mx)**2+(n._s.y-my)**2; if(d<bd){bd=d;best=n;}}
+  return best;
+}
+function edgeSetOf(reach){
+  const set=new Set();
+  Object.values(reach).forEach(r=>{for(let i=0;i<r.path.length-1;i++)set.add(r.path[i]+">"+r.path[i+1])});
+  return set;
+}
+function run(id,dir){
+  if(!S.idx[id]){
+    const nd=BY[id]; if(nd&&nd.mkt&&nd.mkt!=="gl"&&nd.mkt!==S.mkt)setMkt(nd.mkt);
+  }
+  if(!BY[id])return;
+  const reach=walk(id,dir);
+  S.res={src:id,dir,reach,edgeSet:edgeSetOf(reach)};
+  S.pulses=[];
+  Object.values(reach).forEach(r=>{
+    for(let i=0;i<r.path.length-1;i++){
+      const e=S.emap[r.path[i]+">"+r.path[i+1]];
+      if(e&&!S.pulses.some(x=>x.e===e))
+        S.pulses.push({e,u:0,sp:.55+Math.random()*.25,delay:i*.40,life:1});
+    }
+  });
+  const sn=S.idx[id]; if(sn){sn.glow=1; fxNodeHit(sn);}
+  fxScan(sn?sn.col:[69,200,240]);
+  renderResult(); markList(id);
+}
+function clearRes(){S.res=null;S.pulses=[];renderResult();markList(null)}
+
+/* ── 右上角：即時時鐘（台北）＋ 換日重算行事曆 ── */
+function tickClock(){
+  const now=new Date(),tz={timeZone:"Asia/Taipei"};
+  const ymd=new Intl.DateTimeFormat("en-CA",{...tz,year:"numeric",month:"2-digit",day:"2-digit"}).format(now);
+  const hms=new Intl.DateTimeFormat("en-GB",{...tz,hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).format(now);
+  const wd=new Intl.DateTimeFormat("zh-TW",{...tz,weekday:"short"}).format(now);
+  $("#clockV").innerHTML=`${ymd.replace(/-/g,"/")}　<i>${hms}</i>`;
+  $("#clockK").textContent=`台北時間 · ${wd}`;
+  if(ymd!==S.dayKey){const first=!S.dayKey; S.dayKey=ymd; if(!first){refreshDay();return;}}
+  /* 有事件剛過公布時刻 → 立刻淘汰並補進後面的排程 */
+  if(typeof NEXT_EXPIRY==="number"&&isFinite(NEXT_EXPIRY)&&taipeiNowMs()>=NEXT_EXPIRY)refreshDay();
+}
+function refreshDay(){
+  const p=taipeiParts(); TODAY=new Date(p[0],p[1]-1,p[2]);
+  genEvents(); buildGraph(); layout(); renderLeft(); renderPool(); clearRes();
+}
+
+/* ── 右欄：推演結果 ── */
+function coneSVG(kind){
+  const c=CONE[kind]||CONE["總經"];
+  const W2=300,H2=124,P=6,days=20;
+  const X=d=>P+d/days*(W2-P*2);
+  const all=c.shape.map(v=>v*c.vol);
+  const mn=Math.min(...all)*1.12,mx=Math.max(...all)*1.12,rg=(mx-mn)||1;
+  const Y=v=>H2-P-((v-mn)/rg)*(H2-P*2);
+  const band=(lo,hi)=>{let s="";
+    for(let d=0;d<=days;d++){const t=Math.sqrt(d/days);s+=(d?"L":"M")+X(d).toFixed(1)+" "+Y(hi*t).toFixed(1)+" ";}
+    for(let d=days;d>=0;d--){const t=Math.sqrt(d/days);s+="L"+X(d).toFixed(1)+" "+Y(lo*t).toFixed(1)+" ";}
+    return s+"Z";};
+  let mid="";
+  for(let d=0;d<=days;d++){const t=Math.sqrt(d/days);mid+=(d?"L":"M")+X(d).toFixed(1)+" "+Y(all[2]*t).toFixed(1)+" ";}
+  return `<svg viewBox="0 0 ${W2} ${H2}" role="img" aria-label="歷史後續分位帶">
+    <defs><linearGradient id="cg1" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#F2B33D" stop-opacity=".05"/><stop offset="100%" stop-color="#F2B33D" stop-opacity=".22"/></linearGradient>
+      <linearGradient id="cg2" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#F2B33D" stop-opacity=".10"/><stop offset="100%" stop-color="#F2B33D" stop-opacity=".40"/></linearGradient></defs>
+    <line x1="${P}" y1="${Y(0).toFixed(1)}" x2="${W2-P}" y2="${Y(0).toFixed(1)}" stroke="#2A3446" stroke-width="1" stroke-dasharray="3 5"/>
+    <path d="${band(all[0],all[4])}" fill="url(#cg1)"/><path d="${band(all[1],all[3])}" fill="url(#cg2)"/>
+    <path d="${mid}" fill="none" stroke="#FFDC96" stroke-width="1.8"/>
+    <circle cx="${X(days).toFixed(1)}" cy="${Y(all[2]).toFixed(1)}" r="3.2" fill="#FFDC96"/>
+    <text x="${W2-P}" y="${(Y(all[4])-4).toFixed(1)}" fill="#6B7C96" font-family="JetBrains Mono,monospace" font-size="9" text-anchor="end">P90 ${all[4]>0?"+":""}${all[4].toFixed(1)}%</text>
+    <text x="${W2-P}" y="${(Y(all[0])+11).toFixed(1)}" fill="#6B7C96" font-family="JetBrains Mono,monospace" font-size="9" text-anchor="end">P10 ${all[0].toFixed(1)}%</text></svg>`;
+}
+function pathHTML(p){
+  return p.map((id,i)=>{const d=BY[id]; if(!d)return "";
+    return `<span class="n${d.L}">${d.n}</span>`+(i<p.length-1?'<i>▸</i>':"")}).join("");
+}
+const pxTxt=d=>d.px?`${d.px}　${d.chg>0?"+":""}${d.chg}%`:"價格未收錄";
+/* 板塊／放大器在三個巨觀情境下的方向 */
+function macroForSector(sec){
+  return MACRO.map(m=>{
+    const b=bandFor({kind:"總經"},{tags:sec.tags||{},vol:sec.vol||1.2},.55,m.tilt);
+    const dl=dirLabel(b.dir);
+    return `<div class="sc"><div class="sc-h"><span class="dot ${dl.c}"></span><b>${m.t}</b></div>
+      <div class="sc-b"><span class="tag ${dl.c}">${dl.t}</span>
+      <span class="rng">歷史同向分布中位 <b>${PCT(b.med)}</b><s>（${PCT(b.lo)} ~ ${PCT(b.hi)}）</s></span></div></div>`;
+  }).join("");
+}
+function renderResult(){
+  const box=$("#res");
+  if(!S.res){
+    box.innerHTML=renderDashboard();
+    const cl=$("#calLoad"); if(cl)cl.addEventListener("click",()=>{sfx.tap();$("#calFile").click()});
+    $$("#res .hitrow").forEach(b=>b.addEventListener("click",()=>{
+      const dd=BY[b.dataset.id]; if(!dd)return; sfx.node(4); run(dd.id,-1);
+    }));
+    renderStory(null); return;
+  }
+  const src=BY[S.res.src], back=S.res.dir<0, reach=S.res.reach;
+  if(!src){clearRes();return;}
+  /* 反查：上游事件不受「艙體只畫 20 件」限制，看未來 60 天內所有連得到的排程
+     正推：只看標的池（＝白色圓環）裡的標的 */
+  const BACKWIN=60;
+  const hits=Object.entries(reach).map(([id,r])=>({d:BY[id],...r}))
+    .filter(x=>x.d&&(back
+      ? (x.d.L===1&&x.d.days<=BACKWIN&&inMkt(x.d))
+      : (x.d.L===4&&S.idx[x.d.id])))
+    .sort((a,b)=>b.str-a.str||a.d.days-b.d.days).slice(0,10);
+  const holdHits=hits.filter(x=>S.topExpo&&S.topExpo.has(x.d.id));
+  const strongest=hits[0];
+  const isEvent=src.L===1;
+  const l3name=S.mkt==="us"?"基本面":"籌碼";
+
+  let analysis="";
+  if(back&&src.L===4)      analysis=reverseAnalysis(src,hits,S.expoBy?S.expoBy[src.id]:null);
+  else if(isEvent)         analysis=forwardAnalysis(src,hits);
+  else if(src.L===2)       analysis=`<div class="res-sec">
+        <h3>這個板塊在三個巨觀情境下的方向<em>示意</em></h3>${macroForSector(src)}
+        <p class="cone-note">方向由板塊的情境敏感度推得；區間是歷史上同向環境的後續分布，不指涉這一次。</p></div>`;
+
+  box.innerHTML=`
+    <div class="res-hd">
+      <div class="res-k">${back?"反查 · 推動它的是誰":isEvent?"正推 · 這件事會走到哪":"推演 · 它往下打到誰"}</div>
+      <h2>${src.n}</h2>
+      <div class="res-sub">${src.s||src.src||""}${src.v?"　·　"+src.v:""}${
+        src.L===2?`　·　淨流 ${src.flow>0?"+":""}${src.flow} ${src.unit}`:""}${
+        src.L===4?`${src.id}　${pxTxt(src)}${src.etf?"　· ETF":""}${src.custom?"　· 自訂":""}　·　板塊 ${BY[src.ind]?BY[src.ind].n:"—"}`:""}</div>
+      ${isEvent?`<div class="res-date"><b>${src.date}</b><span>${src.kind} · ${src.src}</span>
+        <em>${src.days>0?"D-"+src.days:"今日"}</em></div>
+        <p class="res-note">${src.note}</p>`:""}
+    </div>
+    <div class="res-sec">
+      <h3>${back?"上游事件":"走到的標的（限標的池）"}<em>${hits.length} 個 · 強度 ≥ ${(CUT*100)|0}%</em></h3>
+      ${hits.length?hits.map(x=>`<button class="hitrow" data-id="${x.d.id}">
+        <span class="step">${x.path.length-1} 步</span>
+        <span class="nm">${x.d.n}${S.topExpo&&S.topExpo.has(x.d.id)?'<i>◆ 曝險前五</i>':""}<s>${
+          x.d.L===1?`${x.d.date}　${x.d.days>0?"D-"+x.d.days:"今日"}`:`${x.d.id}　${pxTxt(x.d)}`}</s></span>
+        <span class="lag">T+${x.lag}</span>
+        <span class="str"><i style="width:${(x.str*100).toFixed(0)}%"></i><b>${(x.str*100).toFixed(0)}</b></span>
+      </button>`).join(""):`<p class="cone-note" style="margin:0">強度 8% 以上沒有可追蹤的路徑${back?"":"（標的池內）"}。</p>`}
+    </div>
+    ${strongest?`<div class="res-sec">
+      <h3>最強的一條路徑<em>強度 ${(strongest.str*100).toFixed(0)}% · T+${strongest.lag}</em></h3>
+      <div class="path">${pathHTML(strongest.path)}</div></div>`:""}
+    ${analysis}
+    ${!back&&isEvent?`<div class="res-sec">
+      <h3>歷史後續分布<em>同類事件 ${(CONE[src.kind]||CONE["總經"]).n} 次</em></h3>
+      <div class="cone">${coneSVG(src.kind)}</div>
+      <div class="cone-x"><span>公布日</span><span>T+10</span><span>T+20</span></div>
+      <p class="cone-note">同類「${src.kind}」事件在歷史樣本中的後續 20 個交易日分布。
+        <strong style="color:var(--dim)">這是歷史分布，不指涉這一次會怎樣</strong>；
+        扇形越寬代表歷史反應越不一致，正確的解讀是「這條鏈參考價值低」。</p></div>`:""}
+    <div class="res-sec">
+      <h3>模型邊界<em>${l3name}層 · 三件不做的事</em></h3>
+      <p class="cone-note" style="margin-top:0">情境與區間都是<strong style="color:var(--dim)">歷史統計關聯</strong>，
+        不是因果、不是預測、也不是動作建議。L3 是放大器不是資訊源：同一個衝擊打過來，
+        ${S.mkt==="us"?"獲利能力與自由現金流越強的地方越能吸收":"現價與法人推估成本背離越大的地方反應會被放大"}。</p>
+    </div>`;
+  $$(".hitrow").forEach(b=>b.addEventListener("click",()=>{
+    const d=BY[b.dataset.id]; if(!d)return; sfx.run(); run(d.id,d.L===4?-1:1);
+  }));
+  renderStory({src,back,hits,holdHits,strongest,isEvent});
+}
+function card(cls,k,v,h){
+  return `<div class="card ${cls||""}"><div class="k">${k}</div>
+    <div class="v">${v}</div>${h?`<div class="h">${h}</div>`:""}</div>`;
+}
+const dayTxt=n=>n>0?`還有 ${n} 天`:"就是今天";
+const whenOf=e=>e&&e.L===1?evWhen(e):"";
+function renderStory(r){
+  const box=$("#sumCards");
+  if(!r){
+    const up=NODES.filter(n=>n.L===1&&inMkt(n)).sort((a,b)=>a.days-b.days)[0];
+    const t3=(S.expo||[]).filter(x=>x.score>0).slice(0,3);
+    const top=t3[0];
+    $("#headline").innerHTML=top
+      ? `未來 30 天有 <b>${S.expoEvN||0}</b> 件排定好的事，其中<em> ${top.d.n} </em>被牽動得最重。`
+      : `未來 30 天有 <b>${S.expoEvN||0}</b> 件排定好的事。`;
+    box.innerHTML=card("c2","兩種問法",
+      "點事件＝往下推<br>點標的＝往上追",
+      `往下推：這件事會打到誰、幾天後到<br>往上追：這檔接下來要盯哪幾件事`+
+      (up?`<br>最快到來：<b>${up.n}</b>（${evWhen(up)}）`:""));
+    return;
+  }
+  const {src,back,hits,holdHits,strongest,isEvent}=r;
+  if(back){
+    const nearest=hits.slice().sort((x,y)=>x.d.days-y.d.days)[0];
+    $("#headline").innerHTML=strongest
+      ? `<em>${src.n}</em> 接下來最大的變數是 <b>${strongest.d.n}</b>，${evWhen(strongest.d)}。`
+      : `<em>${src.n}</em> 在未來 60 天裡，沒有強度 8% 以上的排程事件連到它。`;
+    box.innerHTML=card("c2","右欄可以看什麼",
+      `${hits.length} 件事的逐件情境<br>＋ 合起來的綜合情境`,
+      `每件事都列出兩種走法，以及歷史上同向時的報酬<b>區間</b>`+
+      (nearest?`<br>最快要面對：<b>${nearest.d.n}</b>（${evWhen(nearest.d)}）`:""));
+  } else if(isEvent){
+    const h=holdHits[0]||hits[0];
+    const sc=src.scen||[];
+    $("#headline").innerHTML=h
+      ? `<em>${src.n}</em>（${evWhen(src)}）打得最重的是 <b>${h.d.n}</b>，約 <b>${h.lag} 個交易日</b>後反應完。`
+      : `<em>${src.n}</em>（${evWhen(src)}）在你的標的池裡沒有強度 8% 以上的路徑。`;
+    box.innerHTML=card("c2","兩種可能的走法",
+      sc.length?`${sc[0].t}<br><span style="color:var(--faint)">或</span> ${sc[1].t}`:"—",
+      `右欄會把每一檔在兩種走法下的<b>方向與歷史區間</b>都列出來`+
+      (h?`<br>最重的一檔：<b>${h.d.n}</b>　${h.path.length-1} 步 · T+${h.lag} · 強度 ${(h.str*100).toFixed(0)}%`:""));
+  } else {
+    const h=hits[0];
+    $("#headline").innerHTML=h
+      ? `<em>${src.n}</em> 往下打得最重的是 <b>${h.d.n}</b>，強度 <b>${(h.str*100).toFixed(0)}%</b>。`
+      : `<em>${src.n}</em> 往下沒有強度 8% 以上的路徑。`;
+    box.innerHTML=card("c2","這一層在做什麼",
+      src.L===2?"產業板塊<br>先被打到，才會傳到個股":"放大器<br>決定同一個衝擊被放大多少",
+      `往下影響到 ${hits.length} 檔（只算標的池）${h?`，最重 <b>${h.d.n}</b>`:""}<br>
+       想看情境與區間，點左欄的事件或右下角的標的`);
+  }
+}
+/* ── 左欄 ── */
+function renderLeft(){
+  const evs=NODES.filter(n=>n.L===1&&inMkt(n)).sort((a,b)=>a.days-b.days).slice(0,CAP);
+  $("#evList").innerHTML=evs.map(e=>{
+    const d=e.dObj||new Date(e.date);
+    return `<button class="ev" data-id="${e.id}">
+      <span class="d">${d.getMonth()+1}月<b>${d.getDate()}</b></span>
+      <span class="nm">${e.n}<s>${e.kind} · ${e.src} · ${evWhen(e)}</s></span>
+      <span class="lv l${e.lvl}"></span></button>`;
+  }).join("");
+  $("#evN").textContent=evs.length+" 件";
+  $$("#evList .ev").forEach(b=>b.addEventListener("click",()=>{sfx.run();run(b.dataset.id,1)}));
+
+  const xs=(S.expo||[]);
+  $("#expoList").innerHTML=xs.map((x,i)=>`<div class="row${i<5&&x.score>0?" top":""}">
+      <span class="fill" style="width:${x.score}%"></span>
+      <button class="xp" data-id="${x.d.id}">
+        <span class="rk">${String(i+1).padStart(2,"0")}</span>
+        <span class="nm">${x.d.n}${x.d.etf?'<i>ETF</i>':""}<s>${x.d.id}　${pxTxt(x.d)}</s></span>
+        <span class="sc"><b>${x.score}</b><s>${x.hits?`${x.hits} 件 · D-${x.near}`:"未被打到"}</s></span>
+      </button>
+      <button class="del" data-del="${x.d.id}" title="從清單與白色圓環移除" aria-label="移除 ${x.d.n}">✕</button>
+    </div>`).join("");
+  $("#expoN").textContent=`未來 ${HORIZON} 天 · ${S.expoEvN||0} 件`;
+  $$("#expoList .xp").forEach(b=>b.addEventListener("click",()=>{sfx.node(4);run(b.dataset.id,-1)}));
+  $$("#expoList .del").forEach(b=>b.addEventListener("click",()=>removeTicker(b.dataset.del)));
+  $("#lg3").firstChild.textContent=S.mkt==="us"?"基本面 · 傳導的放大器":"籌碼 · 傳導的放大器";
+}
+function markList(id){$$("#evList .ev").forEach(b=>b.classList.toggle("on",b.dataset.id===id))}
+
+/* ── 右下：標的池 ── */
+function renderPool(){
+  const ids=poolIds();
+  const rows=ids.map(id=>BY[id]).filter(Boolean).sort((a,b)=>b.w-a.w);
+  const posMode=S.posMode;
+  $("#poolN").textContent=`${rows.length} / ${CAP}`;
+  const msg=$("#poolMsg");
+  if(posMode&&msg&&!msg.classList.contains("err")&&!msg.classList.contains("ok"))
+    msg.innerHTML="輸入張數與成本；現價可自己改，市值與損益會即時更新。";
+  $$("#poolMode button").forEach(b=>b.setAttribute("aria-pressed",String((b.dataset.mode==="pos")===!!posMode)));
+  if(posMode){
+    const tot=rows.reduce((s,d)=>s+posValue(d),0);
+    const totCost=rows.reduce((s,d)=>s+posCost(d),0);
+    $("#poolList").innerHTML=`<div class="pos-h"><span>標的</span><span>${S.mkt==="us"?"股數":"張數"}</span>
+        <span>成本</span><span>現價</span><span></span></div>`+
+      rows.map(d=>{
+      const p=posOf(d.id)||{};
+      const v=posValue(d), c=posCost(d);
+      const pl=(v&&c)?(v-c)/c*100:null;
+      return `<div class="row po">
+        <div class="pos">
+          <span class="nm">${d.n}<s>${d.id}　${d.mkt==="tw"?"張":"股"}</s></span>
+          <input class="qi" data-q="${d.id}" type="number" step="any" min="0" value="${p.q||""}" placeholder="—">
+          <input class="qi" data-c="${d.id}" type="number" step="any" min="0" value="${p.c||""}" placeholder="—">
+          <input class="qi px" data-p="${d.id}" type="number" step="any" min="0" value="${p.px||d.px||""}" placeholder="—">
+          <span class="pv">${v?"NT$ "+NT(v):"—"}
+            ${pl!==null?`<s class="${pl>=0?"up":"down"}">${pl>=0?"+":""}${pl.toFixed(1)}%</s>`:""}</span>
+        </div>
+        <button class="del" data-del="${d.id}" title="移除">✕</button>
+      </div>`;
+    }).join("")||`<p class="cone-note" style="padding:8px 0">標的池是空的。</p>`;
+    $("#poolTot").innerHTML=tot?`NT$ ${NT(tot)}${totCost?`　<i style="font-style:normal;color:${tot>=totCost?"var(--bull)":"var(--bear)"}">${tot>=totCost?"+":""}${((tot-totCost)/totCost*100).toFixed(1)}%</i>`:""}`:"";
+    $$("#poolList input").forEach(inp=>inp.addEventListener("input",()=>{
+      const id=inp.dataset.q||inp.dataset.c||inp.dataset.p;
+      const key=inp.dataset.q?"q":inp.dataset.c?"c":"px";
+      const v=parseFloat(inp.value);
+      POS[id]=POS[id]||{};
+      if(isFinite(v)&&v>0)POS[id][key]=v; else delete POS[id][key];
+      /* 只有三個欄位都空了才把這筆丟掉——先填成本或先填現價都不會被清掉 */
+      if(!POS[id].q&&!POS[id].c&&!POS[id].px)delete POS[id];
+      savePos();
+      updatePosRow(id);
+    }));
+    /* 注意：這裡不能重繪整份清單——使用者從「成本」跳到「張數」時會觸發 change，
+       一重繪就會把他正要打字的那個輸入框換掉，看起來就像輸入沒有作用。
+       所以離開欄位時只重算圖與體檢頁，清單本身用 updatePosRow 就地更新。 */
+    $$("#poolList input").forEach(inp=>inp.addEventListener("change",()=>{
+      sfx.tap(); layout(); if(!S.res)renderResult();
+    }));
+  }else{
+    $("#poolTot").textContent="";
+    $("#poolList").innerHTML=rows.map((d,D)=>{
+      const v=posValue(d);
+      return `<div class="row pl">
+      <span class="fill" style="width:${d.w}%"></span>
+      <button class="xp" data-id="${d.id}">
+        <span class="rk">${String(D+1).padStart(2,"0")}</span>
+        <span class="nm">${d.n}${d.etf?'<i>ETF</i>':""}${d.custom?'<i>自訂</i>':""}<s>${d.id}　${BY[d.ind]?BY[d.ind].n:""}　${pxTxt(d)}</s></span>
+        <span class="sc"><b>${v?NT(v):d.w}</b><s>${v?"NT$":"影響力"}</s></span>
+      </button>
+      <button class="del" data-del="${d.id}" title="從標的池與白色圓環移除" aria-label="移除 ${d.n}">✕</button>
+    </div>`}).join("")||`<p class="cone-note" style="padding:8px 0">標的池是空的。用上方欄位輸入代號加入。</p>`;
+    $$("#poolList .xp").forEach(b=>b.addEventListener("click",()=>{sfx.node(4);run(b.dataset.id,-1)}));
+  }
+  $$("#poolList .del").forEach(b=>b.addEventListener("click",()=>removeTicker(b.dataset.del)));
+}
+/* 邊打字邊更新這一列的市值與損益，以及頂部合計 */
+function updatePosRow(id){
+  const d=BY[id]; if(!d)return;
+  const row=document.querySelector(`#poolList [data-q="${id}"]`);
+  if(!row)return;
+  const cell=row.parentElement.querySelector(".pv");
+  const v=posValue(d), c=posCost(d);
+  const pl=(v&&c)?(v-c)/c*100:null;
+  if(cell)cell.innerHTML=(v?"NT$ "+NT(v):"—")+
+    (pl!==null?`<s class="${pl>=0?"up":"down"}">${pl>=0?"+":""}${pl.toFixed(1)}%</s>`:"");
+  const ids=poolIds().map(x=>BY[x]).filter(Boolean);
+  const tot=ids.reduce((s,x)=>s+posValue(x),0), tc=ids.reduce((s,x)=>s+posCost(x),0);
+  const el=$("#poolTot");
+  if(el)el.innerHTML=tot?`NT$ ${NT(tot)}${tc?`　<i style="font-style:normal;color:${tot>=tc?"var(--bull)":"var(--bear)"}">${tot>=tc?"+":""}${((tot-tc)/tc*100).toFixed(1)}%</i>`:""}`:"";
+}
+function poolMsg(text,cls){
+  const el=$("#poolMsg"); el.innerHTML=text; el.className="pool-msg"+(cls?" "+cls:"");
+}
+function refreshPoolViews(){
+  layout(); renderLeft(); renderPool();
+  if(S.res&&BY[S.res.src])run(S.res.src,S.res.dir); else renderResult();
+}
+function removeTicker(id){
+  const d=BY[id];
+  if(!poolRemove(id)){sfx.err();return;}
+  sfx.del();
+  if(S.res&&S.res.src===id)S.res=null;
+  refreshPoolViews();
+  poolMsg(`已移除 ${id}${d?" "+d.n:""}，白色圓環同步更新。`,"");
+}
+/* 未收錄代號 → 請使用者指定板塊後納入分析 */
+function openCustomForm(code,mkt){
+  const inds=IND.filter(s=>s.mkt===mkt);
+  const guess=mkt==="tw"?guessIndTW(code):"us_etf";
+  $("#poolForm").innerHTML=`
+    <div class="pf-h"><b>${code}</b> 不在內建清單 — 指定它的產業板塊就能納入分析</div>
+    <div class="pf-r">
+      <input id="pfName" maxlength="12" placeholder="名稱（可留空）">
+      <select id="pfKind"><option value="0">個股</option><option value="1">ETF</option><option value="2">槓桿／反向</option></select>
+    </div>
+    <div class="pf-r">
+      <select id="pfInd">${inds.map(s=>`<option value="${s.id}"${s.id===guess?" selected":""}>${s.n}</option>`).join("")}</select>
+      <input id="pfW" type="number" min="5" max="100" value="35" title="影響力權重 5–100" style="max-width:64px">
+      <button id="pfOK">確認加入</button><button id="pfNo" class="ghost">取消</button>
+    </div>`;
+  $("#poolForm").classList.add("on");
+  $("#pfOK").addEventListener("click",()=>{
+    const kind=+$("#pfKind").value;
+    CUSTOM=CUSTOM.filter(c=>c.id!==code);
+    CUSTOM.push({id:code,n:$("#pfName").value.trim()||code,ind:$("#pfInd").value,mkt,
+      w:clamp(+$("#pfW").value||35,5,100),px:0,chg:0,etf:kind>0,lev:kind===2?2.4:1});
+    saveCustom(); rebuildMaster(); buildGraph();
+    const s=LOOKUP[code];
+    if(!poolPush(s)){sfx.err();poolMsg(`標的池已達 ${CAP} 檔上限，${code} 已建檔但未加入，請先刪除一檔。`,"err");}
+    else{sfx.add();poolMsg(`已加入自訂標的 <b>${code} ${s.n}</b>　板塊 ${BY[s.ind]?BY[s.ind].n:"—"}　影響力 ${s.w}`,"ok");}
+    closeCustomForm();
+    if(S.mkt!=="all"&&S.mkt!==mkt)setMkt(mkt); else {S.res=null;refreshPoolViews();}
+  });
+  $("#pfNo").addEventListener("click",()=>{sfx.toggleOff();closeCustomForm();poolMsg("已取消。","")});
+}
+function closeCustomForm(){$("#poolForm").classList.remove("on");$("#poolForm").innerHTML="";}
+function addTicker(){
+  const el=$("#poolInput"), raw=el.value.trim();
+  if(!raw){sfx.err();poolMsg("請輸入股票或 ETF 代號。","err");return;}
+  const key=raw.toUpperCase(), s=LOOKUP[key];
+  if(s){
+    if(poolHas(key)){sfx.err();poolMsg(`${s.id} ${s.n} 已在清單中。`,"err");return;}
+    if(!poolPush(s)){sfx.err();poolMsg(`${s.mkt==="tw"?"台股":"美股"}標的池已達 ${CAP} 檔上限，請先刪除一檔。`,"err");return;}
+    sfx.add(); el.value=""; closeCustomForm();
+    poolMsg(`已加入 <b>${s.id} ${s.n}</b>${s.etf?"（ETF）":""}　影響力 ${s.w} · 板塊 ${BY[s.ind]?BY[s.ind].n:"—"}`,"ok");
+    if(S.mkt!=="all"&&S.mkt!==s.mkt)setMkt(s.mkt); else refreshPoolViews();
+    flashRow(`#poolList [data-id="${s.id}"]`,"fx-add");
+    return;
+  }
+  const m=guessMkt(key);
+  if(!m){sfx.err();poolMsg("代號格式不符。台股為 4–6 位數字（如 2330、00631L），美股為 1–5 位英文（如 NVDA、QQQ）。","err");return;}
+  if(poolHas(key)){sfx.err();poolMsg(`${key} 已在清單中。`,"err");return;}
+  sfx.toggleOn(); el.value="";
+  poolMsg(`${key} 不在內建清單，指定板塊後即可納入分析。`,"");
+  openCustomForm(key,m);
+}
+$("#poolAdd").addEventListener("click",addTicker);
+$("#poolInput").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();addTicker();}});
+$("#poolReset").addEventListener("click",()=>{
+  POOL={tw:defaultPool("tw"),us:defaultPool("us")}; savePool(); sfx.add();
+  S.res=null; closeCustomForm(); refreshPoolViews();
+  poolMsg("已重設為預設的高影響力標的（各市場 20 檔）。","ok");
+});
+
+/* ── 頂欄 ── */
+function setMkt(m){
+  S.mkt=m;
+  $$("[data-mkt]").forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.mkt===m)));
+  layout(); renderLeft(); renderPool();
+}
+$$("[data-mkt]").forEach(b=>b.addEventListener("click",()=>{sfx.market();setMkt(b.dataset.mkt);clearRes();fxScan()}));
+$("#cSpin").addEventListener("click",e=>{S.spin=!S.spin;e.currentTarget.classList.toggle("on",S.spin);S.spin?sfx.toggleOn():sfx.toggleOff()});
+/* 音效三段式：全部 → 只有點擊音（背景關） → 靜音 */
+const SNDMODE=[{k:"full",t:"音效"},{k:"ui",t:"點擊音"},{k:"off",t:"靜音"}];
+S.sndIdx=0;
+function applySndMode(){
+  const m=SNDMODE[S.sndIdx].k;
+  SND.on=m!=="off";
+  const chip=$("#cSnd");
+  chip.textContent=SNDMODE[S.sndIdx].t;
+  chip.classList.toggle("on",m!=="off");
+  if(!SND.ctx)return;
+  const t=SND.ctx.currentTime;
+  SND.master.gain.setTargetAtTime(m==="off"?0:.8,t,.25);
+  if(SND.bus)SND.bus.gain.setTargetAtTime(m==="full"?AMB_GAIN:0,t,.6);
+}
+$("#cSnd").addEventListener("click",()=>{
+  S.sndIdx=(S.sndIdx+1)%SNDMODE.length;
+  audioStart(); applySndMode();
+  if(SND.on)setTimeout(()=>sfx.toggleOn(),120);
+});
+addEventListener("keydown",e=>{if(e.key==="Escape"&&S.res){sfx.clear();clearRes();}});
+document.addEventListener("visibilitychange",()=>{
+  if(!document.hidden){tickClock();if(SND.ctx&&SND.on&&SND.ctx.state==="suspended")SND.ctx.resume();}
+});
+
+/* ── 標的池／持倉切換 ── */
+$$("#poolMode button").forEach(b=>b.addEventListener("click",()=>{
+  S.posMode=b.dataset.mode==="pos"; sfx.toggleOn(); renderPool(); if(!S.res)renderResult();
+}));
+/* ── 校準檔（入口在體檢頁的「校準狀態」區塊）── */
+function calBadge(){}
+$("#calFile").addEventListener("change",e=>{
+  const f=e.target.files&&e.target.files[0]; if(!f)return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{
+      const meta=applyCalibration(JSON.parse(rd.result));
+      genEvents(); buildGraph(); S.res=null; layout(); renderLeft(); renderPool(); renderResult();
+      sfx.add(); fxScan([242,179,61]); poolMsg(`已載入實際校準檔：${meta.edges} 條邊、${meta.sig} 條顯著、個股 β ${meta.stocks} 檔。`,"ok");
+    }catch(err){sfx.err();poolMsg("校準檔讀取失敗："+err.message,"err");}
+  };
+  rd.readAsText(f); e.target.value="";
+});
+
+
+/* ════════ 版面切換 ════════ */
+const stageHome=$("#app"), stageSlot=$("#stageSlot"), stageCv=$("#stageCv");
+function placeStage(){
+  if(IS_M()){ if(cv.parentNode!==stageCv)stageCv.appendChild(cv); }
+  else if(cv.parentNode!==stageHome) stageHome.insertBefore(cv,stageHome.firstChild);
+}
+function syncViewBtns(){
+  const v=IS_M()?"m":"d";
+  $$("#viewSw button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.view===v?"true":"false"));
+}
+function setView(v,user){
+  const m=v==="m", root=document.documentElement;
+  root.classList.toggle("m",m);
+  if(user){try{localStorage.setItem("mtc.view",v)}catch(e){}}
+  const mv=document.querySelector("meta[name=viewport]");
+  if(mv){
+    const small=Math.min(screen.width,screen.height)<=820;
+    mv.content=(!m&&small)?"width=1440,viewport-fit=cover":"width=device-width,initial-scale=1,viewport-fit=cover";
+  }
+  S.zoom=1; placeStage(); syncViewBtns(); S.hover=null;
+  requestAnimationFrame(()=>{resize(); if(user)scrollTo(0,0);});
+}
+$$("#viewSw button").forEach(b=>b.addEventListener("click",()=>{
+  if((b.dataset.view==="m")===IS_M())return;
+  sfx.toggleOn(); setView(b.dataset.view,true);
+}));
+if(window.ResizeObserver)new ResizeObserver(()=>resize()).observe(cv);
+/* 手機版：縮放鍵 */
+$("#zIn").addEventListener("click",()=>{S.zoom=clamp(S.zoom*1.15,.6,2.4);resize();});
+$("#zOut").addEventListener("click",()=>{S.zoom=clamp(S.zoom/1.15,.6,2.4);resize();});
+$("#zReset").addEventListener("click",()=>{S.zoom=1;S.rotY=SWING_BASE;S.rotX=S.rotXBase=-0.15;
+  S.spin=true;$("#cSpin").classList.add("on");resize();});
+/* 手機版：分頁導覽 */
+$$("#mnav button").forEach(b=>b.addEventListener("click",()=>{
+  const t=document.getElementById(b.dataset.go); if(t)t.scrollIntoView({behavior:reduced?"auto":"smooth",block:"start"});
+}));
+if(window.IntersectionObserver){
+  const secs=$$("#mnav button").map(b=>document.getElementById(b.dataset.go)).filter(Boolean);
+  const vis=new Map();
+  const io=new IntersectionObserver(es=>{
+    es.forEach(e=>vis.set(e.target.id,e.intersectionRatio));
+    if(!IS_M())return;
+    let best=null,br=0; secs.forEach(s=>{const r=vis.get(s.id)||0; if(r>br){br=r;best=s.id;}});
+    $$("#mnav button").forEach(b=>b.classList.toggle("on",b.dataset.go===best));
+  },{threshold:[0,.15,.35,.6,.9],rootMargin:"-50px 0px -30% 0px"});
+  secs.forEach(s=>io.observe(s));
+}
+/* 手機版：從清單點選後，捲回圖譜看傳導動畫（結果就在圖譜正下方） */
+document.addEventListener("click",e=>{
+  if(!IS_M())return;
+  const t=e.target.closest&&e.target.closest("#evList .ev,#expoList .xp,#poolList .xp,#res [data-id]");
+  if(!t||e.target.closest(".del"))return;
+  setTimeout(()=>stageSlot.scrollIntoView({behavior:reduced?"auto":"smooth",block:"start"}),60);
+});
+placeStage(); syncViewBtns();
+
+/* ── 啟動 ── */
+calibrateSim(); genEvents(); buildGraph(); calBadge();
+resize(); layout(); renderLeft(); renderPool(); renderResult();
+tickClock(); setInterval(tickClock,1000);
+requestAnimationFrame(frame);
+setTimeout(()=>{const e=NODES.filter(n=>n.L===1&&inMkt(n)&&n.lvl===3).sort((a,b)=>a.days-b.days)[0]
+  ||NODES.filter(n=>n.L===1&&inMkt(n)).sort((a,b)=>a.days-b.days)[0];
+  if(e)run(e.id,1);},1100);
+</script>
+
+</body></html>
