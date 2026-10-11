@@ -33,6 +33,10 @@ const AMP_WATCH={c_fgn:"外資近 5 日買賣超是否延續、與台指期未�
 function applyLive(j){
   CAL.upcoming=j.upcoming||[]; CAL.live=j.live||{}; CAL.amp=j.amp||{}; CAL.dateSrc=j.date_src||{};
   CAL.regime=j.regime||null; CAL.scenFreq=j.scen_freq||{};
+  CAL.evm=j.ev_mult||{}; CAL.secVol=j.sec_vol||{}; CAL.cred=j.credibility||null; CAL.importance=j.importance||{};
+  CAL.evmMax={}; CAL.secVolMax={};
+  ["台股","美股"].forEach(t=>{const v=Object.values(CAL.evm[t]||{}).map(x=>x[0]); CAL.evmMax[t]=v.length?Math.max(...v):1.2;});
+  IND.forEach(d=>{const v=CAL.secVol[d.id]||0; CAL.secVolMax[d.mkt]=Math.max(CAL.secVolMax[d.mkt]||0,v);});
   const L=CAL.live;
   IND.forEach(d=>{
     if(d.mkt==="tw"&&L.tw_flow){d.flow=+(L.tw_flow[d.id]||0); d.unit="億"; d.flowLbl="三大法人近 5 日買賣超";}
@@ -59,6 +63,30 @@ function scenFor(t){
   if(F){nA=F[0];nB=F[1];}   /* 過去 5 年意外值為正／為負的次數（剛好等於共識的不算） */
   if(nA+nB>0)return t.scen.map((s,i)=>({...s,p:i===0?nA/(nA+nB):nB/(nA+nB),pN:nA+nB,pReal:true}));
   return t.scen.map(s=>({...s,p:1/t.scen.length,pReal:false}));
+}
+/* 傳導強度（實證模式）：只用前後期穩定的量——這類事件的整體波動倍數 × 板塊平常的波動。
+   事件 × 板塊各自的 β 前後半期無法重現，只當作歷史描述顯示，不拿來決定強度。 */
+function evmOf(k,mkt){const e=CAL.evm&&CAL.evm[mkt==="us"?"美股":"台股"]; return e&&e[k]?e[k]:null;}
+function evmStr(k,secId){
+  const sec=INDBY[secId]; if(!sec)return 0;
+  const e=evmOf(k,sec.mkt); if(!e)return 0;
+  const mx=CAL.evmMax[sec.mkt==="us"?"美股":"台股"]||1.2;
+  const sv=(CAL.secVol[secId]||0)/(CAL.secVolMax[sec.mkt]||1);
+  return clamp((e[0]-1)/Math.max(.05,mx-1),0,1)*clamp(sv,.25,1)*.9;
+}
+/* 可信度總表：每一類實證結果在前後期能不能重現 */
+function credHTML(){
+  const c=CAL.cred; if(!c)return "";
+  const st=c.stability||{}, tw=st.tw||{}, us=st.us||{}, rg=c.regime_corr||{};
+  const pct=v=>v==null?"—":Math.round(v*100)+"%";
+  const row=(ok,name,val,note)=>`<p class="cone-note"><b style="color:${ok===1?"var(--l2-ink,#5E8A3E)":ok===0?"var(--l1-ink,#C2572B)":"var(--dim)"}">${ok===1?"✓ 可信":ok===0?"✗ 不可信":"△ 部分可信"}</b>　<b>${name}</b>：${val}${note?`<br>${note}`:""}</p>`;
+  return `<div class="res-sec"><h3>實證可信度<em>前後半期能不能重現</em></h3>
+    ${row(c.stock_beta_corr>=.5?1:c.stock_beta_corr>=.25?2:0,"個股對板塊的 β",`前 250 日與後 250 日估計的相關 ${c.stock_beta_corr}`,"個股跟著所屬板塊動的程度很穩定。")}
+    ${row(c.evm_corr>=.5?1:c.evm_corr>=.25?2:0,"各類事件的整體波動大小",`前後半期相關 ${c.evm_corr}`,"哪類事件會讓板塊波動變大，大致可以重現；傳導強度只用這個量。")}
+    ${row(2,"放大器（法人、融資融券、動能）","前後半期都大於 1，但倍數大小會變","狀態異常時衝擊較大的方向一致，倍數僅供參考；對漲跌方向沒有預測力（同向約 50%）。")}
+    ${row(0,"事件 → 板塊的漲跌方向",`前半期顯著的關係，後半期同方向：台股 ${pct(tw.same_sign_sig)}、美股 ${pct(us.same_sign_sig)}；β 前後半期相關 ${c.dir_corr}`,"跟擲硬幣差不多。情境的方向與分布只描述過去，不能拿來預測這一次。")}
+    ${row(0,"巨觀環境 × 板塊",`各板塊在目前環境下的表現，前後半期排序相關 利率 ${rg.rate}、景氣 ${rg.growth}、通膨 ${rg.infl}`,"前後期甚至相反，只能當作歷史描述。")}
+  </div>`;
 }
 const scenW=sc=>sc.pReal?`過去 ${sc.pN} 次中佔 ${Math.round(sc.p*100)}%`:"不分方向 · 不給權重";
 /* ── 幾何：漏斗 ── */''')
@@ -97,7 +125,7 @@ rep('''  (tpl.hits||[]).forEach(([id,w])=>{if(!INDBY[id]||out[id])return;
     const st=edgeStat(tpl.k,id), cs=strFromStat(st);
     out[id]=''', '''  (tpl.hits||[]).forEach(([id,w])=>{if(!INDBY[id]||out[id])return;
     const st=edgeStat(tpl.k,id), cs=strFromStat(st);
-    if(CAL.src==="real"&&!(st&&cs!==null))return;
+    if(CAL.src==="real")return;      /* 實證模式不用手設的指定板塊 */
     out[id]=''')
 
 # ── 6) 事件行事曆：官方排程 ──
@@ -112,8 +140,10 @@ src = src[:_a] + '''  /* 官方排程（calibrate.py 每天從 Nasdaq 經濟／�
     if(rms<nextExp)nextExp=rms;
     const id=`${t.k}_${fmtD(d)}`; if(seen[id])return; seen[id]=1;
     const cons=u.cons?`市場共識 ${u.cons}${u.prev?`（前值 ${u.prev}）`:""}。`:"";
-    out.push({id,tpl:t.k,n:t.name(d),date:fmtD(d),dObj:d,kind:t.kind,mkt:t.mkt,lvl:t.lvl,
-              src:`${t.src} · ${u.src}`,note:cons+t.note,hits:hitsFor(t),scen:scenFor(t),watch:t.watch,rt,rms,
+    const em=evmOf(t.k,t.mkt==="us"?"us":"tw");
+    const emTxt=em?`過去 5 年事件窗的板塊波動是平常的 ×${em[0].toFixed(2)}${em[0]<1?"（沒有比較大）":""}。`:"";
+    out.push({id,tpl:t.k,n:t.name(d),date:fmtD(d),dObj:d,kind:t.kind,mkt:t.mkt,lvl:(CAL.importance&&CAL.importance[t.k])||t.lvl,
+              src:`${t.src} · ${u.src}`,note:cons+t.note+(emTxt?" "+emTxt:""),hits:hitsFor(t),scen:scenFor(t),watch:t.watch,rt,rms,
               twoSided:!!t.twoSided,days:dd,time:u.t});
   });
 ''' + src[_b:]
@@ -181,7 +211,7 @@ function sectorEvidence(sec){
     ${rows.map(({k,m})=>`<p class="cone-note"><b>${lab(k)}</b>：${m.kind==="abs"
       ?`事件窗超額波動 ${m.b>0?"+":""}${m.b.toFixed(2)}%`
       :`β ${m.b>0?"+":""}${m.b.toFixed(2)}%／1σ 意外值`}（t ${m.t.toFixed(1)} · N ${m.n}）${Math.abs(m.t)>=1.96?" <b>顯著</b>":""}</p>`).join("")}
-    <p class="cone-note">β 是「意外值每多 1 個標準差，板塊超額報酬平均多幾 %」；超額波動是事件窗的 |報酬| 比平常多幾 %，不分方向。</p></div>`;
+    <p class="cone-note"><b>這些數字前後半期無法重現（見體檢頁的實證可信度）</b>，只描述過去 5 年的平均，不代表下一次。β 是「意外值每多 1 個標準差，板塊超額報酬平均多幾 %」；超額波動是事件窗的 |報酬| 比平常多幾 %，不分方向。</p></div>`;
 }
 /* 巨觀環境：用實際數據判斷目前處於哪種環境，顯示這個板塊（或個股 × 實證 β）在同樣環境下之後 20 個交易日的歷史分布 */
 const REG_LAB={rate:{up:"利率上行",down:"利率下行"},growth:{exp:"景氣擴張",con:"景氣收縮"},infl:{up:"通膨升溫",down:"通膨降溫"}};
@@ -202,6 +232,7 @@ function regimeBlock(node){
     ${rows}
     <p class="cone-note">環境用當天已公布的數據判斷：${(R.def||{}).rate||""}；${(R.def||{}).growth||""}；${(R.def||{}).infl||""}。
       目前 ISM ${v.ism??"—"}、2 年期殖利率 3 個月變動 ${v.dgs2_chg!=null?(v.dgs2_chg>0?"+":"")+v.dgs2_chg+" 個百分點":"—"}。
+      <b>可信度：前後半期排序相關 ${["rate","growth","infl"].map(dm=>(R.stability||{})[dm]).filter(x=>x!=null).join("、")||"—"}，未通過，只能當作歷史描述。</b>
       數字是${node.L===4?`板塊（${INDBY[sec]?INDBY[sec].n:sec}）超額報酬乘上這檔的實證 β ${k.toFixed(2)}`:"板塊超額報酬"}；
       相鄰日子的 20 日區間重疊，獨立樣本以月份計，月份少時參考價值低。</p></div>`;
 }
@@ -252,3 +283,21 @@ rep('''        ${S.mkt==="us"?"獲利能力與自由現金流越強的地方越�
 src = src.replace('   數值為示意；板塊淨流取自方舟盤面快照。', '   板塊資金流、放大器、上下游、排程由 applyLive 以 calibrate.py 的每日輸出覆蓋。')
 src = src.replace('   排程為示意，實際日期以官方公告為準。', '   實際使用的是 calibrate.py 整理的官方排程（genEvents）；這裡的規則只保留事件的名稱、說明與情境文字。')
 src = src.replace('所有數字都是歷史統計的示意值，不是預測。', '所有數字都是過去 5 年的實證統計，不是預測。')
+
+# ── 14) 事件 → 板塊強度改用前後期穩定的量（事件整體波動倍數 × 板塊波動）──
+rep('''    const m=edgeStat(tpl.k,s.id), cs=strFromStat(m);
+    if(m&&cs!==null){''', '''    const m=edgeStat(tpl.k,s.id), cs=CAL.src==="real"?evmStr(tpl.k,s.id):strFromStat(m);
+    if(CAL.src==="real"||(m&&cs!==null)){''')
+
+# ── 15) 可信度：體檢頁加上總表；情境說明標示方向未通過樣本外檢驗；事件日期來源說明更新 ──
+rep('''             顯著比例不高是實情：多數事件對單一板塊的平均衝擊很小，強度會依 t 值收縮。`''',
+    '''             顯著比例不高是實情：多數事件對單一板塊的平均衝擊很小。`+credHTML()''')
+rep('''FOMC 日期：${CAL.fomcSrc}；其他事件日期依規則推算。''',
+    '''事件日期：Nasdaq 經濟／財報行事曆、央行、主計總處、財政部官方發布日與法定期限。''')
+rep('''權重是過去 5 年意外值為正／負的次數比例，不是這一次的機率。''',
+    '''權重是過去 5 年意外值為正／負的次數比例，不是這一次的機率。<strong style="color:var(--dim)">方向與區間未通過樣本外檢驗（前半期的關係到後半期常常不成立），只描述過去。</strong>''')
+
+# ── 16) 全球事件（例如 FOMC）台美板塊分開取前段，避免一邊的板塊把另一邊擠掉 ──
+rep('''  cands.slice(0,24).forEach(([id,w,m])=>{out[id]=[w,m]});''',
+    '''  const perMkt={};
+  cands.forEach(([id,w,m])=>{const mk=INDBY[id]?INDBY[id].mkt:"tw"; perMkt[mk]=(perMkt[mk]||0)+1; if(perMkt[mk]<=18)out[id]=[w,m];});''')

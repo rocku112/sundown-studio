@@ -114,9 +114,9 @@ rep("""    var payV = f.pay ? fmtIso(f.pay) : '待公布';""", """    var payV =
 rep("""    var chips = ev.etfs.map(function(code){ var m=ETF_META[code]; return '<span class="imp-chip"><b>'+code+'</b><span>'+(m?m.name:'')+'</span></span>'; }).join('');""",
     """    var chips = (ev.imp||[]).map(function(r){ var m=ETF_META[r[0]];
       var stat = r[4]==='abs' ? ('超額波動 '+(r[1]>0?'+':'')+r[1].toFixed(2)+'%') : ('β '+(r[1]>0?'+':'')+r[1].toFixed(2)+'%／1σ');
-      return '<span class="imp-chip"><b>'+r[0]+'</b><span>'+(m?m.name:'')+' · '+stat+' · t '+r[2].toFixed(1)+(Math.abs(r[2])>=1.96?' · 顯著':'')+'</span></span>'; }).join('');""")
+      return '<span class="imp-chip"><b>'+r[0]+'</b><span>'+(m?m.name:'')+' · '+stat+' · t '+r[2].toFixed(1)+(Math.abs(r[2])>=1.96?' · 顯著':'')+(r[5]?' · 前後半同向':'')+'</span></span>'; }).join('');""")
 rep("""<div class="imp-label">受影響 ETF ('+ev.etfs.length+')</div>""",
-    """<div class="imp-label">過去 5 年反應最明顯的 ETF ('+ev.etfs.length+') · 依 |t| 排序</div>""")
+    """<div class="imp-label">過去 5 年反應最明顯的 ETF ('+ev.etfs.length+') · 依 |t| 排序</div><p style="font-size:12px;color:var(--text3);margin:4px 0 8px">這些數字只描述過去：同一套方法把事件分成前後兩半檢驗，前半期顯著的方向到後半期常常不成立，不能拿來預測這一次。</p>""")
 
 # ── 5) 可重複繪製：清掉動態圖層、監聽器只綁一次；結尾改成先畫內嵌資料，再抓線上最新 ──
 rep("""  var streamLayer = document.getElementById('streamLayer');

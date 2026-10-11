@@ -313,8 +313,12 @@ def mom(s):
 def diff(s):
     return lambda ym: s[ym] - s[prev_ym(ym)] if ym in s and prev_ym(ym) in s else None
 
-cpi, nfp_s, pce_s, ret_s, um = (monthly(fred(x)) for x in ['CPILFESL', 'PAYEMS', 'PCEPILFE', 'RSXFS', 'UMCSENT'])
-dgs2 = fred('DGS2')
+def fred_safe(sid):
+    try: return fred(sid)
+    except Exception as e:
+        print(f'FRED {sid} 無法取得，相關部分略過：{e}', flush=True); return {}
+cpi, nfp_s, pce_s, ret_s, um = (monthly(fred_safe(x)) for x in ['CPILFESL', 'PAYEMS', 'PCEPILFE', 'RSXFS', 'UMCSENT'])
+dgs2 = fred_safe('DGS2')
 rev = json.loads((ROOT / 'swing/data/revenue.json').read_text(encoding='utf-8'))['months']
 def yoy_tsmc(ym):
     v = rev.get(ym, {}).get('2330'); return (v[0] / v[1] - 1) * 100 if v and v[1] else None
@@ -350,6 +354,16 @@ def car(r, i, h, nd):
     if i is None or i + h >= nd: return np.nan
     w = r[i:i + h + 1]
     return np.nan if np.isnan(w).sum() > 1 else float(np.nansum(w))
+EVM = defaultdict(dict)        # 各市場 × 各類事件：事件窗 |CAR| ÷ 平常 |CAR|（全部板塊合併），前後半期各一份
+_NULLC = {}
+def null_mean_abs(key, r, H, nd):
+    if key not in _NULLC:
+        v = np.array([car(r, i, H, nd) for i in range(30, nd - H - 1, 3)]); v = np.abs(v[~np.isnan(v)])
+        _NULLC[key] = float(v.mean()) if len(v) else np.nan
+    return _NULLC[key]
+def replicated(full_t, h):
+    """可重現：全樣本顯著，而且前後半期各自 |t| ≥ 1、方向相同"""
+    return bool(h and abs(full_t) >= 1.96 and abs(h[1]) >= 1 and abs(h[3]) >= 1 and np.sign(h[0]) == np.sign(h[2]))
 def study(AR, nd, react, tag):
     """AR：{板塊: 超額報酬序列}；react(事件日, 模板) → 該市場第一個能反應的交易日索引"""
     edges, dist, cone_pool, n_occ, mode = [], defaultdict(dict), defaultdict(list), {}, {}
@@ -371,14 +385,28 @@ def study(AR, nd, react, tag):
         n_occ[k] = len(keep)
         ev_set = set()
         for _, i in keep: ev_set.update(range(i - 5, i + H + 6))
+        half = len(keep) // 2
+        pool = [[], [], []]          # 前半、後半、全部：|CAR| ÷ 該板塊平常 |CAR|
         for s, r in AR.items():
             cars = np.array([car(r, i, H, nd) for _, i in keep])
+            nb = null_mean_abs((tag, s, H), r, H, nd)
+            if nb and not np.isnan(nb):
+                for j, c in enumerate(cars):
+                    if not np.isnan(c):
+                        pool[2].append(abs(c) / nb); pool[0 if j < half else 1].append(abs(c) / nb)
             c20 = np.array([car(r, i, DIST_H - 1, nd) for _, i in keep])
             cone_pool[t['kind']].extend(c20[~np.isnan(c20)].tolist())
             if u is not None:
                 m = ols(u, cars)
                 if m:
-                    edges.append(dict(frm=k, to=s, beta=m['b'], se=m['se'], t=m['t'], r2=m['r2'], n=m['n'], lag=H, kind='dir'))
+                    hh = None
+                    if half >= 10:
+                        ms = []
+                        for sl in (slice(0, half), slice(half, None)):
+                            xs_ = raw[sl]; zz = (xs_ - xs_.mean()) / (xs_.std() or 1); ms.append(ols(zz, cars[sl]))
+                        if ms[0] and ms[1]: hh = [ms[0]['b'], ms[0]['t'], ms[1]['b'], ms[1]['t']]
+                    edges.append(dict(frm=k, to=s, beta=m['b'], se=m['se'], t=m['t'], r2=m['r2'], n=m['n'], lag=H, kind='dir',
+                                      h=hh, rep=replicated(m['t'], hh)))
                 cell = {}
                 # 情境 A＝意外值為正（高於共識／趨勢）、B＝為負；剛好符合的不列入兩邊（只算在 U）
                 for key, sel in (('A', raw > 0), ('B', raw < 0)):
@@ -393,9 +421,20 @@ def study(AR, nd, react, tag):
                 null = np.abs(null[~np.isnan(null)])
                 if len(ev) >= 8 and len(null) > 50:
                     b = ev.mean() - null.mean(); se = math.sqrt(ev.var(ddof=1) / len(ev) + null.var(ddof=1) / len(null))
-                    edges.append(dict(frm=k, to=s, beta=b, se=se, t=b / se if se else 0, r2=0.0, n=len(ev), lag=H, kind='abs'))
+                    hh = None
+                    ca = np.abs(cars); e1, e2 = ca[:half], ca[half:]; e1, e2 = e1[~np.isnan(e1)], e2[~np.isnan(e2)]
+                    if len(e1) >= 6 and len(e2) >= 6:
+                        def _bt(e):
+                            bb = e.mean() - null.mean(); ss = math.sqrt(e.var(ddof=1) / len(e) + null.var(ddof=1) / len(null))
+                            return bb, (bb / ss if ss else 0)
+                        hh = [*_bt(e1), *_bt(e2)]
+                    edges.append(dict(frm=k, to=s, beta=b, se=se, t=b / se if se else 0, r2=0.0, n=len(ev), lag=H, kind='abs',
+                                      h=hh, rep=replicated(b / se if se else 0, hh)))
                 v = c20[~np.isnan(c20)]
                 if len(v) >= 6: dist[k][s] = {'U': [*np.percentile(v, [10, 50, 90]).round(2).tolist(), len(v)]}
+        if pool[2]:
+            EVM[tag][k] = [round(float(np.mean(pool[2])), 3), round(float(np.mean(pool[0])), 3) if pool[0] else None,
+                           round(float(np.mean(pool[1])), 3) if pool[1] else None, len(keep)]
         print(f'{tag} {k:8s} {t["kind"]} {mode[k]} N={n_occ[k]}', flush=True)
     return edges, dist, cone_pool, n_occ, mode
 
@@ -788,7 +827,7 @@ e_etf, _, _, _, _ = study(etf_ret, ND, lambda d, t: react_idx(d, rt_of(d, t)), '
 SCEN_FREQ.clear(); SCEN_FREQ.update(_save_scen)
 etf_impact = defaultdict(list)
 for e in e_etf:
-    etf_impact[e['frm']].append([e['to'], round(e['beta'], 3), round(e['t'], 2), e['n'], e['kind']])
+    etf_impact[e['frm']].append([e['to'], round(e['beta'], 3), round(e['t'], 2), e['n'], e['kind'], bool(e.get('rep'))])
 for k in etf_impact:
     etf_impact[k] = sorted(etf_impact[k], key=lambda x: -abs(x[2]))[:12]
 print(f'事件 → ETF：{len(etf_ret)} 檔 ETF、{len(e_etf)} 條（顯著 {sum(1 for e in e_etf if abs(e["t"]) >= 1.96)}）', flush=True)
@@ -887,6 +926,90 @@ if us_ok:
     regime['sec'].update(reg_us)
 print(f'巨觀環境：目前 {cur_tw}（{now_tw}），板塊 {len(regime["sec"])} 個', flush=True)
 
+
+# ───────────────────────── 7g. 穩定度檢驗（樣本內前後半）─────────────────────────
+# 同一個事件 × 板塊，用前一半事件與後一半事件各估一次 β：前半期顯著的關係，後半期還同方向嗎？
+# 這是對「數字靠不靠得住」最直接的檢查；同方向比例接近 50% 代表只是雜訊。
+def half_check(ARm, nd, react):
+    pairs, agree_sig, n_sig = [], 0, 0
+    for k, t in TPL.items():
+        if k not in SURP or not EVENTS[k]: continue
+        H = H_BY_KIND[t['kind']]
+        occ = []
+        for d in EVENTS[k]:
+            i = react(d, t); x = SURP[k][0](d)
+            if i is not None and x is not None and i + H < nd: occ.append((d, i, x))
+        if len(occ) < 24: continue
+        occ.sort(); half = len(occ) // 2
+        for sec, r in ARm.items():
+            res = []
+            for part in (occ[:half], occ[half:]):
+                xs = np.array([x for *_, x in part]); z = (xs - xs.mean()) / (xs.std() or 1)
+                cars = np.array([car(r, i, H, nd) for _, i, _ in part])
+                res.append(ols(z, cars))
+            if res[0] and res[1]:
+                pairs.append((res[0]['b'], res[1]['b']))
+                if abs(res[0]['t']) >= 1.96:
+                    n_sig += 1; agree_sig += np.sign(res[0]['b']) == np.sign(res[1]['b'])
+    if not pairs: return None
+    a = np.array(pairs)
+    return {'n_pairs': len(pairs), 'corr': round(float(np.corrcoef(a[:, 0], a[:, 1])[0, 1]), 3),
+            'same_sign_all': round(float(np.mean(np.sign(a[:, 0]) == np.sign(a[:, 1]))), 3),
+            'n_sig_first': int(n_sig), 'same_sign_sig': round(agree_sig / n_sig, 3) if n_sig else None}
+stability = {'tw': half_check(AR, ND, lambda d, t: react_idx(d, rt_of(d, t)))}
+if us_ok: stability['us'] = half_check(UAR, UND, react_us)
+print('穩定度：', stability, flush=True)
+
+# 事件重要性：各類事件對全部板塊的平均衝擊（有方向的取 |β|、沒有的取超額波動），分成三級，取代手設的 1～3
+imp_score = defaultdict(list)
+for e in edges: imp_score[e['frm']].append(abs(e['beta']) if e['kind'] == 'dir' else max(0.0, e['beta']))
+imp_mean = {k: float(np.mean(v)) for k, v in imp_score.items() if v}
+if imp_mean:
+    q1, q2 = np.percentile(list(imp_mean.values()), [33, 67])
+    importance = {k: (3 if v >= q2 else 2 if v >= q1 else 1) for k, v in imp_mean.items()}
+else:
+    importance = {}
+
+
+# 可信度摘要（頁面直接顯示）：哪些實證結果在前後半期能重現
+def _corr(a, b):
+    a, b = np.array(a, float), np.array(b, float); ok = ~(np.isnan(a) | np.isnan(b))
+    return round(float(np.corrcoef(a[ok], b[ok])[0, 1]), 3) if ok.sum() > 5 else None
+_evm_all = [v for tag in ('台股', '美股') for v in EVM.get(tag, {}).values() if v[1] and v[2]]
+_hd = [e['h'] for e in edges if e.get('h') and e['kind'] == 'dir']; _ha = [e['h'] for e in edges if e.get('h') and e['kind'] == 'abs']
+_sb = []
+for c, s_ in SEC.items():
+    if c in CIDX and s_ in SR:
+        a = ols(SR[s_][-500:-250], RET[CIDX[c]][-500:-250]); b = ols(SR[s_][-250:], RET[CIDX[c]][-250:])
+        if a and b and a['n'] > 150 and b['n'] > 150: _sb.append((a['b'], b['b']))
+_labs, _ = regime_labels(tdays)
+_cur = {dm: next((x for x in reversed(l) if x), None) for dm, l in _labs.items()}
+_reg_c = {}
+for dm in _labs:
+    pr = []
+    for sec, r in AR.items():
+        f = np.array([np.nansum(r[i + 1:i + 21]) if i + 21 <= len(r) else np.nan for i in range(len(r))])
+        mm = []
+        for hf in (0, 1):
+            idx = [i for i in range(len(tdays)) if _labs[dm][i] == _cur[dm] and ((i < len(tdays) // 2) == (hf == 0))]
+            v = f[idx]; v = v[~np.isnan(v)]; mm.append(v.mean() if len(v) > 40 else np.nan)
+        pr.append(mm)
+    _reg_c[dm] = _corr([x[0] for x in pr], [x[1] for x in pr])
+regime['stability'] = _reg_c
+# 板塊平常的波動（近 500 日超額報酬日標準差，%）：傳導強度用「事件整體波動倍數 × 板塊波動」這種前後期穩定的量
+sec_vol = {sec: round(float(np.nanstd(r[-500:])), 3) for sec, r in AR.items()}
+if us_ok: sec_vol.update({sec: round(float(np.nanstd(r[-500:])), 3) for sec, r in UAR.items()})
+credibility = {
+  'regime_corr': _reg_c,
+  'dir_corr': _corr([h[0] for h in _hd], [h[2] for h in _hd]), 'abs_corr': _corr([h[0] for h in _ha], [h[2] for h in _ha]),
+  'n_dir': len(_hd), 'n_abs': len(_ha),
+  'n_rep': sum(1 for e in edges if e.get('rep')), 'n_sig': sum(1 for e in edges if abs(e['t']) >= 1.96),
+  'evm_corr': _corr([v[1] for v in _evm_all], [v[2] for v in _evm_all]),
+  'stock_beta_corr': _corr([x for x, _ in _sb], [y for _, y in _sb]),
+  'stability': stability,
+}
+print('可信度：', credibility, flush=True)
+
 # ───────────────────────── 8. 輸出 ─────────────────────────
 def p95(v): return float(np.percentile(np.abs(v), 95)) if len(v) else 1.0
 full = {'dir': round(p95([e['beta'] for e in edges if e['kind'] == 'dir']), 3),
@@ -896,11 +1019,24 @@ out = {
   'window': f'台股官方日線 {tdays[0]}～{tdays[-1]}（事件 {EV_START}～{EV_END}，個股 β 近 {BETA_DAYS} 日）' + US_INFO,
   'asof': tdays[-1], 'n_events': sum(n_occ.values()), 'full': full,
   'edges': [dict(**{'from': e['frm']}, to=e['to'], beta=round(e['beta'], 3), se=round(e['se'], 3), t=round(e['t'], 2),
-                 r2=round(e['r2'], 3), n=e['n'], lag=e['lag'], kind=e['kind']) for e in edges],
+                 r2=round(e['r2'], 3), n=e['n'], lag=e['lag'], kind=e['kind'], rep=e.get('rep', False),
+                 h=[round(x, 3) for x in e['h']] if e.get('h') else None) for e in edges],
+  'ev_mult': dict(EVM),
   'stock_beta': stock_beta, 'dist': dist, 'cone': cone, 'fill': fill,
   'mode': mode, 'n_occ': n_occ, 'surprise': SURP_SRC, 'fomc_src': FOMC_SRC, 'date_src': DATE_SRC,
-  'amp': AMP, 'chain': chain, 'live': live, 'upcoming': upcoming, 'regime': regime, 'scen_freq': SCEN_FREQ, 'etf_impact': etf_impact,
+  'amp': AMP, 'chain': chain, 'live': live, 'upcoming': upcoming, 'regime': regime, 'scen_freq': SCEN_FREQ, 'etf_impact': etf_impact, 'stability': stability, 'importance': importance, 'credibility': credibility, 'sec_vol': sec_vol,
 }
+try:
+    _prev = json.loads(OUT.read_text(encoding='utf-8'))
+except Exception:
+    _prev = None
+_bad = []
+if _prev:
+    if len(out['edges']) < 0.6 * len(_prev.get('edges', [])): _bad.append(f"邊從 {len(_prev['edges'])} 降到 {len(out['edges'])}")
+    if len(out['stock_beta']) < 0.6 * len(_prev.get('stock_beta', {})): _bad.append('個股 β 大幅減少')
+    if _prev.get('upcoming') and not out['upcoming']: _bad.append('未來排程變成空的')
+if _bad:
+    raise SystemExit('校準結果異常，保留上一份輸出：' + '；'.join(_bad))
 OUT.write_text(json.dumps(out, ensure_ascii=False, separators=(',', ':')), encoding='utf-8')
 sig = sum(1 for e in edges if abs(e['t']) >= 1.96)
 print(f'輸出 {OUT.name}：邊 {len(edges)}（顯著 {sig}）、個股 β {len(stock_beta)}、分布 {sum(len(v) for v in dist.values())} 格、'
