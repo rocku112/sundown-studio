@@ -629,8 +629,18 @@ def chip_sector(key, diff=False):
         out[sec] = {'z': zscore_hist(x5), 'now': x5}
     return out
 CH_LAST = max((j for d in CH['fgn'].values() for j in d), default=ND - 1)   # 籌碼最後一個有資料的交易日
+# 期交所外資台指期淨未平倉（twflow/data/taifex）：收盤後才知道，對應到下一個交易日
+_fi = {}
+for f in sorted(glob.glob(str(ROOT / 'twflow/data/taifex/*.json'))):
+    for d, v in json.loads(pathlib.Path(f).read_text(encoding='utf-8')).get('days', {}).items():
+        if v.get('fi'): _fi[d] = v['fi'][0]
+FUT = np.full(ND, np.nan)
+for i, d in enumerate(tdays):
+    if d in _fi: FUT[i] = _fi[d]
+FUT5 = np.full(ND, np.nan); FUT5[5:] = FUT[5:] - FUT[:-5]
 CHS = {'fgn': chip_sector('fgn'), 'itc': chip_sector('itc'), 'marg': chip_sector('marg', True), 'short': chip_sector('short', True)}
 TWC = cond_series(AR)
+FUT_Z = zscore_hist(FUT5, 250)
 
 def null_abs(r, H, nd):
     v = np.array([car(r, i, H, nd) for i in range(30, nd - H - 1, 2)]); v = np.abs(v[~np.isnan(v)])
@@ -671,12 +681,13 @@ AMP_DEF = {
   'c_itc':   ('tw', '投信買賣超', '三大法人日報 · 板塊近 5 日', lambda sec: CHS['itc'].get(sec, {}).get('z'), True),
   'c_marg':  ('tw', '融資增減',   '信用交易 · 板塊融資餘額 5 日變化', lambda sec: CHS['marg'].get(sec, {}).get('z'), True),
   'c_short': ('tw', '融券增減',   '信用交易 · 板塊融券餘額 5 日變化', lambda sec: CHS['short'].get(sec, {}).get('z'), True),
+  'c_fut':   ('tw', '外資期貨部位', '期交所外資台指期淨未平倉 5 日變化（2023-11 起）', lambda sec: FUT_Z, True),
   'c_mom':   ('tw', '價格動能',   '板塊近 20 日累積超額報酬', lambda sec: TWC.get(sec, {}).get('mom'), True),
   'c_vol':   ('tw', '波動升溫',   '板塊 20 日波動 ÷ 250 日波動', lambda sec: TWC.get(sec, {}).get('vol'), False),
 }
 for aid, (mk, name, src_txt, fn, dirn) in AMP_DEF.items():
     est = amp_est(AR, ND, react_tw, fn, dirn)
-    jn = CH_LAST if aid in ('c_fgn', 'c_itc', 'c_marg', 'c_short') else ND - 1
+    jn = CH_LAST if aid in ('c_fgn', 'c_itc', 'c_marg', 'c_short') else (max([i for i in range(ND) if not np.isnan(FUT_Z[i])], default=ND - 1) if aid == 'c_fut' else ND - 1)
     now = {}
     for sec in AR:
         z = fn(sec)
@@ -1071,6 +1082,46 @@ if FCHG is not None:
         if vals: factor.setdefault('cut', {})[mk] = round(float(np.percentile(vals, 70)), 4)
 print('因子模型樣本外：', factor['oos'], flush=True)
 
+
+# ───────────────────────── 7i. 美國政府貿易／關稅行動（Federal Register）─────────────────────────
+# 沒有排程、沒有市場共識的事件：估事件窗超額波動，以及「升級」行動時各板塊的平均超額報酬。
+# 以川普第一任（2017-01～2021-01）與之後兩段檢驗能不能重現：台股板塊方向兩期相關約 0.5，美股為負。
+POL_FILE = SCRATCH / 'policy_events.json'
+POL = json.loads(POL_FILE.read_text(encoding='utf-8')) if POL_FILE.exists() else []
+tariff = {}
+if POL:
+    pol_days = {}
+    for sd, sub_, kind, title, url in POL: pol_days.setdefault(sd, []).append(kind)
+    def _dk(v): ks = set(v); return 'esc' if ks == {'esc'} else 'de' if ks == {'de'} else 'mix'
+    TH = 2
+    def tariff_study(ARm, days, nd, lagdays):
+        idx = {}
+        for sd in pol_days:
+            dd = (dt.date.fromisoformat(sd) + dt.timedelta(days=lagdays)).isoformat()
+            j = bisect.bisect_left(days, dd)
+            if j < len(days) and j + TH < nd: idx[sd] = j
+        sec_out, vol = {}, []
+        for sec, r in ARm.items():
+            nb = null_mean_abs(('tar', id(ARm), sec, TH), r, TH, nd)
+            per = {}
+            for nm, sel in (('t1', lambda x: x < '2021-01-20'), ('t2', lambda x: x >= '2021-01-20')):
+                e = np.array([car(r, j, TH, nd) for sd, j in idx.items() if sel(sd) and _dk(pol_days[sd]) == 'esc']); e = e[~np.isnan(e)]
+                per[nm] = (float(e.mean()), len(e)) if len(e) >= 5 else (None, len(e))
+            a = np.array([abs(car(r, j, TH, nd)) / nb for j in idx.values()]); a = a[~np.isnan(a)]
+            if len(a): vol.append(float(np.mean(np.clip(a, *np.percentile(a, [10, 90])))))
+            e_all = np.array([car(r, j, TH, nd) for sd, j in idx.items() if _dk(pol_days[sd]) == 'esc']); e_all = e_all[~np.isnan(e_all)]
+            if len(e_all) >= 8:
+                sec_out[sec] = [round(float(e_all.mean()), 3), round(float(e_all.mean() / (e_all.std(ddof=1) / np.sqrt(len(e_all)))), 2), len(e_all),
+                                per['t1'][0] and round(per['t1'][0], 3), per['t2'][0] and round(per['t2'][0], 3)]
+        pr = [(v[3], v[4]) for v in sec_out.values() if v[3] is not None and v[4] is not None]
+        corr = round(float(np.corrcoef([a for a, _ in pr], [b for _, b in pr])[0, 1]), 3) if len(pr) > 5 else None
+        return {'sec': sec_out, 'corr': corr, 'vol_mult': round(float(np.mean(vol)), 3) if vol else None, 'n_events': len(idx)}
+    tariff['tw'] = tariff_study(AR, tdays, ND, 1)          # 美東簽署，台股隔天反應
+    if us_ok: tariff['us'] = tariff_study(UAR, udays, UND, 0)
+    tariff['recent'] = [x for x in POL if x[0] >= (dt.date.today() - dt.timedelta(days=60)).isoformat()][-12:]
+    tariff['n_docs'] = len(POL)
+    print('關稅事件：', {m: (v['corr'], v['vol_mult'], v['n_events']) for m, v in tariff.items() if isinstance(v, dict) and 'corr' in v}, flush=True)
+
 # ───────────────────────── 7g. 穩定度檢驗（樣本內前後半）─────────────────────────
 # 同一個事件 × 板塊，用前一半事件與後一半事件各估一次 β：前半期顯著的關係，後半期還同方向嗎？
 # 這是對「數字靠不靠得住」最直接的檢查；同方向比例接近 50% 代表只是雜訊。
@@ -1169,7 +1220,7 @@ out = {
   'ev_mult': dict(EVM),
   'stock_beta': stock_beta, 'dist': dist, 'cone': cone, 'fill': fill,
   'mode': mode, 'n_occ': n_occ, 'surprise': SURP_SRC, 'fomc_src': FOMC_SRC, 'date_src': DATE_SRC,
-  'amp': AMP, 'chain': chain, 'live': live, 'upcoming': upcoming, 'regime': regime, 'scen_freq': SCEN_FREQ, 'etf_impact': etf_impact, 'stability': stability, 'importance': importance, 'credibility': credibility, 'factor': factor, 'sec_vol': sec_vol,
+  'amp': AMP, 'chain': chain, 'live': live, 'upcoming': upcoming, 'regime': regime, 'scen_freq': SCEN_FREQ, 'etf_impact': etf_impact, 'stability': stability, 'importance': importance, 'credibility': credibility, 'factor': factor, 'tariff': tariff, 'sec_vol': sec_vol,
 }
 try:
     _prev = json.loads(OUT.read_text(encoding='utf-8'))

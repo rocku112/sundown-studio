@@ -372,3 +372,45 @@ rep('''  CAL.factor=j.factor||null;''', '''  CAL.factor=j.factor||null;
   }''')
 src = src.replace('反向候選用因子向量的餘弦相似度找方向相反、且流動性夠的標的。',
                   '反向候選用實證因子載荷（板塊對美債、美元、油價、半導體的敏感度 × 個股 β）的餘弦相似度，找方向相反、且流動性夠的標的。')
+
+# ── 20) 美國政府貿易／關稅行動面板（Federal Register）＋ 期貨部位放大器說明 ──
+rep('''        <div class="scroll" id="evList"></div>''', '''        <div class="scroll" id="evList"></div>
+        <div class="pol" id="polBox"></div>''')
+rep('''.pool-sug{flex:none;''', '''.pol{flex:none;margin:8px 14px 12px;padding:10px 12px;border:1px solid var(--line-hi);border-radius:6px;background:var(--card);font-size:12px;line-height:1.6}
+.pol h4{margin:0 0 6px;font-size:12.5px;color:var(--navy)}
+.pol a{color:inherit;text-decoration:underline dotted}
+.pol .pl{display:flex;gap:8px;padding:3px 0;border-bottom:1px dashed var(--line)}
+.pol .pl:last-of-type{border-bottom:none}
+.pol .pl b{flex:none;font-family:var(--mono);font-size:11px;color:var(--faint)}
+.pol .k{flex:none;font-size:10.5px;padding:0 5px;border-radius:3px;border:1px solid var(--line-hi)}
+.pol .k.esc{color:#C2572B;border-color:#C2572B}
+.pol-note{margin:6px 0 0;color:var(--dim);font-size:11.5px}
+.pool-sug{flex:none;''')
+rep('''/* 情境權重：過去''', '''/* 美國政府貿易／關稅行動：最近的總統文件 ＋ 歷史上「升級」行動時各板塊的反應（只有能跨期重現的市場才給方向） */
+function renderPolicy(){
+  const box=$("#polBox"); if(!box)return;
+  const T=CAL.tariff; if(!T||!T.recent){box.innerHTML="";return;}
+  const mk=S.mkt==="us"?"us":"tw", R=T[mk]||{};
+  const rows=T.recent.slice().reverse().slice(0,5).map(x=>`<div class="pl"><b>${x[0].slice(5)}</b>
+    <span class="k ${x[2]==="esc"?"esc":""}">${x[2]==="esc"?"升級":x[2]==="de"?"緩和":"調整"}</span>
+    <a href="${x[4]}" target="_blank" rel="noopener">${x[3]}</a></div>`).join("")||"<p class=\\"pol-note\\">近 60 天沒有新的貿易／關稅總統文件。</p>";
+  let ev="";
+  if(R.sec){
+    const arr=Object.entries(R.sec).filter(([s])=>INDBY[s]).sort((a,b)=>a[1][0]-b[1][0]);
+    const nm=s=>INDBY[s].n, f=v=>`${v>0?"+":""}${v.toFixed(2)}%`;
+    if(R.corr!=null&&R.corr>=.3)
+      ev=`過去 ${R.n_events} 次貿易行動中的「升級」：偏弱 ${arr.slice(0,4).map(([s,v])=>`${nm(s)} ${f(v[0])}`).join("、")}；
+        相對抗跌 ${arr.slice(-3).reverse().map(([s,v])=>`${nm(s)} ${f(v[0])}`).join("、")}（3 日超額報酬）。
+        川普第一任與之後兩期的板塊排序相關 ${R.corr}，方向大致能重現。`;
+    else
+      ev=`這個市場的板塊反應在兩期之間無法重現（相關 ${R.corr}），只顯示波動：事件窗板塊波動是平常的 ×${R.vol_mult}。`;
+  }
+  box.innerHTML=`<h4>美國政府貿易／關稅行動 · 近 60 天</h4>${rows}
+    <p class="pol-note">${ev} 來源：Federal Register 總統文件（共 ${T.n_docs} 份，2017 年起），每天更新。</p>`;
+}
+/* 情境權重：過去''')
+rep('''  CAL.regime=j.regime||null;''', '''  CAL.regime=j.regime||null; CAL.tariff=j.tariff||null;''')
+rep('''function refreshPoolViews(){
+  layout(); renderLeft(); renderPool();''', '''function refreshPoolViews(){
+  layout(); renderLeft(); renderPool(); renderPolicy();''')
+src = src.replace('''  c_short:"融券是否快速增加（軋空或看空加碼）",''', '''  c_short:"融券是否快速增加（軋空或看空加碼）",c_fut:"外資台指期淨部位是否快速轉向",''')
