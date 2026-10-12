@@ -86,7 +86,7 @@ function credHTML(){
     ${row(c.stock_beta_corr>=.5?1:c.stock_beta_corr>=.25?2:0,"個股對板塊的 β",`前 250 日與後 250 日估計的相關 ${c.stock_beta_corr}`,"個股跟著所屬板塊動的程度很穩定。")}
     ${row(c.evm_corr>=.5?1:c.evm_corr>=.25?2:0,"各類事件的整體波動大小",`前後半期相關 ${c.evm_corr}`,"哪類事件會讓板塊波動變大，大致可以重現；傳導強度只用這個量。")}
     ${row(2,"放大器（法人、融資融券、動能）","前後半期都大於 1，但倍數大小會變","狀態異常時衝擊較大的方向一致，倍數僅供參考；對漲跌方向沒有預測力（同向約 50%）。")}
-    ${row(0,"事件 → 板塊的漲跌方向",`前半期顯著的關係，後半期同方向：台股 ${pct(tw.same_sign_sig)}、美股 ${pct(us.same_sign_sig)}；β 前後半期相關 ${c.dir_corr}`,"跟擲硬幣差不多，所以逐對的方向不使用；分布區間只描述過去。")}
+    ${row(Math.max(tw.same_sign_sig||0,us.same_sign_sig||0)>=.6?2:0,"事件 → 板塊的漲跌方向（逐對估計）",`前半期顯著的關係，後半期同方向：台股 ${pct(tw.same_sign_sig)}、美股 ${pct(us.same_sign_sig)}；β 前後半期相關 ${c.dir_corr}`,(Math.max(tw.same_sign_sig||0,us.same_sign_sig||0)>=.6?"略好於擲硬幣，但仍不穩定，所以逐對的方向不使用；分布區間只描述過去。":"跟擲硬幣差不多，所以逐對的方向不使用；分布區間只描述過去。"))}
     ${(()=>{const o=(CAL.factor||{}).oos||{}; const f=(m,n)=>o[m]?`${n}：照方向押平均 ${o[m].mean>0?"+":""}${o[m].mean.toFixed(3)}%（t ${o[m].t}，${o[m].n_events} 次事件，命中率 ${Math.round(o[m].hit*100)}%）`:`${n}：—`;
       const ok=factorOK("tw")||factorOK("us");
       return row(ok?2:0,"方向的因子模型（事件 → 美債／美元／油價／半導體 → 板塊）",f("tw","台股")+"；"+f("us","美股"),
@@ -331,5 +331,5 @@ rep('''      return {d:h.d,dir:b.dir,med:b.med,str:h.str,lag:h.lag};
     }).sort((a,b)=>b.med-a.med);''', '''      return {d:h.d,dir:b.dir,med:b.med,str:h.str,lag:h.lag};
     }).sort((a,b)=>b.dir-a.dir||b.med-a.med);''')
 rep('''        <b>${c.rows.length-c.pos-c.neg}</b> 檔中性</div>''', '''        <b>${c.rows.length-c.pos-c.neg}</b> 檔方向無法預測</div>''')
-rep('''      <div class="cast-l">最受惠：${c.rows.slice(0,3).map(''', '''      <div class="cast-l">最受惠：${c.rows.filter(r=>r.dir>=.12).slice(0,3).map(''')
-rep('''        最受壓：${c.rows.slice(-3).reverse().map(''', '''        最受壓：${c.rows.filter(r=>r.dir<=-.12).slice(-3).reverse().map(''')
+rep('''      <div class="cast-l">最受惠：${c.rows.slice(0,3).map(r=>`${r.d.n} <s>${PCT(r.med)}</s>`)''', '''      <div class="cast-l">因子方向受惠：${c.rows.filter(r=>r.dir>=.12).slice(0,3).map(r=>`${r.d.n} <s>過去中位數 ${PCT(r.med)}</s>`)''')
+rep('''        最受壓：${c.rows.slice(-3).reverse().map(r=>`${r.d.n} <s>${PCT(r.med)}</s>`)''', '''        因子方向受壓：${c.rows.filter(r=>r.dir<=-.12).slice(-3).reverse().map(r=>`${r.d.n} <s>過去中位數 ${PCT(r.med)}</s>`)''')
