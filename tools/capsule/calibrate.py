@@ -811,6 +811,31 @@ for k in ('twrev', 'tsmcrev', 'twq', 'quad'):   # 法定期限與交易所固定
             upcoming.append({'k': k, 'd': dd, 't': tt, 'cons': None, 'prev': None,
                              'src': {'twrev': '證券交易法：每月 10 日前公告營收', 'tsmcrev': '證券交易法：每月 10 日前公告營收',
                                      'twq': '證券交易法：季報法定期限', 'quad': '期交所／CBOE：季月第三個星期五'}[k]})
+# Nasdaq 只提前約 3 週列出；更遠的日期用官方機關時間表與官方規則補上（同一個月已有就不重複）
+def _has(k, d): return any(u['k'] == k and u['d'][:7] == d[:7] for u in upcoming)
+for k, rows in (ECAL.get('official') or {}).items():
+    for d, tm, srcx in rows:
+        dd = dt.date.fromisoformat(d)
+        if today_iso <= d <= horizon and not _has(k, d):
+            hh, mm = map(int, tm.split(':')); d2, t2 = tpe_dt(dd, et_to_tpe_hours(dd, hh, mm))
+            upcoming.append({'k': k, 'd': d2, 't': t2, 'cons': None, 'prev': None, 'src': srcx})
+# ISM 製造業：官方規則為每月第一個營業日 10:00（美東）
+for y, m in months(dt.date.today(), dt.date.fromisoformat(horizon)):
+    d = first_biz(y, m)
+    if d.month == 1 and d.day == 1: d += dt.timedelta(days=1)
+    if d.month == 9 and d.weekday() == 0 and d.day <= 7: d += dt.timedelta(days=1)   # 勞動節
+    while d.weekday() >= 5: d += dt.timedelta(days=1)
+    if today_iso <= d.isoformat() <= horizon and not _has('ism', d.isoformat()):
+        d2, t2 = tpe_dt(d, et_to_tpe_hours(d, 10, 0))
+        upcoming.append({'k': 'ism', 'd': d2, 't': t2, 'cons': None, 'prev': None, 'src': 'ISM 官方規則（每月第一個營業日）'})
+# 財報：Nasdaq 個股下次財報日（algorithm 推算者標預估）
+for k, (sym, default) in EARN_MAP.items():
+    nx = (ECAL.get('earn_next') or {}).get(sym)
+    if not nx or not (today_iso <= nx[0] <= horizon) or any(u['k'] == k and abs((dt.date.fromisoformat(u['d']) - dt.date.fromisoformat(nx[0])).days) <= 3 for u in upcoming): continue
+    d = dt.date.fromisoformat(nx[0]); when = 'pre' if 'before' in nx[2] else 'after' if 'after' in nx[2] else default
+    d2, t2 = tpe_dt(d, et_to_tpe_hours(d, 8, 0) if when == 'pre' else et_to_tpe_hours(d, 16, 30))
+    upcoming.append({'k': k, 'd': d2, 't': t2, 'cons': None, 'prev': None,
+                     'src': f'Nasdaq 下次財報日（{sym}{"，演算法預估" if nx[1] else "，公司預告"}）'})
 upcoming.sort(key=lambda u: (u['d'], u['t']))
 print(f'即時資料：台股資金流 {len(live.get("tw_flow", {}))} 板塊、美股 {len(live.get("us_ret5", {}))} 板塊、'
       f'匯率 {live.get("fx", {}).get("usdtwd")}、除息預告 {len(live["div"])} 檔、未來排程 {len(upcoming)} 件', flush=True)
@@ -1037,6 +1062,8 @@ if FCHG is not None:
         lam_all.update(lam_us)
         factor['gamma_us'] = {k: [round(float(x), 3) for x in v[0]] for k, v in gam_us.items()}
     factor['lambda'] = {sec: [round(float(x), 3) for x in l] for sec, l in lam_all.items()}
+    factor['sd'] = [round(float(np.nanstd(FCHG[:, j])), 4) for j in range(4)]   # 各因子日變化的標準差（bp、%）
+    # （試過：個股自己的因子敏感度與板塊混合，去掉前視偏誤後與只用板塊 × β 差不多，沒有採用）
     factor['fp'] = fp
     # 高信心門檻：各市場預測幅度的第 70 百分位（樣本外前 30% 的板塊方向較明確）
     for mk, pre in (('tw', 'tw_'), ('us', 'us_')):

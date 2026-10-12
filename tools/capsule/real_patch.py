@@ -74,7 +74,10 @@ function evmStr(k,secId){
   const e=evmOf(k,sec.mkt); if(!e)return 0;
   const mx=CAL.evmMax[sec.mkt==="us"?"美股":"台股"]||1.2;
   const sv=(CAL.secVol[secId]||0)/(CAL.secVolMax[sec.mkt]||1);
-  return clamp((e[0]-1)/Math.max(.05,mx-1),0,1)*clamp(sv,.25,1)*.9;
+  const volStr=clamp((e[0]-1)/Math.max(.05,mx-1),0,1)*clamp(sv,.25,1)*.9;
+  /* 方向通過樣本外檢驗的市場：因子模型預測幅度也算進強度（取兩者較大） */
+  const fpv=factorDir(k,secId,sec.mkt), dirStr=fpv===null?0:clamp(Math.abs(fpv)/(CAL.fpScale||1),0,1)*.9;
+  return Math.max(volStr,dirStr);
 }
 /* 可信度總表：每一類實證結果在前後期能不能重現 */
 function credHTML(){
@@ -317,9 +320,10 @@ rep('''  return {med,lo,hi,dir:clamp(med/half*2,-1,1),cover:1,spread:hi-lo,n:q[3
   let dir=0, fdir=false;
   const fpv=factorDir(ev.tpl,sec,node.L===4?node.mkt:INDBY[sec]&&INDBY[sec].mkt);
   if(fpv!==null&&key!=="U"){
+    const pv=fpv*k;   /* 個股 ＝ 板塊方向 × 個股實證 β */
     /* 信心分級：預測幅度在該市場前 30% → 偏正／偏負；其餘 → 略偏（樣本外前 30% 的板塊方向較明確） */
     const cut=(CAL.factor.cut||{})[INDBY[sec]&&INDBY[sec].mkt==="us"?"us":"tw"]||0;
-    dir=Math.sign(fpv)*(Math.abs(fpv)>=cut?.6:.2)*(key==="B"?-1:1)*(k<0?-1:1); fdir=true; }
+    dir=Math.sign(pv)*(Math.abs(pv)>=cut?.6:.2)*(key==="B"?-1:1); fdir=true; }
   return {med,lo,hi,dir,fdir,cover:1,spread:hi-lo,n:q[3],real:true,split:key!=="U"};''')
 rep('''function dirLabel(d){''', '''/* 因子模型方向：該市場樣本外「照方向押」的平均報酬顯著為正才使用 */
 function factorOK(mkt){const o=CAL.factor&&CAL.factor.oos&&CAL.factor.oos[mkt==="us"?"us":"tw"]; return !!(o&&(o.pass!==undefined?o.pass:(o.mean>0&&o.t>=1.96)));}
@@ -339,3 +343,32 @@ rep('''      return {d:h.d,dir:b.dir,med:b.med,str:h.str,lag:h.lag};
 rep('''        <b>${c.rows.length-c.pos-c.neg}</b> 檔中性</div>''', '''        <b>${c.rows.length-c.pos-c.neg}</b> 檔方向無法預測</div>''')
 rep('''      <div class="cast-l">最受惠：${c.rows.slice(0,3).map(r=>`${r.d.n} <s>${PCT(r.med)}</s>`)''', '''      <div class="cast-l">因子方向受惠：${c.rows.filter(r=>r.dir>=.12).slice(0,3).map(r=>`${r.d.n} <s>過去中位數 ${PCT(r.med)}</s>`)''')
 rep('''        最受壓：${c.rows.slice(-3).reverse().map(r=>`${r.d.n} <s>${PCT(r.med)}</s>`)''', '''        因子方向受壓：${c.rows.filter(r=>r.dir<=-.12).slice(-3).reverse().map(r=>`${r.d.n} <s>過去中位數 ${PCT(r.med)}</s>`)''')
+
+# ── 19) 曝險模組改用實證因子：美債殖利率、美元、油價、半導體（取代手設的六個因子與標籤投影矩陣）──
+#   個股對因子的敏感度 ＝ 板塊 λ（全部交易日回歸）× 個股實證 β；事件的因子衝擊 ＝ γ（每 1σ 意外值造成的因子變化）。
+#   排行、因子集中度、持倉換算、反向候選都會跟著改用這組數字。
+rep('''function stockLoad(d){
+  const sec=INDBY[d.ind]; if(!sec)return null;''', '''function stockLoad(d){
+  const sec=INDBY[d.ind]; if(!sec)return null;
+  if(CAL.factor&&CAL.factor.lambda){
+    const lam=CAL.factor.lambda[d.ind]; if(!lam)return null;
+    const m=stockStat(d.id), sd=CAL.factor.sd||[];
+    const beta=(m?m.b:1)*(d.inv?-1:1)*(d.lev||1);
+    const o={}; FIDS.forEach((k,i)=>o[k]=(lam[i]||0)*beta*(sd[i]||1)); return o;   /* 每 1σ 因子變動的超額報酬 % */
+  }''')
+rep('''function eventFactorVec(tpl){''', '''function eventFactorVec(tpl){
+  if(CAL.factor&&(CAL.factor.gamma_tw||CAL.factor.gamma_us)){
+    const G=(tpl.mkt==="us"?CAL.factor.gamma_us:CAL.factor.gamma_tw)||CAL.factor.gamma_us||{}, g=G[tpl.k], sd=CAL.factor.sd||[];
+    if(!g)return null;                       /* 沒有意外值的事件：沒有可估的因子衝擊 */
+    const o={}; FIDS.forEach((k,i)=>o[k]=(g[i]||0)/(sd[i]||1)); return o;   /* 每 1σ 意外值造成幾個 σ 的因子變動 */
+  }''')
+rep('''  CAL.factor=j.factor||null;''', '''  CAL.factor=j.factor||null;
+  if(CAL.factor&&CAL.factor.lambda){
+    const defs=[{id:"rate",n:"美債殖利率",pos:"殖利率上升"},{id:"usd",n:"美元",pos:"美元走強"},
+                {id:"oil",n:"油價",pos:"油價上漲"},{id:"semi",n:"半導體",pos:"費半強於大盤"}];
+    FACTORS.length=0; defs.forEach((f,i)=>FACTORS.push({...f,sd:(CAL.factor.sd||[])[i]||1}));
+    FIDS.length=0; FACTORS.forEach(f=>FIDS.push(f.id));
+    Object.keys(FBY).forEach(k=>delete FBY[k]); FACTORS.forEach(f=>FBY[f.id]=f);
+  }''')
+src = src.replace('反向候選用因子向量的餘弦相似度找方向相反、且流動性夠的標的。',
+                  '反向候選用實證因子載荷（板塊對美債、美元、油價、半導體的敏感度 × 個股 β）的餘弦相似度，找方向相反、且流動性夠的標的。')

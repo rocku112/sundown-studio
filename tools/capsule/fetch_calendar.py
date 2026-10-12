@@ -102,3 +102,40 @@ with ThreadPoolExecutor(max_workers=5) as ex:   # 單一請求約 3～4 秒，�
 save()
 print(f'行事曆：{n_ok}／{len(jobs)} 個請求成功；經濟事件 {sum(len(v) for v in cal["econ"].values())} 筆、'
       f'財報 {sum(len(v) for v in cal["earn"].values())} 筆；{OUT.stat().st_size // 1024} KB')
+
+# ── 官方機關的未來排程（Nasdaq 只提前約 3 週列出；這些機關公布得更遠）──
+#   BEA：Personal Income and Outlays（核心 PCE）　Census：Advance Monthly Retail Trade（零售銷售）
+#   財報：Nasdaq 個股「下次財報日」（未確認者標為預估）
+import re as _re
+HTML_H = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126.0 Safari/537.36', 'Accept': 'text/html'}
+MON = {m: i + 1 for i, m in enumerate(['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'])}
+def _txt(url):
+    try:
+        r = requests.get(url, headers=HTML_H, timeout=40)
+        if not r.ok: return ''
+        t = _re.sub(r'\s+', ' ', _re.sub(r'<[^>]+>', '|', r.text)); return _re.sub(r'(\| ?)+', '|', t)
+    except Exception:
+        return ''
+official = {}
+t = _txt('https://www.bea.gov/news/schedule')
+for mon, day, hh, mm, ap, dmon, dyear in _re.findall(r'\|(\w+) (\d{1,2})\|(\d{1,2}):(\d{2}) ([AP])M\|N\|ews\|Personal Income and Outlays, (\w+) (\d{4})', t):
+    if mon not in MON or dmon not in MON: continue
+    y = int(dyear) + (1 if MON[dmon] == 12 and MON[mon] < 12 else 0)      # 12 月資料隔年公布
+    h = int(hh) % 12 + (12 if ap == 'P' else 0)
+    official.setdefault('pce', []).append([f'{y}-{MON[mon]:02d}-{int(day):02d}', f'{h:02d}:{mm}', 'BEA 官方發布時間表'])
+t = _txt('https://www.census.gov/retail/release_schedule.html')
+seg = t[t.find('Advance Monthly Retail Trade Report'):t.find('Historical Release Dates')] if 'Advance Monthly Retail Trade Report' in t else ''
+for mon, day, year in _re.findall(r'\|(\w+) (\d{1,2}), (\d{4})\|', seg):
+    if mon in MON: official.setdefault('usret', []).append([f'{year}-{MON[mon]:02d}-{int(day):02d}', '08:30', 'Census 官方發布時間表'])
+earn_next = {}
+for sym in sorted(EARN):
+    try:
+        r = sess().get(f'https://api.nasdaq.com/api/analyst/{sym}/earnings-date', timeout=30)
+        txt = ((r.json() or {}).get('data') or {}).get('reportText') or ''
+        m = _re.search(r'(\d{2})/(\d{2})/(\d{4})', txt)
+        if m: earn_next[sym] = [f'{m.group(3)}-{m.group(1)}-{m.group(2)}', 'estimated' in txt.lower(), txt[:160]]
+    except Exception:
+        pass
+cal['official'] = official; cal['earn_next'] = earn_next
+OUT.write_text(json.dumps(cal, ensure_ascii=False, separators=(',', ':')), encoding='utf-8')
+print(f'官方排程：PCE {len(official.get("pce", []))} 筆、零售 {len(official.get("usret", []))} 筆；下次財報 {earn_next}')
