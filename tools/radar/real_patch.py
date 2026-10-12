@@ -2,7 +2,7 @@
 #   · 準備除息：證交所／櫃買中心除權除息預告表（成交值較大的 ETF）
 #   · 近期已除息：證交所／櫃買中心除權除息計算結果表 ＋ 最新收盤價 → 填息進度（取代沒有官方來源的「領息」）
 #   · 總經事件：市場傳導艙的官方排程（Nasdaq 經濟／財報行事曆、央行、主計總處、財政部、法定期限）
-#   · 事件 × ETF：過去 5 年各類事件對每檔 ETF 的實證影響（calibrate.py 的 etf_impact），不再手選
+#   · 事件 × ETF：過去 10 年各類事件對每檔 ETF 的實證影響（calibrate.py 的 etf_impact），不再手選
 # 資料都來自 twflow/web/data/capsule_calib.json 與 tw_all.json；頁面開啟時抓 GitHub Pages 上的最新版。
 import json as _json, datetime as _dt
 _cal = _json.loads((REPO / 'twflow/web/data/capsule_calib.json').read_text(encoding='utf-8'))
@@ -106,7 +106,7 @@ rep("""  document.getElementById('universeNote').innerHTML = '<b>追蹤清單(25
     """  document.getElementById('univPill').innerHTML = '除息預告 <b>'+exDiv.length+'</b> 檔 ETF';
   document.getElementById('universeNote').innerHTML = '<b>資料來源：</b>準備除息＝證交所除權除息預告表（TWT48U）與櫃買中心除權除息預告；'+
     '近期已除息＝證交所除權除息計算結果表（TWT49U）與櫃買中心除權除息計算結果，填息以最新收盤價對照除息前收盤價；'+
-    '總經事件＝Nasdaq 經濟／財報行事曆、中央銀行、主計總處、財政部與法定期限；事件 × ETF＝過去 5 年事件研究（意外值 β 或事件窗超額波動）。'+
+    '總經事件＝Nasdaq 經濟／財報行事曆、中央銀行、主計總處、財政部與法定期限；事件 × ETF＝過去 10 年事件研究（意外值 β 或事件窗超額波動）。'+
     '只列成交值較大的 ETF。資料每個交易日盤後更新。';""")
 rep("""    var payV = f.pay ? fmtIso(f.pay) : '待公布';""", """    var payV = f.pay ? fmtIso(f.pay) : '預告表未提供';""")
 
@@ -116,7 +116,7 @@ rep("""    var chips = ev.etfs.map(function(code){ var m=ETF_META[code]; return 
       var stat = r[4]==='abs' ? ('超額波動 '+(r[1]>0?'+':'')+r[1].toFixed(2)+'%') : ('β '+(r[1]>0?'+':'')+r[1].toFixed(2)+'%／1σ');
       return '<span class="imp-chip"><b>'+r[0]+'</b><span>'+(m?m.name:'')+' · '+stat+' · t '+r[2].toFixed(1)+(Math.abs(r[2])>=1.96?' · 顯著':'')+(r[5]?' · 前後半同向':'')+'</span></span>'; }).join('');""")
 rep("""<div class="imp-label">受影響 ETF ('+ev.etfs.length+')</div>""",
-    """<div class="imp-label">過去 5 年反應最明顯的 ETF ('+ev.etfs.length+') · 依 |t| 排序</div><p style="font-size:12px;color:var(--text3);margin:4px 0 8px">這些數字只描述過去：同一套方法把事件分成前後兩半檢驗，前半期顯著的方向到後半期常常不成立，不能拿來預測這一次。</p>""")
+    """<div class="imp-label">過去 10 年反應最明顯的 ETF ('+ev.etfs.length+') · 依 |t| 排序</div><p style="font-size:12px;color:var(--text3);margin:4px 0 8px">這些數字只描述過去：同一套方法把事件分成前後兩半檢驗，前半期顯著的方向到後半期常常不成立，不能拿來預測這一次。</p>""")
 
 # ── 5) 可重複繪製：清掉動態圖層、監聽器只綁一次；結尾改成先畫內嵌資料，再抓線上最新 ──
 rep("""  var streamLayer = document.getElementById('streamLayer');
@@ -165,7 +165,7 @@ rep('<div class="legend-item c"><i></i>預估數值</div>\n', '')
 _i, _j = _cut('<p id="footNote">', '</p>')
 src = src[:_i] + '''<p id="footNote">
       準備除息取自證交所與櫃買中心的除權除息預告表，金額尚未公告者標示「待公布」；近期已除息取自除權除息計算結果表，填息以最新收盤價對照除息前收盤價判斷。
-      總經事件的日期與公布時刻取自 Nasdaq 經濟／財報行事曆、中央銀行、主計總處、財政部與法定期限；事件與 ETF 的關聯是過去 5 年的事件研究結果
+      總經事件的日期與公布時刻取自 Nasdaq 經濟／財報行事曆、中央銀行、主計總處、財政部與法定期限；事件與 ETF 的關聯是過去 10 年的事件研究結果
       （有市場共識或意外值的事件估 β，其餘估事件窗超額波動），是歷史統計關聯，不是預測，也不構成投資建議。
       地球儀上的光點位置是排版，不代表地理或數值；赤陶色為即將除息（配息自基金淨值撥出）、抹茶綠為近期已除息，金色虛線連到該事件過去反應最明顯的 ETF。
     ''' + src[_j:]

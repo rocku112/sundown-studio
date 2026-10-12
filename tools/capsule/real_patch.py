@@ -1,7 +1,7 @@
 # 由 build.py 以 exec 載入（最後一個）：拿掉音效，並把剩下的示意值全部換成實際資料。
 #   · 事件行事曆：Nasdaq 經濟／財報行事曆＋Fed 官網＋法定期限（calibrate.py 的 upcoming）
 #   · 配息事件：證交所／櫃買中心除權除息預告表
-#   · 情境權重：過去 5 年意外值為正／負的次數比例
+#   · 情境權重：過去 10 年意外值為正／負的次數比例
 #   · 板塊資金流：三大法人近 5 日買賣超（台股）、近 5 日超額報酬（美股，沒有公開資金流）
 #   · 放大器：實證放大倍數（事件前板塊狀態異常 vs 正常時的衝擊比）＋目前處於異常的板塊
 #   · 上下游連動：近 500 日板塊超額報酬的領先落後相關
@@ -34,6 +34,8 @@ function applyLive(j){
   CAL.upcoming=j.upcoming||[]; CAL.live=j.live||{}; CAL.amp=j.amp||{}; CAL.dateSrc=j.date_src||{};
   CAL.regime=j.regime||null; CAL.scenFreq=j.scen_freq||{};
   CAL.evm=j.ev_mult||{}; CAL.secVol=j.sec_vol||{}; CAL.cred=j.credibility||null; CAL.importance=j.importance||{};
+  CAL.factor=j.factor||null;
+  if(CAL.factor&&CAL.factor.fp){const v=Object.values(CAL.factor.fp).map(Math.abs).sort((a,b)=>a-b); CAL.fpScale=v[Math.floor(v.length*.9)]||1;}
   CAL.evmMax={}; CAL.secVolMax={};
   ["台股","美股"].forEach(t=>{const v=Object.values(CAL.evm[t]||{}).map(x=>x[0]); CAL.evmMax[t]=v.length?Math.max(...v):1.2;});
   IND.forEach(d=>{const v=CAL.secVol[d.id]||0; CAL.secVolMax[d.mkt]=Math.max(CAL.secVolMax[d.mkt]||0,v);});
@@ -57,10 +59,10 @@ function applyLive(j){
   AMPS.length=0; CHIP_TW.concat(FUND_US).forEach(x=>AMPS.push(x));
   if(Array.isArray(j.chain)&&j.chain.length){CHAIN.length=0; j.chain.forEach(c=>CHAIN.push([c[0],c[1],c[2],c[3]]));}
 }
-/* 情境權重：過去 5 年意外值為正（情境 A）與為負（情境 B）的次數比例；不分方向的事件不給權重 */
+/* 情境權重：過去 10 年意外值為正（情境 A）與為負（情境 B）的次數比例；不分方向的事件不給權重 */
 function scenFor(t){
   const F=CAL.scenFreq&&CAL.scenFreq[t.k]; let nA=0,nB=0;
-  if(F){nA=F[0];nB=F[1];}   /* 過去 5 年意外值為正／為負的次數（剛好等於共識的不算） */
+  if(F){nA=F[0];nB=F[1];}   /* 過去 10 年意外值為正／為負的次數（剛好等於共識的不算） */
   if(nA+nB>0)return t.scen.map((s,i)=>({...s,p:i===0?nA/(nA+nB):nB/(nA+nB),pN:nA+nB,pReal:true}));
   return t.scen.map(s=>({...s,p:1/t.scen.length,pReal:false}));
 }
@@ -84,7 +86,11 @@ function credHTML(){
     ${row(c.stock_beta_corr>=.5?1:c.stock_beta_corr>=.25?2:0,"個股對板塊的 β",`前 250 日與後 250 日估計的相關 ${c.stock_beta_corr}`,"個股跟著所屬板塊動的程度很穩定。")}
     ${row(c.evm_corr>=.5?1:c.evm_corr>=.25?2:0,"各類事件的整體波動大小",`前後半期相關 ${c.evm_corr}`,"哪類事件會讓板塊波動變大，大致可以重現；傳導強度只用這個量。")}
     ${row(2,"放大器（法人、融資融券、動能）","前後半期都大於 1，但倍數大小會變","狀態異常時衝擊較大的方向一致，倍數僅供參考；對漲跌方向沒有預測力（同向約 50%）。")}
-    ${row(0,"事件 → 板塊的漲跌方向",`前半期顯著的關係，後半期同方向：台股 ${pct(tw.same_sign_sig)}、美股 ${pct(us.same_sign_sig)}；β 前後半期相關 ${c.dir_corr}`,"跟擲硬幣差不多。情境的方向與分布只描述過去，不能拿來預測這一次。")}
+    ${row(0,"事件 → 板塊的漲跌方向",`前半期顯著的關係，後半期同方向：台股 ${pct(tw.same_sign_sig)}、美股 ${pct(us.same_sign_sig)}；β 前後半期相關 ${c.dir_corr}`,"跟擲硬幣差不多，所以逐對的方向不使用；分布區間只描述過去。")}
+    ${(()=>{const o=(CAL.factor||{}).oos||{}; const f=(m,n)=>o[m]?`${n}：照方向押平均 ${o[m].mean>0?"+":""}${o[m].mean.toFixed(3)}%（t ${o[m].t}，${o[m].n_events} 次事件，命中率 ${Math.round(o[m].hit*100)}%）`:`${n}：—`;
+      const ok=factorOK("tw")||factorOK("us");
+      return row(ok?2:0,"方向的因子模型（事件 → 美債／美元／油價／半導體 → 板塊）",f("tw","台股")+"；"+f("us","美股"),
+        `前半期估、後半期驗。${factorOK("tw")?"台股通過，頁面上的台股方向用這個模型。":"台股未通過，不給方向。"}${factorOK("us")?"美股通過，頁面上的美股方向用這個模型。":"美股未通過，不給方向。"}幅度很小，只能當作傾向。`);})()}
     ${row(0,"巨觀環境 × 板塊",`各板塊在目前環境下的表現，前後半期排序相關 利率 ${rg.rate}、景氣 ${rg.growth}、通膨 ${rg.infl}`,"前後期甚至相反，只能當作歷史描述。")}
   </div>`;
 }
@@ -141,7 +147,7 @@ src = src[:_a] + '''  /* 官方排程（calibrate.py 每天從 Nasdaq 經濟／�
     const id=`${t.k}_${fmtD(d)}`; if(seen[id])return; seen[id]=1;
     const cons=u.cons?`市場共識 ${u.cons}${u.prev?`（前值 ${u.prev}）`:""}。`:"";
     const em=evmOf(t.k,t.mkt==="us"?"us":"tw");
-    const emTxt=em?`過去 5 年事件窗的板塊波動是平常的 ×${em[0].toFixed(2)}${em[0]<1?"（沒有比較大）":""}。`:"";
+    const emTxt=em?`過去 10 年事件窗的板塊波動是平常的 ×${em[0].toFixed(2)}${em[0]<1?"（沒有比較大）":""}。`:"";
     out.push({id,tpl:t.k,n:t.name(d),date:fmtD(d),dObj:d,kind:t.kind,mkt:t.mkt,lvl:(CAL.importance&&CAL.importance[t.k])||t.lvl,
               src:`${t.src} · ${u.src}`,note:cons+t.note+(emTxt?" "+emTxt:""),hits:hitsFor(t),scen:scenFor(t),watch:t.watch,rt,rms,
               twoSided:!!t.twoSided,days:dd,time:u.t});
@@ -201,17 +207,17 @@ rep('''  else if(src.L===2)       analysis=`<div class="res-sec">
         <h3>這個板塊在三個巨觀情境下的方向<em>示意</em></h3>${macroForSector(src)}
         <p class="cone-note">方向由板塊的情境敏感度推得；區間是歷史上同向環境的後續分布，不指涉這一次。</p></div>`;''',
     '''  else if(src.L===2)       analysis=sectorEvidence(src)+regimeBlock(src);''')
-rep('''function macroForSector(sec){''', '''/* 板塊頁：過去 5 年各類事件對這個板塊的實證衝擊（依 |t| 排序） */
+rep('''function macroForSector(sec){''', '''/* 板塊頁：過去 10 年各類事件對這個板塊的實證衝擊（依 |t| 排序） */
 function sectorEvidence(sec){
   const lab=k=>{const t=EV_TPL.find(x=>x.k===k); return t?t.name(TODAY).replace(/\\d+ 月/,"").replace(/（\\d+ 月）/,"").trim():k;};
   const rows=Object.entries(CAL.edges||{}).filter(([k])=>k.endsWith(">"+sec.id))
     .map(([k,m])=>({k:k.split(">")[0],m})).sort((a,b)=>Math.abs(b.m.t)-Math.abs(a.m.t)).slice(0,8);
   if(!rows.length)return `<div class="res-sec"><h3>實證反應</h3><p class="cone-note">這個板塊沒有足夠的歷史資料。</p></div>`;
-  return `<div class="res-sec"><h3>這個板塊對各類事件的實證反應<em>近 5 年 · 依顯著程度排序</em></h3>
+  return `<div class="res-sec"><h3>這個板塊對各類事件的實證反應<em>近 10 年 · 依顯著程度排序</em></h3>
     ${rows.map(({k,m})=>`<p class="cone-note"><b>${lab(k)}</b>：${m.kind==="abs"
       ?`事件窗超額波動 ${m.b>0?"+":""}${m.b.toFixed(2)}%`
       :`β ${m.b>0?"+":""}${m.b.toFixed(2)}%／1σ 意外值`}（t ${m.t.toFixed(1)} · N ${m.n}）${Math.abs(m.t)>=1.96?" <b>顯著</b>":""}</p>`).join("")}
-    <p class="cone-note"><b>這些數字前後半期無法重現（見體檢頁的實證可信度）</b>，只描述過去 5 年的平均，不代表下一次。β 是「意外值每多 1 個標準差，板塊超額報酬平均多幾 %」；超額波動是事件窗的 |報酬| 比平常多幾 %，不分方向。</p></div>`;
+    <p class="cone-note"><b>這些數字前後半期無法重現（見體檢頁的實證可信度）</b>，只描述過去 10 年的平均，不代表下一次。β 是「意外值每多 1 個標準差，板塊超額報酬平均多幾 %」；超額波動是事件窗的 |報酬| 比平常多幾 %，不分方向。</p></div>`;
 }
 /* 巨觀環境：用實際數據判斷目前處於哪種環境，顯示這個板塊（或個股 × 實證 β）在同樣環境下之後 20 個交易日的歷史分布 */
 const REG_LAB={rate:{up:"利率上行",down:"利率下行"},growth:{exp:"景氣擴張",con:"景氣收縮"},infl:{up:"通膨升溫",down:"通膨降溫"}};
@@ -249,8 +255,8 @@ rep('''const FXRATE=32.5;                       /* 美元兌台幣（示意固�
     '''let FXRATE=32.5;                         /* 美元兌台幣：applyLive 以 Yahoo TWD=X 覆蓋 */''')
 rep('''總經排程為規則推算，配息日期取自投信公告整理，實際以官方公告為準。''',
     '''排程取自 Nasdaq 經濟／財報行事曆、Fed 官網與法定期限；配息取自證交所／櫃買中心除權除息預告表。''')
-rep('''權重為示意先驗，不是機率預測。''', '''權重是過去 5 年意外值為正／負的次數比例，不是這一次的機率。''')
-src = src.replace('情境權重是示意先驗，不是市場機率。', '情境權重是過去 5 年意外值正負的次數比例，不是這一次的機率。')
+rep('''權重為示意先驗，不是機率預測。''', '''權重是過去 10 年意外值為正／負的次數比例，不是這一次的機率。''')
+src = src.replace('情境權重是示意先驗，不是市場機率。', '情境權重是過去 10 年意外值正負的次數比例，不是這一次的機率。')
 
 # ── 11) 個股影響力：台股用成交值（twall 的 w），不再沿用手設值 ──
 rep('''    if(hit){ if(px!==null&&px!==undefined){hit.px=px; hit.chg=chg==null?0:chg; hit.real=true;} return; }''',
@@ -276,13 +282,13 @@ rep('''    ${!back&&isEvent?`<div class="res-sec">
       <h3>歷史後續分布''')
 rep('''      <h3>模型邊界<em>${l3name}層 · 三件不做的事</em></h3>''', '''      <h3>模型邊界<em>放大器層 · 三件不做的事</em></h3>''')
 rep('''        ${S.mkt==="us"?"獲利能力與自由現金流越強的地方越能吸收":"現價與法人推估成本背離越大的地方反應會被放大"}。</p>''',
-    '''        事件前板塊處於異常狀態（${S.mkt==="us"?"動能過熱或超跌":"法人大買大賣、融資融券急增、動能過熱"}）時，過去 5 年的衝擊平均被放大的倍數，
+    '''        事件前板塊處於異常狀態（${S.mkt==="us"?"動能過熱或超跌":"法人大買大賣、融資融券急增、動能過熱"}）時，過去 10 年的衝擊平均被放大的倍數，
         倍數與 t 值都來自實證；沒有顯著放大的狀態不連線。</p>''')
 
 # ── 13) 程式內的舊註解跟著改，免得之後維護的人誤會 ──
 src = src.replace('   數值為示意；板塊淨流取自方舟盤面快照。', '   板塊資金流、放大器、上下游、排程由 applyLive 以 calibrate.py 的每日輸出覆蓋。')
 src = src.replace('   排程為示意，實際日期以官方公告為準。', '   實際使用的是 calibrate.py 整理的官方排程（genEvents）；這裡的規則只保留事件的名稱、說明與情境文字。')
-src = src.replace('所有數字都是歷史統計的示意值，不是預測。', '所有數字都是過去 5 年的實證統計，不是預測。')
+src = src.replace('所有數字都是歷史統計的示意值，不是預測。', '所有數字都是過去 10 年的實證統計，不是預測。')
 
 # ── 14) 事件 → 板塊強度改用前後期穩定的量（事件整體波動倍數 × 板塊波動）──
 rep('''    const m=edgeStat(tpl.k,s.id), cs=strFromStat(m);
@@ -294,10 +300,36 @@ rep('''             顯著比例不高是實情：多數事件對單一板塊的
     '''             顯著比例不高是實情：多數事件對單一板塊的平均衝擊很小。`+credHTML()''')
 rep('''FOMC 日期：${CAL.fomcSrc}；其他事件日期依規則推算。''',
     '''事件日期：Nasdaq 經濟／財報行事曆、央行、主計總處、財政部官方發布日與法定期限。''')
-rep('''權重是過去 5 年意外值為正／負的次數比例，不是這一次的機率。''',
-    '''權重是過去 5 年意外值為正／負的次數比例，不是這一次的機率。<strong style="color:var(--dim)">方向與區間未通過樣本外檢驗（前半期的關係到後半期常常不成立），只描述過去。</strong>''')
+rep('''權重是過去 10 年意外值為正／負的次數比例，不是這一次的機率。''',
+    '''權重是過去 10 年意外值為正／負的次數比例，不是這一次的機率。<strong style="color:var(--dim)">區間只描述過去；「偏正向／偏負向」來自因子模型（事件 → 美債、美元、油價、半導體 → 板塊），只在樣本外檢驗通過的市場顯示，其餘標「方向無法預測」。</strong>''')
 
 # ── 16) 全球事件（例如 FOMC）台美板塊分開取前段，避免一邊的板塊把另一邊擠掉 ──
 rep('''  cands.slice(0,24).forEach(([id,w,m])=>{out[id]=[w,m]});''',
     '''  const perMkt={};
   cands.forEach(([id,w,m])=>{const mk=INDBY[id]?INDBY[id].mkt:"tw"; perMkt[mk]=(perMkt[mk]||0)+1; if(perMkt[mk]<=18)out[id]=[w,m];});''')
+
+# ── 17) 方向：兩段式因子模型（事件 → 美債／美元／油價／半導體 → 板塊），只在樣本外通過的市場使用 ──
+rep('''  return {med,lo,hi,dir:clamp(med/half*2,-1,1),cover:1,spread:hi-lo,n:q[3],real:true,split:key!=="U"};''',
+    '''  /* 方向不用逐對的歷史中位數（前後期無法重現），改用因子模型；該市場樣本外沒通過就不給方向 */
+  let dir=0, fdir=false;
+  const fpv=factorDir(ev.tpl,sec,node.L===4?node.mkt:INDBY[sec]&&INDBY[sec].mkt);
+  if(fpv!==null&&key!=="U"){ dir=clamp(fpv/(CAL.fpScale||1),-1,1)*(key==="B"?-1:1)*(k<0?-1:1); fdir=true; }
+  return {med,lo,hi,dir,fdir,cover:1,spread:hi-lo,n:q[3],real:true,split:key!=="U"};''')
+rep('''function dirLabel(d){''', '''/* 因子模型方向：該市場樣本外「照方向押」的平均報酬顯著為正才使用 */
+function factorOK(mkt){const o=CAL.factor&&CAL.factor.oos&&CAL.factor.oos[mkt==="us"?"us":"tw"]; return !!(o&&o.mean>0&&o.t>=1.96);}
+function factorDir(k,sec,mkt){
+  if(!CAL.factor||!CAL.factor.fp||!factorOK(mkt))return null;
+  const v=CAL.factor.fp[k+">"+sec]; return v==null?null:v;
+}
+function dirLabel(d){''')
+rep('''  return {t:"方向中性",c:"neu"};
+}''', '''  return {t:"方向無法預測",c:"neu"};
+}''')
+
+# ── 18) 情境摘要：受惠／受壓依因子模型方向排序（數字仍是歷史中位數）；沒有方向時不排受惠受壓 ──
+rep('''      return {d:h.d,dir:b.dir,med:b.med,str:h.str,lag:h.lag};
+    }).sort((a,b)=>b.med-a.med);''', '''      return {d:h.d,dir:b.dir,med:b.med,str:h.str,lag:h.lag};
+    }).sort((a,b)=>b.dir-a.dir||b.med-a.med);''')
+rep('''        <b>${c.rows.length-c.pos-c.neg}</b> 檔中性</div>''', '''        <b>${c.rows.length-c.pos-c.neg}</b> 檔方向無法預測</div>''')
+rep('''      <div class="cast-l">最受惠：${c.rows.slice(0,3).map(''', '''      <div class="cast-l">最受惠：${c.rows.filter(r=>r.dir>=.12).slice(0,3).map(''')
+rep('''        最受壓：${c.rows.slice(-3).reverse().map(''', '''        最受壓：${c.rows.filter(r=>r.dir<=-.12).slice(-3).reverse().map(''')

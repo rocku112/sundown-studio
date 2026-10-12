@@ -10,17 +10,18 @@
 
 輸出 tools/capsule/tw_macro.json：{"cbc": [日期], "twcpi": [[日期, 年增率%]], "twexp": [日期], "next": {事件: 日期}}
 已有的歷史保留，每天只抓最新幾頁；第一次執行會往回翻到 2021 年。
-用法：python fetch_tw_macro.py
+用法：python fetch_tw_macro.py [--backfill]
 """
-import json, pathlib, re, time, datetime as dt
-import requests
+import json, pathlib, re, sys, time, datetime as dt
+import requests, urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 HERE = pathlib.Path(__file__).resolve().parent
 OUT = HERE / 'tw_macro.json'
 H = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126.0 Safari/537.36'}
-STOP = '2021-04-01'
+STOP = '2016-04-01'
 old = json.loads(OUT.read_text(encoding='utf-8')) if OUT.exists() else {}
-first_run = not old
+first_run = not old or '--backfill' in sys.argv   # --backfill：往回翻到 STOP
 s = requests.Session(); s.headers.update(H)
 
 def get(url):
@@ -28,6 +29,14 @@ def get(url):
         try:
             r = s.get(url, timeout=40)
             if r.ok: return r.text
+        except requests.exceptions.SSLError:
+            # stat.gov.tw 偶爾送出不完整的憑證鏈；只對這個公開、唯讀的統計網站退回不驗證憑證
+            if 'stat.gov.tw' in url:
+                try:
+                    r = s.get(url, timeout=40, verify=False)
+                    if r.ok: return r.text
+                except Exception:
+                    pass
         except Exception:
             pass
         time.sleep(3 * (i + 1))
@@ -36,11 +45,11 @@ def roc(y, m, d): return f'{int(y) + 1911}-{int(m):02d}-{int(d):02d}'
 
 # ── 央行理監事會 ──
 cbc, cbc_next = set(old.get('cbc', [])), []
-for p in range(1, 15 if first_run else 3):
+for p in range(1, 30 if first_run else 3):
     t = get(f'https://www.cbc.gov.tw/tw/lp-357-1-{p}-20.html' if p > 1 else 'https://www.cbc.gov.tw/tw/lp-357-1.html')
     if not t: break
-    titles = re.findall(r'title="([^"]+)"', t)
-    got = [roc(*m.groups()) for x in titles for m in [re.search(r'(\d{2,3})年(\d{1,2})月(\d{1,2})日央行理監事會', x)] if m]
+    # 每列是 <time>發布日</time><a title="…央行理監事會後記者會…">；較早的標題不寫年份，日期以 <time> 為準
+    got = sorted({d for d, ttl in re.findall(r'<time>(\d{4}-\d{2}-\d{2})</time>\s*<a[^>]*title="([^"]+)"', t) if '央行理監事會' in ttl})
     cbc.update(got)
     for href, ttl in re.findall(r'href="(/tw/cp-357-[^"]+)"[^>]*title="(\d{3}年中央銀行理監事聯席會議預定日期)"', t):
         art = get('https://www.cbc.gov.tw' + href) or ''
@@ -53,7 +62,7 @@ for p in range(1, 15 if first_run else 3):
 print(f'央行：{len(cbc)} 次', flush=True)
 # ── 台灣 CPI（主計總處新聞稿：張貼日期＋標題年增率）──
 cpi = {d: v for d, v in old.get('twcpi', [])}
-for p in range(1, 70 if first_run else 3):
+for p in range(1, 140 if first_run else 3):
     if p % 10 == 0: print(f'  主計總處第 {p} 頁', flush=True)
     t = get(f'https://www.stat.gov.tw/News.aspx?n=3703&sms=11480&page={p}&PageSize=20')
     if not t: break

@@ -72,7 +72,7 @@ python -X utf8 tools/capsule/calibrate.py . twflow/web/data/capsule_calib.json t
 python -X utf8 tools/capsule/build.py
 ```
 
-`fetch_calendar.py` 第一次會回補 2021-04 起的全部日期（Nasdaq 會限流，約半小時），之後每天只重抓最近 10 天與未來 120 天。
+`fetch_calendar.py` 第一次會回補 2016-04 起的全部日期（Nasdaq 會限流，約半小時），之後每天只重抓最近 10 天與未來 120 天。
 
 ## 需要人工維護
 

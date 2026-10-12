@@ -50,7 +50,7 @@ def clean(v):
 
 cal = json.loads(OUT.read_text(encoding='utf-8')) if OUT.exists() else {'econ': {}, 'earn': {}, 'done_econ': [], 'done_earn': []}
 done_e, done_r = set(cal['done_econ']), set(cal['done_earn'])
-start = dt.date.fromisoformat(sys.argv[sys.argv.index('--from') + 1]) if '--from' in sys.argv else dt.date(2021, 4, 1)
+start = dt.date.fromisoformat(sys.argv[sys.argv.index('--from') + 1]) if '--from' in sys.argv else dt.date(2016, 4, 1)
 today = dt.date.today()
 recent = today - dt.timedelta(days=10)
 end = today + dt.timedelta(days=120)

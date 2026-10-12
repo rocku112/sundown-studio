@@ -7,7 +7,7 @@
   · 成交值前 40 大的台股 ETF（除權息雷達的事件影響）
 
 輸出 <快取目錄>/hist.json.gz：{代號: {"d": [日期], "c": [收盤], "a": [還原收盤], "v": {除息日: 配息}}}
-已有的檔案只補最近三個月；Yahoo 失敗的代號沿用舊資料。快取目錄由 GitHub Actions cache 保存，不進 repo。
+已有的檔案只補最近三個月（第一次抓 11 年）；Yahoo 失敗的代號沿用舊資料。快取目錄由 GitHub Actions cache 保存，不進 repo。
 用法：python fetch_hist.py <快取目錄>
 """
 import gzip, json, pathlib, re, sys, time, datetime as dt
@@ -30,6 +30,8 @@ TW_ETF += re.findall(r'\["(\w+)", ?"(?:季配|月配|半年配)"', (HERE / 'buil
 # 除權息雷達要看各類事件對 ETF 的實證影響：再加成交值前 40 大的台股 ETF（不含槓桿反向）
 TW_ETF += [r[0] for r in sorted((r for r in rows if r[2] == '1'), key=lambda r: -int(r[4]))[:40]]
 TW_ETF = list(dict.fromkeys(TW_ETF))
+# 總經因子（方向的兩段式因子模型）：美債 10 年殖利率、美元指數、原油、費城半導體、美元兌台幣
+FACT = ['^TNX', 'DX-Y.NYB', 'CL=F', '^SOX', 'TWD=X']
 
 old = json.loads(gzip.decompress(OUT.read_bytes()).decode('utf-8')) if OUT.exists() else {}
 s = requests.Session(); s.headers['User-Agent'] = 'Mozilla/5.0'
@@ -74,11 +76,11 @@ def merge(prev, new):
 
 out, ok, fail = {}, 0, []
 today = dt.date.today().isoformat()
-for sym in US + TW_ETF:
+for sym in US + TW_ETF + FACT:
     prev = old.get(sym, {})
-    fresh = prev.get('d') and prev['d'][0] <= (dt.date.today() - dt.timedelta(days=365 * 5 + 200)).isoformat()
-    rng = '3mo' if fresh else '6y'
-    ys = [sym.replace('.', '-')] if sym in US else ([sym + '.TWO', sym + '.TW'] if sym.endswith('B') else [sym + '.TW', sym + '.TWO'])  # 債券 ETF 多在櫃買
+    fresh = prev.get('d') and prev['d'][0] <= (dt.date.today() - dt.timedelta(days=365 * 10 + 150)).isoformat()
+    rng = '3mo' if fresh else '11y'
+    ys = [sym] if sym in FACT else [sym.replace('.', '-')] if sym in US else ([sym + '.TWO', sym + '.TW'] if sym.endswith('B') else [sym + '.TW', sym + '.TWO'])  # 債券 ETF 多在櫃買
     got = None
     for y in ys:
         got = chart(y, rng)
@@ -90,5 +92,5 @@ for sym in US + TW_ETF:
         fail.append(sym)
     time.sleep(0.25)
 OUT.write_bytes(gzip.compress(json.dumps(out, separators=(',', ':')).encode('utf-8')))
-print(f'長歷史：成功 {ok}／{len(US) + len(TW_ETF)}（美股 {len(US)}、台股 ETF {len(TW_ETF)}）；失敗 {len(fail)}：{fail[:20]}；'
+print(f'長歷史：成功 {ok}／{len(US) + len(TW_ETF) + len(FACT)}（美股 {len(US)}、台股 ETF {len(TW_ETF)}）；失敗 {len(fail)}：{fail[:20]}；'
       f'{OUT.stat().st_size // 1024} KB')

@@ -22,9 +22,11 @@ import numpy as np
 ROOT, OUT, CACHE = map(pathlib.Path, sys.argv[1:4])
 CACHE.mkdir(parents=True, exist_ok=True)
 SCRATCH = pathlib.Path(__file__).parent
-# 滾動視窗：載入近 5.5 年日線，前半年只當估計期，事件取最近 5 年到最新交易日
+# 滾動視窗：載入近 10.5 年日線，前半年只當估計期，事件取最近 10 年到最新交易日
+# （5 年時事件 × 板塊的方向前後半期無法重現；樣本加倍是降低雜訊最直接的辦法）
+YEARS = 10
 _today = dt.date.today()
-_y, _m = _today.year - 6, _today.month + 6
+_y, _m = _today.year - YEARS - 1, _today.month + 6
 if _m > 12: _y, _m = _y + 1, _m - 12
 LOAD_FROM = f'{_y}-{_m:02d}'
 EV_START = dt.date(_y + (_m + 6 > 12), (_m + 6 - 1) % 12 + 1, 1)
@@ -927,6 +929,103 @@ if us_ok:
 print(f'巨觀環境：目前 {cur_tw}（{now_tw}），板塊 {len(regime["sec"])} 個', flush=True)
 
 
+
+# ───────────────────────── 7h. 方向：兩段式因子模型 ─────────────────────────
+# 逐對估「事件 × 板塊」的方向樣本太少、前後期無法重現。改成兩段：
+#   第一段 γ：事件意外值 → 總經因子在事件窗的變化（美債 10 年殖利率、美元指數、原油、費半相對 S&P 500）
+#   第二段 λ：板塊超額報酬對這些因子的敏感度，用全部交易日估（樣本是事件日的幾十倍）
+#   預測方向 ＝ γ · λ。台股收盤早於美股，台股第 t 日對的是前一個美國交易日的因子變化。
+import bisect
+def _fser(sym):
+    h = HIST.get(sym) or {}
+    return {d: c for d, c in zip(h.get('d', []), h.get('c', [])) if c}
+_tnx, _dx, _cl, _sox = _fser('^TNX'), _fser('DX-Y.NYB'), _fser('CL=F'), _fser('^SOX')
+_spy = {d: a for d, a in zip(HIST.get('SPY', {}).get('d', []), HIST.get('SPY', {}).get('a', [])) if a}
+FDAYS = sorted(set(_spy) & set(_tnx) & set(_dx) & set(_cl) & set(_sox))
+FNAMES = ['美債殖利率', '美元', '油價', '半導體']
+def _fchg():
+    out = np.full((len(FDAYS), 4), np.nan)
+    for j in range(1, len(FDAYS)):
+        a, b = FDAYS[j - 1], FDAYS[j]
+        spy_r = (_spy[b] / _spy[a] - 1) * 100
+        out[j] = [(_tnx[b] - _tnx[a]) * 100, (_dx[b] / _dx[a] - 1) * 100, (_cl[b] / _cl[a] - 1) * 100, (_sox[b] / _sox[a] - 1) * 100 - spy_r]
+    out[:, 2] = np.clip(out[:, 2], -15, 15)      # 2020-04 原油期貨負價格之類的極端值
+    return out
+FCHG = _fchg() if len(FDAYS) > 500 else None
+def falign(days, lag):
+    M = np.full((len(days), 4), np.nan)
+    if FCHG is None: return M
+    for i, d in enumerate(days):
+        j = bisect.bisect_left(FDAYS, d) - (1 if lag else 0)
+        if lag:
+            if 0 <= j < len(FDAYS): M[i] = FCHG[j]
+        elif j < len(FDAYS) and FDAYS[j] == d: M[i] = FCHG[j]
+    return M
+def loadings(ARm, FM, idx):
+    lam = {}
+    X = FM[idx]
+    for sec, r in ARm.items():
+        y = r[idx]; ok = ~(np.isnan(y) | np.isnan(X).any(1))
+        if ok.sum() < 250: continue
+        lam[sec] = np.linalg.lstsq(np.c_[np.ones(ok.sum()), X[ok]], y[ok], rcond=None)[0][1:]
+    return lam
+def gammas(FM, react, nd, keep_fn):
+    g = {}
+    for k, t in TPL.items():
+        if k not in SURP or not EVENTS[k]: continue
+        H = H_BY_KIND[t['kind']]
+        occ = [(d, react(d, t), SURP[k][0](d)) for d in EVENTS[k] if keep_fn(d)]
+        occ = [o for o in occ if o[1] is not None and o[2] is not None and o[1] + H < nd]
+        if len(occ) < 10: continue
+        xs = np.array([o[2] for o in occ]); z = (xs - xs.mean()) / (xs.std() or 1)
+        fw = np.array([np.nansum(FM[i:i + H + 1], 0) for _, i, _ in occ])
+        g[k] = (np.array([(ols(z, fw[:, j]) or {'b': 0})['b'] for j in range(4)]), xs.mean(), xs.std() or 1)
+    return g
+def factor_oos(ARm, days, nd, react, lag):
+    """前半期估 γ、λ，預測後半期：照方向押的平均超額報酬、t 值（以事件為單位算，避免同事件板塊相關灌水），以及方向命中率"""
+    FM = falign(days, lag); mid = days[len(days) // 2]
+    lam = loadings(ARm, FM, [i for i, d in enumerate(days) if d < mid])
+    gam = gammas(FM, react, nd, lambda d: d.isoformat() < mid)
+    per_event, hits = [], []
+    for k, t in TPL.items():
+        if k not in gam: continue
+        H = H_BY_KIND[t['kind']]; g, mu, sd = gam[k]
+        for d in EVENTS[k]:
+            if d.isoformat() < mid: continue
+            i = react(d, t); x = SURP[k][0](d)
+            if i is None or x is None or i + H >= nd or x == mu: continue
+            zz = (x - mu) / sd; v = []
+            for sec, r in ARm.items():
+                if sec not in lam: continue
+                c = car(r, i, H, nd); pf = float(g @ lam[sec])
+                if np.isnan(c) or pf == 0: continue
+                v.append(np.sign(pf * zz) * c); hits.append(np.sign(pf * zz) == np.sign(c))
+            if v: per_event.append(np.mean(v))
+    pe = np.array(per_event)
+    if len(pe) < 10: return None
+    return {'mean': round(float(pe.mean()), 4), 't': round(float(pe.mean() / pe.std(ddof=1) * np.sqrt(len(pe))), 2),
+            'n_events': len(pe), 'hit': round(float(np.mean(hits)), 3)}
+factor = {'names': FNAMES, 'oos': {}}
+if FCHG is not None:
+    react_tw2 = lambda d, t: react_idx(d, rt_of(d, t))
+    factor['oos']['tw'] = factor_oos(AR, tdays, ND, react_tw2, True)
+    if us_ok: factor['oos']['us'] = factor_oos(UAR, udays, UND, react_us, False)
+    # 全樣本估計，給頁面用
+    FM_tw = falign(tdays, True); lam_all = loadings(AR, FM_tw, list(range(ND))); gam_tw = gammas(FM_tw, react_tw2, ND, lambda d: True)
+    fp = {}
+    for k, (g, _, _) in gam_tw.items():
+        for sec, l in lam_all.items(): fp[f'{k}>{sec}'] = round(float(g @ l), 3)
+    factor['gamma_tw'] = {k: [round(float(x), 3) for x in v[0]] for k, v in gam_tw.items()}
+    if us_ok:
+        FM_us = falign(udays, False); lam_us = loadings(UAR, FM_us, list(range(UND))); gam_us = gammas(FM_us, react_us, UND, lambda d: True)
+        for k, (g, _, _) in gam_us.items():
+            for sec, l in lam_us.items(): fp[f'{k}>{sec}'] = round(float(g @ l), 3)
+        lam_all.update(lam_us)
+        factor['gamma_us'] = {k: [round(float(x), 3) for x in v[0]] for k, v in gam_us.items()}
+    factor['lambda'] = {sec: [round(float(x), 3) for x in l] for sec, l in lam_all.items()}
+    factor['fp'] = fp
+print('因子模型樣本外：', factor['oos'], flush=True)
+
 # ───────────────────────── 7g. 穩定度檢驗（樣本內前後半）─────────────────────────
 # 同一個事件 × 板塊，用前一半事件與後一半事件各估一次 β：前半期顯著的關係，後半期還同方向嗎？
 # 這是對「數字靠不靠得住」最直接的檢查；同方向比例接近 50% 代表只是雜訊。
@@ -1007,6 +1106,7 @@ credibility = {
   'evm_corr': _corr([v[1] for v in _evm_all], [v[2] for v in _evm_all]),
   'stock_beta_corr': _corr([x for x, _ in _sb], [y for _, y in _sb]),
   'stability': stability,
+  'factor_oos': factor.get('oos'),
 }
 print('可信度：', credibility, flush=True)
 
@@ -1024,7 +1124,7 @@ out = {
   'ev_mult': dict(EVM),
   'stock_beta': stock_beta, 'dist': dist, 'cone': cone, 'fill': fill,
   'mode': mode, 'n_occ': n_occ, 'surprise': SURP_SRC, 'fomc_src': FOMC_SRC, 'date_src': DATE_SRC,
-  'amp': AMP, 'chain': chain, 'live': live, 'upcoming': upcoming, 'regime': regime, 'scen_freq': SCEN_FREQ, 'etf_impact': etf_impact, 'stability': stability, 'importance': importance, 'credibility': credibility, 'sec_vol': sec_vol,
+  'amp': AMP, 'chain': chain, 'live': live, 'upcoming': upcoming, 'regime': regime, 'scen_freq': SCEN_FREQ, 'etf_impact': etf_impact, 'stability': stability, 'importance': importance, 'credibility': credibility, 'factor': factor, 'sec_vol': sec_vol,
 }
 try:
     _prev = json.loads(OUT.read_text(encoding='utf-8'))
