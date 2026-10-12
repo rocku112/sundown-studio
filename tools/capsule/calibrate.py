@@ -434,9 +434,11 @@ def study(AR, nd, react, tag):
                                       h=hh, rep=replicated(b / se if se else 0, hh)))
                 v = c20[~np.isnan(c20)]
                 if len(v) >= 6: dist[k][s] = {'U': [*np.percentile(v, [10, 50, 90]).round(2).tolist(), len(v)]}
+        def tmean(v):
+            v = np.array(v); lo, hi = np.percentile(v, [10, 90]); return round(float(np.mean(np.clip(v, lo, hi))), 3)
         if pool[2]:
-            EVM[tag][k] = [round(float(np.mean(pool[2])), 3), round(float(np.mean(pool[0])), 3) if pool[0] else None,
-                           round(float(np.mean(pool[1])), 3) if pool[1] else None, len(keep)]
+            EVM[tag][k] = [tmean(pool[2]), tmean(pool[0]) if len(pool[0]) > 10 else None,
+                           tmean(pool[1]) if len(pool[1]) > 10 else None, len(keep)]
         print(f'{tag} {k:8s} {t["kind"]} {mode[k]} N={n_occ[k]}', flush=True)
     return edges, dist, cone_pool, n_occ, mode
 
@@ -981,24 +983,27 @@ def gammas(FM, react, nd, keep_fn):
         fw = np.array([np.nansum(FM[i:i + H + 1], 0) for _, i, _ in occ])
         g[k] = (np.array([(ols(z, fw[:, j]) or {'b': 0})['b'] for j in range(4)]), xs.mean(), xs.std() or 1)
     return g
-def factor_oos(ARm, days, nd, react, lag):
-    """前半期估 γ、λ，預測後半期：照方向押的平均超額報酬、t 值（以事件為單位算，避免同事件板塊相關灌水），以及方向命中率"""
-    FM = falign(days, lag); mid = days[len(days) // 2]
+def factor_oos(ARm, days, nd, react, lag, frac=0.5, topq=0.0):
+    """前 frac 的期間估 γ、λ，預測之後：照方向押的平均超額報酬、t 值（以事件為單位算，避免同事件板塊相關灌水）、命中率。
+       topq>0 時只押預測幅度前 (1−topq) 的板塊（高信心）。"""
+    FM = falign(days, lag); mid = days[int(len(days) * frac)]
     lam = loadings(ARm, FM, [i for i, d in enumerate(days) if d < mid])
     gam = gammas(FM, react, nd, lambda d: d.isoformat() < mid)
     per_event, hits = [], []
     for k, t in TPL.items():
         if k not in gam: continue
         H = H_BY_KIND[t['kind']]; g, mu, sd = gam[k]
+        pfs = {sec: float(g @ l) for sec, l in lam.items()}
+        cutv = np.percentile(np.abs(list(pfs.values())), topq * 100) if topq and pfs else 0
         for d in EVENTS[k]:
             if d.isoformat() < mid: continue
             i = react(d, t); x = SURP[k][0](d)
             if i is None or x is None or i + H >= nd or x == mu: continue
             zz = (x - mu) / sd; v = []
             for sec, r in ARm.items():
-                if sec not in lam: continue
-                c = car(r, i, H, nd); pf = float(g @ lam[sec])
-                if np.isnan(c) or pf == 0: continue
+                if sec not in pfs: continue
+                c = car(r, i, H, nd); pf = pfs[sec]
+                if np.isnan(c) or pf == 0 or abs(pf) < cutv: continue
                 v.append(np.sign(pf * zz) * c); hits.append(np.sign(pf * zz) == np.sign(c))
             if v: per_event.append(np.mean(v))
     pe = np.array(per_event)
@@ -1008,8 +1013,17 @@ def factor_oos(ARm, days, nd, react, lag):
 factor = {'names': FNAMES, 'oos': {}}
 if FCHG is not None:
     react_tw2 = lambda d, t: react_idx(d, rt_of(d, t))
-    factor['oos']['tw'] = factor_oos(AR, tdays, ND, react_tw2, True)
-    if us_ok: factor['oos']['us'] = factor_oos(UAR, udays, UND, react_us, False)
+    def oos_all(ARm, days, nd, react, lag):
+        base = factor_oos(ARm, days, nd, react, lag)
+        if not base: return None
+        base['top30'] = factor_oos(ARm, days, nd, react, lag, 0.5, 0.7)
+        base['splits'] = {f'{int(f * 100)}%': (lambda r: r and [r['mean'], r['t']])(factor_oos(ARm, days, nd, react, lag, f)) for f in (0.4, 0.5, 0.6, 0.7)}
+        pos = sum(1 for v in base['splits'].values() if v and v[0] > 0)
+        # 通過：50% 切分顯著為正，而且四個切分點至少三個為正
+        base['pass'] = bool(base['mean'] > 0 and base['t'] >= 1.96 and pos >= 3)
+        return base
+    factor['oos']['tw'] = oos_all(AR, tdays, ND, react_tw2, True)
+    if us_ok: factor['oos']['us'] = oos_all(UAR, udays, UND, react_us, False)
     # 全樣本估計，給頁面用
     FM_tw = falign(tdays, True); lam_all = loadings(AR, FM_tw, list(range(ND))); gam_tw = gammas(FM_tw, react_tw2, ND, lambda d: True)
     fp = {}
@@ -1024,6 +1038,10 @@ if FCHG is not None:
         factor['gamma_us'] = {k: [round(float(x), 3) for x in v[0]] for k, v in gam_us.items()}
     factor['lambda'] = {sec: [round(float(x), 3) for x in l] for sec, l in lam_all.items()}
     factor['fp'] = fp
+    # 高信心門檻：各市場預測幅度的第 70 百分位（樣本外前 30% 的板塊方向較明確）
+    for mk, pre in (('tw', 'tw_'), ('us', 'us_')):
+        vals = [abs(v) for kk, v in fp.items() if (kk.split('>')[1].startswith(pre))]
+        if vals: factor.setdefault('cut', {})[mk] = round(float(np.percentile(vals, 70)), 4)
 print('因子模型樣本外：', factor['oos'], flush=True)
 
 # ───────────────────────── 7g. 穩定度檢驗（樣本內前後半）─────────────────────────

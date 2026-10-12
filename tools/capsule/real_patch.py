@@ -89,8 +89,11 @@ function credHTML(){
     ${row(Math.max(tw.same_sign_sig||0,us.same_sign_sig||0)>=.6?2:0,"事件 → 板塊的漲跌方向（逐對估計）",`前半期顯著的關係，後半期同方向：台股 ${pct(tw.same_sign_sig)}、美股 ${pct(us.same_sign_sig)}；β 前後半期相關 ${c.dir_corr}`,(Math.max(tw.same_sign_sig||0,us.same_sign_sig||0)>=.6?"略好於擲硬幣，但仍不穩定，所以逐對的方向不使用；分布區間只描述過去。":"跟擲硬幣差不多，所以逐對的方向不使用；分布區間只描述過去。"))}
     ${(()=>{const o=(CAL.factor||{}).oos||{}; const f=(m,n)=>o[m]?`${n}：照方向押平均 ${o[m].mean>0?"+":""}${o[m].mean.toFixed(3)}%（t ${o[m].t}，${o[m].n_events} 次事件，命中率 ${Math.round(o[m].hit*100)}%）`:`${n}：—`;
       const ok=factorOK("tw")||factorOK("us");
-      return row(ok?2:0,"方向的因子模型（事件 → 美債／美元／油價／半導體 → 板塊）",f("tw","台股")+"；"+f("us","美股"),
-        `前半期估、後半期驗。${factorOK("tw")?"台股通過，頁面上的台股方向用這個模型。":"台股未通過，不給方向。"}${factorOK("us")?"美股通過，頁面上的美股方向用這個模型。":"美股未通過，不給方向。"}幅度很小，只能當作傾向。`);})()}
+      const sp=m=>o[m]&&o[m].splits?Object.entries(o[m].splits).map(([k,v])=>`${k} ${v?(v[1]>0?"+":"")+v[1]:"—"}`).join("、"):"—";
+      const tp=m=>o[m]&&o[m].top30?`高信心板塊 ${o[m].top30.mean>0?"+":""}${o[m].top30.mean.toFixed(3)}%（t ${o[m].top30.t}）`:"";
+      return row(ok?2:0,"方向的因子模型（事件 → 美債／美元／油價／半導體 → 板塊）",
+        f("tw","台股")+"，"+tp("tw")+"；不同切分點 t："+sp("tw")+"<br>"+f("us","美股")+"；不同切分點 t："+sp("us"),
+        `通過規則：前半期估、後半期驗顯著為正，而且四個切分點至少三個為正。${factorOK("tw")?"台股通過，頁面上的台股方向用這個模型。":"台股未通過，不給方向。"}${factorOK("us")?"美股通過，頁面上的美股方向用這個模型。":"美股未通過，不給方向。"}幅度很小，只能當作傾向。`);})()}
     ${row(0,"巨觀環境 × 板塊",`各板塊在目前環境下的表現，前後半期排序相關 利率 ${rg.rate}、景氣 ${rg.growth}、通膨 ${rg.infl}`,"前後期甚至相反，只能當作歷史描述。")}
   </div>`;
 }
@@ -313,10 +316,13 @@ rep('''  return {med,lo,hi,dir:clamp(med/half*2,-1,1),cover:1,spread:hi-lo,n:q[3
     '''  /* 方向不用逐對的歷史中位數（前後期無法重現），改用因子模型；該市場樣本外沒通過就不給方向 */
   let dir=0, fdir=false;
   const fpv=factorDir(ev.tpl,sec,node.L===4?node.mkt:INDBY[sec]&&INDBY[sec].mkt);
-  if(fpv!==null&&key!=="U"){ dir=clamp(fpv/(CAL.fpScale||1),-1,1)*(key==="B"?-1:1)*(k<0?-1:1); fdir=true; }
+  if(fpv!==null&&key!=="U"){
+    /* 信心分級：預測幅度在該市場前 30% → 偏正／偏負；其餘 → 略偏（樣本外前 30% 的板塊方向較明確） */
+    const cut=(CAL.factor.cut||{})[INDBY[sec]&&INDBY[sec].mkt==="us"?"us":"tw"]||0;
+    dir=Math.sign(fpv)*(Math.abs(fpv)>=cut?.6:.2)*(key==="B"?-1:1)*(k<0?-1:1); fdir=true; }
   return {med,lo,hi,dir,fdir,cover:1,spread:hi-lo,n:q[3],real:true,split:key!=="U"};''')
 rep('''function dirLabel(d){''', '''/* 因子模型方向：該市場樣本外「照方向押」的平均報酬顯著為正才使用 */
-function factorOK(mkt){const o=CAL.factor&&CAL.factor.oos&&CAL.factor.oos[mkt==="us"?"us":"tw"]; return !!(o&&o.mean>0&&o.t>=1.96);}
+function factorOK(mkt){const o=CAL.factor&&CAL.factor.oos&&CAL.factor.oos[mkt==="us"?"us":"tw"]; return !!(o&&(o.pass!==undefined?o.pass:(o.mean>0&&o.t>=1.96)));}
 function factorDir(k,sec,mkt){
   if(!CAL.factor||!CAL.factor.fp||!factorOK(mkt))return null;
   const v=CAL.factor.fp[k+">"+sec]; return v==null?null:v;
