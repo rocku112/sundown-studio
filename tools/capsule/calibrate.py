@@ -1122,6 +1122,52 @@ if POL:
     tariff['n_docs'] = len(POL)
     print('關稅事件：', {m: (v['corr'], v['vol_mult'], v['n_events']) for m, v in tariff.items() if isinstance(v, dict) and 'corr' in v}, flush=True)
 
+
+# ───────────────────────── 7j. 上市櫃公司法說會（公開資訊觀測站）─────────────────────────
+# 個股在自己法說會窗口（收盤後召開算隔天，T+0～T+2）的超額波動是平常的幾倍；全部公司合併、前後半期檢驗。
+CONF_FILE = SCRATCH / 'conf_events.json'
+CONF = json.loads(CONF_FILE.read_text(encoding='utf-8')) if CONF_FILE.exists() else {}
+conf = {}
+if CONF:
+    _mkt = RET[CIDX['0050']]; _mb = {}
+    def stock_ar(c):
+        if c not in _mb:
+            r = RET[CIDX[c]]; mm = ols(_mkt, r)
+            _mb[c] = (r - (mm['a'] + mm['b'] * _mkt)) if mm else None
+        return _mb[c]
+    vals = {0: [], 1: []}; nulls = {}
+    for key, rows in CONF.items():
+        for row in rows:
+            c, d, tm = (row[0], row[1], row[2]) if len(row) == 3 else (row[0], row[2], row[3])
+            if c not in CIDX: continue
+            after = not tm or tm >= '13:30'
+            j = bisect.bisect_left(tdays, d)
+            if j < len(tdays) and tdays[j] == d and after: j += 1
+            if j + 2 >= ND or j < 30: continue
+            ar = stock_ar(c)
+            if ar is None: continue
+            if c not in nulls:
+                v = np.array([car(ar, i, 2, ND) for i in range(30, ND - 3, 4)]); v = np.abs(v[~np.isnan(v)])
+                nulls[c] = float(v.mean()) if len(v) > 50 else np.nan
+            cc = car(ar, j, 2, ND)
+            if np.isnan(cc) or not nulls[c] or np.isnan(nulls[c]): continue
+            vals[0 if j < ND // 2 else 1].append(abs(cc) / nulls[c])
+    def tm_(v):
+        v = np.array(v); lo, hi = np.percentile(v, [10, 90]); vv = np.clip(v, lo, hi); return float(vv.mean()), float(vv.std(ddof=1) / np.sqrt(len(vv)))
+    allv = vals[0] + vals[1]
+    if len(allv) > 500:
+        m, se = tm_(allv); m1, _ = tm_(vals[0]); m2, _ = tm_(vals[1])
+        conf = {'mult': round(m, 3), 't': round((m - 1) / se, 1), 'n': len(allv), 'halves': [round(m1, 3), round(m2, 3)]}
+    # 未來 60 天的法說會（給頁面：標的池裡的個股會出現自己的法說事件）
+    up = []
+    horizon_c = (dt.date.today() + dt.timedelta(days=60)).isoformat()
+    for key, rows in CONF.items():
+        for row in rows:
+            if len(row) < 5: continue
+            if today_iso <= row[2] <= horizon_c: up.append(row)
+    conf['upcoming'] = sorted(up, key=lambda r: (r[2], r[3]))
+    print('法說會：', {k: v for k, v in conf.items() if k != 'upcoming'}, f'未來 {len(up)} 場', flush=True)
+
 # ───────────────────────── 7g. 穩定度檢驗（樣本內前後半）─────────────────────────
 # 同一個事件 × 板塊，用前一半事件與後一半事件各估一次 β：前半期顯著的關係，後半期還同方向嗎？
 # 這是對「數字靠不靠得住」最直接的檢查；同方向比例接近 50% 代表只是雜訊。
@@ -1194,7 +1240,13 @@ regime['stability'] = _reg_c
 # 板塊平常的波動（近 500 日超額報酬日標準差，%）：傳導強度用「事件整體波動倍數 × 板塊波動」這種前後期穩定的量
 sec_vol = {sec: round(float(np.nanstd(r[-500:])), 3) for sec, r in AR.items()}
 if us_ok: sec_vol.update({sec: round(float(np.nanstd(r[-500:])), 3) for sec, r in UAR.items()})
+# FOMC 會前漂移（Lucca & Moench）：台股當天收盤在決議（台北凌晨）之前，是乾淨的會前窗口
+_mr = RET[CIDX['0050']]; _pre = [TIDX[d.isoformat()] for d in sorted(set(EVENTS['fomc'])) if d.isoformat() in TIDX]
+def _mt(v): v = np.array(v); v = v[~np.isnan(v)]; return [round(float(v.mean()), 3), round(float(v.mean() / v.std(ddof=1) * np.sqrt(len(v))), 2), len(v)] if len(v) > 5 else None
+pre_fomc = {'all': _mt(_mr[_pre]), 'first': _mt(_mr[[i for i in _pre if i < ND // 2]]), 'second': _mt(_mr[[i for i in _pre if i >= ND // 2]]),
+            'normal': round(float(np.nanmean(_mr)), 3)}
 credibility = {
+  'pre_fomc': pre_fomc,
   'regime_corr': _reg_c,
   'dir_corr': _corr([h[0] for h in _hd], [h[2] for h in _hd]), 'abs_corr': _corr([h[0] for h in _ha], [h[2] for h in _ha]),
   'n_dir': len(_hd), 'n_abs': len(_ha),
@@ -1220,7 +1272,7 @@ out = {
   'ev_mult': dict(EVM),
   'stock_beta': stock_beta, 'dist': dist, 'cone': cone, 'fill': fill,
   'mode': mode, 'n_occ': n_occ, 'surprise': SURP_SRC, 'fomc_src': FOMC_SRC, 'date_src': DATE_SRC,
-  'amp': AMP, 'chain': chain, 'live': live, 'upcoming': upcoming, 'regime': regime, 'scen_freq': SCEN_FREQ, 'etf_impact': etf_impact, 'stability': stability, 'importance': importance, 'credibility': credibility, 'factor': factor, 'tariff': tariff, 'sec_vol': sec_vol,
+  'amp': AMP, 'chain': chain, 'live': live, 'upcoming': upcoming, 'regime': regime, 'scen_freq': SCEN_FREQ, 'etf_impact': etf_impact, 'stability': stability, 'importance': importance, 'credibility': credibility, 'factor': factor, 'tariff': tariff, 'conf': conf, 'sec_vol': sec_vol,
 }
 try:
     _prev = json.loads(OUT.read_text(encoding='utf-8'))

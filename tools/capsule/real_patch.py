@@ -97,6 +97,15 @@ function credHTML(){
       return row(ok?2:0,"方向的因子模型（事件 → 美債／美元／油價／半導體 → 板塊）",
         f("tw","台股")+"，"+tp("tw")+"；不同切分點 t："+sp("tw")+"<br>"+f("us","美股")+"；不同切分點 t："+sp("us"),
         `通過規則：前半期估、後半期驗顯著為正，而且四個切分點至少三個為正。${factorOK("tw")?"台股通過，頁面上的台股方向用這個模型。":"台股未通過，不給方向。"}${factorOK("us")?"美股通過，頁面上的美股方向用這個模型。":"美股未通過，不給方向。"}幅度很小，只能當作傾向。`);})()}
+    ${(()=>{const T=CAL.tariff||{}, tw=T.tw||{}, us=T.us||{};
+      return tw.corr==null?"":row(tw.corr>=.3?2:0,"美國政府貿易／關稅行動（Federal Register）",
+        `「升級」行動時的板塊方向，川普第一任與之後兩期相關：台股 ${tw.corr}、美股 ${us.corr}；事件窗板塊波動 台股 ×${tw.vol_mult}、美股 ×${us.vol_mult}`,
+        "台股的板塊方向大致能重現（電子硬體偏弱、金融電信與海外 ETF 相對抗跌），美股不能重現。事件次數不多，僅供參考。");})()}
+    ${(()=>{const C=CAL.conf||{}; return C.mult?row(C.halves&&C.halves.every(x=>x>1)?1:2,"個股法說會窗口的波動",
+        `${C.n} 場法說會：個股超額波動是平常的 ×${C.mult}（t ${C.t}），前後半期 ×${(C.halves||[]).join("、×")}`,"法說會前後個股會晃得比較大，這點很穩定；方向不可預測。"):"";})()}
+    ${(()=>{const P=(CAL.cred||{}).pre_fomc; return P&&P.all?row(0,"FOMC 會前漂移（研究文獻）",
+        `台股決議前一天 0050 平均 ${P.all[0]>0?"+":""}${P.all[0]}%（t ${P.all[1]}，${P.all[2]} 次），平常日 ${P.normal}%；前半期 t ${P.first?P.first[1]:"—"}、後半期 t ${P.second?P.second[1]:"—"}`,
+        "美國研究發現的會前上漲，在台股沒有顯著，後半期幾乎消失，與文獻說的「近年減弱」一致，所以不使用。"):"";})()}
     ${row(0,"巨觀環境 × 板塊",`各板塊在目前環境下的表現，前後半期排序相關 利率 ${rg.rate}、景氣 ${rg.growth}、通膨 ${rg.infl}`,"前後期甚至相反，只能當作歷史描述。")}
   </div>`;
 }
@@ -284,7 +293,7 @@ rep('''  const c=CONE[ev.kind]||CONE["總經"];
 rep('''"歷史同類分布（示意）"''', '''"同類事件整體分布（這個板塊沒有單獨統計）"''')
 # 除息／領息沒有事件研究的分布（手設的扇形拿掉），除息事件只顯示填息統計
 rep('''    ${!back&&isEvent?`<div class="res-sec">
-      <h3>歷史後續分布''', '''    ${!back&&isEvent&&!src.div?`<div class="res-sec">
+      <h3>歷史後續分布''', '''    ${!back&&isEvent&&!src.div&&src.tpl!=="conf"?`<div class="res-sec">
       <h3>歷史後續分布''')
 rep('''      <h3>模型邊界<em>${l3name}層 · 三件不做的事</em></h3>''', '''      <h3>模型邊界<em>放大器層 · 三件不做的事</em></h3>''')
 rep('''        ${S.mkt==="us"?"獲利能力與自由現金流越強的地方越能吸收":"現價與法人推估成本背離越大的地方反應會被放大"}。</p>''',
@@ -414,3 +423,29 @@ rep('''function refreshPoolViews(){
   layout(); renderLeft(); renderPool();''', '''function refreshPoolViews(){
   layout(); renderLeft(); renderPool(); renderPolicy();''')
 src = src.replace('''  c_short:"融券是否快速增加（軋空或看空加碼）",''', '''  c_short:"融券是否快速增加（軋空或看空加碼）",c_fut:"外資台指期淨部位是否快速轉向",''')
+
+# ── 21) 個股法說會事件（公開資訊觀測站法人說明會一覽表）：標的池裡的個股與最大型股 ──
+rep('''  const dv=genDivEvents(now);''', '''  const cv=genConfEvents(now);
+  cv.out.forEach(e=>out.push(e)); if(cv.nextExp<nextExp)nextExp=cv.nextExp;
+  const dv=genDivEvents(now);''')
+rep('''function genDivEvents(now){''', '''function genConfEvents(now){
+  const out=[]; let nextExp=Infinity;
+  const C=CAL.conf||{}, mult=C.mult||1;
+  const inPool=c=>{try{return POOL.tw.includes(c)}catch(e){return false}};
+  (C.upcoming||[]).forEach(([code,name,ds,tm,summ])=>{
+    if(code==="2330")return;               /* 台積電法說已由財報行事曆（TSM）事件涵蓋 */
+    const st=LOOKUP[code]; if(!st||!(inPool(code)||st.w>=80))return;
+    const dObj=isoD(ds), dd=daysTo(dObj); if(dd<0||dd>60)return;
+    const [hh,mi]=(tm||"14:00").split(":").map(Number), rt=(hh||14)+(mi||0)/60;
+    const rms=releaseMs(dObj,rt); if(rms<=now)return;
+    if(rms<nextExp)nextExp=rms;
+    const str=clamp(.35+(mult-1)*3,.3,.8);
+    out.push({id:`conf_${code}_${ds}`,tpl:"conf",n:`${st.n} 法說會`,date:ds,dObj,kind:"法說",mkt:"tw",lvl:2,
+      src:"公開資訊觀測站 法人說明會一覽表",
+      note:`${summ||""} 過去 ${C.n||"—"} 場法說會，個股在法說窗口（3 個交易日）的超額波動是平常的 ×${mult}（t ${C.t||"—"}）；不分方向。`,
+      hits:[[code,str,null]],scen:[],watch:"法說會的營運展望、毛利率與資本支出指引",rt,rms,twoSided:true,days:dd,time:tm});
+  });
+  return {out,nextExp};
+}
+function genDivEvents(now){''')
+rep('''  CAL.regime=j.regime||null; CAL.tariff=j.tariff||null;''', '''  CAL.regime=j.regime||null; CAL.tariff=j.tariff||null; CAL.conf=j.conf||null;''')

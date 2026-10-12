@@ -17,6 +17,8 @@
 | `gen_usall.py` | Nasdaq 選股器 → `twflow/web/data/capsule_usall.json`（全美股＋ETF，產業對應板塊） |
 | `fetch_calendar.py` | Nasdaq 經濟／財報行事曆 → `econ_cal.json`（公布日、時刻、實際值、市場共識、EPS 驚喜） |
 | `fetch_tw_macro.py` | 央行理監事會（央行決議列表與年度預定日期）、台灣 CPI（主計總處新聞稿與預告發布時間表）、出口（財政部新聞稿） → `tw_macro.json` |
+| `fetch_policy.py` | Federal Register 總統文件中與貿易／關稅有關者（2017 起）→ `policy_events.json` |
+| `fetch_conf.py` | 公開資訊觀測站法人說明會一覽表（2021 起，上市＋上櫃）→ `conf_events.json` |
 | `fetch_hist.py` | Yahoo 長歷史：美股、台股債券／海外 ETF、配息 ETF（含配息紀錄）→ 快取目錄 `hist.json.gz` |
 | `calibrate.py` | 事件研究校準＋放大器＋上下游＋即時資料＋未來排程 → `twflow/web/data/capsule_calib.json` |
 
@@ -52,6 +54,18 @@
 只看大意外值；個股自己的因子敏感度（去掉前視偏誤後與板塊 × β 差不多）。美股的方向在所有組合都沒通過——
 美股對總經數據的反應在公布後幾分鐘內完成，日資料扣掉大盤後幾乎只剩雜訊，要改善需要盤中資料。
 
+## 研究文獻檢驗（2026-10）
+
+| 項目 | 結果 | 處理 |
+|---|---|---|
+| FOMC 會前漂移（Lucca & Moench） | 台股決議前一天 t 1.05，後半期消失 | 不使用，可信度表列出 |
+| 長期波動、EPU、TPU 當放大器 | 前後半期穩定但小於 1（大盤波動大時板塊超額反應相對變小） | 不使用 |
+| 外資台指期淨未平倉 5 日變化 | 放大器 ×1.12（t 6.0，2023-11 起） | 加入放大器 |
+| 外資台指期未平倉變化預測隔日方向 | 樣本內 β 穩定，樣本外照方向押約 0 | 不使用 |
+| 美國政府貿易／關稅行動 | 台股「升級」時板塊方向兩任期相關 0.53；美股 −0.32 | 頁面面板；只對台股給方向 |
+| 個股法說會窗口波動 | ×1.08（t 15，24,618 場），前後半期都大於 1 | 標的池個股的法說事件 |
+| 經濟部外銷訂單 | 公開列表只有近一年發布日、標題無數值 | 暫不加入 |
+
 ## 可信度（前後半期檢驗）
 
 `calibrate.py` 把事件分成前後兩半各估一次，檢查結果能不能重現，結果寫在 `credibility`，頁面體檢頁直接顯示：
@@ -70,7 +84,7 @@
 ## 自動更新
 
 `.github/workflows/twflow-daily.yml` 每個交易日盤後，在官方日線更新後依序執行
-`gen_twall.py` → `fetch_calendar.py` → `gen_usall.py` → `fetch_tw_macro.py` → `fetch_hist.py` → `calibrate.py`。
+`gen_twall.py` → `fetch_calendar.py` → `gen_usall.py` → `fetch_tw_macro.py` → `fetch_policy.py` → `fetch_conf.py` → `fetch_hist.py` → `calibrate.py`。
 `econ_cal.json` 與 `twall.json` 進 repo；Yahoo 長歷史放 Actions cache（`/tmp/capsule_cache`）。
 任何一步失敗都沿用上一份資料，不會擋住其他盤後更新。頁面開啟時會抓 GitHub Pages 上的最新檔案。
 
