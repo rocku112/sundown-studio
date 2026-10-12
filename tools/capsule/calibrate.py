@@ -1118,6 +1118,15 @@ if POL:
         return {'sec': sec_out, 'corr': corr, 'vol_mult': round(float(np.mean(vol)), 3) if vol else None, 'n_events': len(idx)}
     tariff['tw'] = tariff_study(AR, tdays, ND, 1)          # 美東簽署，台股隔天反應
     if us_ok: tariff['us'] = tariff_study(UAR, udays, UND, 0)
+    # 個別台股 ETF（原始報酬，持有人看到的漲跌）在升級行動時的反應，給除權息雷達
+    _etf_ret = {}
+    for c, k_ in KIND.items():
+        if k_ != 1: continue
+        if c in CIDX and np.sum(~np.isnan(RET[CIDX[c]])) > 500: _etf_ret[c] = RET[CIDX[c]]
+        elif c in HIST:
+            rr = hist_ret(c, tdays)
+            if rr is not None and np.sum(~np.isnan(rr)) > 500: _etf_ret[c] = rr
+    tariff['tw_etf'] = tariff_study(_etf_ret, tdays, ND, 1)
     tariff['recent'] = [x for x in POL if x[0] >= (dt.date.today() - dt.timedelta(days=60)).isoformat()][-12:]
     tariff['n_docs'] = len(POL)
     print('關稅事件：', {m: (v['corr'], v['vol_mult'], v['n_events']) for m, v in tariff.items() if isinstance(v, dict) and 'corr' in v}, flush=True)
