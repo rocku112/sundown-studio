@@ -45,12 +45,13 @@ TIDX = {d: i for i, d in enumerate(tdays)}
 codes = sorted({c for rows in day_rows.values() for c in rows})
 CIDX = {c: i for i, c in enumerate(codes)}
 ND, NC = len(tdays), len(codes)
-RET = np.full((NC, ND), np.nan); CLOSE = np.full((NC, ND), np.nan); TURN = np.zeros(NC)
+RET = np.full((NC, ND), np.nan); CLOSE = np.full((NC, ND), np.nan); OPEN = np.full((NC, ND), np.nan); TURN = np.zeros(NC)
 for j, d in enumerate(tdays):
     for c, v in day_rows[d].items():
         i = CIDX[c]
         if v[5] is not None: RET[i, j] = v[5] * 100
         if v[3]: CLOSE[i, j] = v[3]
+        if v[0]: OPEN[i, j] = v[0]
         if v[3] and v[4]: TURN[i] += v[3] * v[4]
 del day_rows
 print(f'日線 {tdays[0]}～{tdays[-1]}：{ND} 個交易日、{NC} 檔', flush=True)
@@ -1177,6 +1178,94 @@ if CONF:
     conf['upcoming'] = sorted(up, key=lambda r: (r[2], r[3]))
     print('法說會：', {k: v for k, v in conf.items() if k != 'upcoming'}, f'未來 {len(up)} 場', flush=True)
 
+
+# ───────────────────────── 7k. 方向：開盤跳空（前一日收盤 → 當日開盤）─────────────────────────
+# 開盤前公布的事件（台股：所有美國夜間與台股收盤後的事件；美股：8:30 數據與盤後／盤前財報），
+# 反應幾乎都在開盤跳空裡完成；只看跳空可以避開整個交易日的其他雜訊。
+# 樣本外（前段估逐對 β、後段照方向押，以事件為單位）：台股 40／50／60／70% 切分 t 2.4／2.6／2.0／1.5；
+# 美股 0.3／1.8／3.9／3.3（50% 未達顯著，依規則暫不使用，每天重新檢驗）。
+def _gap_ex(series_by, mkt):
+    out = {}
+    for k, r in series_by.items():
+        mm = ols(mkt, r); out[k] = r - (mm['a'] + mm['b'] * mkt) if mm else r
+    return out
+def _twgap(i):
+    g = np.full(ND, np.nan); g[1:] = (OPEN[i, 1:] / CLOSE[i, :-1] - 1) * 100; return np.clip(g, -10.5, 10.5)
+TWG = {}
+for sec, mem in MEMBERS.items():
+    if not mem: continue
+    M = np.array([_twgap(i) for i in mem]); cnt = np.sum(~np.isnan(M), 0)
+    TWG[sec] = np.where(cnt >= 2, np.nansum(M, 0) / np.maximum(cnt, 1), np.nan)
+AR_G = _gap_ex(TWG, _twgap(CIDX['0050']))
+def react_gap_tw(d, t):
+    rel = dt.datetime(d.year, d.month, d.day) + dt.timedelta(hours=rt_of(d, t))
+    key = rel.date().isoformat(); j = bisect.bisect_left(tdays, key)
+    if j < len(tdays) and tdays[j] == key and (rel.hour, rel.minute) >= (9, 0): j += 1
+    return j if j < len(tdays) else None
+GAP_US_KEYS = {'uscpi', 'nfp', 'usret', 'pce', 'banks', 'nvda', 'aapl', 'mu', 'tsmc'}
+UAR_G = {}
+if us_ok:
+    def _usgap(sym):
+        h = HIST.get(sym) or {}
+        if not h.get('o'): return None
+        m = {d: (o, c) for d, o, c in zip(h['d'], h['o'], h['c']) if o and c}
+        out = np.full(UND, np.nan)
+        for i in range(1, UND):
+            a, b = m.get(udays[i - 1]), m.get(udays[i])
+            if a and b: out[i] = (b[0] / a[1] - 1) * 100
+        return np.clip(out, -20, 20)
+    _ug = {c: g for c in US_SEC if (g := _usgap(c)) is not None}
+    _spyg = _usgap('SPY')
+    if _spyg is not None and len(_ug) > 100:
+        USG = {}
+        for sec in set(US_SEC.values()):
+            mem = [_ug[c] for c, s_ in US_SEC.items() if s_ == sec and c in _ug]
+            if len(mem) >= 2:
+                M = np.array(mem); cnt = np.sum(~np.isnan(M), 0); USG[sec] = np.where(cnt >= 2, np.nansum(M, 0) / np.maximum(cnt, 1), np.nan)
+        UAR_G = _gap_ex(USG, _spyg)
+    def react_gap_us(d, t):
+        rel = dt.datetime(d.year, d.month, d.day) + dt.timedelta(hours=rt_of(d, t) - (12 if us_dst(d) else 13))
+        key = rel.date().isoformat(); before_open = (rel.hour, rel.minute) < (9, 30)
+        j = bisect.bisect_left(udays, key)
+        if j < len(udays) and udays[j] == key and not before_open: j += 1
+        return j if j < len(udays) else None
+def gap_model(ARm, days, nd, react, keys):
+    def occ_of(k, t):
+        o = [(d.isoformat(), react(d, t), SURP[k][0](d)) for d in EVENTS[k]]
+        return [x for x in o if x[1] is not None and x[2] is not None and x[1] < nd]
+    def oos(frac):
+        mid = days[int(len(days) * frac)]; pe = []
+        for k, t in TPL.items():
+            if k not in keys or k not in SURP or not EVENTS[k]: continue
+            occ = occ_of(k, t); o1 = [o for o in occ if o[0] < mid]; o2 = [o for o in occ if o[0] >= mid]
+            if len(o1) < 8 or not o2: continue
+            x1 = np.array([o[2] for o in o1]); mu, sd = x1.mean(), (x1.std() or 1); z1 = (x1 - mu) / sd
+            betas = {sec: m['b'] for sec, r in ARm.items() if (m := ols(z1, np.array([r[i] for _, i, _ in o1])))}
+            for _, i, x in o2:
+                zz = (x - mu) / sd
+                if zz == 0: continue
+                v = [np.sign(b * zz) * ARm[s_][i] for s_, b in betas.items() if not np.isnan(ARm[s_][i])]
+                if v: pe.append(np.mean(v))
+        pe = np.array(pe)
+        return [round(float(pe.mean()), 4), round(float(pe.mean() / pe.std(ddof=1) * np.sqrt(len(pe))), 2), len(pe)] if len(pe) > 10 else None
+    splits = {f'{int(f * 100)}%': oos(f) for f in (0.4, 0.5, 0.6, 0.7)}
+    base = splits['50%']
+    pos = sum(1 for v in splits.values() if v and v[0] > 0)
+    beta = {}
+    for k, t in TPL.items():
+        if k not in keys or k not in SURP or not EVENTS[k]: continue
+        occ = occ_of(k, t)
+        if len(occ) < 16: continue
+        x = np.array([o[2] for o in occ]); z = (x - x.mean()) / (x.std() or 1)
+        for sec, r in ARm.items():
+            m = ols(z, np.array([r[i] for _, i, _ in occ]))
+            if m: beta[f'{k}>{sec}'] = [round(m['b'], 4), round(m['t'], 2)]
+    return {'splits': splits, 'pass': bool(base and base[0] > 0 and base[1] >= 1.96 and pos >= 3), 'beta': beta,
+            'keys': sorted(keys)}
+gap = {'tw': gap_model(AR_G, tdays, ND, react_gap_tw, {k for k in TPL if k in SURP})}
+if UAR_G: gap['us'] = gap_model(UAR_G, udays, UND, react_gap_us, GAP_US_KEYS)
+print('開盤跳空方向：', {m: (v['splits'], v['pass']) for m, v in gap.items()}, flush=True)
+
 # ───────────────────────── 7g. 穩定度檢驗（樣本內前後半）─────────────────────────
 # 同一個事件 × 板塊，用前一半事件與後一半事件各估一次 β：前半期顯著的關係，後半期還同方向嗎？
 # 這是對「數字靠不靠得住」最直接的檢查；同方向比例接近 50% 代表只是雜訊。
@@ -1281,7 +1370,7 @@ out = {
   'ev_mult': dict(EVM),
   'stock_beta': stock_beta, 'dist': dist, 'cone': cone, 'fill': fill,
   'mode': mode, 'n_occ': n_occ, 'surprise': SURP_SRC, 'fomc_src': FOMC_SRC, 'date_src': DATE_SRC,
-  'amp': AMP, 'chain': chain, 'live': live, 'upcoming': upcoming, 'regime': regime, 'scen_freq': SCEN_FREQ, 'etf_impact': etf_impact, 'stability': stability, 'importance': importance, 'credibility': credibility, 'factor': factor, 'tariff': tariff, 'conf': conf, 'sec_vol': sec_vol,
+  'amp': AMP, 'chain': chain, 'live': live, 'upcoming': upcoming, 'regime': regime, 'scen_freq': SCEN_FREQ, 'etf_impact': etf_impact, 'stability': stability, 'importance': importance, 'credibility': credibility, 'factor': factor, 'tariff': tariff, 'conf': conf, 'gap': gap, 'sec_vol': sec_vol,
 }
 try:
     _prev = json.loads(OUT.read_text(encoding='utf-8'))

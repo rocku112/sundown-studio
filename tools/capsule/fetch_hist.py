@@ -47,38 +47,40 @@ def chart(ysym, rng):
                     res = r.json()['chart']['result'][0]
                     tz = res['meta'].get('gmtoffset', 0)
                     ts = res.get('timestamp') or []
-                    c = res['indicators']['quote'][0]['close']
+                    c = res['indicators']['quote'][0]['close']; o = res['indicators']['quote'][0].get('open') or [None] * len(c)
                     a = (res['indicators'].get('adjclose') or [{}])[0].get('adjclose') or c
                     d = [dt.datetime.utcfromtimestamp(t + tz).date().isoformat() for t in ts]
                     v = {dt.datetime.utcfromtimestamp(int(k) + tz).date().isoformat(): x['amount']
                          for k, x in ((res.get('events') or {}).get('dividends') or {}).items()}
-                    return d, c, a, v
+                    return d, c, a, v, o
             except Exception:
                 pass
             time.sleep(1.5 * (i + 1))
     return None
 
 def merge(prev, new):
-    d, c, a, v = new
-    m = {x: (cc, aa) for x, cc, aa in zip(prev.get('d', []), prev.get('c', []), prev.get('a', []))}
+    d, c, a, v, o = new
+    po = prev.get('o') or [None] * len(prev.get('d', []))
+    m = {x: (cc, aa, oo) for x, cc, aa, oo in zip(prev.get('d', []), prev.get('c', []), prev.get('a', []), po)}
     # 還原收盤會因新的配息整段改寫：補資料時以新抓的區間為準，舊區間依最新一天的比例重新縮放
     ratio = None
-    for x, cc, aa in zip(d, c, a):
+    for x, cc, aa, oo in zip(d, c, a, o):
         if cc is None or aa is None: continue
         if x in m and m[x][1] and ratio is None: ratio = aa / m[x][1]
-        m[x] = (cc, aa)
+        m[x] = (cc, aa, oo)
     if ratio and abs(ratio - 1) > 1e-9:
         newset = set(d)
-        m = {x: (cc, aa if x in newset else aa * ratio) for x, (cc, aa) in m.items()}
+        m = {x: (cc, aa if x in newset else aa * ratio, oo) for x, (cc, aa, oo) in m.items()}
     ks = sorted(m)
+    # 開盤價（原始、與收盤同口徑）：開盤跳空＝前一日收盤 → 當日開盤，是開盤前公布事件最乾淨的反應窗
     return {'d': ks, 'c': [round(m[k][0], 4) for k in ks], 'a': [round(m[k][1], 4) for k in ks],
-            'v': {**prev.get('v', {}), **v}}
+            'o': [round(m[k][2], 4) if m[k][2] else None for k in ks], 'v': {**prev.get('v', {}), **v}}
 
 out, ok, fail = {}, 0, []
 today = dt.date.today().isoformat()
 for sym in US + TW_ETF + FACT:
     prev = old.get(sym, {})
-    fresh = prev.get('d') and prev['d'][0] <= (dt.date.today() - dt.timedelta(days=365 * 10 + 150)).isoformat()
+    fresh = prev.get('d') and 'o' in prev and prev['d'][0] <= (dt.date.today() - dt.timedelta(days=365 * 10 + 150)).isoformat()
     rng = '3mo' if fresh else '11y'
     ys = [sym] if sym in FACT else [sym.replace('.', '-')] if sym in US else ([sym + '.TWO', sym + '.TW'] if sym.endswith('B') else [sym + '.TW', sym + '.TWO'])  # 債券 ETF 多在櫃買
     got = None

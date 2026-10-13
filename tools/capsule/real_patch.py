@@ -76,7 +76,7 @@ function evmStr(k,secId){
   const sv=(CAL.secVol[secId]||0)/(CAL.secVolMax[sec.mkt]||1);
   const volStr=clamp((e[0]-1)/Math.max(.05,mx-1),0,1)*clamp(sv,.25,1)*.9;
   /* 方向通過樣本外檢驗的市場：因子模型預測幅度也算進強度（取兩者較大） */
-  const fpv=factorDir(k,secId,sec.mkt), dirStr=fpv===null?0:clamp(Math.abs(fpv)/(CAL.fpScale||1),0,1)*.9;
+  const ds=dirOf(k,secId,sec.mkt), dirStr=!ds?0:clamp(Math.abs(ds.v)/((ds.cut||1)*2),0,1)*.9;
   return Math.max(volStr,dirStr);
 }
 /* 可信度總表：每一類實證結果在前後期能不能重現 */
@@ -90,6 +90,12 @@ function credHTML(){
     ${row(c.evm_corr>=.5?1:c.evm_corr>=.25?2:0,"各類事件的整體波動大小",`前後半期相關 ${c.evm_corr}`,"哪類事件會讓板塊波動變大，大致可以重現；傳導強度只用這個量。")}
     ${row(2,"放大器（法人、融資融券、動能）","前後半期都大於 1，但倍數大小會變","狀態異常時衝擊較大的方向一致，倍數僅供參考；對漲跌方向沒有預測力（同向約 50%）。")}
     ${row(Math.max(tw.same_sign_sig||0,us.same_sign_sig||0)>=.6?2:0,"事件 → 板塊的漲跌方向（逐對估計）",`前半期顯著的關係，後半期同方向：台股 ${pct(tw.same_sign_sig)}、美股 ${pct(us.same_sign_sig)}；β 前後半期相關 ${c.dir_corr}`,(Math.max(tw.same_sign_sig||0,us.same_sign_sig||0)>=.6?"略好於擲硬幣，但仍不穩定，所以逐對的方向不使用；分布區間只描述過去。":"跟擲硬幣差不多，所以逐對的方向不使用；分布區間只描述過去。"))}
+    ${(()=>{const G=CAL.gap||{}; const sp=m=>G[m]?Object.entries(G[m].splits).map(([k,v])=>`${k} ${v?(v[1]>0?"+":"")+v[1]:"—"}`).join("、"):"—";
+      if(!G.tw)return "";
+      const st=m=>G[m]?(G[m].pass?"通過，頁面上的方向優先用這個":(Object.values(G[m].splits).filter(v=>v&&v[0]>0).length>=3?"接近通過（50% 切分未達顯著），暫不使用，每天重新檢驗":"未通過")):"—";
+      return row(G.tw.pass||(G.us&&G.us.pass)?2:0,"方向：開盤跳空（前一日收盤 → 當日開盤）",
+        `只看開盤前公布事件的跳空，避開盤中雜訊。不同切分點 t：台股 ${sp("tw")}；美股 ${sp("us")}`,
+        `台股：${st("tw")}。美股：${st("us")}。幅度很小（每次事件平均約 0.03%），只能當作傾向。`);})()}
     ${(()=>{const o=(CAL.factor||{}).oos||{}; const f=(m,n)=>o[m]?`${n}：照方向押平均 ${o[m].mean>0?"+":""}${o[m].mean.toFixed(3)}%（t ${o[m].t}，${o[m].n_events} 次事件，命中率 ${Math.round(o[m].hit*100)}%）`:`${n}：—`;
       const ok=factorOK("tw")||factorOK("us");
       const sp=m=>o[m]&&o[m].splits?Object.entries(o[m].splits).map(([k,v])=>`${k} ${v?(v[1]>0?"+":"")+v[1]:"—"}`).join("、"):"—";
@@ -316,7 +322,7 @@ rep('''             顯著比例不高是實情：多數事件對單一板塊的
 rep('''FOMC 日期：${CAL.fomcSrc}；其他事件日期依規則推算。''',
     '''事件日期：Nasdaq 經濟／財報行事曆、央行、主計總處、財政部官方發布日與法定期限。''')
 rep('''權重是過去 10 年意外值為正／負的次數比例，不是這一次的機率。''',
-    '''權重是過去 10 年意外值為正／負的次數比例，不是這一次的機率。<strong style="color:var(--dim)">區間只描述過去；「偏正向／偏負向」來自因子模型（事件 → 美債、美元、油價、半導體 → 板塊），只在樣本外檢驗通過的市場顯示，其餘標「方向無法預測」。</strong>''')
+    '''權重是過去 10 年意外值為正／負的次數比例，不是這一次的機率。<strong style="color:var(--dim)">區間只描述過去；「偏正向／偏負向」優先來自開盤跳空的實證方向，其次是因子模型（事件 → 美債、美元、油價、半導體 → 板塊），只在樣本外檢驗通過的市場顯示，其餘標「方向無法預測」。</strong>''')
 
 # ── 16) 全球事件（例如 FOMC）台美板塊分開取前段，避免一邊的板塊把另一邊擠掉 ──
 rep('''  cands.slice(0,24).forEach(([id,w,m])=>{out[id]=[w,m]});''',
@@ -327,14 +333,20 @@ rep('''  cands.slice(0,24).forEach(([id,w,m])=>{out[id]=[w,m]});''',
 rep('''  return {med,lo,hi,dir:clamp(med/half*2,-1,1),cover:1,spread:hi-lo,n:q[3],real:true,split:key!=="U"};''',
     '''  /* 方向不用逐對的歷史中位數（前後期無法重現），改用因子模型；該市場樣本外沒通過就不給方向 */
   let dir=0, fdir=false;
-  const fpv=factorDir(ev.tpl,sec,node.L===4?node.mkt:INDBY[sec]&&INDBY[sec].mkt);
+  const dsrc=dirOf(ev.tpl,sec,node.L===4?node.mkt:INDBY[sec]&&INDBY[sec].mkt), fpv=dsrc?dsrc.v:null;
   if(fpv!==null&&key!=="U"){
     const pv=fpv*k;   /* 個股 ＝ 板塊方向 × 個股實證 β */
     /* 信心分級：預測幅度在該市場前 30% → 偏正／偏負；其餘 → 略偏（樣本外前 30% 的板塊方向較明確） */
-    const cut=(CAL.factor.cut||{})[INDBY[sec]&&INDBY[sec].mkt==="us"?"us":"tw"]||0;
+    const cut=dsrc.cut;
     dir=Math.sign(pv)*(Math.abs(pv)>=cut?.6:.2)*(key==="B"?-1:1); fdir=true; }
   return {med,lo,hi,dir,fdir,cover:1,spread:hi-lo,n:q[3],real:true,split:key!=="U"};''')
-rep('''function dirLabel(d){''', '''/* 因子模型方向：該市場樣本外「照方向押」的平均報酬顯著為正才使用 */
+rep('''function dirLabel(d){''', '''/* 方向來源優先序：開盤跳空逐對 β（該市場樣本外通過）→ 因子模型（該市場樣本外通過）→ 不給方向 */
+function dirOf(k,sec,mkt){
+  const m=mkt==="us"?"us":"tw", G=CAL.gap&&CAL.gap[m];
+  if(G&&G.pass){const b=G.beta[k+">"+sec]; if(b)return {v:b[0],src:"gap",cut:(CAL.gapCut||{})[m]||0};}
+  const f=factorDir(k,sec,mkt); return f===null?null:{v:f,src:"factor",cut:((CAL.factor||{}).cut||{})[m]||0};
+}
+/* 因子模型方向：該市場樣本外「照方向押」的平均報酬顯著為正才使用 */
 function factorOK(mkt){const o=CAL.factor&&CAL.factor.oos&&CAL.factor.oos[mkt==="us"?"us":"tw"]; return !!(o&&(o.pass!==undefined?o.pass:(o.mean>0&&o.t>=1.96)));}
 function factorDir(k,sec,mkt){
   if(!CAL.factor||!CAL.factor.fp||!factorOK(mkt))return null;
@@ -350,8 +362,8 @@ rep('''      return {d:h.d,dir:b.dir,med:b.med,str:h.str,lag:h.lag};
     }).sort((a,b)=>b.med-a.med);''', '''      return {d:h.d,dir:b.dir,med:b.med,str:h.str,lag:h.lag};
     }).sort((a,b)=>b.dir-a.dir||b.med-a.med);''')
 rep('''        <b>${c.rows.length-c.pos-c.neg}</b> 檔中性</div>''', '''        <b>${c.rows.length-c.pos-c.neg}</b> 檔方向無法預測</div>''')
-rep('''      <div class="cast-l">最受惠：${c.rows.slice(0,3).map(r=>`${r.d.n} <s>${PCT(r.med)}</s>`)''', '''      <div class="cast-l">因子方向受惠：${c.rows.filter(r=>r.dir>=.12).slice(0,3).map(r=>`${r.d.n} <s>過去中位數 ${PCT(r.med)}</s>`)''')
-rep('''        最受壓：${c.rows.slice(-3).reverse().map(r=>`${r.d.n} <s>${PCT(r.med)}</s>`)''', '''        因子方向受壓：${c.rows.filter(r=>r.dir<=-.12).slice(-3).reverse().map(r=>`${r.d.n} <s>過去中位數 ${PCT(r.med)}</s>`)''')
+rep('''      <div class="cast-l">最受惠：${c.rows.slice(0,3).map(r=>`${r.d.n} <s>${PCT(r.med)}</s>`)''', '''      <div class="cast-l">實證方向受惠：${c.rows.filter(r=>r.dir>=.12).slice(0,3).map(r=>`${r.d.n} <s>過去中位數 ${PCT(r.med)}</s>`)''')
+rep('''        最受壓：${c.rows.slice(-3).reverse().map(r=>`${r.d.n} <s>${PCT(r.med)}</s>`)''', '''        實證方向受壓：${c.rows.filter(r=>r.dir<=-.12).slice(-3).reverse().map(r=>`${r.d.n} <s>過去中位數 ${PCT(r.med)}</s>`)''')
 
 # ── 19) 曝險模組改用實證因子：美債殖利率、美元、油價、半導體（取代手設的六個因子與標籤投影矩陣）──
 #   個股對因子的敏感度 ＝ 板塊 λ（全部交易日回歸）× 個股實證 β；事件的因子衝擊 ＝ γ（每 1σ 意外值造成的因子變化）。
@@ -449,3 +461,8 @@ rep('''function genDivEvents(now){''', '''function genConfEvents(now){
 }
 function genDivEvents(now){''')
 rep('''  CAL.regime=j.regime||null; CAL.tariff=j.tariff||null;''', '''  CAL.regime=j.regime||null; CAL.tariff=j.tariff||null; CAL.conf=j.conf||null;''')
+
+# ── 22) 載入開盤跳空方向模型 ──
+rep('''  CAL.regime=j.regime||null; CAL.tariff=j.tariff||null; CAL.conf=j.conf||null;''', '''  CAL.regime=j.regime||null; CAL.tariff=j.tariff||null; CAL.conf=j.conf||null;
+  CAL.gap=j.gap||null; CAL.gapCut={};
+  if(CAL.gap)["tw","us"].forEach(m=>{const G=CAL.gap[m]; if(!G)return; const v=Object.values(G.beta).map(b=>Math.abs(b[0])).sort((a,b)=>a-b); CAL.gapCut[m]=v[Math.floor(v.length*.7)]||0;});''')
