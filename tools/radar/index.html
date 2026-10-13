@@ -1,0 +1,860 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light dark}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#F5F0E8;color:#1A2535}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>ETF 除權息雷達</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Jost:wght@200;300;400;600;700;800;900&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+
+  /* SunDown Studio 品牌色 */
+  :root{
+    --cream:#F5F0E8;
+    --cream2:#EDE7D9;
+    --card:#FEFCF8;
+    --row-alt:#FAF6EE;
+    --gold:#C9960A;
+    --gold-mid:#E8B84B;
+    --gold-light:#F2CC74;
+    --gold-pale:#FDF4DC;
+    --gold-text:#8a5e00;
+    --ex:#C0622A;            /* 準備除息 · terracotta */
+    --ex-bg:#FAEEE8;
+    --ex-text:#7A3010;
+    --pay:#5E8A3E;           /* 準備領息 · matcha */
+    --pay-bg:#EEF4E8;
+    --pay-text:#2E4E20;
+    --mkt:#B03020;
+    --semi:#1D9E75;
+    --navy:#1E3554;
+    --navy-mid:#2D4A6E;
+    --text:#1A2535;
+    --text2:#4A5568;
+    --text3:#8A96A8;
+    --border:#DDD6C8;
+    --border2:#E8E2D8;
+    --shadow:0 1px 2px rgba(30,53,84,.04), 0 10px 28px -16px rgba(30,53,84,.18);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --cream:#101B2B; --cream2:#0C1624; --card:#16253A; --row-alt:#192A41;
+      --gold-pale:rgba(232,184,75,.12); --gold-text:#F2CC74;
+      --ex:#E3864F; --ex-bg:rgba(227,134,79,.14); --ex-text:#F0A97E;
+      --pay:#9DBE7A; --pay-bg:rgba(157,190,122,.14); --pay-text:#B9D59A;
+      --mkt:#E06A55; --semi:#4CC39C;
+      --navy:#E9E2D4; --navy-mid:#C9D3E2;
+      --text:#EDE7D9; --text2:#B4BFCF; --text3:#7D8BA0;
+      --border:#2A3C55; --border2:#22344B;
+      --shadow:0 10px 28px -16px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --cream:#101B2B; --cream2:#0C1624; --card:#16253A; --row-alt:#192A41;
+    --gold-pale:rgba(232,184,75,.12); --gold-text:#F2CC74;
+    --ex:#E3864F; --ex-bg:rgba(227,134,79,.14); --ex-text:#F0A97E;
+    --pay:#9DBE7A; --pay-bg:rgba(157,190,122,.14); --pay-text:#B9D59A;
+    --mkt:#E06A55; --semi:#4CC39C;
+    --navy:#E9E2D4; --navy-mid:#C9D3E2;
+    --text:#EDE7D9; --text2:#B4BFCF; --text3:#7D8BA0;
+    --border:#2A3C55; --border2:#22344B;
+    --shadow:0 10px 28px -16px rgba(0,0,0,.6);
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  html,body{margin:0;}
+  body{
+    background:var(--cream);
+    color:var(--text);
+    font-family:'Jost','Noto Sans TC','Microsoft JhengHei',sans-serif;
+    font-variant-numeric:tabular-nums;
+    padding:28px 20px 48px;
+    min-height:100%;
+  }
+  .num{font-family:'Jost',sans-serif;font-variant-numeric:tabular-nums;}
+
+  .wrap{max-width:1360px;margin:0 auto;}
+
+  /* ---------- header ---------- */
+  .topbar{
+    display:flex;flex-wrap:wrap;gap:16px 24px;
+    align-items:flex-end;justify-content:space-between;
+    padding:6px 2px 22px;border-bottom:1px solid var(--border);
+  }
+  .brand{display:flex;align-items:center;gap:16px;}
+  .brand-mark{width:52px;height:52px;flex:none;}
+  .brand-mark svg{width:100%;height:100%;display:block;}
+  .brand-over{font-size:10px;font-weight:700;letter-spacing:.28em;text-transform:uppercase;color:var(--gold);margin:0 0 4px;}
+  .brand-over span{color:var(--text3);font-weight:600;}
+  .brand-text h1{font-weight:900;font-size:clamp(24px,3.4vw,34px);letter-spacing:-.01em;line-height:1.05;margin:0;color:var(--navy);}
+  .brand-text h1 em{font-style:italic;font-weight:300;color:var(--gold-mid);}
+  .brand-text p{margin:6px 0 0;font-size:11px;font-weight:300;letter-spacing:.32em;text-transform:uppercase;color:var(--text3);}
+  .status-cluster{display:flex;gap:8px;flex-wrap:wrap;}
+  .pill{
+    display:flex;align-items:center;gap:7px;border:1px solid var(--border);border-radius:999px;
+    padding:7px 14px;font-size:12px;color:var(--text2);background:var(--card);
+  }
+  .pill b{color:var(--navy);font-weight:700;}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--pay);}
+  .pill.stale{border-color:var(--ex);background:var(--ex-bg);color:var(--ex-text);}
+  .pill.stale .dot{background:var(--ex);}
+  .pill.stale b{color:var(--ex-text);}
+
+  /* ---------- shared card chrome ---------- */
+  .card-title{display:flex;align-items:center;gap:11px;}
+  .card-title .ic{width:30px;height:30px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:6px;}
+  .ic svg{width:15px;height:15px;}
+  .card-title h2{margin:0;font-weight:800;font-size:15px;letter-spacing:.02em;color:var(--navy);}
+  .card-title span{display:block;font-size:10px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--text3);margin-top:2px;}
+  .scope-pill{
+    font-size:10px;font-weight:700;letter-spacing:.15em;color:var(--text2);
+    background:var(--cream);border:1px solid var(--border);border-radius:3px;
+    padding:3px 9px;white-space:nowrap;
+  }
+  .more-link{font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--gold-text);text-decoration:none;white-space:nowrap;}
+  .more-link:hover{text-decoration:underline;}
+
+  /* ---------- hero row ---------- */
+  .hero-grid{display:grid;grid-template-columns:1fr 1.5fr 1fr;gap:18px;margin-top:22px;align-items:start;}
+  .side-col{display:flex;flex-direction:column;gap:16px;min-width:0;}
+  @media (max-width:1180px){
+    .hero-grid{grid-template-columns:1fr;}
+    .globe-card{order:-1;}
+  }
+
+  .card{
+    background:var(--card);
+    border:1px solid var(--border);border-top:3px solid var(--card-accent,var(--gold-mid));border-radius:8px;box-shadow:var(--shadow);
+    overflow:hidden;display:flex;flex-direction:column;
+  }
+  .card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px 12px;border-bottom:1px solid var(--border2);}
+  .card.ex{--card-accent:var(--ex);}
+  .card.pay{--card-accent:var(--pay);}
+  .card.ex .card-title .ic{background:var(--ex-bg);color:var(--ex);}
+  .card.pay .card-title .ic{background:var(--pay-bg);color:var(--pay);}
+
+  .col-labels{
+    display:grid;grid-template-columns:20px 62px 1fr 52px;gap:6px;padding:8px 16px;
+    font-size:9.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--text3);border-bottom:1px solid var(--border2);background:var(--cream);
+  }
+  .col-labels .r{text-align:right;}
+  .rows{display:flex;flex-direction:column;}
+  .row{display:grid;grid-template-columns:20px 62px 1fr 52px;gap:6px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border2);}
+  .row:last-child{border-bottom:none;}
+  .row:nth-child(even){background:var(--row-alt);}
+  .rank{color:var(--text3);font-size:12px;font-weight:600;}
+  .code{
+    display:inline-block;font-weight:700;font-size:11.5px;color:var(--navy);letter-spacing:.03em;
+    background:var(--cream);border:1px solid var(--border);border-radius:3px;padding:2px 6px;width:fit-content;
+  }
+  .name-cell .name{font-size:12.5px;font-weight:500;color:var(--text);line-height:1.3;}
+  .name-cell .sub{margin-top:3px;font-size:10.5px;color:var(--text3);display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+  .name-cell .amt-line{margin-top:2px;font-size:11px;font-weight:600;color:var(--text2);}
+  .name-cell .amt-line.pending{color:var(--text3);font-weight:400;}
+  .est-tag{font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--gold-text);background:var(--gold-pale);border:1px solid var(--gold-light);border-radius:3px;padding:0 4px;}
+  .cd-badge{font-weight:800;font-size:11.5px;border-radius:4px;padding:4px 0;text-align:center;}
+  .card.ex .cd-badge{background:var(--ex-bg);color:var(--ex-text);}
+  .card.pay .cd-badge{background:var(--pay-bg);color:var(--pay-text);}
+  .empty{padding:26px 16px;text-align:center;color:var(--text3);font-size:12.5px;line-height:1.8;margin:auto;}
+  .empty b{display:block;color:var(--text2);font-weight:600;font-size:13px;margin-bottom:2px;}
+
+  /* ---------- featured ETF detail card ---------- */
+  .detail-card{--card-accent:var(--ex);}
+  .detail-body{padding:14px 16px 16px;}
+  .detail-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;}
+  .detail-id{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
+  .detail-id .code{font-size:13px;padding:3px 8px;}
+  .detail-id .name{font-size:15px;font-weight:700;color:var(--navy);}
+  .watch-btn{
+    font-size:10.5px;font-weight:700;letter-spacing:.1em;color:#fff;background:var(--navy);
+    border-radius:3px;padding:5px 10px;white-space:nowrap;
+  }
+  :root[data-theme="dark"] .watch-btn{color:#101B2B;}
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .watch-btn{color:#101B2B;} }
+  .metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+  .metric{background:var(--cream);border:1px solid var(--border2);border-radius:6px;padding:9px 11px;}
+  .metric .k{font-size:9.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--text3);}
+  .metric .v{font-size:16px;color:var(--navy);margin-top:3px;font-weight:700;}
+  .metric .v.hl{color:var(--ex);}
+  .note-block{border-top:1px dashed var(--border);padding-top:11px;}
+  .note-block .lbl{font-size:9.5px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:6px;}
+  .note-block p{margin:0;font-size:12px;line-height:1.8;color:var(--text2);font-family:'Noto Sans TC',sans-serif;}
+  .note-block .amt{font-size:22px;font-weight:800;color:var(--navy);font-family:'Jost',sans-serif;margin-bottom:10px;}
+
+  /* ---------- macro mini summary card ---------- */
+  .mini-macro{--card-accent:var(--gold-mid);}
+  .mini-macro .card-title .ic{background:var(--gold-pale);color:var(--gold);}
+  .mini-body{padding:14px 16px 16px;}
+  .next-block{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px;gap:8px;}
+  .next-block .date{font-size:24px;font-weight:800;color:var(--navy);letter-spacing:-.01em;}
+  .next-block .dd{font-size:13px;color:var(--gold-text);font-weight:800;white-space:nowrap;}
+  .next-block .name{display:block;font-size:12px;color:var(--text2);margin-top:2px;}
+  .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+  .stat-grid .metric .v{color:var(--gold-text);}
+  .mini-list{display:flex;flex-direction:column;gap:8px;}
+  .mini-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);}
+  .mini-item i{width:8px;height:8px;border-radius:50%;flex:none;}
+  .mini-item b{color:var(--text);font-weight:500;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .mini-item span{font-size:11px;color:var(--text3);white-space:nowrap;}
+
+  /* ---------- globe hero card（夜空海軍藍 · 日落金） ---------- */
+  .globe-card{
+    --g-ink:#F5F0E8; --g-dim:#C9D3E2; --g-faint:#8A9BB5; --g-hair:rgba(242,204,116,.18);
+    background:
+      radial-gradient(90% 55% at 50% 100%, rgba(232,184,75,.22), transparent 70%),
+      linear-gradient(180deg, #1E3554 0%, #172A45 60%, #13233A 100%);
+    border:1px solid #1E3554;border-radius:10px;box-shadow:var(--shadow);
+    position:relative;overflow:hidden;padding:14px 14px 0;
+    min-height:560px;display:flex;flex-direction:column;color:var(--g-ink);
+  }
+  .globe-card.is-full{position:fixed;inset:0;z-index:999;border-radius:0;width:100vw;height:100vh;padding:24px;}
+  .stars{position:absolute;inset:0;background-image:radial-gradient(1.5px 1.5px at 20% 30%, rgba(255,255,255,.45), transparent),radial-gradient(1px 1px at 70% 15%, rgba(255,255,255,.35), transparent),radial-gradient(1px 1px at 85% 60%, rgba(255,255,255,.3), transparent),radial-gradient(1.5px 1.5px at 12% 75%, rgba(255,255,255,.3), transparent),radial-gradient(1px 1px at 45% 85%, rgba(255,255,255,.25), transparent),radial-gradient(1px 1px at 92% 35%, rgba(255,255,255,.35), transparent),radial-gradient(1.5px 1.5px at 55% 8%, rgba(255,255,255,.3), transparent);pointer-events:none;}
+  .corner-text{position:absolute;line-height:1.45;pointer-events:none;z-index:2;}
+  .corner-text .l1{font-size:10px;font-weight:700;letter-spacing:.28em;color:var(--gold-mid);text-transform:uppercase;}
+  .corner-text .l2,.corner-text .l3{font-size:15px;font-weight:900;letter-spacing:.02em;color:var(--g-ink);text-transform:uppercase;}
+  .corner-text .l3{font-style:italic;font-weight:300;color:var(--gold-light);}
+  .corner-text .sub{margin-top:8px;font-size:9px;font-weight:600;letter-spacing:.25em;color:var(--g-faint);text-transform:uppercase;}
+  .ct-tl{top:16px;left:18px;}
+  .ct-bl{bottom:4px;left:8px;}
+  .ct-bl .l1{font-size:9px;letter-spacing:.2em;color:var(--g-faint);font-weight:600;}
+  .ct-br{bottom:4px;right:8px;text-align:right;}
+  .compass{position:absolute;top:16px;right:18px;z-index:2;}
+  .fs-btn{
+    position:absolute;top:18px;right:78px;z-index:3;
+    font-size:11px;color:var(--g-ink);font-family:inherit;
+    background:rgba(245,240,232,.08);border:1px solid var(--g-hair);border-radius:4px;padding:6px 9px;cursor:pointer;
+  }
+  .globe-card.is-full .fs-btn{right:96px;}
+  .fs-btn:hover{background:rgba(245,240,232,.16);}
+  .globe-stage{position:relative;flex:1;display:flex;align-items:center;justify-content:center;min-height:0;padding:40px 8px 0;}
+  .globe-stage svg{width:100%;height:auto;max-width:460px;display:block;}
+  .globe-card.is-full .globe-stage svg{max-width:620px;}
+  .globe-card.is-full .globe-stage{padding-top:60px;}
+  .globe-empty{font-size:12px;font-weight:600;fill:var(--g-dim);letter-spacing:.06em;}
+
+  .globe-legend{
+    display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap;
+    padding:12px 10px 16px;border-top:1px solid var(--g-hair);margin-top:8px;
+  }
+  .gl-item{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--g-dim);white-space:nowrap;}
+  .gl-dot{width:9px;height:9px;border-radius:50%;flex:none;}
+  .gl-ring{width:11px;height:11px;border-radius:50%;border:2px solid var(--gold-mid);flex:none;}
+  .gl-scale{display:flex;align-items:center;gap:4px;}
+  .gl-scale i{border-radius:50%;background:var(--g-faint);display:inline-block;}
+  .gl-line{width:16px;height:0;border-top:2px dashed var(--gold-mid);display:inline-block;}
+
+  /* svg marker states */
+  .flow-dot{cursor:pointer;}
+  .flow-dot .glow{opacity:0;transition:opacity .2s;}
+  .flow-dot:hover .glow{opacity:.55;}
+  .flow-dot .lbl{font-family:'Jost',sans-serif;font-weight:600;font-size:11px;fill:var(--g-dim);}
+  .event-badge{cursor:pointer;}
+  .event-badge .glow{opacity:.2;transition:opacity .2s;}
+  .event-badge:hover .glow{opacity:.45;}
+  .event-badge .core{fill:#1E3554;stroke:#E8B84B;stroke-width:2;}
+  .event-badge .lbl{font-family:'Noto Sans TC',sans-serif;font-size:11px;font-weight:700;fill:#F5F0E8;}
+  .event-badge .dtag{font-family:'Jost',sans-serif;font-weight:600;font-size:9.5px;fill:#F2CC74;}
+
+  /* ---------- macro event section ---------- */
+  .macro-card{margin-top:20px;background:var(--card);border:1px solid var(--border);border-top:3px solid var(--gold-mid);border-radius:8px;box-shadow:var(--shadow);overflow:hidden;scroll-margin-top:16px;}
+  .macro-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 20px 14px;border-bottom:1px solid var(--border2);flex-wrap:wrap;}
+  .macro-head .card-title .ic{width:32px;height:32px;background:var(--gold-pale);color:var(--gold);}
+  .macro-head .card-title h2{font-size:19px;font-weight:900;}
+  .cat-legend{display:flex;gap:14px;flex-wrap:wrap;}
+  .cat-legend .li{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text2);white-space:nowrap;}
+  .cat-legend i{width:8px;height:8px;border-radius:50%;display:inline-block;}
+  .event-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;padding:16px 18px 6px;}
+  .event-row{
+    display:flex;align-items:center;gap:9px;text-align:left;background:var(--cream);border:1px solid var(--border2);border-left:3px solid var(--cat);
+    border-radius:6px;padding:10px 12px;cursor:pointer;color:var(--text);transition:border-color .2s,background .2s,opacity .2s;
+  }
+  .event-row:hover{border-color:var(--border);border-left-color:var(--cat);background:var(--card);}
+  .event-row.active{background:var(--card);border-color:var(--cat);box-shadow:0 0 0 1px var(--cat) inset;}
+  .event-row.past{opacity:.5;}
+  .event-row.past .dd{color:var(--text3);}
+  .event-row .et{flex:1;min-width:0;}
+  .event-row .et b{display:block;font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .event-row .et small{display:block;font-size:11px;color:var(--text3);margin-top:2px;}
+  .event-row .dd{font-weight:800;font-size:12px;color:var(--cat);white-space:nowrap;}
+  .impact-panel{margin:14px 18px 18px;background:var(--cream);border:1px solid var(--border2);border-radius:8px;padding:18px 20px;min-height:120px;display:flex;flex-direction:column;justify-content:center;}
+  .impact-empty{margin:auto;text-align:center;font-size:13px;color:var(--text3);line-height:1.8;padding:16px 0;}
+  .impact-card .cat-tag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--cat);border:1px solid var(--cat);border-radius:3px;padding:2px 8px;margin-bottom:10px;}
+  .impact-card h3{margin:0 0 2px;font-size:20px;font-weight:900;color:var(--navy);display:inline-block;}
+  .impact-card .en{margin:0 0 8px;font-size:11px;font-weight:300;letter-spacing:.18em;text-transform:uppercase;color:var(--text3);}
+  .impact-card .when{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;font-size:13px;color:var(--text2);}
+  .impact-card .when b{color:var(--cat);font-weight:800;}
+  .impact-card p{margin:0 0 14px;font-size:13px;line-height:1.85;color:var(--text2);max-width:820px;font-family:'Noto Sans TC',sans-serif;border-left:2px solid var(--gold-light);padding-left:14px;}
+  .impact-card .imp-label{font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:8px;}
+  .imp-chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .imp-chip{font-size:11.5px;border:1px solid var(--border);color:var(--navy);border-radius:4px;padding:4px 8px;background:var(--card);white-space:nowrap;}
+  .imp-chip b{font-weight:700;color:var(--cat);}
+  .imp-chip span{color:var(--text2);margin-left:5px;font-family:'Noto Sans TC',sans-serif;}
+
+  /* ---------- footer ---------- */
+  .foot{margin-top:20px;display:flex;flex-wrap:wrap;gap:12px 24px;justify-content:space-between;align-items:flex-start;padding:18px 20px;border:1px solid var(--border);border-radius:8px;background:var(--cream2);}
+  .foot p{margin:0;font-size:11.5px;line-height:1.85;color:var(--text3);max-width:680px;font-family:'Noto Sans TC',sans-serif;}
+  .foot .legend{display:flex;gap:16px;flex-wrap:wrap;}
+  .legend-item{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text2);white-space:nowrap;}
+  .legend-item i{width:8px;height:8px;border-radius:2px;display:inline-block;}
+  .legend-item.a i{background:var(--ex);}
+  .legend-item.b i{background:var(--pay);}
+  .legend-item.c i{background:var(--gold-mid);}
+  .universe{margin-top:12px;font-size:11.5px;color:var(--text3);line-height:2;padding:14px 20px;border:1px dashed var(--border);border-radius:8px;}
+  .universe b{color:var(--text2);font-weight:700;}
+  .universe span.tk{font-weight:600;color:var(--navy);}
+  .sd-sign{margin-top:22px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:10.5px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--text3);}
+  .sd-sign i{width:6px;height:6px;border-radius:50%;background:var(--gold-mid);}
+  .sd-sign span{color:var(--gold);}
+
+  @media (max-width:520px){
+    body{padding:18px 16px 36px;}
+    .globe-card{min-height:440px;}
+    .corner-text.ct-bl,.corner-text.ct-br{display:none;}
+    .compass{display:none;}
+    .fs-btn{right:18px;}
+  }
+</style>
+
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 512 512" fill="none" aria-hidden="true">
+          <defs><clipPath id="sd-clip"><circle cx="256" cy="256" r="240"/></clipPath></defs>
+          <circle cx="256" cy="256" r="256" fill="#1E3554"/>
+          <path d="M16 256 A240 240 0 0 1 496 256" fill="#E8B84B" clip-path="url(#sd-clip)"/>
+          <line x1="62" y1="295" x2="450" y2="295" stroke="#fff" stroke-width="26" stroke-linecap="round" opacity=".85"/>
+          <line x1="96" y1="338" x2="416" y2="338" stroke="#fff" stroke-width="22" stroke-linecap="round" opacity=".65"/>
+          <line x1="138" y1="378" x2="374" y2="378" stroke="#fff" stroke-width="18" stroke-linecap="round" opacity=".45"/>
+          <line x1="178" y1="413" x2="334" y2="413" stroke="#fff" stroke-width="14" stroke-linecap="round" opacity=".28"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <div class="brand-over">SunDown Studio <span>· 日落工作室</span></div>
+        <h1>ETF 除權息<em>雷達</em></h1>
+        <p>Dividend &amp; Macro Event Radar</p>
+      </div>
+    </div>
+    <div class="status-cluster">
+      <div class="pill" id="asOfPill"><span class="dot"></span>資料快照 <b id="asOf">2026/09/13</b></div>
+      <div class="pill" id="univPill">除息預告 <b>—</b> 檔 ETF</div>
+    </div>
+  </div>
+
+  <!-- ===================== hero: [除息+個股] | 地球 | [領息+事件] ===================== -->
+  <div class="hero-grid">
+
+    <div class="side-col">
+      <div class="card ex">
+        <div class="card-head">
+          <div class="card-title">
+            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18M8 3v4M16 3v4"></path><path d="M9 15l2 2 4-4"></path></svg></div>
+            <div><h2>準備除息排行</h2><span>未來 30 天內</span></div>
+          </div>
+          <div class="scope-pill">ETF</div>
+        </div>
+        <div class="col-labels"><div>#</div><div>代碼</div><div>名稱</div><div class="r">倒數</div></div>
+        <div class="rows" id="exRows"></div>
+      </div>
+
+      <div class="card detail-card">
+        <div class="card-head">
+          <div class="card-title">
+            <div class="ic" style="background:var(--ex-bg);color:var(--ex)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 3"></path></svg></div>
+            <div><h2>焦點 ETF 詳情</h2><span>最快除息標的</span></div>
+          </div>
+          <span class="scope-pill" id="detailUpdated">2026/09/13</span>
+        </div>
+        <div class="detail-body" id="detailBody"></div>
+      </div>
+    </div>
+
+    <div class="globe-card" id="globeCard">
+      <div class="stars"></div>
+      <button class="fs-btn" id="fsBtn" type="button">⛶</button>
+      <div class="compass">
+        <svg width="46" height="46" viewBox="0 0 46 46">
+          <circle cx="23" cy="23" r="19" fill="none" stroke="rgba(242,204,116,0.4)" stroke-width="1"></circle>
+          <line x1="23" y1="6" x2="23" y2="12" stroke="rgba(242,204,116,0.5)"></line>
+          <line x1="23" y1="34" x2="23" y2="40" stroke="rgba(242,204,116,0.5)"></line>
+          <line x1="6" y1="23" x2="12" y2="23" stroke="rgba(242,204,116,0.5)"></line>
+          <line x1="34" y1="23" x2="40" y2="23" stroke="rgba(242,204,116,0.5)"></line>
+          <text x="23" y="10" text-anchor="middle" fill="#C9D3E2" font-size="7" font-family="Jost,sans-serif">N</text>
+          <text x="23" y="41.5" text-anchor="middle" fill="#C9D3E2" font-size="7" font-family="Jost,sans-serif">S</text>
+          <text x="4" y="26" text-anchor="middle" fill="#C9D3E2" font-size="7" font-family="Jost,sans-serif">W</text>
+          <text x="42" y="26" text-anchor="middle" fill="#C9D3E2" font-size="7" font-family="Jost,sans-serif">E</text>
+        </svg>
+      </div>
+
+      <div class="corner-text ct-tl">
+        <div class="l1">TAIWAN</div>
+        <div class="l2">ETF DIVIDEND</div>
+        <div class="l3">&amp; MACRO FLOW</div>
+        <div class="sub">SIGNALS · CONNECT · MARKETS</div>
+      </div>
+
+      <div class="globe-stage">
+        <div class="corner-text ct-bl"><div class="l1">WE TRACK CAPITAL<br>ACROSS BORDERS</div></div>
+        <div class="corner-text ct-br">
+          <div class="l1">TAIWAN</div>
+          <div class="l2" style="font-size:12px;">TOWARD SMARTER</div>
+          <div class="l3" style="font-size:12px;">INCOME CALLS</div>
+        </div>
+        <svg viewBox="0 0 600 600" role="img" aria-label="地球儀:台灣位於中心,四周光點代表準備除息、準備領息的ETF與總經事件">
+          <defs>
+            <radialGradient id="sphereFill" cx="34%" cy="28%" r="82%">
+              <stop offset="0%" stop-color="#3A5A84"></stop>
+              <stop offset="55%" stop-color="#22395A"></stop>
+              <stop offset="100%" stop-color="#0F1C30"></stop>
+            </radialGradient>
+            <filter id="nodeGlow" x="-120%" y="-120%" width="340%" height="340%">
+              <feGaussianBlur stdDeviation="4"></feGaussianBlur>
+            </filter>
+            <filter id="rimGlow" x="-60%" y="-60%" width="220%" height="220%">
+              <feGaussianBlur stdDeviation="4.5"></feGaussianBlur>
+            </filter>
+            <marker id="arrowGold" markerWidth="7" markerHeight="7" refX="5.5" refY="2.5" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L5.5,2.5 L0,5 Z" fill="#E8B84B"></path>
+            </marker>
+          </defs>
+
+          <circle cx="300" cy="300" r="230" fill="url(#sphereFill)"></circle>
+
+          <g id="gridGroup" stroke="#F2CC74" stroke-width="1" fill="none" opacity="0.28">
+            <ellipse cx="300" cy="300" rx="230" ry="60"></ellipse>
+            <ellipse cx="300" cy="300" rx="230" ry="110"></ellipse>
+            <ellipse cx="300" cy="300" rx="230" ry="165"></ellipse>
+            <ellipse cx="300" cy="300" rx="60" ry="230"></ellipse>
+            <ellipse cx="300" cy="300" rx="110" ry="230"></ellipse>
+            <ellipse cx="300" cy="300" rx="165" ry="230"></ellipse>
+            <animateTransform id="spinAnim" attributeName="transform" type="rotate" from="0 300 300" to="360 300 300" dur="160s" repeatCount="indefinite"></animateTransform>
+          </g>
+
+          <g fill="#F2CC74" opacity="0.95" id="taiwanDots">
+            <circle cx="366.7" cy="425.9" r="1.3"/><circle cx="364.0" cy="422.8" r="1.3"/><circle cx="365.9" cy="422.4" r="1.3"/><circle cx="367.8" cy="422.1" r="1.3"/><circle cx="363.1" cy="419.3" r="1.3"/><circle cx="365.0" cy="418.9" r="1.3"/><circle cx="366.9" cy="418.6" r="1.3"/><circle cx="368.8" cy="418.2" r="1.3"/><circle cx="362.1" cy="415.7" r="1.3"/><circle cx="364.0" cy="415.4" r="1.3"/><circle cx="366.0" cy="415.0" r="1.3"/><circle cx="367.9" cy="414.7" r="1.3"/><circle cx="369.8" cy="414.3" r="1.3"/><circle cx="361.2" cy="412.2" r="1.3"/><circle cx="363.1" cy="411.8" r="1.3"/><circle cx="365.0" cy="411.5" r="1.3"/><circle cx="366.9" cy="411.1" r="1.3"/><circle cx="368.9" cy="410.8" r="1.3"/><circle cx="370.8" cy="410.4" r="1.3"/><circle cx="360.2" cy="408.6" r="1.3"/><circle cx="362.1" cy="408.3" r="1.3"/><circle cx="364.1" cy="407.9" r="1.3"/><circle cx="366.0" cy="407.6" r="1.3"/><circle cx="367.9" cy="407.2" r="1.3"/><circle cx="369.9" cy="406.9" r="1.3"/><circle cx="371.8" cy="406.5" r="1.3"/><circle cx="359.3" cy="405.1" r="1.3"/><circle cx="361.2" cy="404.7" r="1.3"/><circle cx="363.1" cy="404.4" r="1.3"/><circle cx="365.1" cy="404.0" r="1.3"/><circle cx="367.0" cy="403.7" r="1.3"/><circle cx="368.9" cy="403.3" r="1.3"/><circle cx="370.9" cy="403.0" r="1.3"/><circle cx="372.8" cy="402.6" r="1.3"/><circle cx="358.3" cy="401.5" r="1.3"/><circle cx="360.3" cy="401.2" r="1.3"/><circle cx="362.2" cy="400.8" r="1.3"/><circle cx="364.1" cy="400.5" r="1.3"/><circle cx="366.1" cy="400.1" r="1.3"/><circle cx="368.0" cy="399.8" r="1.3"/><circle cx="369.9" cy="399.4" r="1.3"/><circle cx="371.9" cy="399.1" r="1.3"/><circle cx="357.4" cy="398.0" r="1.3"/><circle cx="359.3" cy="397.6" r="1.3"/><circle cx="361.3" cy="397.3" r="1.3"/><circle cx="363.2" cy="396.9" r="1.3"/><circle cx="365.1" cy="396.6" r="1.3"/><circle cx="367.1" cy="396.2" r="1.3"/><circle cx="369.0" cy="395.9" r="1.3"/><circle cx="370.9" cy="395.5" r="1.3"/><circle cx="356.4" cy="394.4" r="1.3"/><circle cx="358.4" cy="394.1" r="1.3"/><circle cx="360.3" cy="393.7" r="1.3"/><circle cx="362.2" cy="393.4" r="1.3"/><circle cx="364.2" cy="393.0" r="1.3"/><circle cx="366.1" cy="392.7" r="1.3"/><circle cx="368.0" cy="392.3" r="1.3"/><circle cx="370.0" cy="392.0" r="1.3"/><circle cx="355.5" cy="390.9" r="1.3"/><circle cx="357.4" cy="390.5" r="1.3"/><circle cx="359.4" cy="390.2" r="1.3"/><circle cx="361.3" cy="389.8" r="1.3"/><circle cx="363.2" cy="389.5" r="1.3"/><circle cx="365.2" cy="389.1" r="1.3"/><circle cx="367.1" cy="388.8" r="1.3"/><circle cx="369.0" cy="388.4" r="1.3"/><circle cx="354.5" cy="387.3" r="1.3"/><circle cx="356.5" cy="387.0" r="1.3"/><circle cx="358.4" cy="386.6" r="1.3"/><circle cx="360.3" cy="386.3" r="1.3"/><circle cx="362.3" cy="385.9" r="1.3"/><circle cx="364.2" cy="385.6" r="1.3"/><circle cx="366.1" cy="385.2" r="1.3"/><circle cx="368.1" cy="384.9" r="1.3"/><circle cx="353.6" cy="383.8" r="1.3"/><circle cx="355.5" cy="383.4" r="1.3"/><circle cx="357.5" cy="383.1" r="1.3"/><circle cx="359.4" cy="382.7" r="1.3"/><circle cx="361.3" cy="382.4" r="1.3"/><circle cx="363.3" cy="382.0" r="1.3"/><circle cx="365.2" cy="381.7" r="1.3"/><circle cx="367.1" cy="381.3" r="1.3"/><circle cx="352.6" cy="380.2" r="1.3"/><circle cx="354.5" cy="379.9" r="1.3"/><circle cx="356.5" cy="379.5" r="1.3"/><circle cx="358.4" cy="379.2" r="1.3"/><circle cx="360.4" cy="378.8" r="1.3"/><circle cx="362.3" cy="378.5" r="1.3"/><circle cx="364.2" cy="378.1" r="1.3"/><circle cx="366.2" cy="377.8" r="1.3"/><circle cx="351.7" cy="376.7" r="1.3"/><circle cx="353.6" cy="376.3" r="1.3"/><circle cx="355.5" cy="376.0" r="1.3"/><circle cx="357.5" cy="375.6" r="1.3"/><circle cx="359.4" cy="375.3" r="1.3"/><circle cx="361.4" cy="374.9" r="1.3"/><circle cx="363.3" cy="374.6" r="1.3"/><circle cx="365.2" cy="374.2" r="1.3"/><circle cx="350.7" cy="373.1" r="1.3"/><circle cx="352.6" cy="372.8" r="1.3"/><circle cx="354.6" cy="372.4" r="1.3"/><circle cx="356.5" cy="372.1" r="1.3"/><circle cx="358.4" cy="371.7" r="1.3"/><circle cx="360.4" cy="371.4" r="1.3"/><circle cx="362.3" cy="371.0" r="1.3"/><circle cx="364.2" cy="370.7" r="1.3"/><circle cx="349.8" cy="369.6" r="1.3"/><circle cx="351.7" cy="369.2" r="1.3"/><circle cx="353.6" cy="368.9" r="1.3"/><circle cx="355.6" cy="368.5" r="1.3"/><circle cx="357.5" cy="368.2" r="1.3"/><circle cx="359.4" cy="367.8" r="1.3"/><circle cx="361.4" cy="367.5" r="1.3"/><circle cx="363.3" cy="367.1" r="1.3"/><circle cx="348.8" cy="366.0" r="1.3"/><circle cx="350.7" cy="365.7" r="1.3"/><circle cx="352.7" cy="365.3" r="1.3"/><circle cx="354.6" cy="365.0" r="1.3"/><circle cx="356.5" cy="364.6" r="1.3"/><circle cx="358.5" cy="364.3" r="1.3"/><circle cx="360.4" cy="363.9" r="1.3"/><circle cx="362.3" cy="363.6" r="1.3"/><circle cx="347.9" cy="362.5" r="1.3"/><circle cx="349.8" cy="362.1" r="1.3"/><circle cx="351.7" cy="361.8" r="1.3"/><circle cx="353.6" cy="361.4" r="1.3"/><circle cx="355.6" cy="361.1" r="1.3"/><circle cx="357.5" cy="360.7" r="1.3"/><circle cx="359.4" cy="360.4" r="1.3"/><circle cx="361.4" cy="360.0" r="1.3"/><circle cx="346.9" cy="358.9" r="1.3"/><circle cx="348.8" cy="358.6" r="1.3"/><circle cx="350.8" cy="358.2" r="1.3"/><circle cx="352.7" cy="357.9" r="1.3"/><circle cx="354.6" cy="357.5" r="1.3"/><circle cx="356.6" cy="357.2" r="1.3"/><circle cx="358.5" cy="356.8" r="1.3"/><circle cx="360.4" cy="356.5" r="1.3"/><circle cx="346.0" cy="355.4" r="1.3"/><circle cx="347.9" cy="355.0" r="1.3"/><circle cx="349.8" cy="354.7" r="1.3"/><circle cx="351.8" cy="354.3" r="1.3"/><circle cx="353.7" cy="354.0" r="1.3"/><circle cx="355.6" cy="353.6" r="1.3"/><circle cx="357.5" cy="353.3" r="1.3"/><circle cx="359.5" cy="352.9" r="1.3"/><circle cx="345.0" cy="351.8" r="1.3"/><circle cx="346.9" cy="351.5" r="1.3"/><circle cx="348.9" cy="351.1" r="1.3"/><circle cx="350.8" cy="350.8" r="1.3"/><circle cx="352.7" cy="350.4" r="1.3"/><circle cx="354.6" cy="350.1" r="1.3"/><circle cx="356.6" cy="349.7" r="1.3"/><circle cx="358.5" cy="349.4" r="1.3"/><circle cx="344.1" cy="348.3" r="1.3"/><circle cx="346.0" cy="347.9" r="1.3"/><circle cx="347.9" cy="347.6" r="1.3"/><circle cx="349.9" cy="347.2" r="1.3"/><circle cx="351.8" cy="346.9" r="1.3"/><circle cx="353.7" cy="346.5" r="1.3"/><circle cx="355.6" cy="346.2" r="1.3"/><circle cx="357.6" cy="345.8" r="1.3"/><circle cx="343.1" cy="344.7" r="1.3"/><circle cx="345.0" cy="344.3" r="1.3"/><circle cx="347.0" cy="344.0" r="1.3"/><circle cx="348.9" cy="343.6" r="1.3"/><circle cx="350.8" cy="343.3" r="1.3"/><circle cx="352.8" cy="342.9" r="1.3"/><circle cx="354.7" cy="342.6" r="1.3"/><circle cx="356.6" cy="342.2" r="1.3"/><circle cx="342.2" cy="341.2" r="1.3"/><circle cx="344.1" cy="340.8" r="1.3"/><circle cx="346.0" cy="340.5" r="1.3"/><circle cx="348.0" cy="340.1" r="1.3"/><circle cx="349.9" cy="339.8" r="1.3"/><circle cx="351.8" cy="339.4" r="1.3"/><circle cx="353.8" cy="339.1" r="1.3"/><circle cx="355.7" cy="338.7" r="1.3"/><circle cx="341.2" cy="337.6" r="1.3"/><circle cx="343.1" cy="337.2" r="1.3"/><circle cx="345.1" cy="336.9" r="1.3"/><circle cx="347.0" cy="336.5" r="1.3"/><circle cx="348.9" cy="336.2" r="1.3"/><circle cx="350.9" cy="335.8" r="1.3"/><circle cx="352.8" cy="335.5" r="1.3"/><circle cx="354.7" cy="335.1" r="1.3"/><circle cx="340.3" cy="334.1" r="1.3"/><circle cx="342.2" cy="333.7" r="1.3"/><circle cx="344.1" cy="333.3" r="1.3"/><circle cx="346.1" cy="333.0" r="1.3"/><circle cx="348.0" cy="332.6" r="1.3"/><circle cx="349.9" cy="332.3" r="1.3"/><circle cx="351.9" cy="331.9" r="1.3"/><circle cx="353.8" cy="331.6" r="1.3"/><circle cx="339.3" cy="330.5" r="1.3"/><circle cx="341.2" cy="330.1" r="1.3"/><circle cx="343.2" cy="329.8" r="1.3"/><circle cx="345.1" cy="329.4" r="1.3"/><circle cx="347.0" cy="329.1" r="1.3"/><circle cx="349.0" cy="328.7" r="1.3"/><circle cx="350.9" cy="328.4" r="1.3"/><circle cx="352.9" cy="328.0" r="1.3"/><circle cx="338.4" cy="327.0" r="1.3"/><circle cx="340.3" cy="326.6" r="1.3"/><circle cx="342.2" cy="326.2" r="1.3"/><circle cx="344.2" cy="325.9" r="1.3"/><circle cx="346.1" cy="325.5" r="1.3"/><circle cx="348.0" cy="325.2" r="1.3"/><circle cx="350.0" cy="324.8" r="1.3"/><circle cx="337.4" cy="323.4" r="1.3"/><circle cx="339.4" cy="323.0" r="1.3"/><circle cx="341.3" cy="322.7" r="1.3"/><circle cx="343.2" cy="322.3" r="1.3"/><circle cx="345.2" cy="322.0" r="1.3"/><circle cx="347.1" cy="321.6" r="1.3"/><circle cx="349.0" cy="321.3" r="1.3"/><circle cx="336.5" cy="319.9" r="1.3"/><circle cx="338.4" cy="319.5" r="1.3"/><circle cx="340.4" cy="319.1" r="1.3"/><circle cx="342.3" cy="318.8" r="1.3"/><circle cx="344.2" cy="318.4" r="1.3"/><circle cx="346.2" cy="318.1" r="1.3"/><circle cx="348.1" cy="317.7" r="1.3"/><circle cx="335.5" cy="316.3" r="1.3"/><circle cx="337.5" cy="315.9" r="1.3"/><circle cx="339.4" cy="315.6" r="1.3"/><circle cx="341.3" cy="315.2" r="1.3"/><circle cx="343.3" cy="314.9" r="1.3"/><circle cx="345.2" cy="314.5" r="1.3"/><circle cx="347.1" cy="314.2" r="1.3"/><circle cx="334.6" cy="312.7" r="1.3"/><circle cx="336.5" cy="312.4" r="1.3"/><circle cx="338.5" cy="312.0" r="1.3"/><circle cx="340.4" cy="311.7" r="1.3"/><circle cx="342.3" cy="311.3" r="1.3"/><circle cx="344.3" cy="311.0" r="1.3"/><circle cx="333.6" cy="309.2" r="1.3"/><circle cx="335.6" cy="308.8" r="1.3"/><circle cx="337.5" cy="308.5" r="1.3"/><circle cx="339.4" cy="308.1" r="1.3"/><circle cx="341.4" cy="307.8" r="1.3"/><circle cx="343.3" cy="307.4" r="1.3"/><circle cx="332.7" cy="305.6" r="1.3"/><circle cx="334.6" cy="305.3" r="1.3"/><circle cx="336.6" cy="304.9" r="1.3"/><circle cx="338.5" cy="304.6" r="1.3"/><circle cx="340.4" cy="304.2" r="1.3"/><circle cx="342.4" cy="303.9" r="1.3"/><circle cx="331.7" cy="302.1" r="1.3"/><circle cx="333.7" cy="301.7" r="1.3"/><circle cx="335.6" cy="301.4" r="1.3"/><circle cx="337.5" cy="301.0" r="1.3"/><circle cx="339.5" cy="300.7" r="1.3"/><circle cx="330.8" cy="298.5" r="1.3"/><circle cx="332.7" cy="298.2" r="1.3"/><circle cx="334.7" cy="297.8" r="1.3"/><circle cx="336.6" cy="297.5" r="1.3"/><circle cx="329.8" cy="295.0" r="1.3"/><circle cx="331.8" cy="294.6" r="1.3"/><circle cx="333.7" cy="294.3" r="1.3"/><circle cx="328.9" cy="291.4" r="1.3"/><circle cx="330.8" cy="291.0" r="1.3"/><circle cx="358.4" cy="437.9" r="1.3"/><circle cx="356.7" cy="435.0" r="1.3"/><circle cx="360.3" cy="434.4" r="1.3"/>
+          </g>
+
+          <circle cx="300" cy="300" r="230" fill="none" stroke="#E8B84B" stroke-width="2" opacity="0.8" filter="url(#rimGlow)"></circle>
+          <ellipse cx="300" cy="300" rx="272" ry="98" fill="none" stroke="rgba(242,204,116,0.3)" stroke-width="1" stroke-dasharray="2 6" transform="rotate(-14 300 300)"></ellipse>
+
+          <g id="streamLayer"></g>
+          <g id="flowLayer"></g>
+          <g id="eventLayer"></g>
+        </svg>
+      </div>
+
+      <div class="globe-legend">
+        <div class="gl-item"><span class="gl-dot" style="background:#E3864F"></span>準備除息 · 資金流出</div>
+        <div class="gl-item"><span class="gl-dot" style="background:#9DBE7A"></span>近期已除息 · 填息追蹤</div>
+        <div class="gl-item"><span class="gl-ring"></span>總經事件</div>
+        <div class="gl-item"><span class="gl-line"></span>事件牽動路徑</div>
+        <div class="gl-item">影響 ETF 數
+          <span class="gl-scale"><i style="width:5px;height:5px"></i><i style="width:8px;height:8px"></i><i style="width:11px;height:11px"></i><i style="width:14px;height:14px"></i></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col">
+      <div class="card pay">
+        <div class="card-head">
+          <div class="card-title">
+            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v14"></path><path d="M6 10l6 6 6-6"></path><path d="M4 20h16"></path></svg></div>
+            <div><h2>近期已除息 · 填息追蹤</h2><span>過去 45 天</span></div>
+          </div>
+          <div class="scope-pill">ETF</div>
+        </div>
+        <div class="col-labels"><div>#</div><div>代碼</div><div>名稱</div><div class="r">倒數</div></div>
+        <div class="rows" id="payRows"></div>
+      </div>
+
+      <div class="card mini-macro">
+        <div class="card-head">
+          <div class="card-title">
+            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c2.6 2.6 4 5.7 4 9s-1.4 6.4-4 9c-2.6-2.6-4-5.7-4-9s1.4-6.4 4-9z"></path></svg></div>
+            <div><h2>總經事件雷達</h2><span>牽動 ETF 的近期事件</span></div>
+          </div>
+          <a class="more-link" href="#macroSection">查看全部 →</a>
+        </div>
+        <div class="mini-body" id="miniMacroBody"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===================== macro event section (full browser, below hero) ===================== -->
+  <div class="macro-card" id="macroSection">
+    <div class="macro-head">
+      <div class="card-title">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c2.6 2.6 4 5.7 4 9s-1.4 6.4-4 9c-2.6-2.6-4-5.7-4-9s1.4-6.4 4-9z"></path></svg></div>
+        <div><h2>總經事件 × ETF 影響</h2><span>點一個事件,看它牽動哪些 ETF</span></div>
+      </div>
+      <div class="cat-legend">
+        <div class="li"><i style="background:var(--gold-mid)"></i>貨幣政策</div>
+        <div class="li"><i style="background:var(--semi)"></i>半導體供應鏈</div>
+        <div class="li"><i style="background:var(--mkt)"></i>市場結算/貿易</div>
+      </div>
+    </div>
+    <div class="event-strip" id="eventStrip"></div>
+    <div class="impact-panel" id="impactPanel">
+      <div class="impact-empty">選一個上方事件,看看它牽動哪些 ETF</div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <p id="footNote">
+      準備除息取自證交所與櫃買中心的除權除息預告表，金額尚未公告者標示「待公布」；近期已除息取自除權除息計算結果表，填息以最新收盤價對照除息前收盤價判斷。
+      總經事件的日期與公布時刻取自 Nasdaq 經濟／財報行事曆、中央銀行、主計總處、財政部與法定期限；事件與 ETF 的關聯是過去 10 年的事件研究結果
+      （有市場共識或意外值的事件估 β，其餘估事件窗超額波動），是歷史統計關聯，不是預測，也不構成投資建議。
+      地球儀上的光點位置是排版，不代表地理或數值；赤陶色為即將除息（配息自基金淨值撥出）、抹茶綠為近期已除息，金色虛線連到該事件過去反應最明顯的 ETF。
+    </p>
+    <div class="legend">
+      <div class="legend-item a"><i></i>準備除息</div>
+      <div class="legend-item b"><i></i>近期已除息</div>
+          </div>
+  </div>
+
+  <div class="universe" id="universeNote"></div>
+
+  <div class="sd-sign"><i></i>Made by <span>SunDown Studio</span> 日落工作室</div>
+
+</div>
+
+<script>
+function radarRender(RD){
+  // ================= 資料（RD：calibrate.py 每日輸出 ＋ twflow 收盤）=================
+  var NAMES = RD.names || {}, W = RD.w || {}, PX = RD.px || {};
+  var LIQ = 40;   // 只列成交值影響力 ≥ 40 的 ETF，避免幾十檔小型 ETF 洗版
+  var exDiv = (RD.div || []).filter(function(x){ return (W[x[0]]||0) >= LIQ; }).map(function(x){
+    return {code:x[0], name:NAMES[x[0]]||x[1], date:x[2], amount:x[3]!=null?String(x[3]):null, est:false, freq:x[5]||'', pay:null, src:x[4]};
+  });
+  var payment = (RD.recent || []).filter(function(x){ return (W[x[0]]||0) >= LIQ; }).map(function(x){
+    var p = PX[x[0]];
+    return {code:x[0], name:NAMES[x[0]]||x[1], date:x[2], pre:x[3], amount:String(x[4]), px:p?p[0]:null, src:x[5]};
+  });
+  var EVMETA = {
+    fomc:{short:'FOMC 決策', name:'FOMC 利率決議', en:'FOMC Rate Decision', cat:'monetary', desc:'聯準會利率決議與聲明，影響美元、殖利率與外資動向。'},
+    cbc:{short:'央行理監事會', name:'台灣央行理監事會', en:'Taiwan CBC Board Meeting', cat:'monetary', desc:'台灣央行利率與信用管制決議，影響金融股、高股息與債券 ETF。'},
+    uscpi:{short:'美國 CPI', name:'美國核心 CPI', en:'US Core CPI', cat:'monetary', desc:'美國通膨數據，左右降息預期與利率敏感型 ETF。'},
+    pce:{short:'美國 PCE', name:'美國核心 PCE 物價', en:'US Core PCE', cat:'monetary', desc:'聯準會偏好的通膨指標。'},
+    nfp:{short:'非農就業', name:'美國非農就業', en:'US Nonfarm Payrolls', cat:'monetary', desc:'美國就業強弱，牽動降息機率與美元。'},
+    umich:{short:'密大信心', name:'密大消費者信心初值', en:'UMich Consumer Sentiment', cat:'monetary', desc:'美國消費者信心與通膨預期。'},
+    twcpi:{short:'台灣 CPI', name:'台灣 CPI', en:'Taiwan CPI', cat:'monetary', desc:'台灣物價，影響央行語氣與利率敏感型 ETF。'},
+    tsmc:{short:'台積電法說', name:'台積電法說會', en:'TSMC Earnings Call', cat:'semiconductor', desc:'台積電財報與展望，牽動大盤與科技型 ETF。'},
+    tsmcrev:{short:'台積電營收', name:'台積電月營收', en:'TSMC Monthly Revenue', cat:'semiconductor', desc:'台積電每月營收，台股權值最大的單一指標。'},
+    nvda:{short:'NVIDIA 財報', name:'NVIDIA 財報', en:'NVIDIA Earnings', cat:'semiconductor', desc:'AI 伺服器需求的風向球，牽動台灣 AI 供應鏈。'},
+    mu:{short:'美光財報', name:'美光財報', en:'Micron Earnings', cat:'semiconductor', desc:'記憶體與 HBM 景氣的風向球。'},
+    aapl:{short:'Apple 財報', name:'Apple 財報', en:'Apple Earnings', cat:'semiconductor', desc:'消費電子需求，牽動組裝與零組件供應鏈。'},
+    twexp:{short:'台灣出口', name:'台灣出口統計', en:'Taiwan Exports', cat:'market', desc:'財政部海關進出口統計，反映電子與資通訊出口動能。'},
+    twrev:{short:'營收截止', name:'台股月營收公布截止', en:'Taiwan Monthly Revenue Deadline', cat:'market', desc:'上市櫃公司月營收的法定公布期限。'},
+    twq:{short:'季報截止', name:'台股季報公布截止', en:'Taiwan Quarterly Report Deadline', cat:'market', desc:'上市櫃公司季報的法定公布期限。'},
+    quad:{short:'四巫日', name:'四巫日（期權到期）', en:'Quadruple Witching', cat:'market', desc:'美國股票與指數期貨、選擇權同日到期，成交量與波動常放大。'},
+    usret:{short:'美國零售', name:'美國零售銷售', en:'US Retail Sales', cat:'market', desc:'美國消費動能。'},
+    ism:{short:'ISM 製造業', name:'美國 ISM 製造業指數', en:'US ISM Manufacturing', cat:'market', desc:'美國製造業景氣，50 以上為擴張。'},
+    cnpmi:{short:'中國 PMI', name:'中國官方製造業 PMI', en:'China Official PMI', cat:'market', desc:'中國製造業景氣，影響原物料、面板與航運需求。'},
+    banks:{short:'美銀行財報', name:'美國大型銀行財報', en:'US Big Bank Earnings', cat:'market', desc:'美國財報季開跑，金融業信用與放款狀況。'}
+  };
+  var EVENTS = (RD.up || []).map(function(u){
+    var m = EVMETA[u.k] || {short:u.k, name:u.k, en:'', cat:'market', desc:''};
+    var imp = (RD.imp && RD.imp[u.k]) || [];
+    var sel = imp.filter(function(r){ return Math.abs(r[2]) >= 1; }).slice(0,8);
+    if(sel.length < 4) sel = imp.slice(0,4);
+    var cons = u.cons ? '　市場共識 '+u.cons+(u.prev?'（前值 '+u.prev+'）':'')+'。' : (u.prev ? '　前值 '+u.prev+'。' : '');
+    return {id:u.k+'_'+u.d, k:u.k, short:m.short, name:m.name, en:m.en, date:u.d, time:u.t, cat:m.cat, est:false,
+            desc:m.desc+cons+'　日期來源：'+u.src+'（台北時間 '+u.t+'）。', etfs:sel.map(function(r){ return r[0]; }), imp:sel, src:u.src};
+  });
+  var ETF_META = {}; Object.keys(NAMES).forEach(function(c){ ETF_META[c] = {name:NAMES[c]}; });
+  var SNAPSHOT = RD.asof;
+  var CATCOLOR = { monetary:'var(--gold-mid)', semiconductor:'var(--semi)', market:'var(--mkt)' };
+  var CATLABEL = { monetary:'貨幣政策', semiconductor:'半導體供應鏈', market:'市場結算/貿易' };
+  var GLOBE = { ex:'#E3864F', pay:'#9DBE7A', gold:'#E8B84B' };
+
+  function pad(n){ return n<10 ? '0'+n : ''+n; }
+  function fmtDate(d){ return d.getFullYear()+'/'+pad(d.getMonth()+1)+'/'+pad(d.getDate()); }
+  function fmtIso(iso){ var d=new Date(iso+'T00:00:00'); return fmtDate(d); }
+  function daysUntil(iso){
+    var target = new Date(iso+'T00:00:00'); var now = new Date();
+    var a = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return Math.round((target - a) / 86400000);
+  }
+
+  // ================= dividend rank tables =================
+  function renderList(items, mountId, windowDays){
+    var mount = document.getElementById(mountId);
+    var withDays = items.map(function(it){ return Object.assign({}, it, {d: daysUntil(it.date)}); })
+      .filter(function(it){ return it.d>=0 && it.d<=windowDays; })
+      .sort(function(a,b){ return a.d-b.d || (W[b.code]||0)-(W[a.code]||0); }).slice(0,15);
+    if(!withDays.length){ mount.innerHTML = '<div class="empty"><b>未來 '+windowDays+' 天內暫無符合事件</b>'+(isStale?'資料快照為 '+fmtIso(SNAPSHOT)+'，待更新':'')+'</div>'; return withDays; }
+    mount.innerHTML = withDays.map(function(it,i){
+      var dt = new Date(it.date+'T00:00:00');
+      var amtHtml = it.amount ? '<div class="amt-line">'+it.amount+' 元'+(it.est?' <span class="est-tag">估</span>':'')+'</div>' : '<div class="amt-line pending">待公布</div>';
+      return '<div class="row"><div class="rank">'+(i+1)+'</div><div class="code">'+it.code+'</div>'+
+        '<div class="name-cell"><div class="name">'+it.name+'</div><div class="sub">'+fmtDate(dt)+(it.est?' <span class="est-tag">預估</span>':'')+'</div>'+amtHtml+'</div>'+
+        '<div class="cd-badge">D-'+it.d+'</div></div>';
+    }).join('');
+    return withDays;
+  }
+  var staleDays = -daysUntil(SNAPSHOT);
+  var isStale = staleDays > 14;
+  var exList = renderList(exDiv, 'exRows', 30);
+  /* 近期已除息：除息前收盤價 vs 最新收盤價 → 是否已填息 */
+  function renderRecent(items, mountId){
+    var mount = document.getElementById(mountId);
+    var list = items.map(function(it){ return Object.assign({}, it, {d: -daysUntil(it.date)}); })
+      .filter(function(it){ return it.d >= 0 && it.d <= 45; })
+      .sort(function(a,b){ return a.d-b.d || (W[b.code]||0)-(W[a.code]||0); }).slice(0,12);
+    if(!list.length){ mount.innerHTML = '<div class="empty"><b>近 45 天沒有除息的 ETF</b></div>'; return list; }
+    mount.innerHTML = list.map(function(it,i){
+      var st;
+      if(it.px == null) st = '<div class="amt-line pending">無收盤價</div>';
+      else if(it.px >= it.pre) st = '<div class="amt-line">已填息 <span class="est-tag">✓</span></div>';
+      else st = '<div class="amt-line pending">距填息 '+((it.pre-it.px)/it.pre*100).toFixed(2)+'%</div>';
+      return '<div class="row"><div class="rank">'+(i+1)+'</div><div class="code">'+it.code+'</div>'+
+        '<div class="name-cell"><div class="name">'+it.name+'</div><div class="sub">'+fmtIso(it.date)+' 除息 · 配 '+(+it.amount)+' 元 · 除息前 '+it.pre+'</div>'+st+'</div>'+
+        '<div class="cd-badge">'+it.d+' 天前</div></div>';
+    }).join('');
+    return list;
+  }
+  var payList = renderRecent(payment, 'payRows');
+
+  document.getElementById('asOf').textContent = fmtIso(SNAPSHOT) + (isStale ? '（'+staleDays+' 天前）' : '');
+  if(isStale) document.getElementById('asOfPill').classList.add('stale');
+  document.getElementById('detailUpdated').textContent = fmtIso(SNAPSHOT);
+  document.getElementById('univPill').innerHTML = '除息預告 <b>'+exDiv.length+'</b> 檔 ETF';
+  document.getElementById('universeNote').innerHTML = '<b>資料來源：</b>準備除息＝證交所除權除息預告表（TWT48U）與櫃買中心除權除息預告；'+
+    '近期已除息＝證交所除權除息計算結果表（TWT49U）與櫃買中心除權除息計算結果，填息以最新收盤價對照除息前收盤價；'+
+    '總經事件＝Nasdaq 經濟／財報行事曆、中央銀行、主計總處、財政部與法定期限；事件 × ETF＝過去 10 年事件研究（意外值 β 或事件窗超額波動）。'+
+    '只列成交值較大的 ETF。資料每個交易日盤後更新。';
+
+  // ================= featured ETF detail card =================
+  (function(){
+    var f = exList && exList[0];
+    if(!f){
+      document.getElementById('detailBody').innerHTML = '<div class="empty"><b>目前沒有 30 天內除息的標的</b>'+(isStale?'資料快照 '+fmtIso(SNAPSHOT)+' 已過期，更新後會自動帶出最快除息的 ETF。':'')+'</div>';
+      return;
+    }
+    var d = f.d;
+    var amtV = f.amount ? f.amount+' 元' : '待公布';
+    var payV = f.pay ? fmtIso(f.pay) : '預告表未提供';
+    document.getElementById('detailBody').innerHTML =
+      '<div class="detail-top"><div class="detail-id"><span class="code">'+f.code+'</span><span class="name">'+f.name+'</span></div><span class="watch-btn">＋ 加入自選</span></div>'+
+      '<div class="metric-grid">'+
+        '<div class="metric"><div class="k">除息日期</div><div class="v hl">'+fmtIso(f.date)+'</div></div>'+
+        '<div class="metric"><div class="k">倒數</div><div class="v hl">D-'+d+'</div></div>'+
+        '<div class="metric"><div class="k">發放日期</div><div class="v">'+payV+'</div></div>'+
+        '<div class="metric"><div class="k">配息頻率</div><div class="v">'+(f.freq||'—')+'</div></div>'+
+      '</div>'+
+      '<div class="note-block"><div class="lbl">配息金額</div><div class="amt">'+amtV+'</div>'+
+      '<div class="lbl">說明</div><p>'+f.code+' '+f.name+'本次'+(f.freq||'')+'將於 '+fmtIso(f.date)+' 除息'+(f.pay? '、'+fmtIso(f.pay)+' 入帳':'')+
+      (f.amount? ',每受益權單位配發 '+f.amount+' 元。':'，配息金額尚未公告，請留意投信後續公告。')+'</p></div>';
+  })();
+
+  // ================= mini macro summary card =================
+  (function(){
+    var withDays = EVENTS.map(function(e){ return Object.assign({}, e, {d: daysUntil(e.date)}); })
+      .filter(function(e){ return e.d>=0; }).sort(function(a,b){ return a.d-b.d; });
+    if(!withDays.length){
+      document.getElementById('miniMacroBody').innerHTML = '<div class="empty"><b>近期事件都已發生</b>待更新總經行事曆</div>';
+      return;
+    }
+    var next = withDays[0];
+    var in45 = withDays.filter(function(e){ return e.d<=45; });
+    var avg = (withDays.reduce(function(s,e){ return s+e.etfs.length; },0)/withDays.length).toFixed(1);
+    var top3 = withDays.slice(0,3);
+    document.getElementById('miniMacroBody').innerHTML =
+      '<div class="next-block"><div><span class="date">'+fmtIso(next.date)+'</span><span class="name">'+next.name+(next.est?'(預估)':'')+'</span></div><div class="dd">D-'+next.d+'</div></div>'+
+      '<div class="stat-grid"><div class="metric"><div class="k">未來 45 天事件</div><div class="v">'+in45.length+' 個</div></div>'+
+      '<div class="metric"><div class="k">平均影響 ETF</div><div class="v">'+avg+' 檔</div></div></div>'+
+      '<div class="mini-list">'+top3.map(function(e){
+        return '<div class="mini-item"><i style="background:'+CATCOLOR[e.cat]+'"></i><b>'+e.name+'</b><span>'+fmtIso(e.date)+' D-'+e.d+'</span></div>';
+      }).join('')+'</div>';
+  })();
+
+  // ================= globe: flow dots + event badges + capital-flow streams =================
+  var svgns = 'http://www.w3.org/2000/svg';
+  function el(tag, attrs){ var e=document.createElementNS(svgns, tag); for(var k in attrs){ e.setAttribute(k, attrs[k]); } return e; }
+  function polar(cx,cy,r,deg){ var a=(deg-90)*Math.PI/180; return {x:cx+r*Math.cos(a), y:cy+r*Math.sin(a)}; }
+  function labelAnchor(p,cx){
+    if(p.x > cx+6) return {anchor:'start', dx:9};
+    if(p.x < cx-6) return {anchor:'end', dx:-9};
+    return {anchor:'middle', dx:0};
+  }
+  var prefersReduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+  // animated dashed line: dashes travel from (x1,y1) toward (x2,y2), i.e. the direction of flow
+  function streamLine(x1,y1,x2,y2,hex,opts){
+    opts = opts || {};
+    var ln = el('line', {
+      x1:x1, y1:y1, x2:x2, y2:y2,
+      stroke:hex, 'stroke-width':opts.width||1.3,
+      'stroke-dasharray':opts.dash||'3 6',
+      opacity:opts.opacity||0.45,
+      'stroke-linecap':'round'
+    });
+    if(opts.marker) ln.setAttribute('marker-end', opts.marker);
+    if(!prefersReduced){
+      ln.appendChild(el('animate', {
+        attributeName:'stroke-dashoffset', values:'0;-18', dur:(opts.dur||'1s'), repeatCount:'indefinite'
+      }));
+    }
+    return ln;
+  }
+
+  var CX=300, CY=300;
+  var streamLayer = document.getElementById('streamLayer');
+  var flowLayer = document.getElementById('flowLayer');
+  streamLayer.innerHTML = ''; flowLayer.innerHTML = ''; document.getElementById('eventLayer').innerHTML = '';
+  // 'out' = ex-dividend: distribution leaves the fund's NAV (資金流出), animated outward from center
+  // 'in'  = payment date: cash settles into the unit holder's account (資金流入), animated inward to center
+  var flowItems = exList.map(function(x){ return {code:x.code, hex:GLOBE.ex, kind:'out'}; })
+    .concat(payList.map(function(x){ return {code:x.code, hex:GLOBE.pay, kind:'in'}; }));
+  var radii = [150,182,208,164,196,172,204,158];
+  var flowPos = {}; // code -> [{x,y,hex,kind}] for wiring event-influence paths below
+  flowItems.forEach(function(it, i){
+    var deg = (i/flowItems.length)*360;
+    var r = radii[i % radii.length];
+    var p = polar(CX,CY,r,deg);
+    (flowPos[it.code] = flowPos[it.code] || []).push({x:p.x, y:p.y});
+
+    if(it.kind==='out'){
+      streamLayer.appendChild(streamLine(CX,CY,p.x,p.y, it.hex, {opacity:0.6, width:1.6, dur:'1.1s'}));
+    } else {
+      streamLayer.appendChild(streamLine(p.x,p.y,CX,CY, it.hex, {opacity:0.6, width:1.6, dur:'1.1s'}));
+    }
+
+    var a = labelAnchor(p,CX);
+    var g = el('g', {'class':'flow-dot', style:'--c:'+it.hex});
+    g.appendChild(el('circle', {cx:p.x, cy:p.y, r:10, fill:it.hex, 'class':'glow', filter:'url(#nodeGlow)'}));
+    g.appendChild(el('circle', {cx:p.x, cy:p.y, r:4, fill:it.hex}));
+    var t = el('text', {x:p.x+a.dx, y:p.y+3.5, 'text-anchor':a.anchor, 'class':'lbl'});
+    t.textContent = it.code;
+    g.appendChild(t);
+    flowLayer.appendChild(g);
+  });
+
+  var eventLayer = document.getElementById('eventLayer');
+  var withDaysAll = EVENTS.map(function(e){ return Object.assign({}, e, {d: daysUntil(e.date)}); })
+    .filter(function(e){ return e.d>=0; }).sort(function(a,b){ return a.d-b.d; });
+  var topEvents = withDaysAll.slice(0,4);
+  if(!flowItems.length){
+    var gt = el('text', {x:CX, y:CY+272, 'text-anchor':'middle', 'class':'globe-empty'});
+    gt.textContent = isStale ? '30 天內無除息事件 · 資料待更新' : '30 天內無除息事件';
+    flowLayer.appendChild(gt);
+  }
+  topEvents.forEach(function(ev, i){
+    var deg = 22.5 + (i/4)*360;
+    var p = polar(CX,CY,236,deg);
+    var a = labelAnchor(p,CX);
+    var n = ev.etfs.length;
+    var rCore = 14 + Math.min(n,12)*0.9;
+
+    // influence path: event badge -> each affected ETF that already has a plotted flow dot
+    ev.etfs.forEach(function(code){
+      var hits = flowPos[code];
+      if(!hits) return;
+      hits.forEach(function(h){
+        streamLayer.appendChild(streamLine(p.x,p.y,h.x,h.y,GLOBE.gold,{opacity:0.55, width:1.3, dash:'3 5', dur:'1.3s', marker:'url(#arrowGold)'}));
+      });
+    });
+
+    var g = el('g', {'class':'event-badge'});
+    g.appendChild(el('circle', {cx:p.x, cy:p.y, r:rCore+12, fill:GLOBE.gold, 'class':'glow', filter:'url(#nodeGlow)'}));
+    g.appendChild(el('circle', {cx:p.x, cy:p.y, r:rCore, 'class':'core'}));
+    var lbl = el('text', {x:p.x+a.dx, y:p.y-rCore-8, 'text-anchor':a.anchor, 'class':'lbl'});
+    lbl.textContent = ev.short;
+    g.appendChild(lbl);
+    var dtag = el('text', {x:p.x+a.dx, y:p.y+rCore+16, 'text-anchor':a.anchor, 'class':'dtag'});
+    dtag.textContent = fmtIso(ev.date).slice(5)+' D-'+ev.d;
+    g.appendChild(dtag);
+    g.addEventListener('click', function(){
+      var target = document.getElementById('macroSection');
+      target.scrollIntoView({behavior:'smooth', block:'start'});
+      if(window.__selectMacroEvent) window.__selectMacroEvent(ev.id);
+    });
+    eventLayer.appendChild(g);
+  });
+
+  // ---- globe: pseudo-fullscreen + reduced motion ----
+  var globeCard = document.getElementById('globeCard');
+  var fsBtn = document.getElementById('fsBtn');
+  if(!window.__radarInit){ window.__radarInit = true;
+  fsBtn.addEventListener('click', function(){
+    var isFull = globeCard.classList.toggle('is-full');
+    fsBtn.textContent = isFull ? '✕' : '⛶';
+    document.body.style.overflow = isFull ? 'hidden' : '';
+  });
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape' && globeCard.classList.contains('is-full')){
+      globeCard.classList.remove('is-full'); fsBtn.textContent = '⛶'; document.body.style.overflow = '';
+    }
+  });
+  }
+  if(prefersReduced){
+    var spin = document.getElementById('spinAnim');
+    if(spin && spin.parentNode) spin.parentNode.removeChild(spin);
+  }
+
+  // ================= macro event browser (full section) =================
+  var stripMount = document.getElementById('eventStrip');
+  stripMount.innerHTML = EVENTS.slice().sort(function(a,b){
+    var da=daysUntil(a.date), db=daysUntil(b.date);
+    if((da<0)!==(db<0)) return da<0 ? 1 : -1;
+    return da<0 ? db-da : da-db;
+  }).map(function(ev){
+    var d = daysUntil(ev.date);
+    var ddTxt = d>=0 ? ('D-'+d) : '已發生';
+    return '<div class="event-row'+(d<0?' past':'')+'" data-id="'+ev.id+'" style="--cat:'+CATCOLOR[ev.cat]+'">'+
+      '<div class="et"><b>'+ev.name+'</b><small>'+fmtIso(ev.date)+(ev.est?' (預估)':'')+'</small></div><div class="dd">'+ddTxt+'</div></div>';
+  }).join('');
+
+  var impactPanel = document.getElementById('impactPanel');
+  var state = { active: null };
+  function selectEvent(id){
+    if(id && state.active === id){ id = null; }
+    state.active = id;
+    Array.prototype.forEach.call(stripMount.querySelectorAll('.event-row'), function(r){ r.classList.remove('active'); });
+    if(!id){ renderImpactEmpty(); return; }
+    var ev = EVENTS.filter(function(e){ return e.id===id; })[0];
+    if(!ev) return;
+    var row = stripMount.querySelector('.event-row[data-id="'+ev.id+'"]');
+    if(row) row.classList.add('active');
+    renderImpactCard(ev);
+  }
+  window.__selectMacroEvent = selectEvent;
+  function renderImpactEmpty(){ impactPanel.innerHTML = '<div class="impact-empty">選一個上方事件,看看它牽動哪些 ETF</div>'; }
+  function renderImpactCard(ev){
+    var d = daysUntil(ev.date);
+    var ddTxt = d>=0 ? ('倒數 D-'+d) : '已發生';
+    var chips = (ev.imp||[]).map(function(r){ var m=ETF_META[r[0]];
+      var stat = r[4]==='abs' ? ('超額波動 '+(r[1]>0?'+':'')+r[1].toFixed(2)+'%') : ('β '+(r[1]>0?'+':'')+r[1].toFixed(2)+'%／1σ');
+      return '<span class="imp-chip"><b>'+r[0]+'</b><span>'+(m?m.name:'')+' · '+stat+' · t '+r[2].toFixed(1)+(Math.abs(r[2])>=1.96?' · 顯著':'')+(r[5]?' · 前後半同向':'')+'</span></span>'; }).join('');
+    impactPanel.innerHTML = '<div class="impact-card" style="--cat:'+CATCOLOR[ev.cat]+'"><div class="cat-tag">'+CATLABEL[ev.cat]+'</div><br>'+
+      '<h3>'+ev.name+'</h3><div class="en">'+ev.en+'</div>'+
+      '<div class="when">'+fmtIso(ev.date)+(ev.est?' <span class="est-tag">預估</span>':'')+' <b>'+ddTxt+'</b></div>'+
+      '<p>'+ev.desc+'</p><div class="imp-label">過去 10 年反應最明顯的 ETF ('+ev.etfs.length+') · 依 |t| 排序</div><p style="font-size:12px;color:var(--text3);margin:4px 0 8px">這些數字只描述過去：同一套方法把事件分成前後兩半檢驗，前半期顯著的方向到後半期常常不成立，不能拿來預測這一次。</p><div class="imp-chips">'+chips+'</div></div>';
+  }
+  Array.prototype.forEach.call(stripMount.querySelectorAll('.event-row'), function(row){
+    row.addEventListener('click', function(){ selectEvent(row.getAttribute('data-id')); });
+  });
+  renderImpactEmpty();
+}
+var RADAR_DATA = {"asof":"2026-10-12","div":[["00401A","主動摩根台灣鑫收","2026-10-15",0.131,"證交所除權除息預告表","半年配"],["00851","台新全球AI","2026-10-16",null,"證交所除權除息預告表","年配"],["00904","台新臺灣半導體30","2026-10-16",null,"證交所除權除息預告表","季配"],["00936","台新永續高息中小","2026-10-16",null,"證交所除權除息預告表","月配"],["00947","台新臺灣IC設計","2026-10-16",null,"證交所除權除息預告表","季配"],["00962","台新AI優息動能","2026-10-16",null,"證交所除權除息預告表","月配"],["009805","台新美國電力基建","2026-10-16",null,"證交所除權除息預告表","年配"],["00734B","台新JPM新興債","2026-10-16",null,"櫃買中心除權除息預告","季配"],["00842B","台新美元銀行債","2026-10-16",null,"櫃買中心除權除息預告","季配"],["00942B","台新美A公司債20+","2026-10-16",null,"櫃買中心除權除息預告","月配"],["00970B","台新BBB投等債20+","2026-10-16",null,"櫃買中心除權除息預告",null],["00980B","台新特選IG債10+","2026-10-16",null,"櫃買中心除權除息預告","月配"],["00988B","玉山嚴選非投債","2026-10-16",null,"櫃買中心除權除息預告",null],["00989B","台新美國非投等債","2026-10-16",null,"櫃買中心除權除息預告",null],["00714","群益道瓊美國地產","2026-10-19",null,"證交所除權除息預告表","季配"],["00717","富邦美國特別股","2026-10-19",null,"證交所除權除息預告表","季配"],["00730","富邦臺灣優質高息","2026-10-19",null,"證交所除權除息預告表","月配"],["00733","富邦臺灣中小","2026-10-19",null,"證交所除權除息預告表","半年配"],["00900","富邦特選高股息30","2026-10-19",null,"證交所除權除息預告表","月配"],["00905","FT臺灣Smart","2026-10-19",null,"證交所除權除息預告表","季配"],["00908","富邦入息REITs+","2026-10-19",null,"證交所除權除息預告表","季配"],["00912","中信臺灣智慧50","2026-10-19",null,"證交所除權除息預告表","季配"],["00922","國泰台灣領袖50","2026-10-19",null,"證交所除權除息預告表","半年配"],["00927","群益半導體收益","2026-10-19",null,"證交所除權除息預告表","季配"],["00934","中信成長高股息","2026-10-19",null,"證交所除權除息預告表","月配"],["00943","兆豐電子高息等權","2026-10-19",0.36,"證交所除權除息預告表","月配"],["00944","野村趨勢動能高息","2026-10-19",null,"證交所除權除息預告表","月配"],["00945B","凱基美國非投等債","2026-10-19",null,"證交所除權除息預告表","月配"],["00952","凱基台灣AI50","2026-10-19",null,"證交所除權除息預告表","月配"],["00956","中信日經高股息","2026-10-19",null,"證交所除權除息預告表","季配"],["00960","野村全球航運龍頭","2026-10-19",null,"證交所除權除息預告表","季配"],["00961","FT臺灣永續高息","2026-10-19",null,"證交所除權除息預告表","月配"],["00963","中信全球高股息","2026-10-19",null,"證交所除權除息預告表","月配"],["00964","中信亞太高股息","2026-10-19",null,"證交所除權除息預告表","月配"],["00981T","平衡凱基雙核收息","2026-10-19",null,"證交所除權除息預告表",null],["00982D","主動富邦動態入息","2026-10-19",null,"證交所除權除息預告表",null],["00983D","主動富邦複合收益","2026-10-19",null,"證交所除權除息預告表",null],["00984A","主動安聯台灣高息","2026-10-19",null,"證交所除權除息預告表","季配"],["00985A","主動野村台灣50","2026-10-19",null,"證交所除權除息預告表",null],["00992A","主動群益科技創新","2026-10-19",null,"證交所除權除息預告表","年配"],["00995A","主動中信台灣卓越","2026-10-19",null,"證交所除權除息預告表",null],["00996A","主動兆豐台灣豐收","2026-10-19",0.73,"證交所除權除息預告表",null],["00694B","富邦美債1-3","2026-10-19",null,"櫃買中心除權除息預告","季配"],["00695B","富邦美債7-10","2026-10-19",null,"櫃買中心除權除息預告","季配"],["00696B","富邦美債20年","2026-10-19",null,"櫃買中心除權除息預告","季配"],["00722B","群益投資級電信債","2026-10-19",null,"櫃買中心除權除息預告","季配"],["00723B","群益投資級科技債","2026-10-19",null,"櫃買中心除權除息預告","季配"],["00724B","群益投資級金融債","2026-10-19",null,"櫃買中心除權除息預告","季配"],["00725B","國泰投資級公司債","2026-10-19",null,"櫃買中心除權除息預告","季配"],["00727B","國泰優選非投等債","2026-10-19",null,"櫃買中心除權除息預告","季配"],["00740B","富邦全球投等債","2026-10-19",null,"櫃買中心除權除息預告","月配"],["00741B","富邦全球非投等債","2026-10-19",null,"櫃買中心除權除息預告","月配"],["00746B","富邦A級公司債","2026-10-19",null,"櫃買中心除權除息預告","季配"],["00749B","凱基新興債10+","2026-10-19",null,"櫃買中心除權除息預告","季配"],["00750B","凱基科技債10+","2026-10-19",null,"櫃買中心除權除息預告","季配"],["00772B","中信高評級公司債","2026-10-19",null,"櫃買中心除權除息預告","月配"],["00773B","中信優先金融債","2026-10-19",null,"櫃買中心除權除息預告","月配"],["00777B","凱基AAA至A公司債","2026-10-19",null,"櫃買中心除權除息預告","月配"],["00778B","凱基金融債20+","2026-10-19",null,"櫃買中心除權除息預告","月配"],["00782B","國泰A級公用債","2026-10-19",null,"櫃買中心除權除息預告","季配"],["00785B","富邦金融投等債","2026-10-19",null,"櫃買中心除權除息預告","季配"],["00840B","凱基IG精選15+","2026-10-19",null,"櫃買中心除權除息預告","月配"],["00848B","中信新興亞洲債","2026-10-19",null,"櫃買中心除權除息預告","季配"],["00849B","中信EM主權債0-5","2026-10-19",null,"櫃買中心除權除息預告","季配"],["00884B","中信低碳新興債","2026-10-19",null,"櫃買中心除權除息預告","季配"],["00890B","凱基ESG BBB債15+","2026-10-19",null,"櫃買中心除權除息預告","月配"],["00933B","國泰10Y+金融債","2026-10-19",null,"櫃買中心除權除息預告","月配"],["00937B","群益ESG投等債20+","2026-10-19",null,"櫃買中心除權除息預告","月配"],["00948B","中信優息投資級債","2026-10-19",null,"櫃買中心除權除息預告","月配"],["00957B","兆豐US優選投等債","2026-10-19",0.064,"櫃買中心除權除息預告","月配"],["00980D","主動聯博投等入息","2026-10-19",null,"櫃買中心除權除息預告","月配"],["009814","富邦標普500","2026-10-19",null,"櫃買中心除權除息預告","年配"],["00981D","主動中信非投等債","2026-10-19",null,"櫃買中心除權除息預告",null],["00982B","FT投資級債20+","2026-10-19",null,"櫃買中心除權除息預告","月配"],["00991B","貝萊德A級公司債","2026-10-20",null,"證交所除權除息預告表",null],["00931B","統一美債20年","2026-10-20",null,"櫃買中心除權除息預告","季配"],["00985D","主動貝萊德優投等","2026-10-20",null,"櫃買中心除權除息預告","季配"],["00408A","主動第一金優股息","2026-10-21",null,"證交所除權除息預告表",null],["00929","復華台灣科技優息","2026-10-21",null,"證交所除權除息預告表","月配"],["00789B","復華公司債A3","2026-10-21",null,"櫃買中心除權除息預告","季配"],["00791B","復華信用債1-5","2026-10-21",null,"櫃買中心除權除息預告","季配"],["00986D","主動復華金融債息","2026-10-21",null,"櫃買中心除權除息預告","季配"],["0056","元大高股息","2026-10-22",null,"證交所除權除息預告表","季配"],["00719B","元大美債1-3","2026-10-22",null,"櫃買中心除權除息預告","季配"],["00720B","元大投資級公司債","2026-10-22",null,"櫃買中心除權除息預告","季配"],["00788B","元大10年IG電能債","2026-10-22",null,"櫃買中心除權除息預告","季配"],["00834B","第一金金融債10+","2026-10-22",null,"櫃買中心除權除息預告","季配"],["00870B","元大15年EM主權債","2026-10-22",null,"櫃買中心除權除息預告","季配"],["00967B","元大優息美債","2026-10-22",null,"櫃買中心除權除息預告","月配"],["00968B","元大優息投等債","2026-10-22",null,"櫃買中心除權除息預告","月配"],["00981B","第一金優選非投債","2026-10-22",null,"櫃買中心除權除息預告","月配"],["00907","永豐優息存股","2026-10-27",null,"證交所除權除息預告表",null],["00888","永豐台灣ESG","2026-10-27",null,"櫃買中心除權除息預告","季配"],["00958B","永豐ESG銀行債15+","2026-10-27",null,"櫃買中心除權除息預告","月配"],["00726B","國泰新興投等債","2026-10-28",null,"櫃買中心除權除息預告","季配"],["00990B","國泰收益非投等債","2026-10-28",null,"櫃買中心除權除息預告","年配"]],"recent":[["00400A","主動國泰動能高息","2026-10-08",16.47,0.12,"證交所除權除息計算結果表"],["00940","元大台灣價值高息","2026-10-07",13.3,0.055,"證交所除權除息計算結果表"],["00946","群益科技高息成長","2026-10-07",15.56,0.058,"證交所除權除息計算結果表"],["00953B","群益優選非投等債","2026-10-07",9.48,0.067,"證交所除權除息計算結果表"],["00985B","群益ESG投等債0-5","2026-10-07",10.05,0.053,"證交所除權除息計算結果表"],["00406A","主動中信台灣收益","2026-10-05",10.13,0.138,"證交所除權除息計算結果表"],["00939","統一台灣高息動能","2026-10-05",24.0,0.125,"證交所除權除息計算結果表"],["00984D","主動聯博全球非投","2026-10-05",9.74,0.085,"證交所除權除息計算結果表"],["00950B","凱基A級公司債","2026-10-05",13.12,0.063,"櫃買中心除權除息計算結果"],["00959B","大華投等美債15Y+","2026-10-05",8.72,0.048,"櫃買中心除權除息計算結果"],["00966B","統一ESG投等債15+","2026-10-05",12.96,0.068,"櫃買中心除權除息計算結果"],["00983B","大華優利美公債20","2026-10-05",14.41,0.06,"櫃買中心除權除息計算結果"],["00984B","大華優利美A債15","2026-10-05",15.13,0.079,"櫃買中心除權除息計算結果"],["00986B","FT金融債10+","2026-10-05",9.19,0.042,"櫃買中心除權除息計算結果"],["00930","永豐ESG低碳高息","2026-09-23",24.81,0.815,"證交所除權除息計算結果表"],["00836B","永豐10年A公司債","2026-09-23",27.81,0.382,"櫃買中心除權除息計算結果"],["00856B","永豐1-3年美公債","2026-09-23",37.21,0.335,"櫃買中心除權除息計算結果"],["00857B","永豐20年美公債","2026-09-23",22.38,0.255,"櫃買中心除權除息計算結果"],["00958B","永豐ESG銀行債15+","2026-09-23",8.97,0.041,"櫃買中心除權除息計算結果"],["00990B","國泰收益非投等債","2026-09-23",9.96,0.08,"櫃買中心除權除息計算結果"],["00713","元大台灣高息低波","2026-09-21",65.1,1.25,"證交所除權除息計算結果表"],["00697B","元大美債7-10","2026-09-21",34.82,0.31,"櫃買中心除權除息計算結果"],["00751B","元大AAA至A公司債","2026-09-21",30.47,0.43,"櫃買中心除權除息計算結果"],["00787B","元大10年IG醫療債","2026-09-21",31.74,0.41,"櫃買中心除權除息計算結果"],["00967B","元大優息美債","2026-09-21",8.84,0.033,"櫃買中心除權除息計算結果"],["00968B","元大優息投等債","2026-09-21",8.98,0.043,"櫃買中心除權除息計算結果"],["00981B","第一金優選非投債","2026-09-21",9.14,0.063,"櫃買中心除權除息計算結果"],["00728","第一金工業30","2026-09-18",68.5,0.77,"證交所除權除息計算結果表"],["00918","大華優利高填息30","2026-09-18",36.25,1.75,"證交所除權除息計算結果表"],["00994A","主動第一金台股優","2026-09-18",16.37,0.257,"證交所除權除息計算結果表"],["00710B","復華彭博非投等債","2026-09-17",19.06,0.39,"證交所除權除息計算結果表"],["00711B","復華彭博新興債","2026-09-17",15.34,0.2,"證交所除權除息計算結果表"],["00712","復華富時不動產","2026-09-17",8.21,0.2,"證交所除權除息計算結果表"],["00929","復華台灣科技優息","2026-09-17",28.84,0.38,"證交所除權除息計算結果表"],["00853B","統一美債10年Aa-A","2026-09-17",26.5,0.347,"櫃買中心除權除息計算結果"],["00985D","主動貝萊德優投等","2026-09-17",9.72,0.061,"櫃買中心除權除息計算結果"],["00986D","主動復華金融債息","2026-09-17",14.22,0.09,"櫃買中心除權除息計算結果"],["00998A","主動復華金融股息","2026-09-17",17.78,0.424,"櫃買中心除權除息計算結果"],["00404A","主動聯博動能50","2026-09-16",9.72,0.36,"證交所除權除息計算結果表"],["00730","富邦臺灣優質高息","2026-09-16",28.19,0.11,"證交所除權除息計算結果表"],["00770","國泰北美科技","2026-09-16",67.75,6.0,"證交所除權除息計算結果表"],["00896","中信綠能及電動車","2026-09-16",27.69,1.45,"證交所除權除息計算結果表"],["00900","富邦特選高股息30","2026-09-16",19.52,0.075,"證交所除權除息計算結果表"],["00915","凱基優選高股息30","2026-09-16",32.89,0.6,"證交所除權除息計算結果表"],["00919","群益台灣精選高息","2026-09-16",32.74,1.1,"證交所除權除息計算結果表"],["00921","兆豐龍頭等權重","2026-09-16",24.04,1.0,"證交所除權除息計算結果表"],["00934","中信成長高股息","2026-09-16",29.56,0.33,"證交所除權除息計算結果表"],["00935","野村臺灣新科技50","2026-09-16",57.4,1.83,"證交所除權除息計算結果表"],["00943","兆豐電子高息等權","2026-09-16",20.78,0.25,"證交所除權除息計算結果表"],["00944","野村趨勢動能高息","2026-09-16",21.42,0.109,"證交所除權除息計算結果表"],["00945B","凱基美國非投等債","2026-09-16",14.41,0.097,"證交所除權除息計算結果表"],["00952","凱基台灣AI50","2026-09-16",17.66,0.12,"證交所除權除息計算結果表"],["00961","FT臺灣永續高息","2026-09-16",13.33,0.19,"證交所除權除息計算結果表"],["00963","中信全球高股息","2026-09-16",13.11,0.1,"證交所除權除息計算結果表"],["00964","中信亞太高股息","2026-09-16",14.85,0.2,"證交所除權除息計算結果表"],["00972","野村日本動能高息","2026-09-16",22.15,0.22,"證交所除權除息計算結果表"],["009802","富邦旗艦50","2026-09-16",19.7,0.189,"證交所除權除息計算結果表"],["009809","富邦淨零ESG50","2026-09-16",17.95,0.215,"證交所除權除息計算結果表"],["00981A","主動統一台股增長","2026-09-16",28.86,0.63,"證交所除權除息計算結果表"],["00981T","平衡凱基雙核收息","2026-09-16",11.72,0.082,"證交所除權除息計算結果表"],["00982D","主動富邦動態入息","2026-09-16",9.51,0.052,"證交所除權除息計算結果表"],["00982T","平衡兆豐台美動能","2026-09-16",15.78,1.0,"證交所除權除息計算結果表"],["00983D","主動富邦複合收益","2026-09-16",9.77,0.061,"證交所除權除息計算結果表"],["00999A","主動野村臺灣高息","2026-09-16",11.18,0.29,"證交所除權除息計算結果表"],["00687B","國泰20年美債","2026-09-16",26.66,0.335,"櫃買中心除權除息計算結果"],["00740B","富邦全球投等債","2026-09-16",36.85,0.185,"櫃買中心除權除息計算結果"],["00741B","富邦全球非投等債","2026-09-16",37.06,0.199,"櫃買中心除權除息計算結果"],["00764B","群益25年美債","2026-09-16",26.58,0.304,"櫃買中心除權除息計算結果"],["00772B","中信高評級公司債","2026-09-16",31.92,0.14,"櫃買中心除權除息計算結果"],["00773B","中信優先金融債","2026-09-16",34.15,0.145,"櫃買中心除權除息計算結果"],["00777B","凱基AAA至A公司債","2026-09-16",30.77,0.14,"櫃買中心除權除息計算結果"],["00778B","凱基金融債20+","2026-09-16",32.66,0.145,"櫃買中心除權除息計算結果"],["00779B","凱基美債25+","2026-09-16",26.92,0.36,"櫃買中心除權除息計算結果"],["00781B","國泰A級科技債","2026-09-16",26.77,0.55,"櫃買中心除權除息計算結果"],["00792B","群益A級公司債","2026-09-16",30.28,0.447,"櫃買中心除權除息計算結果"],["00840B","凱基IG精選15+","2026-09-16",28.35,0.127,"櫃買中心除權除息計算結果"],["00859B","群益0-1年美債","2026-09-16",41.17,0.563,"櫃買中心除權除息計算結果"],["00862B","中信投資級公司債","2026-09-16",30.34,0.45,"櫃買中心除權除息計算結果"],["00863B","中信全球電信債","2026-09-16",30.48,0.42,"櫃買中心除權除息計算結果"],["00890B","凱基ESG BBB債15+","2026-09-16",30.8,0.145,"櫃買中心除權除息計算結果"],["00933B","國泰10Y+金融債","2026-09-16",15.3,0.073,"櫃買中心除權除息計算結果"],["00937B","群益ESG投等債20+","2026-09-16",14.13,0.072,"櫃買中心除權除息計算結果"],["00948B","中信優息投資級債","2026-09-16",9.03,0.045,"櫃買中心除權除息計算結果"],["00957B","兆豐US優選投等債","2026-09-16",12.79,0.063,"櫃買中心除權除息計算結果"],["00980D","主動聯博投等入息","2026-09-16",19.87,0.114,"櫃買中心除權除息計算結果"],["00981D","主動中信非投等債","2026-09-16",10.26,0.07,"櫃買中心除權除息計算結果"],["00982B","FT投資級債20+","2026-09-16",9.34,0.045,"櫃買中心除權除息計算結果"],["00936","台新永續高息中小","2026-09-15",21.28,0.16,"證交所除權除息計算結果表"],["00962","台新AI優息動能","2026-09-15",15.0,0.25,"證交所除權除息計算結果表"],["009803","玉山市值動能50","2026-09-15",21.64,0.9,"證交所除權除息計算結果表"],["00942B","台新美A公司債20+","2026-09-15",13.52,0.062,"櫃買中心除權除息計算結果"],["00970B","台新BBB投等債20+","2026-09-15",8.92,0.05,"櫃買中心除權除息計算結果"],["00980B","台新特選IG債10+","2026-09-15",9.03,0.047,"櫃買中心除權除息計算結果"],["00988B","玉山嚴選非投債","2026-09-15",19.41,0.141,"櫃買中心除權除息計算結果"],["00989B","台新美國非投等債","2026-09-15",10.02,0.088,"櫃買中心除權除息計算結果"],["00401A","主動摩根台灣鑫收","2026-09-14",14.07,0.125,"證交所除權除息計算結果表"],["00940","元大台灣價值高息","2026-09-08",12.99,0.055,"證交所除權除息計算結果表"],["00400A","主動國泰動能高息","2026-09-07",15.17,0.12,"證交所除權除息計算結果表"],["00406A","主動中信台灣收益","2026-09-02",9.96,0.138,"證交所除權除息計算結果表"],["00946","群益科技高息成長","2026-09-02",15.74,0.058,"證交所除權除息計算結果表"],["00953B","群益優選非投等債","2026-09-02",9.63,0.067,"證交所除權除息計算結果表"],["00985B","群益ESG投等債0-5","2026-09-02",10.16,0.053,"證交所除權除息計算結果表"],["00950B","凱基A級公司債","2026-09-02",13.58,0.063,"櫃買中心除權除息計算結果"],["00959B","大華投等美債15Y+","2026-09-02",9.09,0.048,"櫃買中心除權除息計算結果"],["00983B","大華優利美公債20","2026-09-02",15.03,0.06,"櫃買中心除權除息計算結果"],["00984B","大華優利美A債15","2026-09-02",15.74,0.079,"櫃買中心除權除息計算結果"],["00939","統一台灣高息動能","2026-09-01",23.17,0.125,"證交所除權除息計算結果表"],["00984D","主動聯博全球非投","2026-09-01",10.01,0.085,"證交所除權除息計算結果表"],["00966B","統一ESG投等債15+","2026-09-01",13.54,0.068,"櫃買中心除權除息計算結果"],["00986B","FT金融債10+","2026-09-01",9.55,0.042,"櫃買中心除權除息計算結果"]],"up":[{"k":"uscpi","d":"2026-10-14","t":"20:30","cons":"0.2%","prev":"0.3%","src":"Nasdaq 經濟行事曆"},{"k":"tsmc","d":"2026-10-15","t":"20:00","cons":"$4.45","prev":null,"src":"Nasdaq 財報行事曆（TSM）"},{"k":"usret","d":"2026-10-15","t":"20:30","cons":"0.3%","prev":"1.2%","src":"Nasdaq 經濟行事曆"},{"k":"umich","d":"2026-10-23","t":"22:00","cons":null,"prev":"46.3","src":"Nasdaq 經濟行事曆"},{"k":"fomc","d":"2026-10-29","t":"02:00","cons":null,"prev":"4.00%","src":"Nasdaq 經濟行事曆"},{"k":"pce","d":"2026-10-29","t":"20:30","cons":null,"prev":"3.0%","src":"Nasdaq 經濟行事曆"},{"k":"cnpmi","d":"2026-10-31","t":"09:30","cons":null,"prev":"50.1","src":"Nasdaq 經濟行事曆"},{"k":"ism","d":"2026-11-02","t":"23:00","cons":null,"prev":"54.5","src":"Nasdaq 經濟行事曆"},{"k":"aapl","d":"2026-11-03","t":"05:30","cons":"$1.98","prev":null,"src":"Nasdaq 財報行事曆（AAPL）"},{"k":"twcpi","d":"2026-11-05","t":"16:00","cons":null,"prev":"2.73%","src":"主計總處預告統計資料發布時間表"},{"k":"twexp","d":"2026-11-09","t":"16:00","cons":null,"prev":null,"src":"財政部新聞稿「下次發布日期」"},{"k":"tsmcrev","d":"2026-11-10","t":"14:00","cons":null,"prev":null,"src":"證券交易法：每月 10 日前公告營收"},{"k":"twrev","d":"2026-11-10","t":"17:00","cons":null,"prev":null,"src":"證券交易法：每月 10 日前公告營收"},{"k":"twq","d":"2026-11-14","t":"17:00","cons":null,"prev":null,"src":"證券交易法：季報法定期限"},{"k":"nvda","d":"2026-11-19","t":"05:30","cons":"$2.47","prev":null,"src":"Nasdaq 財報行事曆（NVDA）"},{"k":"ism","d":"2026-12-01","t":"23:00","cons":null,"prev":null,"src":"ISM 官方規則（每月第一個營業日）"},{"k":"twcpi","d":"2026-12-08","t":"16:00","cons":null,"prev":"2.73%","src":"主計總處預告統計資料發布時間表"},{"k":"fomc","d":"2026-12-10","t":"03:00","cons":null,"prev":null,"src":"Nasdaq 經濟行事曆"},{"k":"tsmcrev","d":"2026-12-10","t":"14:00","cons":null,"prev":null,"src":"證券交易法：每月 10 日前公告營收"},{"k":"twrev","d":"2026-12-10","t":"17:00","cons":null,"prev":null,"src":"證券交易法：每月 10 日前公告營收"},{"k":"cbc","d":"2026-12-17","t":"16:30","cons":null,"prev":null,"src":"中央銀行理監事聯席會議預定日期"},{"k":"quad","d":"2026-12-18","t":"21:00","cons":null,"prev":null,"src":"期交所／CBOE：季月第三個星期五"},{"k":"ism","d":"2027-01-04","t":"23:00","cons":null,"prev":null,"src":"ISM 官方規則（每月第一個營業日）"},{"k":"twcpi","d":"2027-01-08","t":"16:00","cons":null,"prev":"2.73%","src":"主計總處預告統計資料發布時間表"},{"k":"tsmcrev","d":"2027-01-10","t":"14:00","cons":null,"prev":null,"src":"證券交易法：每月 10 日前公告營收"},{"k":"twrev","d":"2027-01-10","t":"17:00","cons":null,"prev":null,"src":"證券交易法：每月 10 日前公告營收"},{"k":"fomc","d":"2027-01-28","t":"02:00","cons":null,"prev":null,"src":"Nasdaq 經濟行事曆"},{"k":"ism","d":"2027-02-01","t":"23:00","cons":null,"prev":null,"src":"ISM 官方規則（每月第一個營業日）"},{"k":"tsmcrev","d":"2027-02-10","t":"14:00","cons":null,"prev":null,"src":"證券交易法：每月 10 日前公告營收"},{"k":"twrev","d":"2027-02-10","t":"17:00","cons":null,"prev":null,"src":"證券交易法：每月 10 日前公告營收"}],"imp":{"twcpi":[["00937B",-0.386,-1.72,34,"dir",false],["00865B",-0.091,-1.69,82,"dir",false],["00935",-0.717,-1.18,35,"dir",false],["00887",1.125,1.17,66,"dir",false],["00922",-0.488,-1.17,42,"dir",false],["00927",-0.547,-1.12,40,"dir",false],["00712",-0.442,-1.06,110,"dir",false],["00734B",0.085,0.91,100,"dir",false],["00946",-0.535,-0.91,29,"dir",false],["00953B",-0.11,-0.91,25,"dir",false],["00738U",-0.346,-0.9,100,"dir",false],["00881",-0.335,-0.9,70,"dir",false]],"twexp":[["00724B",-0.34,-3.43,22,"abs",true],["00751B",-0.359,-3.01,22,"abs",true],["00720B",-0.312,-2.79,22,"abs",true],["00725B",-0.23,-2.57,22,"abs",true],["00722B",-0.269,-2.27,22,"abs",true],["00937B",-0.273,-2.15,22,"abs",true],["00795B",-0.375,-2.11,22,"abs",false],["006208",0.603,2.02,22,"abs",false],["0050",0.569,1.84,21,"abs",false],["00713",-0.274,-1.83,22,"abs",false],["00757",-0.501,-1.82,22,"abs",false],["00933B",-0.21,-1.77,22,"abs",false]],"cbc":[["00933B",-0.446,-4.54,11,"abs",false],["00945B",-0.231,-3.35,9,"abs",false],["00935",-1.157,-3.04,11,"abs",false],["00943",-0.807,-2.92,9,"abs",false],["00881",-0.734,-2.6,23,"abs",false],["00878",-0.351,-2.4,24,"abs",false],["00922",-0.655,-2.24,14,"abs",false],["00891",-0.799,-2.23,21,"abs",false],["00927",-0.749,-2.2,13,"abs",false],["00940",-0.371,-1.91,10,"abs",false],["00946",-0.613,-1.85,9,"abs",false],["00944",-0.457,-1.76,9,"abs",false]],"twrev":[["00738U",1.255,2.58,99,"dir",false],["00888",0.828,2.23,65,"dir",false],["0050",0.581,2.1,118,"dir",true],["00713",0.446,2.1,107,"dir",false],["00878",0.522,2.09,73,"dir",true],["00933B",0.368,1.99,35,"dir",false],["006208",0.55,1.89,107,"dir",false],["00830",0.838,1.86,88,"dir",false],["00891",0.753,1.79,63,"dir",false],["0056",0.398,1.72,119,"dir",false],["00937B",0.312,1.64,33,"dir",false],["00929",0.663,1.6,39,"dir",false]],"tsmcrev":[["00725B",-0.41,-2.32,103,"dir",false],["00734B",-0.334,-2.25,99,"dir",false],["00712",-0.789,-2.03,109,"dir",false],["00724B",-0.314,-1.94,105,"dir",false],["00720B",-0.318,-1.82,103,"dir",false],["00770",-0.618,-1.8,91,"dir",false],["00722B",-0.308,-1.74,105,"dir",false],["00646",-0.331,-1.68,119,"dir",false],["00757",-0.578,-1.35,93,"dir",false],["00662",-0.336,-1.33,119,"dir",false],["00830",-0.649,-1.33,88,"dir",false],["00751B",-0.256,-1.32,95,"dir",false]],"uscpi":[["00888",-0.791,-3.02,64,"dir",false],["00878",-0.38,-2.67,73,"dir",true],["00865B",0.138,2.48,81,"dir",false],["00881",-0.68,-2.38,68,"dir",true],["00912",-0.809,-2.06,49,"dir",false],["006208",-0.448,-1.98,112,"dir",false],["0050",-0.42,-1.89,118,"dir",false],["0056",-0.279,-1.76,119,"dir",false],["00904",-0.895,-1.71,53,"dir",false],["00770",-0.382,-1.46,91,"dir",false],["00713",-0.214,-1.45,107,"dir",false],["00830",-0.528,-1.43,88,"dir",false]],"umich":[["00770",0.484,2.24,90,"dir",false],["00865B",0.113,2.16,80,"dir",false],["00662",0.317,1.92,118,"dir",false],["00646",0.266,1.9,118,"dir",false],["00757",0.552,1.84,92,"dir",false],["00924",0.31,1.46,40,"dir",false],["00830",0.392,1.33,87,"dir",false],["00939",0.426,1.33,28,"dir",false],["0050",-0.275,-1.28,117,"dir",false],["0052",-0.298,-1.22,118,"dir",false],["00929",0.363,1.22,38,"dir",false],["00947",1.095,1.16,26,"dir",false]],"usret":[["00865B",-0.118,-2.55,78,"dir",false],["00878",0.292,1.82,72,"dir",false],["00934",-1.388,-1.7,34,"dir",false],["00738U",-0.59,-1.68,94,"dir",false],["00733",0.472,1.67,95,"dir",false],["00757",-0.409,-1.36,87,"dir",false],["00918",-0.625,-1.29,46,"dir",false],["00713",0.135,1.21,102,"dir",false],["00662",-0.231,-1.18,114,"dir",false],["00646",-0.156,-1.15,114,"dir",false],["00939",-0.789,-1.15,30,"dir",false],["00722B",-0.176,-0.98,100,"dir",false]],"twq":[["00733",1.288,1.62,34,"abs",false],["00943",3.167,1.45,10,"abs",false],["00725B",0.359,1.43,35,"abs",false],["0052",1.03,1.35,40,"abs",false],["00945B",0.63,1.27,10,"abs",false],["00720B",0.344,1.25,35,"abs",false],["00751B",0.351,1.25,32,"abs",false],["00724B",0.327,1.22,35,"abs",false],["00940",2.0,1.16,11,"abs",false],["00722B",0.296,1.15,35,"abs",false],["00944",1.881,1.15,10,"abs",false],["00953B",0.573,1.14,9,"abs",false]],"fomc":[["00937B",-1.084,-4.96,22,"dir",false],["00865B",0.205,2.93,54,"dir",false],["00751B",-0.541,-2.91,63,"dir",false],["00722B",-0.494,-2.86,68,"dir",false],["00725B",-0.396,-2.8,67,"dir",false],["00679B",-0.604,-2.6,75,"dir",false],["00720B",-0.442,-2.57,67,"dir",false],["00687B",-0.595,-2.53,73,"dir",false],["00724B",-0.371,-2.46,68,"dir",false],["00795B",-0.558,-2.19,59,"dir",false],["00738U",-1.293,-2.0,64,"dir",false],["00712",-0.554,-1.86,70,"dir",false]],"quad":[["00944",-0.761,-4.23,9,"abs",false],["00943",-0.897,-3.75,9,"abs",false],["00891",-0.898,-3.62,21,"abs",false],["00881",-0.825,-3.61,23,"abs",false],["00878",-0.441,-3.22,24,"abs",false],["00935",-1.171,-3.21,11,"abs",false],["006208",-0.459,-2.59,38,"abs",true],["00904",-0.685,-2.59,18,"abs",false],["0050",-0.439,-2.58,39,"abs",true],["00940",-0.56,-2.42,10,"abs",false],["00922",-0.698,-2.31,14,"abs",false],["00927",-0.638,-2.19,13,"abs",false]],"mu":[["00937B",0.255,1.55,10,"dir",false],["00795B",0.44,1.5,23,"dir",false],["00933B",0.201,1.42,10,"dir",false],["00877",-1.97,-1.39,18,"dir",false],["00939",-0.26,-1.32,10,"dir",false],["00953B",-0.413,-1.31,8,"dir",false],["00922",0.369,1.28,10,"dir",false],["0050",0.499,1.26,31,"dir",false],["00687B",0.334,1.16,30,"dir",false],["00679B",0.326,1.13,30,"dir",false],["006208",0.425,1.09,29,"dir",false],["00881",0.524,1.06,17,"dir",false]],"pce":[["00937B",0.788,1.76,32,"dir",false],["00924",-0.62,-1.53,39,"dir",false],["00933B",0.611,1.49,33,"dir",false],["00646",0.199,1.44,114,"dir",false],["00940",-0.773,-1.43,28,"dir",false],["00934",-0.982,-1.42,33,"dir",false],["00712",0.396,1.24,104,"dir",false],["00947",-1.643,-1.21,26,"dir",false],["00953B",0.392,1.08,23,"dir",false],["00918",-0.45,-1.06,44,"dir",false],["00887",-0.726,-1.01,64,"dir",false],["00946",-0.709,-0.99,27,"dir",false]],"cnpmi":[["00712",-0.715,-2.69,84,"dir",true],["00646",0.292,1.8,92,"dir",false],["00738U",0.614,1.67,77,"dir",false],["00687B",-0.324,-1.65,86,"dir",false],["00713",0.172,1.48,83,"dir",false],["00795B",-0.311,-1.48,69,"dir",false],["00679B",-0.235,-1.26,89,"dir",false],["00953B",1.906,1.19,17,"dir",false],["00770",0.279,1.12,70,"dir",false],["00662",0.221,1.06,92,"dir",false],["00945B",1.36,0.94,20,"dir",false],["00865B",0.1,0.92,64,"dir",false]],"ism":[["0052",0.701,2.58,122,"dir",true],["00770",0.797,2.54,93,"dir",false],["00795B",-0.501,-2.36,90,"dir",false],["00733",0.686,2.02,102,"dir",true],["00933B",-0.733,-1.89,35,"dir",false],["006208",0.465,1.84,114,"dir",false],["00830",0.781,1.77,89,"dir",false],["0050",0.423,1.76,122,"dir",false],["00679B",-0.29,-1.73,118,"dir",false],["00687B",-0.294,-1.68,115,"dir",false],["00940",1.408,1.66,30,"dir",false],["00937B",-0.805,-1.63,34,"dir",false]],"nfp":[["00757",0.54,1.73,91,"dir",false],["00888",3.863,1.47,65,"dir",false],["00720B",0.204,1.45,103,"dir",false],["00712",0.294,1.39,108,"dir",false],["00725B",0.177,1.35,103,"dir",false],["00937B",-5.6,-1.29,33,"dir",false],["00881",3.635,1.28,68,"dir",false],["00662",0.295,1.21,119,"dir",false],["00724B",0.149,1.18,105,"dir",false],["00946",-14.329,-1.18,28,"dir",false],["00646",0.22,1.07,119,"dir",false],["00944",-10.723,-1.05,28,"dir",false]],"banks":[["00712",1.324,2.64,36,"dir",false],["00713",0.394,1.64,36,"dir",false],["00865B",-0.183,-1.47,27,"dir",false],["00937B",1.649,1.44,11,"dir",false],["00733",0.942,1.41,33,"dir",false],["00662",-0.533,-1.35,40,"dir",false],["00738U",0.742,1.32,33,"dir",false],["00646",-0.28,-1.0,40,"dir",false],["00722B",-0.233,-0.96,35,"dir",false],["00795B",-0.326,-0.93,30,"dir",false],["00757",-0.55,-0.9,31,"dir",false],["00912",-1.633,-0.83,17,"dir",false]],"tsmc":[["00924",-2.115,-2.49,14,"dir",false],["00912",-2.528,-2.23,17,"dir",false],["00891",-3.159,-2.0,21,"dir",false],["00904",-3.032,-1.74,18,"dir",false],["00757",-1.793,-1.7,28,"dir",false],["00881",-2.099,-1.69,23,"dir",false],["00887",-1.805,-1.45,22,"dir",false],["00888",-1.803,-1.45,22,"dir",false],["00770",-1.155,-1.44,28,"dir",false],["00877",-2.21,-1.26,25,"dir",false],["00937B",-0.875,-1.11,11,"dir",false],["00662",-0.418,-1.06,35,"dir",false]],"aapl":[["00888",-1.227,-1.39,20,"dir",false],["00738U",1.523,1.22,31,"dir",false],["00881",-1.024,-1.19,21,"dir",false],["00947",-10.293,-1.12,9,"dir",false],["00927",-5.784,-1.06,13,"dir",false],["00877",-0.916,-1.05,23,"dir",false],["00953B",1.865,1.05,8,"dir",false],["00929",-4.193,-1.01,13,"dir",false],["00924",-3.43,-1.0,13,"dir",false],["00878",-0.513,-0.99,23,"dir",false],["00945B",1.429,0.99,10,"dir",false],["00733",-0.764,-0.95,31,"dir",false]],"nvda":[["00947",-7.928,-2.66,8,"dir",false],["00713",0.523,2.08,33,"dir",false],["00891",1.463,2.08,21,"dir",false],["00830",1.59,1.94,29,"dir",false],["00904",1.362,1.81,17,"dir",false],["00912",0.789,1.53,16,"dir",false],["00919",0.705,1.52,15,"dir",false],["00937B",-1.616,-1.48,10,"dir",false],["00929",1.067,1.45,12,"dir",false],["00927",1.604,1.39,12,"dir",false],["00770",0.724,1.3,30,"dir",false],["00881",0.813,1.27,22,"dir",false]]},"names":{"00400A":"主動國泰動能高息","00401A":"主動摩根台灣鑫收","00402A":"主動安聯美國科技","00403A":"主動統一升級50","00404A":"主動聯博動能50","00405A":"主動富邦台灣龍耀","00406A":"主動中信台灣收益","00407A":"主動凱基台灣","00408A":"主動第一金優股息","00409A":"主動復華全球50","00410A":"主動永豐科技趨勢","00411A":"主動統一前沿科技","0050":"元大台灣50","0051":"元大中型100","0052":"富邦科技","0053":"元大科技市值","0055":"元大MSCI金融","0056":"元大高股息","0057":"富邦摩台","0061":"元大寶滬深","006201":"元大富櫃50","006203":"元大MSCI台灣","006204":"永豐臺灣加權","006205":"富邦上証","006206":"元大上證50","006207":"復華滬深","006208":"富邦台50","00625K":"富邦上証+R","00631L":"元大台灣50正2","00632R":"元大台灣50反1","00633L":"富邦上証正2","00634R":"富邦上証反1","00635U":"期元大S&P黃金","00636":"國泰中國A50","00636K":"國泰中國A50+U","00637L":"元大滬深300正2","00638R":"元大滬深300反1","00639":"富邦深100","00640L":"富邦日本正2","00641R":"富邦日本反1","00642U":"期元大S&P石油","00643":"群益深証中小","00643K":"群益深証中小+R","00645":"富邦日本","00646":"元大S&P500","00647L":"元大S&P500正2","00648R":"元大S&P500反1","00650L":"復華香港正2","00651R":"復華香港反1","00652":"富邦印度","00653L":"富邦印度正2","00654R":"富邦印度反1","00655L":"國泰中國A50正2","00656R":"國泰中國A50反1","00657":"國泰日經225","00657K":"國泰日經225+U","00660":"元大歐洲50","00661":"元大日經225","00662":"富邦NASDAQ","00663L":"國泰臺灣加權正2","00664R":"國泰臺灣加權反1","00665L":"富邦恒生國企正2","00666R":"富邦恒生國企反1","00668":"國泰美國道瓊","00668K":"國泰美國道瓊+U","00669R":"國泰美國道瓊反1","00670L":"富邦NASDAQ正2","00671R":"富邦NASDAQ反1","00673R":"期元大S&P原油反1","00674R":"期元大S&P黃金反1","00675L":"富邦臺灣加權正2","00676R":"富邦臺灣加權反1","00678":"群益那斯達克生技","00679B":"元大美債20年","00680L":"元大美債20正2","00681R":"元大美債20反1","00682U":"期元大美元指數","00683L":"期元大美元指正2","00684R":"期元大美元指反1","00685L":"群益臺灣加權正2","00686R":"群益臺灣加權反1","00687B":"國泰20年美債","00687C":"國泰20年美債+櫃U","00688L":"國泰20年美債正2","00689R":"國泰20年美債反1","00690":"兆豐藍籌30","00692":"富邦公司治理","00693U":"期街口S&P黃豆","00694B":"富邦美債1-3","00695B":"富邦美債7-10","00696B":"富邦美債20年","00697B":"元大美債7-10","00700":"富邦恒生國企","00701":"國泰股利精選30","00702":"國泰標普低波高息","00703":"台新MSCI中國","00706L":"期元大S&P日圓正2","00707R":"期元大S&P日圓反1","00708L":"期元大S&P黃金正2","00709":"富邦歐洲","00710B":"復華彭博非投等債","00711B":"復華彭博新興債","00712":"復華富時不動產","00713":"元大台灣高息低波","00714":"群益道瓊美國地產","00715L":"期街口布蘭特正2","00717":"富邦美國特別股","00719B":"元大美債1-3","00720B":"元大投資級公司債","00722B":"群益投資級電信債","00723B":"群益投資級科技債","00724B":"群益投資級金融債","00725B":"國泰投資級公司債","00726B":"國泰新興投等債","00727B":"國泰優選非投等債","00728":"第一金工業30","00730":"富邦臺灣優質高息","00731":"復華富時高息低波","00733":"富邦臺灣中小","00734B":"台新JPM新興債","00735":"國泰臺韓科技","00736":"國泰新興市場","00737":"國泰AI機器人","00738U":"期元大道瓊白銀","00739":"元大MSCI A股","00740B":"富邦全球投等債","00741B":"富邦全球非投等債","00746B":"富邦A級公司債","00749B":"凱基新興債10+","00750B":"凱基科技債10+","00751B":"元大AAA至A公司債","00752":"中信中國50","00753L":"中信中國50正2","00754B":"群益AAA-AA公司債","00755B":"群益投資級公用債","00756B":"群益投等新興公債","00757":"統一FANG+","00758B":"復華能源債","00759B":"復華製藥債","00760B":"復華新興企業債","00761B":"國泰A級公司債","00762":"元大全球AI","00763U":"期街口道瓊銅","00764B":"群益25年美債","00768B":"復華20年美債","00770":"國泰北美科技","00771":"元大US高息特別股","00772B":"中信高評級公司債","00773B":"中信優先金融債","00775B":"台新投等債15+","00777B":"凱基AAA至A公司債","00778B":"凱基金融債20+","00779B":"凱基美債25+","00780B":"國泰A級金融債","00781B":"國泰A級科技債","00782B":"國泰A級公用債","00783":"富邦中証500","00785B":"富邦金融投等債","00786B":"元大10年IG銀行債","00787B":"元大10年IG醫療債","00788B":"元大10年IG電能債","00789B":"復華公司債A3","00791B":"復華信用債1-5","00792B":"群益A級公司債","00795B":"中信美國公債20年","00799B":"國泰A級醫療債","00830":"國泰費城半導體","00834B":"第一金金融債10+","00836B":"永豐10年A公司債","00840B":"凱基IG精選15+","00841B":"凱基AAA-AA公司債","00842B":"台新美元銀行債","00844B":"台新15年IG金融債","00845B":"富邦新興投等債","00846B":"富邦歐洲銀行債","00848B":"中信新興亞洲債","00849B":"中信EM主權債0-5","00850":"元大臺灣ESG永續","00851":"台新全球AI","00852L":"國泰美國道瓊正2","00853B":"統一美債10年Aa-A","00856B":"永豐1-3年美公債","00857B":"永豐20年美公債","00858":"永豐美國500大","00859B":"群益0-1年美債","00860B":"群益1-5Y投資級債","00861":"元大全球未來通訊","00862B":"中信投資級公司債","00863B":"中信全球電信債","00864B":"中信美國公債0-1","00865B":"國泰US短期公債","00867B":"台新A-BBB電信債","00870B":"元大15年EM主權債","00875":"國泰網路資安","00876":"元大全球5G","00877":"復華中國5G","00878":"國泰永續高股息","00881":"國泰台灣科技龍頭","00882":"中信中國高股息","00884B":"中信低碳新興債","00885":"富邦越南","00886":"永豐美國科技","00887":"永豐中國科技50大","00888":"永豐台灣ESG","00890B":"凱基ESG BBB債15+","00891":"中信關鍵半導體","00892":"富邦台灣半導體","00893":"國泰智能電動車","00894":"中信小資高價30","00895":"富邦未來車","00896":"中信綠能及電動車","00897":"富邦基因免疫生技","00898":"國泰基因免疫革命","00899":"FT潔淨能源","00900":"富邦特選高股息30","00901":"永豐智能車供應鏈","00902":"中信電池及儲能","00903":"富邦元宇宙","00904":"台新臺灣半導體30","00905":"FT臺灣Smart","00907":"永豐優息存股","00908":"富邦入息REITs+","00909":"國泰數位支付服務","00910":"第一金太空衛星","00911":"兆豐洲際半導體","00912":"中信臺灣智慧50","00913":"兆豐台灣晶圓製造","00915":"凱基優選高股息30","00916":"國泰全球品牌50","00917":"中信特選金融","00918":"大華優利高填息30","00919":"群益台灣精選高息","00920":"富邦ESG綠色電力","00921":"兆豐龍頭等權重","00922":"國泰台灣領袖50","00923":"群益台ESG低碳50","00924":"復華S&P500成長","00926":"凱基全球菁英55","00927":"群益半導體收益","00928":"中信上櫃ESG 30","00929":"復華台灣科技優息","00930":"永豐ESG低碳高息","00931B":"統一美債20年","00932":"兆豐永續高息等權","00933B":"國泰10Y+金融債","00934":"中信成長高股息","00935":"野村臺灣新科技50","00936":"台新永續高息中小","00937B":"群益ESG投等債20+","00938":"凱基優選30","00939":"統一台灣高息動能","00940":"元大台灣價值高息","00941":"中信上游半導體","00942B":"台新美A公司債20+","00943":"兆豐電子高息等權","00944":"野村趨勢動能高息","00945B":"凱基美國非投等債","00946":"群益科技高息成長","00947":"台新臺灣IC設計","00948B":"中信優息投資級債","00949":"復華日本龍頭","00950B":"凱基A級公司債","00951":"台新日本半導體","00952":"凱基台灣AI50","00953B":"群益優選非投等債","00954":"中信日本半導體","00955":"中信日本商社","00956":"中信日經高股息","00957B":"兆豐US優選投等債","00958B":"永豐ESG銀行債15+","00959B":"大華投等美債15Y+","00960":"野村全球航運龍頭","00961":"FT臺灣永續高息","00962":"台新AI優息動能","00963":"中信全球高股息","00964":"中信亞太高股息","00965":"元大航太防衛科技","00966B":"統一ESG投等債15+","00967B":"元大優息美債","00968B":"元大優息投等債","00969B":"元大零息超長美債","00970B":"台新BBB投等債20+","00971":"野村美國研發龍頭","00972":"野村日本動能高息","009800":"中信NASDAQ","009801":"中信美國創新科技","009802":"富邦旗艦50","009803":"玉山市值動能50","009804":"聯邦台精彩50","009805":"台新美國電力基建","009806":"台新標普500","009807":"台新標普科技精選","009808":"華南永昌優選50","009809":"富邦淨零ESG50","00980A":"主動野村臺灣優選","00980B":"台新特選IG債10+","00980D":"主動聯博投等入息","00980T":"平衡凱基美國TOP","009810":"玉山全球藍籌100","009811":"統一美國50","009812":"野村日本東證","009813":"貝萊德標普卓越50","009814":"富邦標普500","009815":"大華美國MAG7+","009816":"凱基台灣TOP50","009817":"國泰日本不動產","009818":"華南永昌NASDAQxT","009819":"中信數據及電力","00981A":"主動統一台股增長","00981B":"第一金優選非投債","00981D":"主動中信非投等債","00981T":"平衡凱基雙核收息","009820":"元大納斯達克精選","009821":"野村稀土關鍵資源","009822":"華南永昌未來金融","009823":"群益S&P500","009824":"群益美國科技巨頭","009825":"聯邦美國金融創新","009826":"貝萊德世界股票","009827":"玉山未來全球算力","009828":"中信台日韓PCB","009829":"大華韓國KOSPI50","00982A":"主動群益台灣強棒","00982B":"FT投資級債20+","00982D":"主動富邦動態入息","00982T":"平衡兆豐台美動能","00983A":"主動中信ARK創新","00983B":"大華優利美公債20","00983D":"主動富邦複合收益","00984A":"主動安聯台灣高息","00984B":"大華優利美A債15","00984D":"主動聯博全球非投","00985A":"主動野村台灣50","00985B":"群益ESG投等債0-5","00985D":"主動貝萊德優投等","00986A":"主動台新龍頭成長","00986B":"FT金融債10+","00986D":"主動復華金融債息","00987A":"主動台新優勢成長","00987B":"野村10+澳洲公債","00987D":"主動統一美債量化","00988A":"主動統一全球創新","00988B":"玉山嚴選非投債","00989A":"主動摩根美國科技","00989B":"台新美國非投等債","00990A":"主動元大AI新經濟","00990B":"國泰收益非投等債","00991A":"主動復華未來50","00991B":"貝萊德A級公司債","00992A":"主動群益科技創新","00992B":"街口優息非投債","00993A":"主動安聯台灣","00994A":"主動第一金台股優","00995A":"主動中信台灣卓越","00996A":"主動兆豐台灣豐收","00997A":"主動群益美國增長","00998A":"主動復華金融股息","00999A":"主動野村臺灣高息"},"w":{"00400A":58,"00401A":41,"00402A":31,"00403A":69,"00404A":39,"00405A":59,"00406A":74,"00407A":49,"00408A":26,"00409A":49,"00410A":41,"00411A":47,"0050":90,"0051":23,"0052":69,"0053":52,"0055":39,"0056":74,"0057":10,"0061":5,"006201":16,"006203":5,"006204":26,"006205":25,"006206":8,"006207":16,"006208":65,"00625K":5,"00631L":82,"00632R":63,"00633L":45,"00634R":5,"00635U":46,"00636":24,"00636K":5,"00637L":51,"00638R":5,"00639":18,"00640L":6,"00641R":7,"00642U":31,"00643":36,"00643K":5,"00645":18,"00646":58,"00647L":26,"00648R":11,"00650L":40,"00651R":5,"00652":22,"00653L":15,"00654R":5,"00655L":35,"00656R":5,"00657":17,"00657K":5,"00660":5,"00661":16,"00662":61,"00663L":59,"00664R":29,"00665L":46,"00666R":6,"00668":22,"00668K":5,"00669R":16,"00670L":44,"00671R":5,"00673R":47,"00674R":5,"00675L":56,"00676R":34,"00678":29,"00679B":60,"00680L":46,"00681R":5,"00682U":5,"00683L":15,"00684R":5,"00685L":74,"00686R":12,"00687B":58,"00687C":5,"00688L":33,"00689R":23,"00690":33,"00692":36,"00693U":29,"00694B":17,"00695B":23,"00696B":41,"00697B":23,"00700":11,"00701":27,"00702":12,"00703":5,"00706L":17,"00707R":5,"00708L":57,"00709":5,"00710B":26,"00711B":8,"00712":54,"00713":51,"00714":25,"00715L":51,"00717":5,"00719B":43,"00720B":48,"00722B":50,"00723B":16,"00724B":45,"00725B":57,"00726B":12,"00727B":16,"00728":26,"00730":12,"00731":35,"00733":41,"00734B":48,"00735":52,"00736":18,"00737":10,"00738U":45,"00739":5,"00740B":42,"00741B":14,"00746B":32,"00749B":10,"00750B":11,"00751B":49,"00752":31,"00753L":45,"00754B":12,"00755B":15,"00756B":18,"00757":52,"00758B":15,"00759B":16,"00760B":19,"00761B":29,"00762":26,"00763U":19,"00764B":43,"00768B":29,"00770":37,"00771":5,"00772B":42,"00773B":34,"00775B":8,"00777B":11,"00778B":11,"00779B":20,"00780B":16,"00781B":16,"00782B":12,"00783":5,"00785B":16,"00786B":5,"00787B":5,"00788B":5,"00789B":15,"00791B":17,"00792B":17,"00795B":49,"00799B":19,"00830":67,"00834B":15,"00836B":10,"00840B":10,"00841B":12,"00842B":22,"00844B":14,"00845B":11,"00846B":12,"00848B":18,"00849B":19,"00850":36,"00851":14,"00852L":25,"00853B":32,"00856B":5,"00857B":27,"00858":27,"00859B":45,"00860B":15,"00861":29,"00862B":27,"00863B":20,"00864B":35,"00865B":50,"00867B":24,"00870B":6,"00875":25,"00876":19,"00877":53,"00878":64,"00881":65,"00882":46,"00884B":16,"00885":28,"00886":14,"00887":43,"00888":52,"00890B":11,"00891":60,"00892":49,"00893":31,"00894":36,"00895":27,"00896":43,"00897":28,"00898":15,"00899":5,"00900":48,"00901":18,"00902":16,"00903":5,"00904":54,"00905":34,"00907":34,"00908":5,"00909":44,"00910":37,"00911":21,"00912":43,"00913":41,"00915":36,"00916":36,"00917":28,"00918":66,"00919":76,"00920":5,"00921":21,"00922":58,"00923":47,"00924":42,"00926":23,"00927":75,"00928":16,"00929":65,"00930":33,"00931B":35,"00932":25,"00933B":50,"00934":50,"00935":61,"00936":25,"00937B":63,"00938":13,"00939":44,"00940":52,"00941":29,"00942B":27,"00943":42,"00944":10,"00945B":46,"00946":28,"00947":62,"00948B":32,"00949":14,"00950B":35,"00951":28,"00952":33,"00953B":52,"00954":29,"00955":27,"00956":6,"00957B":5,"00958B":17,"00959B":24,"00960":27,"00961":62,"00962":53,"00963":21,"00964":30,"00965":31,"00966B":30,"00967B":13,"00968B":18,"00969B":23,"00970B":25,"00971":8,"00972":5,"009800":31,"009801":5,"009802":39,"009803":45,"009804":26,"009805":37,"009806":18,"009807":5,"009808":9,"009809":5,"00980A":45,"00980B":20,"00980D":20,"00980T":5,"009810":21,"009811":20,"009812":7,"009813":23,"009814":28,"009815":28,"009816":74,"009817":19,"009818":5,"009819":33,"00981A":78,"00981B":45,"00981D":24,"00981T":30,"009820":34,"009821":39,"009822":5,"009823":34,"009824":30,"009825":18,"009826":41,"009827":34,"009828":59,"009829":61,"00982A":55,"00982B":5,"00982D":13,"00982T":5,"00983A":23,"00983B":27,"00983D":15,"00984A":46,"00984B":25,"00984D":45,"00985A":74,"00985B":47,"00985D":29,"00986A":5,"00986B":5,"00986D":18,"00987A":32,"00987B":24,"00987D":34,"00988A":53,"00988B":29,"00989A":22,"00989B":43,"00990A":46,"00990B":33,"00991A":66,"00991B":20,"00992A":67,"00992B":11,"00993A":35,"00994A":40,"00995A":37,"00996A":52,"00997A":46,"00998A":56,"00999A":42},"px":{"00400A":[16.2,0.31],"00401A":[14.61,0.55],"00402A":[10.28,-0.68],"00403A":[11.29,0.0],"00404A":[10.05,0.4],"00405A":[9.68,0.52],"00406A":[10.18,0.2],"00407A":[10.59,0.67],"00408A":[11.01,0.09],"00409A":[10.2,-1.54],"00410A":[12.96,0.23],"00411A":[11.17,0.36],"0050":[114.8,-0.13],"0051":[153.25,0.2],"0052":[66.8,-0.3],"0053":[258.85,-0.42],"0055":[50.1,1.77],"0056":[58.6,0.51],"0057":[340.45,-0.39],"0061":[23.2,0.52],"006201":[48.18,0.75],"006203":[207.65,-0.48],"006204":[246.65,0.04],"006205":[39.1,0.0],"006206":[36.74,0.46],"006207":[30.59,0.1],"006208":[263.15,-0.09],"00631L":[40.89,-0.02],"00632R":[9.23,-0.11],"00633L":[43.32,-0.05],"00634R":[3.29,0.0],"00635U":[43.08,1.34],"00636":[26.21,0.42],"00636K":[8.2,-0.12],"00637L":[17.99,0.33],"00638R":[7.02,0.14],"00639":[14.77,-0.47],"00640L":[111.15,1.09],"00641R":[3.62,-0.82],"00642U":[31.29,0.45],"00643":[16.69,-1.3],"00643K":[3.53,0.0],"00645":[58.8,0.6],"00646":[78.8,0.57],"00647L":[143.25,0.88],"00648R":[3.86,-0.52],"00650L":[15.58,1.96],"00651R":[5.39,-1.46],"00652":[30.8,0.79],"00653L":[39.93,-0.18],"00654R":[7.26,-0.14],"00655L":[30.16,0.2],"00656R":[6.15,-0.32],"00657":[81.85,-0.43],"00657K":[25.67,-0.81],"00660":[45.45,0.13],"00661":[89.6,-0.61],"00662":[127.15,-0.12],"00663L":[118.4,0.25],"00664R":[1.49,0.0],"00665L":[8.77,1.86],"00666R":[9.34,-1.16],"00668":[60.55,1.42],"00668K":[18.92,0.75],"00669R":[5.35,-1.47],"00670L":[218.4,-0.86],"00671R":[2.31,0.0],"00673R":[10.73,-0.37],"00674R":[29.23,-1.55],"00675L":[358.7,0.27],"00676R":[5.09,-0.39],"00678":[43.03,2.23],"00679B":[24.73,1.56],"00680L":[5.76,3.41],"00681R":[22.86,-1.64],"00682U":[21.12,0.0],"00683L":[22.69,0.04],"00684R":[14.74,0.0],"00685L":[13.55,0.15],"00686R":[0.91,0.0],"00687B":[25.69,1.58],"00687C":[8.68,1.52],"00688L":[5.74,3.24],"00689R":[24.01,-1.68],"00690":[84.05,-0.12],"00692":[98.95,-0.05],"00693U":[23.3,-1.23],"00694B":[41.81,-0.05],"00695B":[33.83,0.51],"00696B":[26.97,1.7],"00697B":[34.13,0.56],"00700":[16.86,1.32],"00701":[41.75,1.36],"00702":[23.51,1.34],"00703":[18.66,0.59],"00706L":[18.98,-0.26],"00708L":[72.35,2.55],"00709":[38.58,0.49],"00710B":[18.56,0.16],"00711B":[14.73,1.03],"00712":[7.04,1.73],"00713":[63.6,0.55],"00714":[20.5,2.14],"00715L":[72.5,1.54],"00717":[14.52,-0.07],"00719B":[31.16,0.13],"00720B":[30.93,1.14],"00722B":[33.06,0.79],"00723B":[28.34,0.82],"00724B":[31.7,0.96],"00725B":[33.01,1.26],"00726B":[31.24,0.68],"00727B":[39.09,0.08],"00728":[70.9,0.64],"00730":[29.93,-0.89],"00731":[100.95,2.75],"00733":[78.6,-0.38],"00734B":[14.96,0.81],"00735":[107.9,-2.04],"00736":[31.72,-0.38],"00737":[41.94,0.82],"00738U":[48.12,1.56],"00739":[26.5,1.26],"00740B":[36.01,1.15],"00741B":[36.76,0.03],"00746B":[33.43,1.0],"00749B":[29.64,1.02],"00750B":[30.69,0.99],"00751B":[28.95,1.26],"00752":[22.32,1.59],"00753L":[8.54,1.91],"00754B":[30.39,1.27],"00755B":[30.62,1.46],"00756B":[29.09,1.25],"00757":[147.25,0.34],"00758B":[48.7,1.46],"00759B":[51.2,1.69],"00760B":[50.4,1.08],"00761B":[32.06,1.3],"00762":[121.15,-1.3],"00763U":[35.25,0.26],"00764B":[25.63,1.59],"00768B":[46.03,1.72],"00770":[67.0,-0.15],"00771":[14.82,0.47],"00772B":[31.3,1.23],"00773B":[33.51,0.96],"00775B":[29.91,1.56],"00777B":[30.13,1.35],"00778B":[31.92,1.27],"00779B":[25.88,1.77],"00780B":[35.5,0.42],"00781B":[25.83,1.33],"00782B":[28.51,1.35],"00783":[25.96,-1.52],"00785B":[33.0,1.07],"00786B":[30.73,0.92],"00787B":[30.41,1.2],"00788B":[28.23,1.0],"00789B":[44.64,1.39],"00791B":[56.5,0.09],"00792B":[29.35,1.56],"00795B":[24.87,1.76],"00799B":[27.59,1.21],"00830":[89.85,-2.23],"00834B":[32.13,0.78],"00836B":[26.67,1.68],"00840B":[27.75,1.35],"00841B":[26.41,1.15],"00842B":[28.3,1.18],"00844B":[29.4,1.17],"00845B":[31.62,0.6],"00846B":[34.26,0.76],"00848B":[32.44,0.9],"00849B":[37.41,0.24],"00850":[98.4,0.31],"00851":[74.95,0.07],"00852L":[33.38,2.93],"00853B":[25.61,1.27],"00856B":[37.3,0.03],"00857B":[21.36,1.62],"00858":[36.98,0.22],"00859B":[40.81,0.02],"00860B":[37.89,0.13],"00861":[89.8,-1.8],"00862B":[29.31,1.14],"00863B":[29.44,0.72],"00864B":[46.37,0.13],"00865B":[49.12,0.1],"00867B":[28.71,1.06],"00870B":[26.28,1.19],"00875":[61.6,4.32],"00876":[93.5,-1.27],"00877":[32.12,-5.14],"00878":[35.24,0.71],"00881":[53.4,0.19],"00882":[15.06,0.74],"00884B":[27.5,1.21],"00885":[17.72,-0.51],"00886":[50.55,1.32],"00887":[14.69,-1.21],"00888":[36.54,-0.41],"00890B":[30.09,1.18],"00891":[38.12,-0.29],"00892":[43.92,1.55],"00893":[46.59,-1.71],"00894":[51.9,-0.1],"00895":[52.85,-1.03],"00896":[28.47,-0.18],"00897":[14.1,3.91],"00898":[11.79,3.15],"00899":[21.87,-0.05],"00900":[19.83,1.59],"00901":[49.36,-0.22],"00902":[12.96,-0.84],"00903":[22.08,-0.59],"00904":[44.09,-0.41],"00905":[28.37,-0.18],"00907":[18.17,2.54],"00908":[14.33,0.42],"00909":[45.84,-1.23],"00910":[54.95,-1.96],"00911":[57.15,-2.06],"00912":[36.84,0.33],"00913":[53.05,-0.75],"00915":[33.04,1.01],"00916":[27.49,1.22],"00917":[22.41,1.59],"00918":[34.28,0.91],"00919":[32.23,1.83],"00920":[25.32,-0.51],"00921":[24.27,0.54],"00922":[44.68,0.09],"00923":[42.27,-0.24],"00924":[34.66,0.2],"00926":[27.25,0.37],"00927":[40.38,0.27],"00928":[35.16,0.14],"00929":[30.08,0.17],"00930":[23.86,-0.21],"00931B":[12.5,1.71],"00932":[17.76,0.85],"00933B":[15.02,0.94],"00934":[30.23,0.77],"00935":[62.0,-0.56],"00936":[21.73,0.65],"00937B":[13.75,1.1],"00938":[27.36,1.71],"00939":[24.38,1.92],"00940":[13.34,0.98],"00941":[26.55,0.38],"00942B":[13.24,1.22],"00943":[21.44,0.8],"00944":[22.59,1.44],"00945B":[14.3,0.28],"00946":[15.41,0.46],"00947":[40.12,-1.33],"00948B":[8.82,1.26],"00949":[22.35,0.31],"00950B":[13.16,1.15],"00951":[19.44,-0.51],"00952":[18.56,-0.05],"00953B":[9.48,0.32],"00954":[20.76,-0.38],"00955":[15.76,0.51],"00956":[13.45,1.2],"00957B":[12.5,1.38],"00958B":[8.65,0.93],"00959B":[8.71,0.93],"00960":[23.4,3.68],"00961":[13.34,1.14],"00962":[15.23,-0.26],"00963":[12.52,0.81],"00964":[15.04,1.01],"00965":[25.02,0.08],"00966B":[12.99,1.25],"00967B":[8.55,1.54],"00968B":[8.66,0.93],"00969B":[7.46,3.18],"00970B":[8.73,1.16],"00971":[18.19,0.17],"00972":[21.58,0.98],"009800":[13.77,-0.22],"009801":[11.88,-0.92],"009802":[20.29,-0.15],"009803":[22.15,-0.36],"009804":[24.51,-0.16],"009805":[15.39,0.13],"009806":[14.12,1.0],"009807":[18.19,-0.82],"009808":[32.77,0.37],"009809":[18.88,0.16],"00980A":[26.58,0.42],"00980B":[8.85,1.14],"00980D":[19.43,0.36],"00980T":[12.3,0.0],"009810":[21.66,0.05],"009811":[13.83,0.14],"009812":[13.14,0.31],"009813":[11.77,0.09],"009814":[11.62,0.17],"009815":[12.3,-0.24],"009816":[16.89,0.12],"009817":[8.49,1.07],"009818":[21.5,-0.65],"009819":[10.06,-0.79],"00981A":[32.3,0.19],"00981B":[8.97,0.22],"00981D":[10.13,0.1],"00981T":[11.7,0.34],"009820":[10.75,-0.37],"009821":[12.95,0.08],"009822":[9.35,0.32],"009823":[10.68,0.38],"009824":[10.79,-0.64],"009825":[9.83,1.24],"009826":[10.12,0.2],"009827":[10.63,-1.12],"009828":[11.08,-0.89],"009829":[10.28,-4.01],"00982A":[24.3,0.21],"00982B":[9.18,1.89],"00982D":[9.37,0.75],"00982T":[15.4,-0.45],"00983A":[13.26,1.45],"00983B":[14.44,1.76],"00983D":[9.62,0.73],"00984A":[16.36,0.99],"00984B":[15.16,1.2],"00984D":[9.64,0.0],"00985A":[24.32,0.0],"00985B":[10.05,0.0],"00985D":[9.52,1.17],"00986A":[15.09,-0.46],"00986B":[9.17,0.88],"00986D":[13.92,0.58],"00987A":[17.88,-0.67],"00987B":[15.36,0.99],"00987D":[9.5,1.28],"00988A":[17.23,-0.52],"00988B":[19.04,0.05],"00989A":[18.32,0.99],"00989B":[9.89,0.3],"00990A":[16.48,-0.66],"00990B":[9.87,0.3],"00991A":[18.89,-0.21],"00991B":[14.4,1.19],"00992A":[20.12,0.55],"00992B":[9.8,0.1],"00993A":[14.5,0.49],"00994A":[17.94,0.0],"00995A":[18.83,1.13],"00996A":[15.36,-0.07],"00997A":[11.87,-0.75],"00998A":[16.0,-0.62],"00999A":[11.66,1.04]},"date_src":{"twcpi":"主計總處新聞稿","twexp":"財政部新聞稿","cbc":"中央銀行理監事聯席會議決議","twrev":"法定／交易所規則日期","tsmcrev":"法定／交易所規則日期","uscpi":"Nasdaq 經濟行事曆","umich":"Nasdaq 經濟行事曆","usret":"Nasdaq 經濟行事曆","twq":"法定／交易所規則日期","fomc":"Nasdaq 經濟行事曆","quad":"法定／交易所規則日期","mu":"Nasdaq 財報行事曆","pce":"Nasdaq 經濟行事曆","cnpmi":"Nasdaq 經濟行事曆","ism":"Nasdaq 經濟行事曆","nfp":"Nasdaq 經濟行事曆","banks":"Nasdaq 財報行事曆","tsmc":"Nasdaq 財報行事曆","aapl":"Nasdaq 財報行事曆","nvda":"Nasdaq 財報行事曆"}};
+radarRender(RADAR_DATA);
+/* 線上更新：抓 GitHub Pages 上 calibrate.py 與 twflow 的最新輸出，比內嵌新就重畫 */
+(function(){
+  var base = 'https://rocku112.github.io/sundown-studio/twflow/web/data/';
+  function get(u){ return fetch(base+u, {cache:'no-cache'}).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); }); }
+  Promise.all([get('capsule_calib.json'), get('tw_all.json')]).then(function(res){
+    var cal = res[0], tw = res[1], L = cal.live || {};
+    if(!tw.date || tw.date < RADAR_DATA.asof) return;
+    var names = {}, w = {}, px = {};
+    (tw.rows||[]).forEach(function(r){ if(r[2]!=='e') return;
+      names[r[0]] = r[1]; px[r[0]] = [r[4], r[5]];
+      var tt = (r[6]||0)*1000*(r[4]||0); w[r[0]] = tt>0 ? Math.max(5, Math.min(100, Math.round((Math.log10(tt)-6)*22))) : 5; });
+    /* 線上版缺的欄位（例如舊版校準檔）沿用內嵌資料 */
+    var E = RADAR_DATA;
+    radarRender({asof:tw.date, div:(L.div&&L.div.length&&L.div[0].length>5)?L.div:E.div, recent:L.div_recent||E.recent,
+                 up:cal.upcoming||E.up, imp:cal.etf_impact||E.imp, names:names, w:w, px:px, date_src:cal.date_src||E.date_src});
+    document.getElementById('asOfPill').classList.add('live');
+  }).catch(function(){});
+})();
+</script>
+
+</body></html>

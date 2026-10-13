@@ -1,7 +1,7 @@
 import re, pathlib, sys
 d = pathlib.Path(__file__).resolve().parent
 REPO = d.parent.parent
-OUT_HTML = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else d / 'dist' / 'index.html'
+OUT_HTML = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else d / 'index.html'   # 直接輸出給 GitHub Pages（tools/…/）
 src = (d / 'orig.html').read_text(encoding='utf-8')
 
 def rep(old, new, count=1):
