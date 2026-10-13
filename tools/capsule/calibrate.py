@@ -248,11 +248,19 @@ for k, (ctry, name) in ECON_MAP.items():
         a, c = num(r[3]), num(r[4])
         if a is not None and c is not None: CAL_X[k][d] = a - c
     CAL_INFO[k] = f'Nasdaq 經濟行事曆：{name}（實際值 − 市場共識）'
+SEC_EARN = {sym: [dt.datetime.fromisoformat(x.replace('Z', '+00:00')) for x in v] for sym, v in (ECAL.get('sec_earn') or {}).items()}
+EARN_SRC = {}
 for k, (sym, default) in EARN_MAP.items():
     for row in ECAL['earn'].get(sym, []):
         d = dt.date.fromisoformat(row[0]); tm = row[1]
         when = 'pre' if 'pre' in tm else 'after' if 'after' in tm else default
         CAL_EV[k].append(d); CAL_RT[k][d] = et_to_tpe_hours(d, 8, 0) if when == 'pre' else et_to_tpe_hours(d, 16, 30)
+        # SEC EDGAR 8-K（item 2.02）受理時間（UTC）是實際公布時刻：前後 3 天內有就以它為準
+        hit = min((x for x in SEC_EARN.get(sym, []) if abs((x.date() - d).days) <= 3), key=lambda x: abs((x.date() - d).days), default=None)
+        if hit:
+            tpe = hit + dt.timedelta(hours=8)
+            CAL_RT[k][d] = (dt.datetime(tpe.year, tpe.month, tpe.day, tpe.hour, tpe.minute) - dt.datetime(d.year, d.month, d.day)).total_seconds() / 3600
+            EARN_SRC[sym] = 'SEC EDGAR 8-K'
         x = num(row[4])
         if x is not None and num(row[2]) is not None: CAL_X[k][d] = x
     CAL_INFO[k] = f'Nasdaq 財報行事曆：{sym} EPS 驚喜幅度（%）'
@@ -321,6 +329,33 @@ def fred_safe(sid):
     except Exception as e:
         print(f'FRED {sid} 無法取得，相關部分略過：{e}', flush=True); return {}
 cpi, nfp_s, pce_s, ret_s, um = (monthly(fred_safe(x)) for x in ['CPILFESL', 'PAYEMS', 'PCEPILFE', 'RSXFS', 'UMCSENT'])
+# 核心 CPI 與非農改用美國勞工統計局官方 API（BLS Public Data API v1，免金鑰）；抓不到時沿用上面的 FRED
+def bls_fetch(sids):
+    """BLS Public Data API v1（POST，每次最多 3 年、每天 25 次）；兩個序列一起抓，一天 4 次請求"""
+    p = CACHE / 'bls.json'
+    if not p.exists() or (dt.datetime.now().timestamp() - p.stat().st_mtime) > 20 * 3600:
+        out = {sid: {} for sid in sids}
+        try:
+            y1 = dt.date.today().year
+            for a_ in range(y1 - 11, y1 + 1, 3):
+                body = json.dumps({'seriesid': sids, 'startyear': str(a_), 'endyear': str(min(a_ + 2, y1))}).encode()
+                req = urllib.request.Request('https://api.bls.gov/publicAPI/v1/timeseries/data/', data=body,
+                                             headers={'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'})
+                jj = json.loads(urllib.request.urlopen(req, timeout=60).read().decode('utf-8'))
+                for ser in jj['Results']['series']:
+                    for row in ser['data']:
+                        if row['period'].startswith('M') and row['period'] != 'M13':
+                            try: out[ser['seriesID']][f"{row['year']}-{row['period'][1:]}"] = float(row['value'])
+                            except ValueError: pass                         # 「-」：該月未發布（例如政府停擺）
+            if all(len(v) > 100 for v in out.values()): p.write_text(json.dumps(out), encoding='utf-8')
+        except Exception as e:
+            print(f'BLS API 讀取失敗，改用 FRED：{e}', flush=True)
+    return json.loads(p.read_text(encoding='utf-8')) if p.exists() else {}
+_bls = bls_fetch(['CUSR0000SA0L1E', 'CES0000000001'])
+_bc, _bn = _bls.get('CUSR0000SA0L1E', {}), _bls.get('CES0000000001', {})
+if len(_bc) > 100: cpi = _bc
+if len(_bn) > 100: nfp_s = _bn
+MACRO_SRC = {'core_cpi': 'BLS API' if len(_bc) > 100 else 'FRED', 'payrolls': 'BLS API' if len(_bn) > 100 else 'FRED'}
 dgs2 = fred_safe('DGS2')
 rev = json.loads((ROOT / 'swing/data/revenue.json').read_text(encoding='utf-8'))['months']
 def yoy_tsmc(ym):
@@ -757,11 +792,22 @@ def roc(sv):
     m = re.match(r'(\d{2,3})\D?(\d{2})\D?(\d{2})', sv.replace('年', '/').replace('月', '/').replace('日', ''))
     return f'{int(m.group(1)) + 1911}-{m.group(2)}-{m.group(3)}' if m else None
 divs = []
-try:
+try:   # 證交所 OpenAPI（官方 API）
+    req = urllib.request.Request('https://openapi.twse.com.tw/v1/exchangeReport/TWT48U_ALL', headers={'User-Agent': 'Mozilla/5.0'})
+    for r in json.loads(urllib.request.urlopen(req, timeout=40).read().decode('utf-8')):
+        c = r.get('Code', '')
+        if not c.startswith('00') or '息' not in r.get('Exdividend', ''): continue
+        try: amt = float(r.get('CashDividend') or 0) or None
+        except ValueError: amt = None
+        divs.append([c, r.get('Name', '').strip(), roc(r.get('Date', '')), amt, '證交所 OpenAPI 除權除息預告表'])
+except Exception as e:
+    print('證交所 OpenAPI 除息預告讀取失敗：', e)
+try:   # 證交所網站 JSON：OpenAPI 未列出的（例如金額待公告）再補上
+    _have = {d[0] for d in divs}
     req = urllib.request.Request('https://www.twse.com.tw/rwd/zh/exRight/TWT48U?response=json', headers={'User-Agent': 'Mozilla/5.0'})
     j = json.loads(urllib.request.urlopen(req, timeout=40).read().decode('utf-8'))
     for r in j.get('data', []):
-        if not r[1].startswith('00') or '息' not in r[3]: continue
+        if not r[1].startswith('00') or '息' not in r[3] or r[1] in _have: continue
         amt = re.sub(r'<[^>]+>', '', r[7]); amt = float(amt) if re.match(r'^[\d.]+$', amt.strip()) and float(amt) > 0 else None
         divs.append([r[1], r[2].strip(), roc(r[0]), amt, '證交所除權除息預告表'])
 except Exception as e:
@@ -1369,7 +1415,7 @@ out = {
                  h=[round(x, 3) for x in e['h']] if e.get('h') else None) for e in edges],
   'ev_mult': dict(EVM),
   'stock_beta': stock_beta, 'dist': dist, 'cone': cone, 'fill': fill,
-  'mode': mode, 'n_occ': n_occ, 'surprise': SURP_SRC, 'fomc_src': FOMC_SRC, 'date_src': DATE_SRC,
+  'mode': mode, 'n_occ': n_occ, 'surprise': SURP_SRC, 'fomc_src': FOMC_SRC, 'macro_src': MACRO_SRC, 'earn_src': EARN_SRC, 'date_src': DATE_SRC,
   'amp': AMP, 'chain': chain, 'live': live, 'upcoming': upcoming, 'regime': regime, 'scen_freq': SCEN_FREQ, 'etf_impact': etf_impact, 'stability': stability, 'importance': importance, 'credibility': credibility, 'factor': factor, 'tariff': tariff, 'conf': conf, 'gap': gap, 'sec_vol': sec_vol,
 }
 try:

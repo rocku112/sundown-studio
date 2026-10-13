@@ -171,3 +171,15 @@ src = src[:_i] + '''<p id="footNote">
     ''' + src[_j:]
 src = src.replace("gt.textContent = isStale ? '30 天內無除息/領息事件 · 資料待更新' : '30 天內無除息/領息事件';",
                   "gt.textContent = isStale ? '30 天內無除息事件 · 資料待更新' : '30 天內無除息事件';")
+
+# ── 7) 白話說明：一般人第一眼要知道這頁在幹嘛 ──
+rep('''  <div class="hero-grid">''', '''  <div class="intro-plain">
+    <b>這頁在做什麼？</b>幫你看台股 ETF 的配息：<b>左邊</b>是接下來 30 天要除息的 ETF（要領到配息，須在除息日前一個交易日以前買進），
+    <b>右邊</b>是最近已經除息的 ETF 有沒有「填息」（股價漲回除息前的價格）；下方是未來的總經事件，以及各檔 ETF 過去在這類事件後的反應。
+    資料取自證交所、櫃買中心官方公告，每個交易日更新。數字都是過去的統計，不是投資建議。
+  </div>
+  <div class="hero-grid">''')
+rep('''  .universe{''', '''  .intro-plain{margin:0 0 14px;padding:12px 16px;border:1px solid var(--border);border-left:4px solid #E8B84B;border-radius:8px;
+    background:rgba(232,184,75,.08);font-size:13.5px;line-height:1.8;color:var(--text2)}
+  .intro-plain b{color:var(--navy)}
+  .universe{''')

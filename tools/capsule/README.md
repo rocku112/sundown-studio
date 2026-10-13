@@ -13,6 +13,7 @@
 | `calib_patch.py` | 內嵌實證校準；頁面開啟時線上讀最新的 `capsule_calib.json` |
 | `us_patch.py` | 美股收盤價（`us/all.json`）、全美股搜尋（`capsule_usall.json`） |
 | `real_patch.py` | 拿掉音效；事件行事曆、除息、情境權重、資金流、放大器、上下游、匯率改用實際資料 |
+| `guide_patch.py` | 白話導覽（頂欄按鈕，第一次開啟自動顯示）：這週要注意什麼、持股誰最容易被晃、怎麼看、名詞小抄、資料來源 |
 | `gen_twall.py` | 台股全市場清單＋產業價值鏈 → `twall.json`（板塊、成交值影響力） |
 | `gen_usall.py` | Nasdaq 選股器 → `twflow/web/data/capsule_usall.json`（全美股＋ETF，產業對應板塊） |
 | `fetch_calendar.py` | Nasdaq 經濟／財報行事曆 → `econ_cal.json`（公布日、時刻、實際值、市場共識、EPS 驚喜） |
@@ -22,6 +23,20 @@
 | `rev_dates.py` | 各公司月營收實際公布日（每天記錄第一次出現在 MOPS 彙總頁的日期，從 2026-10 起累積）→ `rev_dates.json` |
 | `fetch_hist.py` | Yahoo 長歷史：美股、台股債券／海外 ETF、配息 ETF（含配息紀錄）→ 快取目錄 `hist.json.gz` |
 | `calibrate.py` | 事件研究校準＋放大器＋上下游＋即時資料＋未來排程 → `twflow/web/data/capsule_calib.json` |
+
+## 官方 API
+
+| 資料 | API | 憑證 |
+|---|---|---|
+| 證交所除權除息預告 | 證交所 OpenAPI `exchangeReport/TWT48U_ALL` | 免 |
+| 櫃買除權除息預告／結果 | 櫃買中心 OpenAPI | 免 |
+| 美國核心 CPI、非農就業 | BLS Public Data API v1（POST，每天 4 次請求，上限 25） | 免 |
+| 美股財報實際公布時刻 | SEC EDGAR submissions（8-K item 2.02 受理時間） | 環境變數 `SEC_USER_AGENT`（repo 變數，已設定） |
+| 美國數據官方發布排程（未來日期） | FRED API `release/dates` | 環境變數 `FRED_API_KEY`（repo secret，**尚未設定**） |
+| 美國總統貿易／關稅文件 | Federal Register API | 免 |
+
+啟用 FRED：到 https://fred.stlouisfed.org/docs/api/api_key.html 免費申請金鑰，在 GitHub repo → Settings → Secrets and variables → Actions 新增 secret `FRED_API_KEY`。
+未設定時沿用 Nasdaq 行事曆與 BEA／Census 時間表。市場共識與美股歷史報價沒有免費官方來源，仍用 Nasdaq 與 Yahoo（頁面標示為第三方）。
 
 ## 資料來源
 

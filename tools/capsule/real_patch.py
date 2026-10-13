@@ -464,5 +464,5 @@ rep('''  CAL.regime=j.regime||null; CAL.tariff=j.tariff||null;''', '''  CAL.regi
 
 # ── 22) 載入開盤跳空方向模型 ──
 rep('''  CAL.regime=j.regime||null; CAL.tariff=j.tariff||null; CAL.conf=j.conf||null;''', '''  CAL.regime=j.regime||null; CAL.tariff=j.tariff||null; CAL.conf=j.conf||null;
-  CAL.gap=j.gap||null; CAL.gapCut={};
+  CAL.gap=j.gap||null; CAL.gapCut={}; CAL.fredOn=JSON.stringify(j.upcoming||[]).includes("FRED 官方");
   if(CAL.gap)["tw","us"].forEach(m=>{const G=CAL.gap[m]; if(!G)return; const v=Object.values(G.beta).map(b=>Math.abs(b[0])).sort((a,b)=>a-b); CAL.gapCut[m]=v[Math.floor(v.length*.7)]||0;});''')

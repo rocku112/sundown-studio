@@ -48,6 +48,10 @@ jobs:
       # 定義由 twflow-weekly.yml 每週更新一次，這裡只重算數字。
       - name: 重算板塊指標
         working-directory: twflow
+        env:
+          # 市場傳導艙的官方 API：SEC EDGAR 需要含聯絡資訊的 User-Agent（與 usflow 共用）；FRED API 金鑰可選
+          SEC_USER_AGENT: ${{ vars.SEC_USER_AGENT }}
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
         run: |
           python -X utf8 scripts/build_sectors.py
           python -X utf8 scripts/build_web.py

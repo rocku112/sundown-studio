@@ -139,3 +139,38 @@ for sym in sorted(EARN):
 cal['official'] = official; cal['earn_next'] = earn_next
 OUT.write_text(json.dumps(cal, ensure_ascii=False, separators=(',', ':')), encoding='utf-8')
 print(f'官方排程：PCE {len(official.get("pce", []))} 筆、零售 {len(official.get("usret", []))} 筆；下次財報 {earn_next}')
+
+# ── 官方 API（有憑證時才啟用）──
+#   SEC EDGAR：8-K item 2.02（財報結果）的受理時間＝實際公布時刻（需環境變數 SEC_USER_AGENT，含聯絡資訊）
+#   FRED API：BLS／BEA／Census 的官方發布排程（需環境變數 FRED_API_KEY，免費申請）
+import os
+ua = os.environ.get('SEC_USER_AGENT')
+if ua:
+    sec = {}
+    for sym, cik in (('NVDA', 1045810), ('AAPL', 320193), ('MU', 723125), ('JPM', 19617)):
+        try:
+            r = requests.get(f'https://data.sec.gov/submissions/CIK{cik:010d}.json', headers={'User-Agent': ua}, timeout=40)
+            f = r.json()['filings']['recent']
+            sec[sym] = sorted(f['acceptanceDateTime'][i] for i in range(len(f['form'])) if f['form'][i] == '8-K' and '2.02' in (f['items'][i] or ''))
+            time.sleep(0.3)
+        except Exception as e:
+            print('SEC', sym, e)
+    if sec: cal['sec_earn'] = sec
+key = os.environ.get('FRED_API_KEY')
+if key:
+    want = {'uscpi': 'Consumer Price Index', 'nfp': 'Employment Situation', 'pce': 'Personal Income and Outlays',
+            'usret': 'Advance Monthly Sales for Retail and Food Services'}
+    try:
+        rels = requests.get('https://api.stlouisfed.org/fred/releases', params={'api_key': key, 'file_type': 'json', 'limit': 1000}, timeout=40).json()['releases']
+        fo = {}
+        for k, nm in want.items():
+            rid = next((x['id'] for x in rels if x['name'] == nm), None)
+            if not rid: continue
+            ds = requests.get('https://api.stlouisfed.org/fred/release/dates', params={'api_key': key, 'file_type': 'json', 'release_id': rid,
+                              'include_release_dates_with_no_data': 'true', 'realtime_start': dt.date.today().isoformat(), 'limit': 50}, timeout=40).json()
+            fo[k] = [[x['date'], '08:30', 'FRED 官方發布排程（' + nm + '）'] for x in ds.get('release_dates', [])]
+        if fo: cal.setdefault('official', {}).update({k: v for k, v in fo.items() if v})
+    except Exception as e:
+        print('FRED API', e)
+OUT.write_text(json.dumps(cal, ensure_ascii=False, separators=(',', ':')), encoding='utf-8')
+print('官方 API：SEC', 'on' if ua else 'off（未設定 SEC_USER_AGENT）', '｜FRED', 'on' if key else 'off（未設定 FRED_API_KEY）')
