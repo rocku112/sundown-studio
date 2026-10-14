@@ -27,6 +27,15 @@ rep('''.pool-sug{flex:none;''', '''@media (max-width:420px){#mnav{gap:4px;paddin
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .gd{background:#1B2638;color:#E9E3D6}
   :root:not([data-theme="light"]) .gd b,:root:not([data-theme="light"]) .gd h2,:root:not([data-theme="light"]) .gd h3,:root:not([data-theme="light"]) .gd summary{color:#F2CC74}}
 .pool-sug{flex:none;''')
+# 資料過期提醒：自動更新若中斷，頁面不能還寫「線上最新」卻不說資料停在哪天
+rep('''  c.textContent="統計 · 實證"+(CAL.asof?" "+CAL.asof.slice(5).replace("-","/"):"");''',
+    '''  c.textContent="統計 · 實證"+(CAL.asof?" "+CAL.asof.slice(5).replace("-","/"):"")+(calStale()>=5?" ⚠":"");
+  c.classList.toggle("stale",calStale()>=5);''')
+rep('''function updateCalChip(){''', '''function calStale(){ return CAL.asof?Math.floor((Date.now()-Date.parse(CAL.asof+"T14:00:00+08:00"))/864e5):0; }
+function updateCalChip(){''')
+rep('''.gd-btn{''', '''#calChip.stale{border-color:#C2572B!important;color:#C2572B!important}
+.gd .stale{margin:8px 0 0;padding:8px 10px;border-radius:8px;background:rgba(194,87,43,.1);color:#C2572B;font-size:13px}
+.gd-btn{''')
 _i = src.rindex('</body>')
 src = src[:_i] + '''<div class="gd-ov" id="gdOv" hidden role="dialog" aria-modal="true" aria-label="白話導覽"><div class="gd"><button class="x" id="gdX" aria-label="關閉">✕</button><div id="gdBody"></div><button class="go" id="gdGo">我知道了，開始看</button></div></div>
 <script>
@@ -73,6 +82,7 @@ src = src[:_i] + '''<div class="gd-ov" id="gdOv" hidden role="dialog" aria-modal
     const ev=weekEvents();
     $("#gdBody").innerHTML=`
       <h2>白話導覽</h2>
+      ${calStale()>=5?`<p class="stale">⚠ 資料停在 ${CAL.asof}（${calStale()} 天前）。可能是連假休市，也可能是自動更新暫時失敗；事件日期仍可參考，即時資金流與除息預告可能不是最新。</p>`:""}
       <p class="sub">一句話：<b>消息公布之前，先知道你的持股可能會被晃多大</b>。下面是依今天的資料自動整理的（目前看的是${mkN}，可在上方切換）。</p>
       <h3>這週要注意什麼</h3>
       <ul>${ev.length?ev.map(eventLine).join(""):"<li>這 7 天沒有重要的排定事件。</li>"}${divLine()}</ul>
