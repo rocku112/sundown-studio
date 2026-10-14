@@ -3,7 +3,8 @@
 rep('''      <button class="chip on" id="cSpin">擺盪</button>''',
     '''      <button class="chip gd-btn" id="cGuide">白話導覽</button>
       <button class="chip on" id="cSpin">擺盪</button>''')
-rep('''.pool-sug{flex:none;''', '''.gd-btn{background:var(--gold,#E8B84B)!important;color:#1E3554!important;font-weight:700}
+rep('''.pool-sug{flex:none;''', '''@media (max-width:420px){#mnav{gap:4px;padding-left:8px;padding-right:8px}#mnav button{padding:0 8px}}
+.gd-btn{background:var(--gold,#E8B84B)!important;color:#1E3554!important;font-weight:700}
 .gd-ov{position:fixed;inset:0;z-index:999;background:rgba(15,28,48,.55);display:flex;align-items:flex-start;justify-content:center;
   padding:24px 16px;overflow-y:auto}
 .gd-ov[hidden]{display:none}

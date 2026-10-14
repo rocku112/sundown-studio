@@ -158,17 +158,20 @@ if ua:
     if sec: cal['sec_earn'] = sec
 key = os.environ.get('FRED_API_KEY')
 if key:
-    want = {'uscpi': 'Consumer Price Index', 'nfp': 'Employment Situation', 'pce': 'Personal Income and Outlays',
-            'usret': 'Advance Monthly Sales for Retail and Food Services'}
+    # 事件 → (FRED 發布名稱候選, 美東公布時刻)。密大信心不從 FRED 取：FRED 的 UMCSENT 授權上延後上架，日期不是實際公布日
+    want = {'uscpi': (['Consumer Price Index'], '08:30'), 'nfp': (['Employment Situation'], '08:30'),
+            'pce': (['Personal Income and Outlays'], '08:30'),
+            'usret': (['Advance Monthly Sales for Retail and Food Services'], '08:30')}
     try:
         rels = requests.get('https://api.stlouisfed.org/fred/releases', params={'api_key': key, 'file_type': 'json', 'limit': 1000}, timeout=40).json()['releases']
         fo = {}
-        for k, nm in want.items():
-            rid = next((x['id'] for x in rels if x['name'] == nm), None)
-            if not rid: continue
+        for k, (names, tm) in want.items():
+            hit = next((x for nm in names for x in rels if x['name'] == nm), None)
+            if not hit: print('FRED 找不到發布：', names); continue
+            rid, nm = hit['id'], hit['name']
             ds = requests.get('https://api.stlouisfed.org/fred/release/dates', params={'api_key': key, 'file_type': 'json', 'release_id': rid,
                               'include_release_dates_with_no_data': 'true', 'realtime_start': dt.date.today().isoformat(), 'limit': 50}, timeout=40).json()
-            fo[k] = [[x['date'], '08:30', 'FRED 官方發布排程（' + nm + '）'] for x in ds.get('release_dates', [])]
+            fo[k] = [[x['date'], tm, 'FRED 官方發布排程（' + nm + '）'] for x in ds.get('release_dates', [])]
         if fo: cal.setdefault('official', {}).update({k: v for k, v in fo.items() if v})
     except Exception as e:
         print('FRED API', e)

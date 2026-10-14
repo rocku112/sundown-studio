@@ -894,6 +894,13 @@ for k, (sym, default) in EARN_MAP.items():
     d2, t2 = tpe_dt(d, et_to_tpe_hours(d, 8, 0) if when == 'pre' else et_to_tpe_hours(d, 16, 30))
     upcoming.append({'k': k, 'd': d2, 't': t2, 'cons': None, 'prev': None,
                      'src': f'Nasdaq 下次財報日（{sym}{"，演算法預估" if nx[1] else "，公司預告"}）'})
+# 台積電在台北下午開法說會：以公開資訊觀測站登記的日期與時刻為準（Nasdaq 只標美股盤前，會變成台北晚上 8 點）
+_cf = json.loads((SCRATCH / 'conf_events.json').read_text(encoding='utf-8')) if (SCRATCH / 'conf_events.json').exists() else {}
+_c2330 = [(r[1], r[2]) if len(r) == 3 else (r[2], r[3]) for v in _cf.values() for r in v if r[0] == '2330']   # 舊月份已精簡成 [代號, 日期, 時刻]
+for u in upcoming:
+    if u['k'] != 'tsmc': continue
+    m = [r for r in _c2330 if abs((dt.date.fromisoformat(r[0]) - dt.date.fromisoformat(u['d'])).days) <= 3]
+    if m: u.update(d=m[0][0], t=(m[0][1] or '14:00')[:5], src=u['src'] + '；時刻依公開資訊觀測站法說會登記')
 upcoming.sort(key=lambda u: (u['d'], u['t']))
 print(f'即時資料：台股資金流 {len(live.get("tw_flow", {}))} 板塊、美股 {len(live.get("us_ret5", {}))} 板塊、'
       f'匯率 {live.get("fx", {}).get("usdtwd")}、除息預告 {len(live["div"])} 檔、未來排程 {len(upcoming)} 件', flush=True)
