@@ -22,3 +22,5 @@ SunDown Studio 日落工作室 · 台灣在地專業工具品牌
 市場傳導艙：https://rocku112.github.io/sundown-studio/tools/capsule/
 
 除權息雷達：https://rocku112.github.io/sundown-studio/tools/radar/
+
+交易健檢：https://rocku112.github.io/sundown-studio/tools/tradecheck/
