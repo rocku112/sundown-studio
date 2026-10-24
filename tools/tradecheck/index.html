@@ -1,0 +1,647 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>交易健檢</title>
+<meta name="description" content="把交易紀錄丟進來，看你的獲利是實力還是運氣、有沒有贏過放著不動的 0050、是不是靠賭消息；附老師宣稱檢驗與 165 官方涉詐網站查詢。全部在瀏覽器內計算，不上傳。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --cream:#F5F0E8; --cream2:#EDE7D9; --card:#FEFCF8; --row-alt:#FAF6EE;
+  --gold:#C9960A; --gold-mid:#E8B84B; --gold-pale:#FDF4DC; --gold-text:#8a5e00;
+  --navy:#1E3554; --navy-mid:#2D4A6E;
+  --text:#1A2535; --text2:#4A5568; --text3:#8A96A8;
+  --border:#DDD6C8; --border2:#E8E2D8;
+  --good:#3F7A2E; --good-bg:#EEF4E8; --bad:#B4471E; --bad-bg:#FAEEE8; --warn:#8a5e00; --warn-bg:#FDF4DC;
+  --line1:#1E3554; --line2:#C9960A;
+  --shadow:0 1px 2px rgba(30,53,84,.04),0 10px 28px -16px rgba(30,53,84,.18);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --cream:#101B2B; --cream2:#0C1624; --card:#16253A; --row-alt:#192A41;
+    --gold-pale:rgba(232,184,75,.12); --gold-text:#F2CC74;
+    --navy:#E9E2D4; --navy-mid:#C9D3E2; --text:#EDE7D9; --text2:#B4BFCF; --text3:#7D8BA0;
+    --border:#2A3C55; --border2:#22344B;
+    --good:#9DBE7A; --good-bg:rgba(157,190,122,.14); --bad:#F0A97E; --bad-bg:rgba(227,134,79,.14); --warn:#F2CC74; --warn-bg:rgba(232,184,75,.12);
+    --line1:#C9D3E2; --line2:#E8B84B; --shadow:0 10px 28px -16px rgba(0,0,0,.6);
+  }
+}
+:root[data-theme="dark"]{
+  --cream:#101B2B; --cream2:#0C1624; --card:#16253A; --row-alt:#192A41;
+  --gold-pale:rgba(232,184,75,.12); --gold-text:#F2CC74;
+  --navy:#E9E2D4; --navy-mid:#C9D3E2; --text:#EDE7D9; --text2:#B4BFCF; --text3:#7D8BA0;
+  --border:#2A3C55; --border2:#22344B;
+  --good:#9DBE7A; --good-bg:rgba(157,190,122,.14); --bad:#F0A97E; --bad-bg:rgba(227,134,79,.14); --warn:#F2CC74; --warn-bg:rgba(232,184,75,.12);
+  --line1:#C9D3E2; --line2:#E8B84B; --shadow:0 10px 28px -16px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--cream);color:var(--text);font-family:'Jost','Noto Sans TC','Microsoft JhengHei',sans-serif;
+  font-variant-numeric:tabular-nums;line-height:1.65;padding:24px 16px 56px}
+.wrap{max-width:1080px;margin:0 auto}
+a{color:var(--gold-text)}
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin-bottom:6px}
+.brand{font-size:12px;letter-spacing:.18em;color:var(--text3);text-transform:uppercase}
+h1{margin:0;font-size:28px;color:var(--navy);letter-spacing:.04em}
+.lede{margin:4px 0 16px;color:var(--text2);font-size:15px}
+.btn{font:inherit;border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:8px;padding:7px 14px;cursor:pointer}
+.btn:hover{border-color:var(--gold)}
+.btn.pri{background:var(--navy);color:var(--card);border-color:var(--navy)}
+.btn.gold{background:var(--gold-mid);color:#1E3554;border-color:var(--gold-mid);font-weight:700}
+.sp{flex:1}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0 18px;border-bottom:1px solid var(--border)}
+.tab{font:inherit;font-size:15px;border:none;background:none;color:var(--text2);padding:10px 14px;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px}
+.tab.on{color:var(--navy);font-weight:700;border-bottom-color:var(--gold-mid)}
+.pane[hidden]{display:none}
+.card{background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:18px;box-shadow:var(--shadow);margin-bottom:16px}
+.card h2{margin:0 0 4px;font-size:18px;color:var(--navy)}
+.card h3{margin:16px 0 6px;font-size:15px;color:var(--navy)}
+.hint{color:var(--text3);font-size:13px}
+.muted{color:var(--text2)}
+textarea,input[type=text],input[type=number]{font:inherit;width:100%;border:1px solid var(--border);border-radius:8px;background:var(--cream);color:var(--text);padding:9px 11px}
+textarea{min-height:150px;font-family:ui-monospace,Consolas,monospace;font-size:13px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+.drop{border:2px dashed var(--border);border-radius:10px;padding:14px;text-align:center;color:var(--text2);cursor:pointer}
+.drop.over{border-color:var(--gold);background:var(--gold-pale)}
+.verdict{border-radius:12px;padding:16px 18px;margin-bottom:16px;border:1px solid}
+.verdict .v1{font-size:21px;font-weight:700}
+.verdict p{margin:6px 0 0}
+.v-good{background:var(--good-bg);border-color:var(--good);color:var(--text)} .v-good .v1{color:var(--good)}
+.v-bad{background:var(--bad-bg);border-color:var(--bad);color:var(--text)} .v-bad .v1{color:var(--bad)}
+.v-warn{background:var(--warn-bg);border-color:var(--gold-mid);color:var(--text)} .v-warn .v1{color:var(--warn)}
+.v-gray{background:var(--row-alt);border-color:var(--border);color:var(--text)} .v-gray .v1{color:var(--text2)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.kpi{background:var(--row-alt);border-radius:10px;padding:10px 12px}
+.kpi .l{font-size:12.5px;color:var(--text3)}
+.kpi .n{font-size:21px;font-weight:600;color:var(--navy)}
+.kpi .s{font-size:12px;color:var(--text2)}
+.pos{color:var(--good)!important} .neg{color:var(--bad)!important}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:7px 8px;border-bottom:1px solid var(--border2);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--text3);font-weight:500;font-size:12.5px}
+.tscroll{overflow-x:auto}
+.flag{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:10px;margin:8px 0;background:var(--row-alt)}
+.flag b{color:var(--navy)}
+.flag .ic{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;color:#fff}
+.ic.r{background:#C0622A}.ic.y{background:#C9960A}.ic.g{background:#5E8A3E}
+.chart svg{width:100%;height:auto;display:block}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--text2);margin-top:4px}
+.legend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-right:5px;border-radius:2px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+label.f{display:block;font-size:13.5px;color:var(--text2)}
+label.f input{margin-top:4px}
+mark{background:rgba(232,184,75,.45);color:inherit;border-radius:3px;padding:0 2px}
+.scanout{white-space:pre-wrap;word-break:break-word;background:var(--row-alt);border-radius:8px;padding:10px 12px;font-size:14px;margin-top:8px}
+details{margin-top:10px} summary{cursor:pointer;color:var(--navy);font-weight:600}
+.foot{margin-top:24px;font-size:12.5px;color:var(--text3)}
+.ov{position:fixed;inset:0;z-index:50;background:rgba(15,28,48,.55);display:flex;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto}
+.ov[hidden]{display:none}
+.modal{position:relative;width:min(680px,100%);background:var(--card);border-radius:12px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.modal h2{margin:0 0 6px;color:var(--navy)} .modal h3{margin:16px 0 4px;color:var(--navy);font-size:15.5px;border-left:4px solid var(--gold-mid);padding-left:8px}
+.modal ul{padding-left:20px;margin:4px 0} .modal li{margin:4px 0}
+.x{position:absolute;top:10px;right:12px;border:none;background:none;font-size:20px;cursor:pointer;color:var(--text3)}
+.demo-badge{display:inline-block;background:var(--gold-mid);color:#1E3554;font-weight:700;font-size:12px;padding:1px 8px;border-radius:999px;margin-left:6px}
+@media (max-width:560px){h1{font-size:23px}.tab{padding:9px 10px;font-size:14px}.kpi .n{font-size:18px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div><div class="brand">SunDown Studio</div><h1>交易健檢</h1></div>
+    <div class="sp"></div>
+    <button class="btn gold" id="guideBtn">白話導覽</button>
+  </div>
+  <p class="lede">你的獲利是實力還是運氣？有沒有贏過放著不動的 0050？是不是靠賭消息？<br>
+    <span class="hint">所有計算都在你的瀏覽器裡完成，交易紀錄不會上傳到任何地方。</span></p>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab on" data-tab="check">我的交易健檢</button>
+    <button class="tab" data-tab="guru">老師宣稱檢驗</button>
+    <button class="tab" data-tab="fraud">詐騙檢查</button>
+  </nav>
+
+  <!-- ══ 1. 交易健檢 ══ -->
+  <section class="pane" id="p-check">
+    <div class="card">
+      <h2>貼上或匯入你的交易紀錄</h2>
+      <p class="hint">一列一筆「已經賣掉」的交易。至少要有<b>損益</b>；有<b>買進日、賣出日、投入金額</b>才能和 0050、重大事件比較。
+        欄位名稱中英文都可以（例如 買進日／賣出日／代號／投入金額／損益，或 entry／exit／symbol／cost／pnl），券商匯出的 CSV 通常直接可用。</p>
+      <textarea id="csv" placeholder="買進日,賣出日,代號,投入金額,損益&#10;2025/03/03,2025/03/20,2330,98000,4200&#10;2025/04/01,2025/04/08,3231,52000,-3100"></textarea>
+      <div class="row">
+        <label class="drop" id="drop" style="flex:1;min-width:200px">把 CSV 檔拖到這裡，或點這裡選檔<input type="file" id="file" accept=".csv,.txt,.tsv" hidden></label>
+      </div>
+      <div class="row">
+        <button class="btn pri" id="runBtn">開始健檢</button>
+        <button class="btn" id="demoBtn">用示範資料試試</button>
+        <button class="btn" id="tplBtn">下載空白範本</button>
+        <span class="hint" id="parseMsg"></span>
+      </div>
+    </div>
+    <div id="result"></div>
+  </section>
+
+  <!-- ══ 2. 老師宣稱 ══ -->
+  <section class="pane" id="p-guru" hidden>
+    <div class="card">
+      <h2>老師說「勝率 90%」，可信嗎？</h2>
+      <p class="hint">輸入對方宣稱的數字。我們算的是：<b>如果他其實沒有任何本事（只是丟銅板），運氣好做出這種成績的機率</b>，以及市場上那麼多老師裡，光靠運氣會出現幾個「神人」。</p>
+      <div class="grid2" style="margin-top:10px">
+        <label class="f">宣稱勝率（%）<input type="number" id="gWin" value="80" min="1" max="100" step="0.1"></label>
+        <label class="f">一共幾筆（他公開的筆數）<input type="number" id="gN" value="20" min="1" step="1"></label>
+        <label class="f">平均賺 ÷ 平均賠（不知道就填 1）<input type="number" id="gPay" value="1" min="0.05" step="0.05"></label>
+        <label class="f">市場上大約有多少這種老師／群組<input type="number" id="gPeople" value="1000" min="1" step="1"></label>
+      </div>
+      <h3>他宣稱的報酬率</h3>
+      <div class="grid2">
+        <label class="f">每月報酬（%，沒有就空白）<input type="number" id="gMonthly" placeholder="例如 10" step="0.1"></label>
+      </div>
+      <div id="guruOut" style="margin-top:14px"></div>
+    </div>
+  </section>
+
+  <!-- ══ 3. 詐騙檢查 ══ -->
+  <section class="pane" id="p-fraud" hidden>
+    <div class="card">
+      <h2>這個網站在 165 的涉詐名單上嗎？</h2>
+      <p class="hint">比對警政署 165 反詐騙諮詢專線的兩份官方開放資料：「假投資（博弈）網站」與「遭停止解析涉詐網站」。<span id="fraudMeta"></span></p>
+      <div class="row"><input type="text" id="url" placeholder="貼上網址，例如 https://www.example-invest.com/login" style="flex:1;min-width:220px"><button class="btn pri" id="urlBtn">查詢</button></div>
+      <div id="urlOut"></div>
+    </div>
+    <div class="card">
+      <h2>這段訊息像不像詐騙？</h2>
+      <p class="hint">把 LINE、臉書、簡訊裡的邀約內容貼進來，比對常見投資詐騙話術。只在你的瀏覽器內比對。</p>
+      <textarea id="msg" placeholder="例如：老師帶單每月穩賺 20%，名額有限，加 LINE 下載專屬 APP，出金前需先繳保證金……"></textarea>
+      <div class="row"><button class="btn pri" id="scanBtn">檢查話術</button></div>
+      <div id="scanOut"></div>
+    </div>
+    <div class="card">
+      <h2>覺得被騙了？</h2>
+      <ul>
+        <li>撥打 <b>165</b> 反詐騙諮詢專線（免付費、24 小時），或到 <a href="https://165.npa.gov.tw/" target="_blank" rel="noopener">165 全民防騙網</a> 查詢。</li>
+        <li><b>不要再匯任何錢</b>，包括對方說的「解凍金、保證金、稅金、手續費」。這些都是第二次詐騙。</li>
+        <li>保留對話紀錄、匯款單據、網址，報案時用得到。</li>
+        <li>合法的證券商、投顧可以在 <a href="https://www.sfb.gov.tw/" target="_blank" rel="noopener">金管會證期局</a> 查到；不在名單上的「投顧老師」不能收費帶單。</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="foot" id="foot">資料：證交所官方日成交資訊（0050 含息還原）；Nasdaq 經濟行事曆、中央銀行、公開資訊觀測站（重大事件日）；
+    警政署 165 反詐騙諮詢專線開放資料（政府資料開放平臺）。每個交易日盤後自動更新。這裡的數字都是對過去紀錄的統計，不是預測，也不是投資建議。</div>
+</div>
+
+<div class="ov" id="gOv" hidden role="dialog" aria-modal="true" aria-label="白話導覽"><div class="modal">
+  <button class="x" id="gX" aria-label="關閉">✕</button>
+  <h2>白話導覽</h2>
+  <p class="muted">一句話：<b>賺錢不等於有本事。</b>這個工具幫你分辨：你的獲利是可以重複的實力，還是運氣、還是根本輸給什麼都不做。</p>
+  <h3>它會告訴你四件事</h3>
+  <ul>
+    <li><b>是實力還是運氣：</b>假設你其實沒有任何優勢，運氣好做出你這種成績的機率有多高。機率很低，才比較像實力。</li>
+    <li><b>有沒有贏過 0050：</b>同一筆錢、同樣的天數，如果拿去買 0050 放著，會賺多少。很多人忙了一年，其實輸給什麼都不做。</li>
+    <li><b>是不是靠賭消息：</b>你的獲利是不是集中在美國 CPI、聯準會開會、台積電法說會這些大事件前後。如果是，那比較像在賭方向。</li>
+    <li><b>是不是靠一兩筆：</b>拿掉最賺的那一兩筆之後還賺不賺錢。</li>
+  </ul>
+  <h3>怎麼用</h3>
+  <ul>
+    <li>從券商下載「已實現損益」或「對帳單」CSV，貼上或拖進來，按「開始健檢」。</li>
+    <li>沒有自己的資料，可以先按「用示範資料試試」，看看報告長什麼樣子。</li>
+    <li>「老師宣稱檢驗」：輸入群組老師說的勝率和筆數，看靠運氣做出來的機率。</li>
+    <li>「詐騙檢查」：查網址在不在 165 官方涉詐名單上，或貼上邀約訊息檢查話術。</li>
+  </ul>
+  <h3>名詞小抄</h3>
+  <ul>
+    <li><b>期望值：</b>平均每做一筆交易賺（或賠）多少，已經把賺的和賠的都算進去。</li>
+    <li><b>損益兩平勝率：</b>依你平均賺賠的大小，勝率至少要多少才不會虧。</li>
+    <li><b>運氣機率：</b>如果你其實沒有優勢，隨機做出你這種成績（或更好）的機率。低於 5% 才算「不太像運氣」。</li>
+    <li><b>前後半段檢驗：</b>把紀錄切成前後兩半，兩半都賺才算穩定，不是一段好運。</li>
+  </ul>
+  <p class="hint">你的交易紀錄只在這台電腦的瀏覽器裡計算，不會上傳。</p>
+  <button class="btn pri" id="gGo" style="width:100%;margin-top:12px">我知道了</button>
+</div></div>
+
+<script>
+"use strict";
+const $=s=>document.querySelector(s);
+const BASES=["./","https://rocku112.github.io/sundown-studio/tools/tradecheck/"];
+async function getData(path,type){
+  let err;
+  for(const b of BASES){
+    try{const r=await fetch(b+path,{cache:"no-cache"}); if(!r.ok)throw new Error("HTTP "+r.status); return type==="text"?await r.text():await r.json();}
+    catch(e){err=e;}
+  }
+  throw err;
+}
+const fmt=(x,d=0)=>x==null||!isFinite(x)?"—":x.toLocaleString("zh-TW",{minimumFractionDigits:d,maximumFractionDigits:d});
+const money=x=>x==null||!isFinite(x)?"—":(x<0?"−":"")+"$"+fmt(Math.abs(x));
+const pct=(x,d=1)=>x==null||!isFinite(x)?"—":(x>0?"+":"")+(x*100).toFixed(d)+"%";
+const cls=x=>x>0?"pos":x<0?"neg":"";
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ───── 資料 ───── */
+let DATA=null, BENCH=null;
+const EVN={fomc:"聯準會利率決議（FOMC）",uscpi:"美國 CPI",nfp:"美國非農就業",cbc:"台灣央行理監事會",tsmc:"台積電法說會"};
+const dataReady=getData("data.json").then(j=>{DATA=j; BENCH=j.bench&&j.bench["0050"]; return j;}).catch(e=>{console.warn("data.json",e); return null;});
+
+function idxOnOrBefore(d){ // 最後一個 ≤ d 的交易日
+  const a=BENCH.d; let lo=0,hi=a.length-1,ans=-1;
+  while(lo<=hi){const m=(lo+hi)>>1; if(a[m]<=d){ans=m;lo=m+1}else hi=m-1}
+  return ans;
+}
+function benchRet(d1,d2){
+  if(!BENCH)return null;
+  const i=idxOnOrBefore(d1), j=idxOnOrBefore(d2);
+  if(i<0||j<0||d1<BENCH.d[0]||d2>BENCH.d[BENCH.d.length-1]&&d2>addDays(BENCH.d[BENCH.d.length-1],5))return null;
+  return BENCH.v[j]/BENCH.v[i]-1;
+}
+function addDays(d,n){const x=new Date(d+"T00:00:00Z");x.setUTCDate(x.getUTCDate()+n);return x.toISOString().slice(0,10);}
+
+/* ───── 解析 CSV ───── */
+const ALIAS={
+  entry:["買進日","買入日","買進日期","買入日期","進場日","進場日期","開倉日","開倉時間","建倉日","entry","entrydate","opendate","buydate","opentime","entrytime","買進時間"],
+  exit:["賣出日","賣出日期","出場日","出場日期","平倉日","平倉時間","exit","exitdate","closedate","selldate","closetime","exittime","賣出時間"],
+  date:["日期","成交日","成交日期","交易日","交易日期","date","tradedate","time"],
+  sym:["代號","股票代號","證券代號","商品","商品代號","股票","標的","名稱","symbol","ticker","code","instrument","pair"],
+  cost:["投入金額","投入","成本","買進金額","買入金額","本金","持有成本","付出成本","cost","amount","capital","notional","costbasis"],
+  pnl:["損益","淨損益","已實現損益","損益金額","實現損益","獲利","盈虧","pnl","p&l","profit","netpnl","realizedpnl","netprofit","profitloss"],
+  ret:["報酬率","報酬","損益率","獲利率","return","ret","returnpct","pnlpct","roi"]
+};
+const normH=h=>h.replace(/^﻿/,"").trim().toLowerCase().replace(/[\s_\-()（）%％]/g,"");
+function splitLine(line,delim){
+  const out=[];let cur="",q=false;
+  for(let i=0;i<line.length;i++){const c=line[i];
+    if(q){if(c==='"'){if(line[i+1]==='"'){cur+='"';i++}else q=false}else cur+=c}
+    else if(c==='"')q=true; else if(c===delim){out.push(cur);cur=""} else cur+=c;}
+  out.push(cur);return out.map(s=>s.trim());
+}
+function parseNum(s){
+  if(s==null)return null; s=String(s).trim(); if(!s||s==="-"||s==="—")return null;
+  let neg=false; if(/^\(.*\)$/.test(s)){neg=true;s=s.slice(1,-1)}
+  s=s.replace(/NT\$|US\$|\$|元|,|\s|USDT|USD|TWD/gi,"");
+  const isPct=/[%％]$/.test(s); s=s.replace(/[%％]$/,"").replace(/^\+/,"");
+  if(s.startsWith("−"))s="-"+s.slice(1);
+  const v=parseFloat(s); if(!isFinite(v)||!/^-?[\d.]+(e-?\d+)?$/i.test(s))return null;
+  return {v:neg?-v:v,pct:isPct};
+}
+function parseDate(s){
+  if(!s)return null; s=String(s).trim().split(/[ T]/)[0];
+  let m=s.match(/^(\d{2,4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})$/);
+  if(m){let y=+m[1]; if(y<1000)y+=1911; return iso(y,+m[2],+m[3]);}
+  m=s.match(/^(\d{4})(\d{2})(\d{2})$/); if(m)return iso(+m[1],+m[2],+m[3]);
+  m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); if(m)return iso(+m[3],+m[1],+m[2]);
+  return null;
+}
+function iso(y,m,d){if(m<1||m>12||d<1||d>31||y<1990||y>2100)return null; return `${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;}
+function parseCSV(text){
+  const lines=text.replace(/\r/g,"").split("\n").filter(l=>l.trim());
+  if(lines.length<2)return {err:"至少要有標題列和一筆交易。"};
+  const delim=(lines[0].match(/\t/g)||[]).length>(lines[0].match(/,/g)||[]).length?"\t":(lines[0].includes(";")&&!lines[0].includes(",")?";":",");
+  const head=splitLine(lines[0],delim).map(normH);
+  const col={};
+  for(const k in ALIAS){const al=ALIAS[k].map(normH); const hits=head.map((h,i)=>al.includes(h)?i:-1).filter(i=>i>=0);
+    if(hits.length===1)col[k]=hits[0]; else if(hits.length>1)return {err:`有不只一欄看起來是「${ALIAS[k][0]}」（${hits.map(i=>splitLine(lines[0],delim)[i]).join("、")}），請只留一欄或改欄名。`};}
+  if(col.pnl==null&&col.ret==null)return {err:"找不到「損益」或「報酬率」欄。請把欄名改成「損益」或「報酬率」。目前的欄名："+splitLine(lines[0],delim).join("、")};
+  if(col.exit==null&&col.date!=null)col.exit=col.date;
+  const trades=[],bad=[];
+  for(let r=1;r<lines.length;r++){
+    const c=splitLine(lines[r],delim);
+    const t={row:r+1, sym:col.sym!=null?c[col.sym]:"", entry:col.entry!=null?parseDate(c[col.entry]):null, exit:col.exit!=null?parseDate(c[col.exit]):null};
+    const p=col.pnl!=null?parseNum(c[col.pnl]):null, rt=col.ret!=null?parseNum(c[col.ret]):null, cs=col.cost!=null?parseNum(c[col.cost]):null;
+    t.cost=cs?Math.abs(cs.v):null;
+    if(rt)t.ret=rt.pct||Math.abs(rt.v)>1.5?rt.v/100:rt.v;
+    if(p)t.pnl=p.v; else if(t.ret!=null&&t.cost)t.pnl=t.ret*t.cost;
+    if(t.ret==null&&t.pnl!=null&&t.cost)t.ret=t.pnl/t.cost;
+    if(t.pnl==null&&t.ret==null){bad.push(r+1);continue;}
+    if(t.entry&&t.exit&&t.entry>t.exit){const x=t.entry;t.entry=t.exit;t.exit=x;}
+    trades.push(t);
+  }
+  const unit=trades.every(t=>t.pnl!=null)?"pnl":"ret";
+  trades.forEach(t=>t.x=unit==="pnl"?t.pnl:t.ret);
+  if(trades.some(t=>t.exit))trades.sort((a,b)=>(a.exit||"")<(b.exit||"")?-1:(a.exit||"")>(b.exit||"")?1:a.row-b.row);
+  const keys=new Map(); let dup=0;
+  trades.forEach(t=>{const k=[t.sym,t.entry,t.exit,t.cost,t.x].join("|"); if(t.entry&&t.exit){keys.set(k,(keys.get(k)||0)+1); if(keys.get(k)>1)dup++;}});
+  return {trades,bad,unit,col,dup};
+}
+
+/* ───── 統計 ───── */
+function mean(a){return a.reduce((s,x)=>s+x,0)/a.length}
+function sd(a){const m=mean(a);return Math.sqrt(a.reduce((s,x)=>s+(x-m)**2,0)/(a.length-1))}
+function tstat(a){if(a.length<3)return null; const s=sd(a); return s>0?mean(a)/(s/Math.sqrt(a.length)):null}
+function rng(seed){let s=seed>>>0||1;return()=>{s^=s<<13;s>>>=0;s^=s>>17;s^=s<<5;s>>>=0;return s/4294967296}}
+/* 區塊自助抽樣：把「沒有優勢」當前提（扣掉平均值），保留連續交易之間的相關性，看隨機做出 ≥ 你的平均的機率 */
+function luckP(a){
+  const n=a.length; if(n<5)return null;
+  const m=mean(a), c=a.map(x=>x-m), L=Math.max(1,Math.round(Math.cbrt(n))), R=Math.max(2000,Math.min(10000,Math.floor(4e6/n)));
+  const rnd=rng(20261024); let hit=0;
+  for(let r=0;r<R;r++){let s=0,k=0;
+    while(k<n){const st=Math.floor(rnd()*n); for(let j=0;j<L&&k<n;j++,k++)s+=c[(st+j)%n];}
+    if(s/n>=m)hit++;}
+  return (hit+1)/(R+1);
+}
+function maxDD(a){let peak=0,cum=0,dd=0;for(const x of a){cum+=x;peak=Math.max(peak,cum);dd=Math.min(dd,cum-peak)}return dd}
+
+function analyze(P){
+  const T=P.trades, x=T.map(t=>t.x), n=x.length, unitP=P.unit==="pnl";
+  const W=x.filter(v=>v>0), Lz=x.filter(v=>v<0);
+  const S={n, unitP, sum:x.reduce((s,v)=>s+v,0), mean:mean(x), win:W.length/n,
+    avgW:W.length?mean(W):0, avgL:Lz.length?-mean(Lz):0, t:tstat(x), p:luckP(x), dd:maxDD(x)};
+  S.payoff=S.avgL>0?S.avgW/S.avgL:null;
+  S.beWin=S.avgW+S.avgL>0?S.avgL/(S.avgW+S.avgL):null;
+  S.pf=Lz.length?W.reduce((s,v)=>s+v,0)/-Lz.reduce((s,v)=>s+v,0):null;
+  const h=Math.floor(n/2); S.h1=n>=10?{m:mean(x.slice(0,h)),t:tstat(x.slice(0,h))}:null; S.h2=n>=10?{m:mean(x.slice(h)),t:tstat(x.slice(h))}:null;
+  if(S.mean>0&&S.t)S.need=Math.ceil(((1.645+0.842)*sd(x)/S.mean)**2);
+  const sorted=[...x].sort((a,b)=>b-a); S.top1=sorted[0]; S.dropTop1=S.sum-sorted[0];
+  const k5=Math.max(1,Math.round(n*0.05)); S.k5=k5; S.dropTop5=S.sum-sorted.slice(0,k5).reduce((s,v)=>s+v,0);
+  /* 對照 0050 */
+  const B=T.filter(t=>t.entry&&t.exit&&(t.cost||!unitP)&&benchRet(t.entry,t.exit)!=null);
+  if(BENCH&&B.length>=Math.max(3,n*0.5)){
+    B.forEach(t=>{t.br=benchRet(t.entry,t.exit); t.bx=unitP?t.cost*t.br:t.br; t.ex=t.x-t.bx;});
+    const ex=B.map(t=>t.ex);
+    S.bench={n:B.length, mine:B.reduce((s,t)=>s+t.x,0), b:B.reduce((s,t)=>s+t.bx,0), beat:B.filter(t=>t.ex>0).length/B.length, t:tstat(ex), p:luckP(ex)};
+    const firstD=B.reduce((m,t)=>t.entry<m?t.entry:m,B[0].entry), lastD=B.reduce((m,t)=>t.exit>m?t.exit:m,B[0].exit);
+    S.bench.period=[firstD,lastD,benchRet(firstD,lastD)];
+    const avgHold=mean(B.map(t=>(Date.parse(t.exit)-Date.parse(t.entry))/864e5));
+    S.bench.hold=avgHold;
+  }
+  /* 重大事件暴露：持有期間跨過事件日（買進日 < 事件反應日 ≤ 賣出日）*/
+  const H=T.filter(t=>t.entry&&t.exit);
+  if(DATA&&DATA.events&&H.length>=Math.max(5,n*0.5)){
+    const rows=[]; const any=new Set();
+    for(const k of Object.keys(EVN)){const E=DATA.events[k]||[]; if(!E.length)continue;
+      const hit=H.filter(t=>E.some(e=>t.entry<e&&e<=t.exit)); hit.forEach(t=>any.add(t));
+      if(hit.length)rows.push({k,name:EVN[k],n:hit.length,win:hit.filter(t=>t.x>0).length/hit.length,m:mean(hit.map(t=>t.x)),sum:hit.reduce((s,t)=>s+t.x,0)});}
+    const none=H.filter(t=>!any.has(t));
+    const evT=[...any];
+    S.ev={rows,H:H.length,evN:evT.length,evSum:evT.reduce((s,t)=>s+t.x,0),evM:evT.length?mean(evT.map(t=>t.x)):null,evWin:evT.length?evT.filter(t=>t.x>0).length/evT.length:null,
+      noN:none.length,noSum:none.reduce((s,t)=>s+t.x,0),noM:none.length?mean(none.map(t=>t.x)):null,noWin:none.length?none.filter(t=>t.x>0).length/none.length:null,
+      range:[DATA.events.uscpi&&DATA.events.uscpi[0]]};
+  }
+  /* 標的集中度 */
+  if(T.some(t=>t.sym)){const g={};T.forEach(t=>{const k=t.sym||"（未填）";(g[k]=g[k]||{n:0,s:0});g[k].n++;g[k].s+=t.x;});
+    S.sym=Object.entries(g).sort((a,b)=>b[1].s-a[1].s);}
+  return S;
+}
+
+/* ───── 報告 ───── */
+function verdict(S){
+  const u=S.unitP?money:v=>pct(v,2);
+  if(S.n<30){
+    return {c:"v-gray",t:"樣本太少，還不能下結論",p:`目前只有 ${S.n} 筆。就算真的有本事，這麼少筆也很難和運氣分開${S.need?`；照你現在的平均和波動，大約要 <b>${fmt(S.need)}</b> 筆才看得出來`:""}。下面的數字先當參考。`};
+  }
+  const stable=S.h1&&S.h2&&S.h1.m>0&&S.h2.m>0;
+  if(S.mean>0&&S.p!=null&&S.p<0.05&&stable){
+    const lose=S.bench&&S.bench.mine<S.bench.b;
+    return lose?{c:"v-warn",t:"有賺錢的證據，但沒有贏過 0050",p:`你的獲利不太像運氣（運氣機率 ${(S.p*100).toFixed(1)}%），前後兩半也都賺。但同一筆錢、同樣的天數拿去放 0050，會多賺 <b>${u(S.bench.b-S.bench.mine)}</b>。花的時間和承擔的風險，目前沒有換到比較多的報酬。`}
+      :{c:"v-good",t:"看起來是可以重複的優勢",p:`如果你其實沒有優勢，運氣好做出這種成績的機率只有 <b>${(S.p*100).toFixed(1)}%</b>，前後兩半也都賺${S.bench?`，而且比同期放 0050 多賺 ${u(S.bench.mine-S.bench.b)}`:""}。繼續記錄、維持紀律，並留意下方的風險提示。`};
+  }
+  if(S.mean>0)return {c:"v-warn",t:"有賺，但分不出是實力還是運氣",p:`平均每筆 ${u(S.mean)}，不過沒有優勢的人靠運氣做出這種成績的機率有 <b>${S.p!=null?(S.p*100).toFixed(0)+"%":"—"}</b>${stable?"":"，而且前後兩半不是都賺"}。${S.need?`照目前的平均和波動，大約要 ${fmt(S.need)} 筆才分得出來。`:""}`};
+  return {c:"v-bad",t:S.p!=null&&1-S.p<0.05?"統計上是在虧錢":"目前看不到優勢",p:`平均每筆 ${u(S.mean)}，總共 ${u(S.sum)}。${S.bench?`同期放 0050 會是 ${u(S.bench.b)}。`:""}繼續用同一套方法，長期大概率還是虧；先停下來、縮小部位，或改成定期定額。`};
+}
+function flags(S){
+  const u=S.unitP?money:v=>pct(v,2), F=[];
+  if(S.sum>0&&S.dropTop1<=0)F.push(["r","靠一筆撐起來",`拿掉最賺的那一筆（${u(S.top1)}），總損益變成 ${u(S.dropTop1)}。整體獲利全靠一次大賺，這種事不一定會再發生。`]);
+  else if(S.sum>0&&S.dropTop5<=0)F.push(["y","靠少數幾筆撐起來",`拿掉最賺的 ${S.k5} 筆（前 5%），總損益變成 ${u(S.dropTop5)}。`]);
+  if(S.payoff!=null&&S.win>0.6&&S.payoff<0.6)F.push(["y","小賺大賠",`勝率 ${(S.win*100).toFixed(0)}% 看起來很高，但平均賠的是平均賺的 ${(1/S.payoff).toFixed(1)} 倍。這種型態常見於「賺一點就跑、虧了一直抱」。`]);
+  if(S.h1&&S.h2&&S.h1.m>0!==S.h2.m>0)F.push(["y","前後兩段表現相反",`前半段平均每筆 ${u(S.h1.m)}，後半段 ${u(S.h2.m)}。之前有效的方法可能已經失效，或之前只是運氣。`]);
+  if(S.ev&&S.ev.evN>=5&&S.sum>0&&S.ev.evSum>0.6*S.sum&&S.ev.evN<0.5*S.ev.H)F.push(["y","獲利集中在重大事件前後",`只有 ${S.ev.evN} 筆（${(S.ev.evN/S.ev.H*100).toFixed(0)}%）跨過重大事件，卻貢獻了 ${(S.ev.evSum/S.sum*100).toFixed(0)}% 的獲利。這比較像押消息方向，事件結果反過來時會一次賠回去。`]);
+  if(S.ev&&S.ev.evN>=5&&S.ev.evSum<0&&S.ev.noSum>0)F.push(["y","抱著過重大事件常常賠",`跨過重大事件的 ${S.ev.evN} 筆合計 ${u(S.ev.evSum)}，沒跨過的合計 ${u(S.ev.noSum)}。可以考慮事件前減碼。`]);
+  if(S.sym&&S.sym.length>=3&&S.sum>0&&S.sym[0][1].s>0.7*S.sum)F.push(["y","獲利集中在一檔",`「${esc(S.sym[0][0])}」一檔就佔了 ${(S.sym[0][1].s/S.sum*100).toFixed(0)}% 的獲利。`]);
+  if(S.dd<0&&S.sum!==0&&Math.abs(S.dd)>Math.abs(S.sum)&&S.unitP)F.push(["y","回檔比總獲利還深",`最大一段連續回落是 ${u(S.dd)}，比你的總損益 ${u(S.sum)} 還大。過程中你很可能會想放棄。`]);
+  if(!F.length)F.push(["g","沒有發現明顯的危險型態","沒有「靠一兩筆」「小賺大賠」「前後相反」「押事件」這些常見問題。"]);
+  return F;
+}
+function chartSVG(T,S){
+  const pts=T.filter(t=>t.exit); if(pts.length<3)return "";
+  const W=760,H=260,pl=64,pr=12,pt=14,pb=30;
+  let c1=0,c2=0; const a=[],b=[],hasB=!!S.bench;
+  pts.forEach(t=>{c1+=t.x;a.push(c1); if(hasB){c2+=(t.bx!=null?t.bx:0);b.push(c2);}});
+  const all=a.concat(b,[0]), lo=Math.min(...all), hi=Math.max(...all), span=hi-lo||1;
+  const X=i=>pl+(W-pl-pr)*i/(pts.length-1), Y=v=>pt+(H-pt-pb)*(hi-v)/span;
+  const path=arr=>arr.map((v,i)=>(i?"L":"M")+X(i).toFixed(1)+" "+Y(v).toFixed(1)).join("");
+  const ticks=[lo,0,hi].filter((v,i,s)=>s.indexOf(v)===i);
+  const u=S.unitP?v=>v===0?"0":(v<0?"−":"")+fmt(Math.abs(v)/1000,Math.abs(v)<10000?1:0)+"k":v=>(v*100).toFixed(0)+"%";
+  return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="累積損益走勢">
+    ${ticks.map(v=>`<line x1="${pl}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--border)" stroke-dasharray="${v===0?"":"3 4"}"/><text x="${pl-6}" y="${Y(v)+4}" text-anchor="end" font-size="12" fill="var(--text3)">${u(v)}</text>`).join("")}
+    ${hasB?`<path d="${path(b)}" fill="none" stroke="var(--line2)" stroke-width="2" stroke-dasharray="6 4"/>`:""}
+    <path d="${path(a)}" fill="none" stroke="var(--line1)" stroke-width="2.4"/>
+    <text x="${pl}" y="${H-8}" font-size="12" fill="var(--text3)">${pts[0].exit}</text>
+    <text x="${W-pr}" y="${H-8}" font-size="12" fill="var(--text3)" text-anchor="end">${pts[pts.length-1].exit}</text>
+  </svg><div class="legend"><span><i style="background:var(--line1)"></i>你的累積${S.unitP?"損益":"報酬（逐筆加總）"}</span>${hasB?`<span><i style="background:var(--line2)"></i>同一筆錢、同樣天數放 0050</span>`:""}</div></div>`;
+}
+function render(P,isDemo){
+  const S=analyze(P), V=verdict(S), u=S.unitP?money:v=>pct(v,2), T=P.trades;
+  const notes=[];
+  if(P.bad.length)notes.push(`有 ${P.bad.length} 列讀不到損益，已略過（第 ${P.bad.slice(0,8).join("、")}${P.bad.length>8?"…":""} 列）。`);
+  if(P.dup)notes.push(`有 ${P.dup} 筆和別筆完全相同（日期、代號、金額、損益都一樣），可能是重複匯入，請核對。`);
+  if(!S.unitP)notes.push("沒有損益金額，以下用每筆報酬率計算（每筆當作投入一樣多的錢）。");
+  if(!S.bench)notes.push(BENCH?"要和 0050 比較，需要每筆的買進日、賣出日，以及投入金額或報酬率。":"0050 資料暫時讀不到，略過對照。");
+  let h=`${isDemo?`<p class="hint">以下是<b>示範資料</b><span class="demo-badge">示範</span>，不是任何人的真實績效。</p>`:""}
+  <div class="verdict ${V.c}"><div class="v1">${V.t}</div><p>${V.p}</p></div>
+  ${notes.length?`<div class="card"><div class="hint">${notes.join("<br>")}</div></div>`:""}
+  <div class="card"><h2>基本數字</h2><div class="kpis">
+    <div class="kpi"><div class="l">交易筆數</div><div class="n">${fmt(S.n)}</div><div class="s">${T[0].exit?`${T[0].exit} ～ ${T[T.length-1].exit}`:""}</div></div>
+    <div class="kpi"><div class="l">總${S.unitP?"損益":"報酬（加總）"}</div><div class="n ${cls(S.sum)}">${u(S.sum)}</div></div>
+    <div class="kpi"><div class="l">期望值（平均每筆）</div><div class="n ${cls(S.mean)}">${u(S.mean)}</div></div>
+    <div class="kpi"><div class="l">勝率</div><div class="n">${(S.win*100).toFixed(1)}%</div><div class="s">損益兩平要 ${S.beWin!=null?(S.beWin*100).toFixed(1)+"%":"—"}</div></div>
+    <div class="kpi"><div class="l">平均賺 ／ 平均賠</div><div class="n">${S.payoff!=null?S.payoff.toFixed(2):"—"}</div><div class="s">${u(S.avgW)} ／ ${u(-S.avgL)}</div></div>
+    <div class="kpi"><div class="l">運氣機率</div><div class="n">${S.p!=null?(S.p<0.001?"<0.1%":(S.p*100).toFixed(1)+"%"):"—"}</div><div class="s">沒優勢也做得出這成績的機率</div></div>
+    <div class="kpi"><div class="l">最大連續回落</div><div class="n neg">${u(S.dd)}</div></div>
+    <div class="kpi"><div class="l">前半段 ／ 後半段 平均</div><div class="n" style="font-size:16px"><span class="${cls(S.h1&&S.h1.m)}">${S.h1?u(S.h1.m):"—"}</span> ／ <span class="${cls(S.h2&&S.h2.m)}">${S.h2?u(S.h2.m):"—"}</span></div><div class="s">兩半都賺才算穩定</div></div>
+  </div>${chartSVG(T,S)}</div>`;
+  if(S.bench){const B=S.bench, diff=B.mine-B.b;
+    h+=`<div class="card"><h2>有沒有贏過放著不動的 0050？</h2>
+      <p class="muted">把每一筆交易換成「同一天、同樣的錢買 0050（含配息），在同一天賣掉」。這樣比較的是：你花時間選股、進出，比起什麼都不做多賺了多少。</p>
+      <div class="kpis">
+        <div class="kpi"><div class="l">你的${S.unitP?"損益":"報酬加總"}（${B.n} 筆）</div><div class="n ${cls(B.mine)}">${u(B.mine)}</div></div>
+        <div class="kpi"><div class="l">同期放 0050</div><div class="n ${cls(B.b)}">${u(B.b)}</div></div>
+        <div class="kpi"><div class="l">你多賺（少賺）</div><div class="n ${cls(diff)}">${u(diff)}</div><div class="s">運氣機率 ${B.p!=null?(B.p*100).toFixed(1)+"%":"—"}</div></div>
+        <div class="kpi"><div class="l">贏過 0050 的筆數</div><div class="n">${(B.beat*100).toFixed(0)}%</div><div class="s">平均持有 ${fmt(B.hold,1)} 天</div></div>
+      </div>
+      <p class="hint" style="margin-top:10px">另外，從你第一筆買進（${B.period[0]}）到最後一筆賣出（${B.period[1]}），一直抱著 0050 的含息報酬是 <b class="${cls(B.period[2])}">${pct(B.period[2])}</b>。
+      0050 資料：證交所官方日成交資訊，含息還原，資料到 ${BENCH.d[BENCH.d.length-1]}。</p></div>`;}
+  if(S.ev){const E=S.ev;
+    h+=`<div class="card"><h2>是不是靠賭消息？</h2>
+      <p class="muted">「跨過事件」是指你在事件公布前買進、公布後才賣出（抱著過了那個消息）。美國的數據在台灣深夜公布，算在台股隔天。</p>
+      <div class="tscroll"><table><thead><tr><th>情況</th><th>筆數</th><th>勝率</th><th>平均每筆</th><th>合計</th></tr></thead><tbody>
+      ${E.rows.map(r=>`<tr><td>跨過 ${r.name}</td><td>${r.n}</td><td>${(r.win*100).toFixed(0)}%</td><td class="${cls(r.m)}">${u(r.m)}</td><td class="${cls(r.sum)}">${u(r.sum)}</td></tr>`).join("")}
+      <tr style="font-weight:600"><td>跨過任何一個事件</td><td>${E.evN}</td><td>${E.evWin!=null?(E.evWin*100).toFixed(0)+"%":"—"}</td><td class="${cls(E.evM)}">${u(E.evM)}</td><td class="${cls(E.evSum)}">${u(E.evSum)}</td></tr>
+      <tr style="font-weight:600"><td>沒有跨過事件</td><td>${E.noN}</td><td>${E.noWin!=null?(E.noWin*100).toFixed(0)+"%":"—"}</td><td class="${cls(E.noM)}">${u(E.noM)}</td><td class="${cls(E.noSum)}">${u(E.noSum)}</td></tr>
+      </tbody></table></div>
+      <p class="hint">一筆交易可能同時跨過好幾個事件，所以各列加起來會超過總筆數。事件日來源：${esc(DATA.src&&DATA.src.events||"")}（2016 年起）。</p></div>`;}
+  h+=`<div class="card"><h2>風險提示</h2>${flags(S).map(f=>`<div class="flag"><span class="ic ${f[0]}">${f[0]==="g"?"✓":"!"}</span><div><b>${f[1]}</b><br><span class="muted">${f[2]}</span></div></div>`).join("")}</div>`;
+  if(S.sym&&S.sym.length>1){const top=S.sym.slice(0,5), bot=S.sym.slice(-5).reverse().filter(x=>!top.includes(x));
+    h+=`<div class="card"><h2>哪些標的賺、哪些賠</h2><div class="tscroll"><table><thead><tr><th>標的</th><th>筆數</th><th>合計</th></tr></thead><tbody>
+      ${top.concat(bot).map(([k,v])=>`<tr><td>${esc(k)}</td><td>${v.n}</td><td class="${cls(v.s)}">${u(v.s)}</td></tr>`).join("")}</tbody></table></div>
+      <p class="hint">列出最賺的 5 檔和最賠的 5 檔，共 ${S.sym.length} 檔。</p></div>`;}
+  h+=`<details class="card"><summary>這些數字怎麼算的</summary><ul class="muted">
+    <li><b>運氣機率</b>：先假設你沒有優勢（把每筆損益扣掉平均值），再從你的紀錄裡一段一段隨機抽樣重組上千次，看有多少次的平均 ≥ 你的平均。一段一段抽（區塊自助抽樣）是為了保留連續交易之間的關聯，比一筆一筆抽保守。</li>
+    <li><b>0050 對照</b>：用買進日、賣出日的 0050 含息還原收盤價計算同期報酬，乘上你的投入金額。不含手續費與稅，所以對 0050 略為有利，但長抱 0050 的成本本來就很低。</li>
+    <li><b>樣本數估計</b>：以單尾 5% 顯著、80% 檢定力，依你目前的平均與波動推算。</li>
+    <li>這些都是對「過去紀錄」的統計，不能保證未來。</li></ul></details>`;
+  $("#result").innerHTML=h;
+  $("#result").scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+/* ───── 示範資料（固定亂數，標示為示範）───── */
+function demoCSV(){
+  const r=rng(7), d=BENCH?BENCH.d.filter(x=>x>="2024-01-01"):null;
+  const syms=["2330","2317","2454","3231","2382","2603","3017","2376","6669","2308","3661","2357"];
+  const rows=["買進日,賣出日,代號,投入金額,損益"];
+  for(let i=0;i<80;i++){
+    let a,b; if(d){const s=Math.floor(r()*(d.length-30)); a=d[s]; b=d[s+1+Math.floor(r()*14)];}else{a="2025-01-02";b="2025-01-10";}
+    const cost=Math.round((50+r()*150))*1000, br=d?benchRet(a,b):0;
+    let ret=(br||0)*0.9+(r()<0.58?r()*0.04:-r()*0.07)-0.006;  /* 常見型態：小賺大賠、扣掉成本 */
+    if(i===23)ret=0.42;
+    rows.push([a,b,syms[Math.floor(r()*syms.length)],cost,Math.round(cost*ret)].join(","));
+  }
+  return rows.join("\n");
+}
+
+/* ───── 介面 ───── */
+let lastDemo=false;
+document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("on",x===b));
+  document.querySelectorAll(".pane").forEach(p=>p.hidden=p.id!=="p-"+b.dataset.tab);
+  if(b.dataset.tab==="fraud")loadFraudMeta();
+}));
+async function run(isDemo){
+  await dataReady;
+  const P=parseCSV($("#csv").value);
+  if(P.err){$("#parseMsg").textContent=P.err; $("#parseMsg").className="neg"; return;}
+  if(P.trades.length<2){$("#parseMsg").textContent="讀到的交易不到 2 筆。"; return;}
+  $("#parseMsg").className="hint"; $("#parseMsg").textContent=`讀到 ${P.trades.length} 筆交易。`;
+  render(P,isDemo);
+}
+$("#runBtn").addEventListener("click",()=>run(lastDemo&&$("#csv").value===demoText));
+let demoText="";
+$("#demoBtn").addEventListener("click",async()=>{await dataReady; demoText=demoCSV(); $("#csv").value=demoText; lastDemo=true; run(true);});
+$("#tplBtn").addEventListener("click",()=>{
+  const blob=new Blob(["﻿買進日,賣出日,代號,投入金額,損益\n"],{type:"text/csv"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="交易紀錄範本.csv"; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+});
+function readFile(f){
+  const fr=new FileReader();
+  fr.onload=()=>{let t=fr.result; if(t.includes("�")){const fr2=new FileReader(); fr2.onload=()=>{$("#csv").value=fr2.result; lastDemo=false; run(false);}; fr2.readAsText(f,"big5"); return;}
+    $("#csv").value=t; lastDemo=false; run(false);};
+  fr.readAsText(f,"utf-8");
+}
+$("#file").addEventListener("change",e=>e.target.files[0]&&readFile(e.target.files[0]));
+const dz=$("#drop");
+["dragenter","dragover"].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.add("over")}));
+["dragleave","drop"].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.remove("over")}));
+dz.addEventListener("drop",e=>e.dataTransfer.files[0]&&readFile(e.dataTransfer.files[0]));
+
+/* ───── 老師宣稱 ───── */
+function lnG(z){const g=[676.5203681218851,-1259.1392167224028,771.32342877765313,-176.61502916214059,12.507343278686905,-0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];
+  if(z<0.5)return Math.log(Math.PI/Math.sin(Math.PI*z))-lnG(1-z); z-=1; let x=0.99999999999980993; for(let i=0;i<8;i++)x+=g[i]/(z+i+1); const t=z+7.5; return 0.5*Math.log(2*Math.PI)+(z+0.5)*Math.log(t)-t+Math.log(x);}
+function binTail(n,k,p){ // P(X ≥ k)
+  if(k<=0)return 1; let s=0;
+  for(let i=k;i<=n;i++)s+=Math.exp(lnG(n+1)-lnG(i+1)-lnG(n-i+1)+i*Math.log(p)+(n-i)*Math.log(1-p));
+  return Math.min(1,s);
+}
+function guru(){
+  const w=+$("#gWin").value/100, n=Math.round(+$("#gN").value), pay=+$("#gPay").value||1, N=Math.max(1,Math.round(+$("#gPeople").value)), mo=$("#gMonthly").value;
+  let h="";
+  if(w>0&&w<=1&&n>=1){
+    const k=Math.round(w*n), p0=1/(1+pay), p=binTail(n,k,p0), lucky=N*p, atLeast=1-Math.pow(1-p,N);
+    const ev=w*pay-(1-w);
+    const c=p>0.05?"v-bad":p>0.001?"v-warn":"v-gray";
+    h+=`<div class="verdict ${c}"><div class="v1">${p>0.05?"光靠運氣就很容易做到":p>0.001?"不太容易，但老師很多時就會出現":"靠運氣很難做到，但先確認數字是真的"}</div>
+      <p>以他平均賺賠的比例，一個<b>完全沒本事</b>的人每筆贏的機率是 ${(p0*100).toFixed(0)}%（這樣長期剛好不賺不賠）。
+      這種人做 ${n} 筆、贏 ${k} 筆以上的機率是 <b>${p<0.0001?p.toExponential(1):(p*100).toFixed(p<0.01?2:1)+"%"}</b>。</p>
+      <p>市場上如果有 ${fmt(N)} 個這樣的老師，光靠運氣大約會出現 <b>${lucky<1?lucky.toFixed(2):fmt(lucky)}</b> 個「${(w*100).toFixed(0)}% 勝率」的神人（至少出現一個的機率 ${atLeast>0.99?"超過 99":(atLeast*100).toFixed(0)}%）。
+      你看到的通常是這些運氣好的人，運氣差的早就消失了，這就是<b>倖存者偏差</b>。</p></div>
+      <div class="flag"><span class="ic y">!</span><div><b>勝率高不代表賺錢</b><br><span class="muted">勝率 ${(w*100).toFixed(0)}%、平均賺賠比 ${pay}，每筆期望值是投入的 ${ev>=0?"+":""}${(ev*100).toFixed(0)}%（未扣手續費與稅）。
+        勝率 90%、但賠一次是賺一次的 10 倍，長期還是虧。老師只講勝率、不講賠多少，要特別小心。</span></div></div>
+      <div class="flag"><span class="ic y">!</span><div><b>筆數是誰挑的？</b><br><span class="muted">公開的 ${n} 筆如果是挑過的（只貼賺錢的單、事後才說「我早就說了」），上面的機率都不成立。要求看<b>完整、事先公布、有時間戳記</b>的紀錄。</span></div></div>`;
+  }
+  if(mo!==""&&isFinite(+mo)){
+    const r=+mo/100, yr=Math.pow(1+r,12)-1;
+    let cagr=null; if(BENCH){const a=BENCH.d.length-1, b=Math.max(0,a-252*10); cagr=Math.pow(BENCH.v[a]/BENCH.v[b],365.25/((Date.parse(BENCH.d[a])-Date.parse(BENCH.d[b]))/864e5))-1;}
+    h+=`<div class="flag"><span class="ic ${r>=0.03?"r":"y"}">!</span><div><b>每月 ${mo}% 等於一年 ${pct(yr,0)}</b><br><span class="muted">
+      ${cagr!=null?`0050 近十年含息年化約 ${pct(cagr)}（證交所官方資料計算）。`:""}長期每年 20% 已經是世界頂尖投資人的水準。
+      ${r>=0.03?"每月穩定 3% 以上、還「保證」的，幾乎都是詐騙或龐氏騙局：早期的「獲利」是用後來的人的本金支付。":""}
+      十萬元照每月 ${mo}% 複利 5 年會變成 ${money(100000*Math.pow(1+r,60))}，真有這種本事的人不需要收你的錢。</span></div></div>`;
+  }
+  $("#guruOut").innerHTML=h;
+}
+["gWin","gN","gPay","gPeople","gMonthly"].forEach(id=>$("#"+id).addEventListener("input",()=>dataReady.then(guru)));
+
+/* ───── 165 網址查詢 ───── */
+let fraudMeta=null; const shardCache={};
+function loadFraudMeta(){ if(fraudMeta)return; getData("fraud/meta.json").then(m=>{fraudMeta=m; $("#fraudMeta").textContent=` 目前共 ${fmt(m.n)} 個網域（假投資網站 ${fmt(m.A)}、停止解析 ${fmt(m.B)}），更新於 ${m.date}。`;}).catch(()=>{}); }
+function fnv(h){let x=0x811c9dc5; for(const b of new TextEncoder().encode(h)){x^=b; x=Math.imul(x,0x01000193)>>>0;} return x%32;}
+function hostOf(u){
+  u=(u||"").trim().toLowerCase().replace(/^[a-z]+:\/\//,""); u=u.split(/[\/?#]/)[0].split("@").pop().split(":")[0].replace(/^\.+|\.+$/g,"");
+  if(u.startsWith("www."))u=u.slice(4);
+  try{ if(/[^\x00-\x7f]/.test(u))u=new URL("http://"+u).hostname; }catch(e){}
+  return /^[a-z0-9.\-]+\.[a-z0-9\-]{2,}$/.test(u)?u:"";
+}
+async function shard(i){ if(!shardCache[i]){const t=await getData(`fraud/${String(i).padStart(2,"0")}.txt`,"text"); const m=new Map(); t.split("\n").forEach(l=>{if(!l)return; const p=l.split("\t"); m.set(p[0],p.slice(1));}); shardCache[i]=m;} return shardCache[i]; }
+async function lookup(){
+  const h=hostOf($("#url").value), out=$("#urlOut");
+  if(!h){out.innerHTML=`<p class="neg">看不出網址，請貼完整網址或網域（例如 example.com）。</p>`;return;}
+  out.innerHTML=`<p class="hint">查詢中…</p>`;
+  const parts=h.split("."), cands=[]; for(let i=0;i<parts.length-1;i++)cands.push(parts.slice(i).join("."));
+  try{
+    const hits=[];
+    for(const c of cands){const m=await shard(fnv(c)); if(m.has(c))hits.push([c,m.get(c)]);}
+    if(hits.length){
+      out.innerHTML=hits.map(([c,v])=>`<div class="verdict v-bad" style="margin-top:12px"><div class="v1">在 165 涉詐名單上：${esc(c)}</div><p>${
+        v[0]==="A"?`警政署「假投資（博弈）網站」名單：網站名稱「${esc(v[1])}」，${esc(v[2])} 那一週有 ${esc(v[3])} 件民眾通報。`
+                  :`警政署「遭停止解析涉詐網站」名單：網站性質「${esc(v[1])}」，${esc(v[2])} 依詐欺犯罪危害防制條例停止解析。`}
+        </p><p><b>不要在這個網站輸入任何帳號、密碼或匯款。</b>已經匯款的話，請立刻撥打 165。</p></div>`).join("");
+    }else{
+      out.innerHTML=`<div class="verdict v-warn" style="margin-top:12px"><div class="v1">不在名單上（${esc(h)}），但這不代表安全</div>
+        <p>詐騙網站常常幾天就換一個新網址，名單只收錄已被通報或處理的。下面任何一點符合，就要提高警覺：網址和知名券商很像但多了字母或數字、
+        要你下載「專屬 APP」而不是官方 App Store／Google Play 的券商 App、出金要先付錢、客服只用 LINE 聯絡。</p></div>`;
+    }
+  }catch(e){out.innerHTML=`<p class="neg">名單暫時讀不到（${esc(e.message)}），請稍後再試，或到 165 全民防騙網查詢。</p>`;}
+}
+$("#urlBtn").addEventListener("click",lookup);
+$("#url").addEventListener("keydown",e=>{if(e.key==="Enter")lookup();});
+
+/* ───── 話術掃描 ───── */
+const PAT=[
+  {k:"保證獲利",sev:3,re:/保證(獲利|賺|報酬|收益|回本)|穩賺|包賺|保本|零風險|無風險|穩定獲利|只賺不賠|不會賠|穩穩賺/g,why:"合法的投資都有風險，沒有人能保證獲利。證券投資顧問業依法不得保證或承諾獲利。"},
+  {k:"出金要先付錢",sev:3,re:/出金.{0,12}(繳|付|保證金|稅|手續費|解凍|驗證金)|先(繳|付|匯).{0,8}(稅|保證金|手續費|解凍)|(帳戶|資金)(被)?凍結|解凍金|洗碼|流水不足/g,why:"這是最典型的詐騙。真正的券商不會要你先付錢才能領回自己的錢，付了只會被要更多。"},
+  {k:"老師帶單／明牌",sev:2,re:/帶單|喊單|報(明)?牌|跟單|飆股|主力(拉抬|進場|吃貨)|內線|內部(消息|資料)|老師.{0,6}(帶|教|指導)|股市(神人|天王|大師)/g,why:"合法投顧不能在群組帶單收費；「內線」若是真的，交易本身就違法。"},
+  {k:"引導到私人群組",sev:2,re:/加(入)?\s?(LINE|line|Line|賴|好友)|LINE\s?ID|私訊|加我|進群|投資群組|VIP群|股票群/g,why:"把你從公開平台拉到私人群組，是投資詐騙的第一步，群組裡的「學員」常常是同夥。"},
+  {k:"專屬平台／APP",sev:2,re:/(下載|安裝).{0,10}(APP|App|app|平台|軟體)|專屬(平台|APP|App|帳戶)|操作平台|交易平台|跟單平台/g,why:"正規券商 App 從官方商店下載，帳戶開在券商名下。要你裝「專屬平台」的，錢多半直接進了詐騙集團。"},
+  {k:"虛擬貨幣入金",sev:2,re:/USDT|泰達幣|虛擬貨幣|加密貨幣|比特幣|以太幣|幣商|錢包地址|冷錢包|出入金/g,why:"要你用 USDT 或找「幣商」入金，錢一轉出就追不回來。"},
+  {k:"假抽籤／內部認購",sev:2,re:/(中籤|抽籤|認購|承銷).{0,10}(名額|額度|保留)|保留名額|內部認購|新股認購|未上市.{0,6}(認購|股票)|增資認購/g,why:"「內部保留抽籤名額」是 165 常見的假投資手法，申購只會透過券商和證交所公開抽籤。"},
+  {k:"誇大報酬",sev:2,re:/(每|一)(個)?(月|週|周|天|日)[^\d，,。\n]{0,6}\d+(\.\d+)?\s?[%％]|(月|週|周|日)(報酬|獲利|收益)\s?\d+(\.\d+)?\s?[%％]|翻倍|\d+\s?倍(獲利|報酬)|勝率\s?(9\d|100)\s?[%％]|年化\s?\d{3,}\s?[%％]/g,why:"長期每年 20% 已是世界頂尖；每月 10%、勝率 95% 這種數字，幾乎都是假的。"},
+  {k:"製造急迫感",sev:1,re:/限時|名額有限|最後\s?\d+\s?(個|位|名)|倒數|錯過(就|再)?(沒有|沒了)|今天(就|截止)|馬上(加入|行動|上車)|機不可失/g,why:"催你快點決定，就是不想讓你冷靜查證。"},
+  {k:"匯到個人帳戶／面交",sev:3,re:/匯(款)?到.{0,6}(個人|私人|指定)|(個人|私人|指定|專屬)帳戶|面交|現金交付|車手|代收/g,why:"正規券商的交割帳戶在你自己名下，不會要你把錢匯到某個人的帳戶或當面交現金。"},
+  {k:"冒用名人／官方",sev:2,re:/名人(推薦|帶單|代言)|金管會(核准|認證|許可|背書)|政府(認證|核准|背書)|官方(授權|認證)合作|(證交所|央行)(合作|授權)/g,why:"詐騙常冒用財經名人或政府名義。金管會不會為任何投資群組背書，可到證期局網站查合法業者。"},
+];
+function scan(){
+  const txt=$("#msg").value, out=$("#scanOut");
+  if(!txt.trim()){out.innerHTML="";return;}
+  const hits=[]; const spans=[];
+  for(const p of PAT){p.re.lastIndex=0; let m, any=false; while((m=p.re.exec(txt))){any=true; spans.push([m.index,m.index+m[0].length]); if(!m[0].length)p.re.lastIndex++;} if(any)hits.push(p);}
+  spans.sort((a,b)=>a[0]-b[0]); const merged=[]; for(const s of spans){if(merged.length&&s[0]<=merged[merged.length-1][1])merged[merged.length-1][1]=Math.max(merged[merged.length-1][1],s[1]); else merged.push([...s]);}
+  let marked="",pos=0; for(const [a,b] of merged){marked+=esc(txt.slice(pos,a))+"<mark>"+esc(txt.slice(a,b))+"</mark>"; pos=b;} marked+=esc(txt.slice(pos));
+  const score=hits.reduce((s,p)=>s+p.sev,0), severe=hits.some(p=>p.sev===3);
+  const lvl=severe&&score>=5||score>=7?["v-bad","高度疑似投資詐騙","請不要匯款、不要下載對方給的 APP。撥打 165 確認。"]
+         :score>=3||severe?["v-warn","有明顯的詐騙跡象","先停下來查證：對方是不是金管會核准的業者？要你做的事是不是都在正規券商裡完成？"]
+         :hits.length?["v-warn","有一些可疑用語","單一用語不一定是詐騙，但要多留意。"]
+         :["v-gray","沒有找到常見話術","這不代表安全：詐騙集團會一直換說法。只要牽涉匯款到陌生帳戶、下載陌生 APP，都要先查證。"];
+  out.innerHTML=`<div class="verdict ${lvl[0]}" style="margin-top:12px"><div class="v1">${lvl[1]}</div><p>${lvl[2]}</p></div>
+    ${hits.map(p=>`<div class="flag"><span class="ic ${p.sev===3?"r":"y"}">!</span><div><b>${p.k}</b><br><span class="muted">${p.why}</span></div></div>`).join("")}
+    ${hits.length?`<div class="scanout">${marked}</div>`:""}`;
+}
+$("#scanBtn").addEventListener("click",scan);
+
+/* ───── 導覽 ───── */
+const ov=$("#gOv");
+const openG=()=>{ov.hidden=false}, closeG=()=>{ov.hidden=true; try{localStorage.setItem("tradecheck.guide.v1","1")}catch(e){}};
+$("#guideBtn").addEventListener("click",openG); $("#gX").addEventListener("click",closeG); $("#gGo").addEventListener("click",closeG);
+ov.addEventListener("click",e=>{if(e.target===ov)closeG()}); addEventListener("keydown",e=>{if(e.key==="Escape"&&!ov.hidden)closeG()});
+let seen=false; try{seen=localStorage.getItem("tradecheck.guide.v1")==="1"}catch(e){}
+if(!seen)setTimeout(openG,800);
+dataReady.then(j=>{ guru(); if(j&&j.asof)$("#foot").insertAdjacentHTML("beforeend",` 資料日：${j.asof}。`); });
+</script>
+</body>
+</html>
