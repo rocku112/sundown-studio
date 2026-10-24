@@ -30,13 +30,12 @@ jobs:
         working-directory: twflow
         run: |
           timeout 10m python -X utf8 scripts/fetch_taifex.py --budget 3
-          python -X utf8 scripts/snapshot.py
 
       - name: 提交
         run: |
           git config user.name  "twflow-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add twflow/data/taifex twflow/web/data/taifex.json twflow/web/snapshot.html
+          git add twflow/data/taifex twflow/web/data/taifex.json
           if git diff --staged --quiet; then
             echo "沒有變動"
             exit 0

@@ -96,12 +96,11 @@ python scripts/build_sectors.py           # 組板塊表
 python scripts/build_web.py               # 產生前端資料（個股、走勢、今日重點）
 python scripts/build_events.py            # 籌碼異動事件流（自選股通知欄）
 python scripts/build_chains.py            # 供應鏈上下游資金重心
-python scripts/snapshot.py                # 打包單檔可離線開的 snapshot.html
+python scripts/snapshot.py                # 打包單檔可離線開的 snapshot.html（手動；不進版控）
 python scripts/sanity_check.py            # 合理性檢查（CI 用，失敗回非 0）
-python scripts/diff_vs_tide.py            # 與 Tide 比對（可選）
 ```
 
-看畫面：`python -m http.server 3004 --directory web`，或直接開 `web/snapshot.html`。
+看畫面：`python -m http.server 3004 --directory web`，或先跑 `snapshot.py` 再直接開 `web/snapshot.html`。
 
 加 `--force` 忽略快取重抓。TWSE 會擋高頻請求，內建 2 秒延遲與指數退避。
 
@@ -186,7 +185,6 @@ python scripts/diff_vs_tide.py            # 與 Tide 比對（可選）
 scripts/
   fetch_ic_chain.py    爬 47 條產業鏈 → 上中下游 → 537 葉節點
   fetch_market.py      每日收盤＋三大法人買賣超（上市＋上櫃）
-  diff_vs_tide.py      與 Tide 108 板塊比對
   prune_sectors.py     橫斷面去均值後的相關性剪枝
 data/
   ic_chain.json        完整階層

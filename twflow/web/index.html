@@ -1888,7 +1888,7 @@ function portCard(s,f){
       ${row('t 值（月超額）',s.is.t??'—',s.oos.t??'—')}</table>
     ${s.flips!=null?`<div class="krow" style="margin-top:8px"><span>五年內進出場次數</span><b>${s.flips} 次</b></div>`:''}
     ${eqCurve(s.curve)}
-    <div class="rsub" style="margin:14px 0 6px">${esc(s.today_label)}・不等於推薦${s.verdict?'':'，且此策略報酬未勝過基準'}</div>
+    <div class="rsub" style="margin:14px 0 6px">${esc(s.today_label)}・${SW.period[1]}・不等於推薦${s.verdict?'':'，且此策略報酬未勝過基準'}</div>
     <div class="chips">${s.today.map(t=>`<button class="chip" data-code="${t.kind==='etf'?'ETF:':''}${t.code}">${esc(t.name)} <small style="color:var(--s8)">${t.code}</small></button>`).join('')||'<span class="rsub">—</span>'}</div>
   </div>`;
 }
@@ -2212,11 +2212,15 @@ function buildSwing(){
   if(!LIT){ litReady().then(o=>{ if(o&&curView==='swing') buildSwing(); }); }
   if(!EXL){ exlReady().then(o=>{ if(o&&curView==='swing') buildSwing(); }); }
   if(!SW){ el.innerHTML='<div class="empty">載入中…</div>';
-    swReady().then(d=>{ if(d) buildSwing(); else el.innerHTML='<div class="empty">波段回測資料尚未產生。每個交易日盤後更新。</div>'; }); return; }
+    swReady().then(d=>{ if(d) buildSwing(); else el.innerHTML='<div class="empty">波段研究資料尚未產生。</div>'; }); return; }
   const ok=SW.strategies.filter(s=>s.verdict).length, b=SW.bench||{};
   const f=x=>x==null?'—':(x>=0?'+':'')+x.toFixed(2)+'%';
   const row=(lab,a,b_)=>`<tr><td>${lab}</td><td>${a}</td><td>${b_}</td></tr>`;
-  el.innerHTML=`${mapCard()}${stressCard()}${litCard()}${exlCard()}${pfCard()}${fwdCard()}${horizonCard()}${oddsCard()}${rdcaCard()}${eviCard()}
+  // 研究結果已凍結：結論不會天天變，不再每日重算，需要時手動觸發 twflow-daily 並勾選 research
+  el.innerHTML=`<div class="card"><p class="note" style="font-size:12.5px;color:var(--s9)">
+      這一頁是<b style="color:var(--s10)">研究結果（已凍結）</b>，不再每天重算；回測資料截至 ${SW.period[1]}。
+      底下列出的「符合條件」個股也是當天的狀態，不是今天的訊號。前瞻紀錄仍會在每月月初記錄。</p></div>
+    ${mapCard()}${stressCard()}${litCard()}${exlCard()}${pfCard()}${fwdCard()}${horizonCard()}${oddsCard()}${rdcaCard()}${eviCard()}
     <div class="card"><h3>波段實驗室・${SW.period[0]} ～ ${SW.period[1]}</h3>
       <div class="big" style="font-size:20px">${ok?`${SW.strategies.length} 個策略中 ${ok} 個在樣本外通過檢驗`:`${SW.strategies.length} 個策略扣掉成本後，都沒有穩定贏過基準`}</div>
       ${SW.strategies.length>3?`<p class="note" style="margin-top:6px;font-size:12px">同時測的策略越多，靠運氣「看起來有效」的機會越大；${SW.strategies.length} 個策略裡出現 1 個 t≈2 的結果，本身就可能只是巧合。</p>`:''}
@@ -2245,7 +2249,7 @@ function buildSwing(){
       <div class="krow"><span>同池等權買進持有 年化／最大回落</span><b><span style="color:${col(SW.pool_bench?.cagr)}">${f(SW.pool_bench?.cagr)}</span>　${f(SW.pool_bench?.mdd)}</b></div>
       <div class="krow"><span>${b.code||'0050'} 買進持有 年化／最大回落</span><b><span style="color:${col(b.cagr)}">${f(b.cagr)}</span>　${f(b.mdd)}</b></div>
       ${eqCurve(s.portfolio.curve)}
-      <div class="rsub" style="margin:14px 0 6px">最新交易日符合進場條件（${s.today.length} 檔）・條件符合不等於推薦${s.verdict?'':'，且此策略樣本外無效'}</div>
+      <div class="rsub" style="margin:14px 0 6px">${SW.period[1]} 符合進場條件（${s.today.length} 檔）・條件符合不等於推薦${s.verdict?'':'，且此策略樣本外無效'}</div>
       <div class="chips">${s.today.map(t=>`<button class="chip" data-code="${t.kind==='etf'?'ETF:':''}${t.code}">${esc(t.name)} <small style="color:var(--s8)">${t.code}</small></button>`).join('')||'<span class="rsub">今日無</span>'}</div>
     </div>`).join('')}
     <div class="card"><h3>為什麼沒有「無腦賺」的程式</h3>
@@ -2706,7 +2710,7 @@ const HELP_PAGES=[
   ['screen','選股','約 2,000 檔上市櫃股票、40 多個欄位（估值、月營收、季報、技術面、法人、融資券、千張大戶）的條件選股，每個條件標出證據檢驗結果。'],
   ['chart','泡泡圖','各產業板塊一張圖：橫軸漲跌、縱軸法人資金、泡泡大小是成交值。右上＝漲又有資金進來，左下＝跌又有資金流出。點泡泡看板塊成分股。'],
   ['etf','ETF','全部台股 ETF 的折溢價、申購贖回資金流、殖利率、長期含息報酬、受益人數；點進去看單檔的完整體質。'],
-  ['swing','波段','本站的研究室：中期組合實驗、前瞻紀錄、持有期勝率、定期定額 vs 調節、短線證據檢驗、波段策略回測。所有結果都含交易成本，失敗的也照實列出。'],
+  ['swing','波段','本站的研究室（結果已凍結，不再每日重算）：中期組合實驗、前瞻紀錄、持有期勝率、定期定額 vs 調節、短線證據檢驗、波段策略回測。所有結果都含交易成本，失敗的也照實列出。'],
   ['hold','持股','記錄自己的持股，看損益、配置、集中度，並和 0050 長抱比較。資料只存在你的瀏覽器。'],
   ['rank','排行榜','法人買超、漲跌幅、成交值等排行。'],
   ['chain','供應鏈','產業上中下游關係圖：從一家公司找到它的供應商與客戶。'],

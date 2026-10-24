@@ -11,6 +11,10 @@ on:
       days:
         description: "至少保留幾個交易日"
         default: "60"
+      research:
+        description: "重算凍結的波段研究（回測、壓力測試、文獻檢驗等），結果會更新「波段」頁"
+        type: boolean
+        default: false
 
 concurrency:
   group: twflow-daily
@@ -62,14 +66,12 @@ jobs:
           # 台美連動用到台股最新收盤（ADR 溢價、關聯股漲跌），台股更新後也要重算。
           # 這步失敗只影響台美頁，不能擋住台股盤後更新
           python -X utf8 ../usflow/scripts/build_cross.py || echo "::warning::台美連動重算失敗"
-          # 訊號成效回測：結果直接給前端「訊號成效」卡片。失敗不擋盤後更新
-          python -X utf8 scripts/backtest.py || echo "::warning::訊號回測失敗"
           # ETF 折溢價（證交所 17:00 後的收盤估值快照）
           python -X utf8 scripts/fetch_etf.py || echo "::warning::ETF 折溢價抓取失敗"
           # 月營收（只補新月份；失敗時沿用已存的月份）
           ( cd .. && python -X utf8 swing/scripts/fetch_revenue.py ) || echo "::warning::月營收抓取失敗"
-          # 籌碼歷史（法人＋融資融券）：每天補最新幾天，並順便回補五年歷史 25 分鐘，補完後幾秒就結束
-          ( cd .. && python -X utf8 swing/scripts/fetch_chips.py --days 2550 --budget 25 ) || echo "::warning::籌碼抓取失敗"
+          # 籌碼（法人＋融資融券）：每日增補最近幾天（十年歷史已補齊；--days 2550 會每天重查十年交易日曆，耗時約 25 分鐘）
+          ( cd .. && python -X utf8 swing/scripts/fetch_chips.py --days 5 ) || echo "::warning::籌碼抓取失敗"
           # 集保千張大戶（每週一份，只能從現在開始累積）
           ( cd .. && python -X utf8 swing/scripts/fetch_tdcc.py ) || echo "::warning::集保資料抓取失敗"
           # ETF 體質表（配息、長期含息報酬、風險、受益人數）
@@ -78,12 +80,14 @@ jobs:
           timeout 15m python -X utf8 scripts/fetch_taifex.py --budget 8 || echo "::warning::台指期抓取失敗"
           # 基本面（月底估值、季報；已有的不重抓）
           ( cd .. && timeout 20m python -X utf8 swing/scripts/fetch_fund.py --budget 16 ) || echo "::warning::基本面抓取失敗"
-          # 新增官方來源：重大訊息、庫藏股、董監質押、處置／注意股、借券、景氣燈號（每日快照＋歷史回補）
-          ( cd .. && timeout 14m python -u -X utf8 swing/scripts/fetch_extra.py --budget 12 ) || echo "::warning::新增資料來源抓取失敗"
+          # 新增官方來源：重大訊息、庫藏股、董監質押、處置／注意股、借券、景氣燈號（每日快照＋近 40 天歷史）
+          # 十年歷史回補只有凍結的研究用得到，需要時手動觸發並勾選 research
+          if [ "${{ inputs.research }}" = "true" ]; then EXTRA_ARGS="--budget 12"; else EXTRA_ARGS="--budget 5 --hist-days 40"; fi
+          ( cd .. && timeout 14m python -u -X utf8 swing/scripts/fetch_extra.py $EXTRA_ARGS ) || echo "::warning::新增資料來源抓取失敗"
           # 官方長歷史（0050／006208／0056 含息還原、加權指數）：取代 Yahoo，逐日往前回補到上市起點
           ( cd .. && timeout 10m python -u -X utf8 swing/scripts/fetch_official.py --budget 8 ) || echo "::warning::官方長歷史抓取失敗"
-          # 官方日線（含日後下市股票）：補最新幾天，並順便回補十年歷史 20 分鐘
-          ( cd .. && python -X utf8 swing/scripts/fetch_prices.py --days 2550 --budget 20 ) || echo "::warning::官方日線抓取失敗"
+          # 官方日線（含日後下市股票）：每日增補最近幾天（十年歷史已補齊）
+          ( cd .. && python -X utf8 swing/scripts/fetch_prices.py --days 5 ) || echo "::warning::官方日線抓取失敗"
           # 市場傳導艙：全市場板塊對照＋台美股事件研究校準（β、分布區間、填息統計），頁面開啟時線上讀取
           # 美股長歷史抓不到時沿用快取；快取也沒有時沿用上一份校準的美股部分。
           # 官方排程（Nasdaq 經濟／財報行事曆）只重抓最近 10 天與未來 120 天；全美股清單失敗時保留舊檔
@@ -102,23 +106,26 @@ jobs:
           if [ "$(TZ=Asia/Taipei date +%u)" = "5" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             ( cd .. && timeout 8m python -X utf8 tools/tradecheck/gen_dip.py ) || echo "::warning::回檔回測更新失敗"
           fi
-          # 波段實驗室：五年日線回測（約 3 分鐘）
-          # 官方日線滿一千天時取代 Yahoo（消除倖存者偏差），否則沿用 Yahoo
+          # 持股頁需要的日線資料：官方日線滿一千天時取代 Yahoo（消除倖存者偏差），否則沿用 Yahoo
           ( cd .. && python -X utf8 swing/scripts/fetch_hist.py && { python -X utf8 swing/scripts/build_ohlcv.py || true; } \
-              && python -X utf8 swing/scripts/backtest_swing.py \
               && python -X utf8 swing/scripts/build_bench.py && python -X utf8 swing/scripts/holding_odds.py \
-              && { python -X utf8 swing/scripts/rules_vs_dca.py || true; } \
-              && python -X utf8 swing/scripts/evidence.py \
-              && { python -X utf8 swing/scripts/portfolio_lab.py || true; } \
-              && { python -X utf8 swing/scripts/stress_lab.py || true; } \
-              && { python -X utf8 swing/scripts/horizon_lab.py || true; } \
-              && { python -X utf8 swing/scripts/literature_lab.py || true; } \
-              && { python -X utf8 swing/scripts/extra_lab.py || true; } ) \
-            || echo "::warning::波段回測失敗"
-          # 波段策略 quantstats 績效報告（樣本外、對照 0050；需要上一步的 swing/.cache/ohlcv.json）
-          # 每週五重算一次（三份共約 2.7MB，天天重寫會讓 repo 長太快）
-          if [ "$(TZ=Asia/Taipei date +%u)" = "5" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            ( cd .. && timeout 8m python -X utf8 swing/scripts/report_qs.py ) || echo "::warning::波段績效報告產生失敗"
+              && python -X utf8 swing/scripts/evidence.py ) \
+            || echo "::warning::持股資料更新失敗"
+          # 前瞻紀錄每月只在調整日後 5 個交易日內寫入一次（只增不改），所以每月 1–10 日照跑，紀錄才不會斷
+          if [ "$(TZ=Asia/Taipei date +%-d)" -le 10 ] || [ "${{ inputs.research }}" = "true" ]; then
+            ( cd .. && python -X utf8 swing/scripts/portfolio_lab.py ) || echo "::warning::組合實驗室失敗"
+          fi
+          # 波段研究（凍結）：結論不會天天變，只在手動觸發並勾選 research 時重算
+          if [ "${{ inputs.research }}" = "true" ]; then
+            ( cd .. && python -X utf8 swing/scripts/backtest_swing.py \
+                && { python -X utf8 swing/scripts/rules_vs_dca.py || true; } \
+                && { python -X utf8 swing/scripts/stress_lab.py || true; } \
+                && { python -X utf8 swing/scripts/horizon_lab.py || true; } \
+                && { python -X utf8 swing/scripts/literature_lab.py || true; } \
+                && { python -X utf8 swing/scripts/extra_lab.py || true; } ) \
+              || echo "::warning::波段研究重算失敗"
+            # 訊號成效回測（「今日」頁的訊號成效卡片）
+            python -X utf8 scripts/backtest.py || echo "::warning::訊號回測失敗"
           fi
           # 智慧選股資料表（技術、籌碼、基本面、大戶）
           ( cd .. && python -X utf8 swing/scripts/build_screen.py ) || echo "::warning::智慧選股資料表產生失敗"
@@ -126,7 +133,6 @@ jobs:
           timeout 12m python -u -X utf8 scripts/fetch_news.py --top 300 --budget 8 || echo "::warning::新聞抓取失敗"
           # 每檔股票的風險與籌碼旗標（質押、處置／注意、借券、庫藏股）
           python -X utf8 scripts/build_flags.py || echo "::warning::旗標產生失敗"
-          python -X utf8 scripts/snapshot.py
 
       - name: 檢查資料是否合理
         working-directory: twflow
@@ -139,8 +145,7 @@ jobs:
           git add twflow/data/market/days twflow/data/market/stock_meta.json $(ls -d twflow/data/etf twflow/data/taifex 2>/dev/null) \
                   $(ls swing/data/revenue.json 2>/dev/null) $(ls -d swing/data/chips swing/data/fund swing/data/tdcc swing/data/prices swing/data/forward swing/data/extra swing/data/official 2>/dev/null) \
                   twflow/data/market/market.json twflow/web/data tools/capsule/twall.json tools/capsule/econ_cal.json tools/capsule/tw_macro.json tools/capsule/policy_events.json tools/capsule/conf_events.json tools/capsule/rev_dates.json \
-                  tools/tradecheck/data.json tools/tradecheck/fraud tools/tradecheck/dip \
-                  twflow/web/snapshot.html $(ls -d twflow/web/reports 2>/dev/null)
+                  tools/tradecheck/data.json tools/tradecheck/fraud tools/tradecheck/dip
           if git diff --staged --quiet; then
             echo "沒有變動（非交易日或來源尚未更新）"
           else
