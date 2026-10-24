@@ -517,12 +517,15 @@ $("#runBtn").addEventListener("click",()=>run(lastDemo&&$("#csv").value===demoTe
 let demoText="";
 $("#demoBtn").addEventListener("click",async()=>{await dataReady; demoText=demoCSV(); $("#csv").value=demoText; lastDemo=true; run(true);});
 $("#tplBtn").addEventListener("click",()=>{
+  if(!$("#csv").value.trim()||lastDemo){$("#csv").value="買進日,賣出日,代號,投入金額,損益\n"; lastDemo=false; $("#csv").focus();}
+  let framed=true; try{framed=window.top!==window}catch(e){}
+  if(framed)return;   /* 嵌入的預覽視窗不能下載檔案，只把欄位填進輸入框 */
   const blob=new Blob(["﻿買進日,賣出日,代號,投入金額,損益\n"],{type:"text/csv"});
   const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="交易紀錄範本.csv"; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 });
 function readFile(f){
   const fr=new FileReader();
-  fr.onload=()=>{let t=fr.result; if(t.includes("�")){const fr2=new FileReader(); fr2.onload=()=>{$("#csv").value=fr2.result; lastDemo=false; run(false);}; fr2.readAsText(f,"big5"); return;}
+  fr.onload=()=>{let t=fr.result; if(t.includes(String.fromCharCode(0xFFFD))){const fr2=new FileReader(); fr2.onload=()=>{$("#csv").value=fr2.result; lastDemo=false; run(false);}; fr2.readAsText(f,"big5"); return;}
     $("#csv").value=t; lastDemo=false; run(false);};
   fr.readAsText(f,"utf-8");
 }
