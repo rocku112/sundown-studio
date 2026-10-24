@@ -120,6 +120,7 @@ details{margin-top:10px} summary{cursor:pointer;color:var(--navy);font-weight:60
   <nav class="tabs" role="tablist">
     <button class="tab on" data-tab="check">我的交易健檢</button>
     <button class="tab" data-tab="guru">老師宣稱檢驗</button>
+    <button class="tab" data-tab="dip">回檔買進回測</button>
     <button class="tab" data-tab="fraud">詐騙檢查</button>
   </nav>
 
@@ -162,7 +163,29 @@ details{margin-top:10px} summary{cursor:pointer;color:var(--navy);font-weight:60
     </div>
   </section>
 
-  <!-- ══ 3. 詐騙檢查 ══ -->
+  <!-- ══ 3. 回檔買進回測 ══ -->
+  <section class="pane" id="p-dip" hidden>
+    <div class="card">
+      <h2>「跌多了就買」真的比較好嗎？</h2>
+      <p class="hint">用證交所／櫃買官方含息還原價，測過去約十年：股價從近 60 個交易日的高點<b>回檔 10%、15%、20%、25%</b> 那天收盤買進，持有一段時間後的報酬，
+        再和「隨便哪一天買進、持有一樣久」比較。同一波下跌只算第一次，要等股價再創 60 日新高才算下一波。</p>
+      <div class="row">
+        <input type="text" id="dipCode" list="dipList" placeholder="輸入代號或名稱，例如 0050、台積電" style="flex:1;min-width:200px" autocomplete="off">
+        <datalist id="dipList"></datalist>
+        <button class="btn pri" id="dipBtn">回測</button>
+      </div>
+      <div class="row" id="dipHz" role="group" aria-label="持有天數">
+        <span class="hint">持有</span>
+        <button class="btn" data-hz="20">20 個交易日（約 1 個月）</button>
+        <button class="btn pri" data-hz="60">60 個交易日（約 3 個月）</button>
+        <button class="btn" data-hz="120">120 個交易日（約半年）</button>
+      </div>
+      <p class="hint" id="dipMeta"></p>
+    </div>
+    <div id="dipOut"></div>
+  </section>
+
+  <!-- ══ 4. 詐騙檢查 ══ -->
   <section class="pane" id="p-fraud" hidden>
     <div class="card">
       <h2>這個網站在 165 的涉詐名單上嗎？</h2>
@@ -208,6 +231,7 @@ details{margin-top:10px} summary{cursor:pointer;color:var(--navy);font-weight:60
     <li>從券商下載「已實現損益」或「對帳單」CSV，貼上或拖進來，按「開始健檢」。</li>
     <li>沒有自己的資料，可以先按「用示範資料試試」，看看報告長什麼樣子。</li>
     <li>「老師宣稱檢驗」：輸入群組老師說的勝率和筆數，看靠運氣做出來的機率。</li>
+    <li>「回檔買進回測」：輸入任何一檔股票或 ETF，看過去「跌 10%～25% 才買」有沒有比隨便哪天買好。</li>
     <li>「詐騙檢查」：查網址在不在 165 官方涉詐名單上，或貼上邀約訊息檢查話術。</li>
   </ul>
   <h3>名詞小抄</h3>
@@ -504,6 +528,7 @@ document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>{
   document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("on",x===b));
   document.querySelectorAll(".pane").forEach(p=>p.hidden=p.id!=="p-"+b.dataset.tab);
   if(b.dataset.tab==="fraud")loadFraudMeta();
+  if(b.dataset.tab==="dip")loadDipIndex();
 }));
 async function run(isDemo){
   await dataReady;
@@ -570,6 +595,69 @@ function guru(){
   $("#guruOut").innerHTML=h;
 }
 ["gWin","gN","gPay","gPeople","gMonthly"].forEach(id=>$("#"+id).addEventListener("input",()=>dataReady.then(guru)));
+
+/* ───── 回檔買進回測 ───── */
+let DIPIX=null, dipHz="60", dipCur=null; const dipCache={};
+function loadDipIndex(){
+  if(DIPIX)return Promise.resolve(DIPIX);
+  return getData("dip/index.json").then(j=>{DIPIX=j;
+    $("#dipList").innerHTML=j.list.map(([c,n])=>`<option value="${esc(c)} ${esc(n)}">`).join("");
+    $("#dipMeta").textContent=`資料期間 ${j.start} ～ ${j.asof}，共 ${fmt(j.list.length)} 檔目前仍在交易的上市櫃股票與 ETF。每週更新。`;
+    if(!$("#dipCode").value){$("#dipCode").value="0050 元大台灣50"; dipRun();}
+    return j;}).catch(e=>{$("#dipMeta").textContent="回測資料暫時讀不到（"+e.message+"）。";});
+}
+function dipFind(q){
+  q=(q||"").trim(); if(!q||!DIPIX)return null; const c=q.split(/\s+/)[0].toUpperCase();
+  return DIPIX.list.find(x=>x[0]===c)||DIPIX.list.find(x=>x[1]===q)||DIPIX.list.find(x=>x[1].includes(q))||null;
+}
+async function dipRun(){
+  await loadDipIndex(); const hit=dipFind($("#dipCode").value), out=$("#dipOut");
+  if(!hit){out.innerHTML=`<div class="card"><p class="neg">找不到「${esc($("#dipCode").value)}」。只收錄目前仍在交易、上市櫃滿一年的股票與 ETF。</p></div>`;return;}
+  const sh=fnv(hit[0]);
+  try{ if(!dipCache[sh])dipCache[sh]=await getData(`dip/${String(sh).padStart(2,"0")}.json`); }
+  catch(e){out.innerHTML=`<div class="card"><p class="neg">回測資料暫時讀不到（${esc(e.message)}）。</p></div>`;return;}
+  dipCur=[hit[0],dipCache[sh][hit[0]]]; dipRender();
+}
+function dipRender(){
+  if(!dipCur||!dipCur[1])return;
+  const [code,D]=dipCur, h=dipHz, B=D.base[h], hzN={20:"1 個月",60:"3 個月",120:"半年"}[h], k={20:2,60:3,120:4}[h];
+  const P=v=>v==null?"—":pct(v,1);
+  const rows=Object.entries(D.th).map(([th,o])=>({th:+th,st:o.st[h],ev:o.ev}));
+  /* 白話結論：看樣本最多、又比對照組好的門檻 */
+  const good=rows.filter(r=>r.st&&r.st.n>=5&&B&&r.st.med>B.med);
+  const best=rows.filter(r=>r.st&&r.st.n>=5).sort((a,b)=>b.st.med-a.st.med)[0];
+  let vc="v-gray",vt="",vp="";
+  if(!B){vt="資料不夠長";vp="這檔的歷史太短，算不出結果。";}
+  else if(!best){vc="v-gray";vt="回檔的次數太少，看不出規律";vp=`過去 ${D.d0} 起，每個門檻觸發都不到 5 次。次數這麼少，結果很容易被一兩次大漲或大跌左右。`;}
+  else if(good.length){vc="v-good";vt=`回檔 ${best.th}% 時買，過去平均比隨便哪天買好`;
+    vp=`回檔 ${best.th}% 那天買進、持有 ${hzN}，報酬中位數 <b>${P(best.st.med)}</b>，隨便哪天買是 ${P(B.med)}；但只有 <b>${best.st.n}</b> 次，最差一次 ${P(best.st.worst)}。過去好，不代表下一次也會反彈。`;}
+  else{vc="v-warn";vt="等回檔再買，過去沒有比較好";vp=`隨便哪天買、持有 ${hzN} 的報酬中位數是 ${P(B.med)}，回檔才買沒有更好（樣本最多的門檻也只有 ${best.st.n} 次）。等待回檔反而可能錯過上漲。`;}
+  let h1=`<div class="verdict ${vc}"><div class="v1">${esc(code)} ${esc(D.n)}：${vt}</div><p>${vp}</p></div>
+  <div class="card"><h2>${esc(code)} ${esc(D.n)} · 持有 ${h} 個交易日</h2>
+    <p class="hint">資料 ${D.d0} ～ ${D.d1}（${fmt(D.days)} 個交易日）。目前距離 60 日高點 <b class="${cls(D.dd)}">${pct(D.dd,1)}</b>。</p>
+    <div class="tscroll"><table><thead><tr><th>什麼時候買</th><th>次數</th><th>報酬中位數</th><th>平均</th><th>最差一次</th><th>賺錢的比例</th><th>比隨便買多（中位數）</th></tr></thead><tbody>
+    ${rows.map(r=>r.st?`<tr><td>回檔 ${r.th}%${r.st.n<5?' <span class="hint">次數少</span>':""}</td><td>${r.st.n}</td><td class="${cls(r.st.med)}">${P(r.st.med)}</td><td class="${cls(r.st.mean)}">${P(r.st.mean)}</td><td class="neg">${P(r.st.worst)}</td><td>${(r.st.win*100).toFixed(0)}%</td><td class="${cls(B?r.st.med-B.med:null)}">${B?(r.st.med-B.med>0?"+":"")+((r.st.med-B.med)*100).toFixed(1)+" 個百分點":"—"}</td></tr>`
+      :`<tr><td>回檔 ${r.th}%</td><td>${r.ev.length}</td><td colspan="5" class="hint" style="text-align:left">${r.ev.length?"觸發後還沒滿 "+h+" 個交易日":"過去沒有發生過"}</td></tr>`).join("")}
+    ${B?`<tr style="font-weight:600;background:var(--row-alt)"><td>隨便哪一天買</td><td>${fmt(B.n)}</td><td class="${cls(B.med)}">${P(B.med)}</td><td class="${cls(B.mean)}">${P(B.mean)}</td><td class="neg">${P(B.worst)}</td><td>${(B.win*100).toFixed(0)}%</td><td>—</td></tr>`:""}
+    </tbody></table></div></div>`;
+  h1+=`<div class="card"><h2>每一次觸發</h2><p class="hint">買進日是第一次跌破門檻那天（收盤價買）。「進行中」表示到今天還沒滿那麼多個交易日。</p>
+    ${rows.filter(r=>r.ev.length).map(r=>`<details${r.th===(best&&best.th)?" open":""}><summary>回檔 ${r.th}%（${r.ev.length} 次）</summary><div class="tscroll"><table>
+      <thead><tr><th>買進日</th><th>當時回檔</th><th>20 天後</th><th>60 天後</th><th>120 天後</th></tr></thead><tbody>
+      ${r.ev.slice().reverse().map(e=>`<tr><td>${e[0]}</td><td class="neg">${pct(e[1],1)}</td>${[2,3,4].map(i=>`<td class="${cls(e[i])}"${i===k?' style="font-weight:600"':""}>${e[i]==null?'<span class="hint">進行中</span>':pct(e[i],1)}</td>`).join("")}</tr>`).join("")}
+      </tbody></table></div></details>`).join("")||'<p class="muted">過去沒有回檔到 10% 以上。</p>'}</div>
+  <details class="card"><summary>讀這張表要注意什麼</summary><ul class="muted">
+    <li><b>次數很少</b>：十年裡回檔 20% 的波段通常只有幾次，一兩次的結果就能把中位數拉很高或很低。次數少於 5 次的列，看看就好。</li>
+    <li><b>倖存者偏差</b>：這裡只有「現在還在交易」的股票。過去跌了又跌、最後下市的公司不在名單上，所以個股「跌深就買」的結果會比真實情況好看。ETF 和大型權值股受這個影響較小。</li>
+    <li><b>含息還原</b>：報酬已包含配息、配股與減資，不含手續費與稅。</li>
+    <li><b>對照組</b>是從第 60 個交易日起，每一天都買一次、持有一樣久，代表「不挑時機」的結果。</li>
+    <li>這是過去的統計，不是預測，也不是投資建議。</li></ul></details>`;
+  $("#dipOut").innerHTML=h1;
+}
+$("#dipBtn").addEventListener("click",dipRun);
+$("#dipCode").addEventListener("keydown",e=>{if(e.key==="Enter")dipRun();});
+$("#dipCode").addEventListener("change",dipRun);
+document.querySelectorAll("#dipHz [data-hz]").forEach(b=>b.addEventListener("click",()=>{
+  dipHz=b.dataset.hz; document.querySelectorAll("#dipHz [data-hz]").forEach(x=>x.classList.toggle("pri",x===b)); dipRender();}));
 
 /* ───── 165 網址查詢 ───── */
 let fraudMeta=null; const shardCache={};

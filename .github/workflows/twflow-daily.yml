@@ -98,6 +98,10 @@ jobs:
               && timeout 10m python -X utf8 tools/capsule/calibrate.py . twflow/web/data/capsule_calib.json /tmp/capsule_cache ) || echo "::warning::傳導艙校準失敗"
           # 交易健檢：0050 含息還原基準、歷史重大事件日、165 反詐騙開放資料（涉詐網域）
           ( cd .. && timeout 5m python -X utf8 tools/tradecheck/gen_data.py ) || echo "::warning::交易健檢資料更新失敗"
+          # 回檔買進回測：全部上市櫃股票與 ETF，每週五重算一次（約 5MB，天天重寫會讓 repo 長太快）
+          if [ "$(TZ=Asia/Taipei date +%u)" = "5" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            ( cd .. && timeout 8m python -X utf8 tools/tradecheck/gen_dip.py ) || echo "::warning::回檔回測更新失敗"
+          fi
           # 波段實驗室：五年日線回測（約 3 分鐘）
           # 官方日線滿一千天時取代 Yahoo（消除倖存者偏差），否則沿用 Yahoo
           ( cd .. && python -X utf8 swing/scripts/fetch_hist.py && { python -X utf8 swing/scripts/build_ohlcv.py || true; } \
@@ -130,7 +134,7 @@ jobs:
           git add twflow/data/market/days twflow/data/market/stock_meta.json $(ls -d twflow/data/etf twflow/data/taifex 2>/dev/null) \
                   $(ls swing/data/revenue.json 2>/dev/null) $(ls -d swing/data/chips swing/data/fund swing/data/tdcc swing/data/prices swing/data/forward swing/data/extra swing/data/official 2>/dev/null) \
                   twflow/data/market/market.json twflow/web/data tools/capsule/twall.json tools/capsule/econ_cal.json tools/capsule/tw_macro.json tools/capsule/policy_events.json tools/capsule/conf_events.json tools/capsule/rev_dates.json \
-                  tools/tradecheck/data.json tools/tradecheck/fraud \
+                  tools/tradecheck/data.json tools/tradecheck/fraud tools/tradecheck/dip \
                   twflow/web/snapshot.html
           if git diff --staged --quiet; then
             echo "沒有變動（非交易日或來源尚未更新）"
