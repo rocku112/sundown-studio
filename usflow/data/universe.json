@@ -2983,6 +2983,13 @@
    "auto": true
   },
   {
+   "sym": "Q",
+   "name": "Qnity Electronics",
+   "type": "stock",
+   "sector": "科技",
+   "auto": true
+  },
+  {
    "sym": "PWR",
    "name": "Quanta Services",
    "type": "stock",
@@ -2994,13 +3001,6 @@
    "name": "Quest Diagnostics",
    "type": "stock",
    "sector": "醫療保健",
-   "auto": true
-  },
-  {
-   "sym": "Q",
-   "name": "Qnity Electronics",
-   "type": "stock",
-   "sector": "科技",
    "auto": true
   },
   {
@@ -3173,7 +3173,7 @@
   },
   {
    "sym": "SKYD",
-   "name": "Skydance Corporation",
+   "name": "Skydance",
    "type": "stock",
    "sector": "通訊服務",
    "auto": true
