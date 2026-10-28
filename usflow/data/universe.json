@@ -2955,17 +2955,17 @@
    "auto": true
   },
   {
-   "sym": "PEG",
-   "name": "Public Service Enterprise Group",
-   "type": "stock",
-   "sector": "公用事業",
-   "auto": true
-  },
-  {
    "sym": "PTC",
    "name": "PTC Inc.",
    "type": "stock",
    "sector": "科技",
+   "auto": true
+  },
+  {
+   "sym": "PEG",
+   "name": "Public Service Enterprise Group",
+   "type": "stock",
+   "sector": "公用事業",
    "auto": true
   },
   {
