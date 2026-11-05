@@ -2430,13 +2430,6 @@
    "auto": true
   },
   {
-   "sym": "KVUE",
-   "name": "Kenvue",
-   "type": "stock",
-   "sector": "必需消費",
-   "auto": true
-  },
-  {
    "sym": "KDP",
    "name": "Keurig Dr Pepper",
    "type": "stock",
@@ -2819,6 +2812,13 @@
    "name": "Occidental Petroleum",
    "type": "stock",
    "sector": "能源",
+   "auto": true
+  },
+  {
+   "sym": "OKTA",
+   "name": "Okta, Inc.",
+   "type": "stock",
+   "sector": "科技",
    "auto": true
   },
   {
